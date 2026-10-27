@@ -26,7 +26,7 @@ class PlazaScene extends Phaser.Scene {
     }, false);   // enableCapture=false: no bloquea el tipeo en el chat
 
     this.add.text(10, 10,
-      "PLAZA (compartida) · te ves con otros jugadores en vivo\nApretá  M  para volver a tu GRANJA",
+      "PLAZA (compartida) · te ves con otros jugadores en vivo\nPulsa  M  para volver a tu GRANJA",
       { fontFamily:"system-ui", fontSize:"13px", color:"#f2ead5",
         backgroundColor:"rgba(20,28,15,0.7)", padding:{x:8,y:6}, lineSpacing:4 })
       .setScrollFactor(0).setDepth(10000);

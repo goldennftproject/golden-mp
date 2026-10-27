@@ -35,7 +35,7 @@ const G = ctx.G, H = 3600000;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UN BICHO A LA VEZ");
+console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UNA CRIATURA A LA VEZ");
 {
   G.level = 9; G.doma = null; G.dishes = { bocado_domador: 5, galletita_cereza: 5, papilla_remolacha: 5 };
   ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.bocado_domador === 5);
@@ -53,7 +53,7 @@ console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UN BICHO A
   ok("con Costillar y mala suerte (0,5 ≥ 25%): se lo come y se va", ctx.domaIntentar("orco", () => 0.5) === false && G.dishes.bocado_domador === 4);
   ok("con Costillar y suerte: el orco te sigue a casa", ctx.domaIntentar("orco", () => 0.001) === true && G.doma.bicho === "orco");
   ok("y ese intento también costó su plato", G.dishes.bocado_domador === 3);
-  ok("y no hay segundo bicho (ni gasta más platos)", ctx.domaIntentar("troll", () => 0.001) === false && G.dishes.bocado_domador === 3);
+  ok("y no hay segunda criatura (ni gasta más platos)", ctx.domaIntentar("troll", () => 0.001) === false && G.dishes.bocado_domador === 3);
   const R = vm.runInContext("RECIPE_DEF", ctx);
   ok("la escalera de platos sigue al valor del ayudante: galletita 4 · papilla 7 · costillar 10",
     R.galletita_cereza.lvl === 4 && R.papilla_remolacha.lvl === 7 && R.bocado_domador.lvl === 10);
@@ -61,18 +61,18 @@ console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UN BICHO A
   const C = vm.runInContext("CROP_DEF", ctx), PR = vm.runInContext("PRICE", ctx);
   const costo = (res) => Object.keys(res).reduce((a, k) => a + ((C[k] ? C[k].price : PR[k]) || 0) * res[k], 0);
   const cg = costo(R.galletita_cereza.res), cp = costo(R.papilla_remolacha.res), cc = costo(R.bocado_domador.res);
-  ok("y el costo también: galletita < papilla < costillar", cg < cp && cp < cc, cg + " < " + cp + " < " + cc);
+  ok("y el coste también: galletita < papilla < costillar", cg < cp && cp < cc, cg + " < " + cp + " < " + cc);
   ok("la galletita es calderilla (≤ 30) y el costillar pesa (≥ 300)", cg <= 30 && cc >= 300);
-  ok("y cada descripción nombra a su bicho ('le encanta')",
+  ok("y cada descripción nombra a su criatura ('le encanta')",
     /orco/i.test(R.bocado_domador.desc) && /RATA/i.test(R.galletita_cereza.desc) && /LARVA/i.test(R.papilla_remolacha.desc));
 }
 
-console.log("\nY CON UN BICHO YA EN CASA, TAMBIÉN LO DICE");
+console.log("\nY CON UNA CRIATURA YA EN CASA, TAMBIÉN LO DICE");
 {
   avisos.length = 0;
   const antes = G.dishes.bocado_domador;
   ok("no doma un segundo", ctx.domaIntentar("troll", () => 0.001) === false);
-  ok("y avisa que ya tenés uno", avisos.some(a => /ya ten[eé]s/i.test(a)), avisos.join(" · "));
+  ok("y avisa que ya tienes uno", avisos.some(a => /ya tienes/i.test(a)), avisos.join(" · "));
   ok("sin gastar el plato", G.dishes.bocado_domador === antes);
 }
 
@@ -108,7 +108,7 @@ console.log("\nLA SUERTE SE DERIVA DEL REPAGO (24/8; el diseñador proponía 1 d
   ok("la rata sigue en 1 de cada 4 (es el ayudante de entrada)", CH.rata === 0.25);
   ok("el orco y los suyos, más difíciles: 1 de cada 6", Math.round(1 / CH.brazos) === 6);
   ok("el que produce más es el más difícil", CH.brazos < CH.rata);
-  ok("y el aviso dice la suerte de ESE bicho, no una fija",
+  ok("y el aviso dice la suerte de ESA criatura, no una fija",
     ctx.domaChanceTxt("rata") === "1 de cada 4" && ctx.domaChanceTxt("orco") === "1 de cada 6");
 
   const rRata = repago("rata", "galletita_cereza"), rOrco = repago("brazos", "bocado_domador");
@@ -142,7 +142,7 @@ console.log("\nEL TURNO: SOLO LO MADURADO EN TU AUSENCIA, COMISIÓN 30%, EL NODO
   ok("correr el turno DOS veces no duplica (ya está drenado)", otra === null);
 }
 
-console.log("\nCON HAMBRE NO TRABAJA — Y CON VOS ADENTRO, TAMPOCO");
+console.log("\nCON HAMBRE NO TRABAJA — Y CONTIGO ADENTRO, TAMPOCO");
 {
   const ahora0 = FakeDate.now();
   G.doma.comidaHasta = ahora0 - 1;   // panza vacía desde antes de irte
@@ -154,7 +154,7 @@ console.log("\nCON HAMBRE NO TRABAJA — Y CON VOS ADENTRO, TAMPOCO");
   const ahora1 = FakeDate.now();
   G.doma.comidaHasta = ahora1 + 72 * H;
   G.nodos = { "tree:12,12": { readyAt: ahora1 - 8 * H, cdIni: ahora1 - 10 * H } };   // 4 cargas viejas
-  ok("lo madurado con vos presente no se toca (visto = ahora)", ctx.domaTrabajar(ahora1) === null);
+  ok("lo madurado contigo presente no se toca (visto = ahora)", ctx.domaTrabajar(ahora1) === null);
 }
 
 console.log("\nLOS MINERALES QUEDAN AFUERA Y EL TURNO CORRE EN HYDRATE");
@@ -172,12 +172,12 @@ console.log("\nLOS MINERALES QUEDAN AFUERA Y EL TURNO CORRE EN HYDRATE");
   desfase += 10 * H;
   const madera0 = Math.floor(G.res.madera || 0);
   ctx.hydrate(snap);
-  ok("cargar la partida ES volver: el bicho entrega su parte", Math.floor(G.res.madera || 0) > madera0,
+  ok("cargar la partida ES volver: la criatura entrega su parte", Math.floor(G.res.madera || 0) > madera0,
     madera0 + " → " + Math.floor(G.res.madera || 0));
   ok("y el parte queda anotado para el hover", !!(G.doma.ultimo && G.doma.ultimo.at));
 }
 
-console.log("\nCADA BICHO, SU OFICIO: LA RATA ESCARBA Y LA LARVA ABONA (v3, dirección)");
+console.log("\nCADA CRIATURA, SU OFICIO: LA RATA ESCARBA Y LA LARVA ABONA (v3, dirección)");
 {
   /* la rata: 1 lombriz cada 8 h cubiertas, tope 3 */
   const ahora0 = FakeDate.now();

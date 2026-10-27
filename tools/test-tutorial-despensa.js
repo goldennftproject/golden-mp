@@ -87,7 +87,7 @@ console.log("\nEL BOTÓN DE COCINAR TAMBIÉN — « Faltan ingredientes » no es
   G.res = { papa: 5 };
   ok("y cuando alcanza, no dice nada", ctx.cookFaltaTxt("papa_asada") === "", "«" + ctx.cookFaltaTxt("papa_asada") + "»");
   ok("y el objetivo vuelve a su texto limpio",
-    ctx.tutoTxt(PASOS.find(s => s.id === "cook")) === "Cociná tu primer plato: Papa Asada",
+    ctx.tutoTxt(PASOS.find(s => s.id === "cook")) === "Cocina tu primer plato: Papa Asada",
     ctx.tutoTxt(PASOS.find(s => s.id === "cook")));
 }
 

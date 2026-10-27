@@ -277,7 +277,7 @@ function addPlayerState(type, val, durS, label) {
         G.states.filter(s => s.type === "flaqueza" || s.type === "fragilidad").length >= 2) return false;   // tope maldiciones
   }
   G.states.push({ type, val, until: t + durS * 1000, next: t + 1000, label: label || type });
-  log("Sufrís " + (label || type) + ".", "bad");
+  log("Sufres " + (label || type) + ".", "bad");
   return true;
 }
 function stateTotal(type) { const t = Date.now(); let s = 0; for (const st of (G.states || [])) if (st.type === type && st.until > t) s += st.val; return s; }
@@ -722,8 +722,8 @@ function tutoAvisoCubierto() {
   if (G._cubAviso === meta) return;
   if (plataProyectada() >= meta) {
     G._cubAviso = meta;
-    toast("🎯 Con lo plantado y tu bolsa ya cubrís los " + meta + " de plata — cosechá y vendé");
-    log("Con lo que está creciendo y lo que tenés en la bolsa ya llegás a los " + meta + " de plata del objetivo.", "good");
+    toast("🎯 Con lo plantado y tu bolsa ya cubres los " + meta + " de plata — cosecha y vende");
+    log("Con lo que está creciendo y lo que tienes en la bolsa ya llegas a los " + meta + " de plata del objetivo.", "good");
   }
 }
 function nodoCd(o, clave, cdLargo) { return cdLargo*vipTiempoMult(); } // Free 30/40 min; VIP excepción autorizada 20/10
@@ -734,7 +734,7 @@ function seedBuysToday() {
 }
 function buySeed(k, qty) {
   const cd = CROP_DEF[k]; if (!cd) { console.warn("[buySeed] cultivo inexistente:", k); return; }
-  if (!cropUnlocked(k)) { toast("Necesitás Cultivo nivel " + cd.lvl); return; }
+  if (!cropUnlocked(k)) { toast("Necesitas Cultivo nivel " + cd.lvl); return; }
   qty = Math.max(1, Math.floor(qty || 1));
   // Guardamos el paso ANTES de comprar: el tercer evento puede avanzar la guía y cerrar
   // el Mercado solo corresponde en ese recorrido inicial, no en una compra cualquiera.
@@ -745,8 +745,8 @@ function buySeed(k, qty) {
   // tutorial incluido — el kit inicial ya cubre los insumos del recorrido, así que
   // ninguna misión depende de comprar de más. Sin excepciones = sin exploit.
   const left = seedDailyMax() - sb.count;
-  if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — volvé mañana"); return; }
-  if (qty > left) { qty = left; toast("Cupo diario: solo podés comprar " + left + " más hoy"); }
+  if (left <= 0) { toast("Cupo diario de semillas alcanzado (" + seedDailyMax() + ") — vuelve mañana"); return; }
+  if (qty > left) { qty = left; toast("Cupo diario: solo puedes comprar " + left + " más hoy"); }
   // 15/8: RED ANTI-SOFTLOCK — jugador en cero absoluto (sin plata, semillas, cultivos,
   // platos ni nada creciendo): el Mercado le FÍA una semilla de papa por día. Sin esto,
   // como los materiales no se venden, el cero era un callejón sin salida matemático.
@@ -782,7 +782,7 @@ function buySeed(k, qty) {
     selectSeed("papa");
     if (typeof refreshHotbar === "function") refreshHotbar(true);
     tutoCerrarPanelTrasPaso("ov-market", "plant");
-    toast("🌱 Semillas de papa seleccionadas — hacé clic en una parcela vacía para plantarlas.");
+    toast("🌱 Semillas de papa seleccionadas — haz clic en una parcela vacía para plantarlas.");
   }
 }
 
@@ -807,7 +807,7 @@ function emergBuysToday() {
 function comprarEmergencia(tipo) {
   const precio = EMERG_GOLDEN[tipo]; if (precio == null) { console.warn("[comprarEmergencia] tipo inexistente:", tipo); return; }
   const e = emergBuysToday();
-  if ((e[tipo] || 0) >= EMERG_MAX) { toast("Tope diario del kit de emergencia (" + EMERG_MAX + ") — volvé mañana"); return; }
+  if ((e[tipo] || 0) >= EMERG_MAX) { toast("Tope diario del kit de emergencia (" + EMERG_MAX + ") — vuelve mañana"); return; }
   if (G.golden < precio) { toast("Te faltan $Golden"); return; }
   G.golden -= precio; e[tipo] = (e[tipo] || 0) + 1;
   const n = (EMERG_LOTE && EMERG_LOTE[tipo]) || 1;   // 16/8: se entrega por lotes
@@ -921,7 +921,7 @@ function darPlano(t, silencioso) {
        rápida". Los planos viven en el COBERTIZO desde el 18/8. */
     /* 20/8: el aviso también nombra el camino. "Está en el Cobertizo" no sirve de nada si el
        jugador no sabe que el Cobertizo se abre desde el Menú. */
-    log("¡Ganaste el PLANO de " + b.label + "! Te espera en el Cobertizo (Menú ☰ → Cobertizo): abrilo y elegí dónde va.", "gold");
+    log("¡Ganaste el PLANO de " + b.label + "! Te espera en el Cobertizo (Menú ☰ → Cobertizo): abrilo y elige dónde va.", "gold");
     toast("📜 ¡Plano de " + b.label + "! → Menú ☰ → Cobertizo");
     if (window.celebrate) celebrate({ title: "¡PLANO NUEVO!", sub: b.label, big: false, reward: "Te espera en el Cobertizo 🏚" });
   }
@@ -990,19 +990,19 @@ function tutoSubPlata(prefijo, meta) {
   if (conStock) {
     const n = Math.floor(G.res[conStock]), cd = CROP_DEF[conStock];
     const alcanza = meta && (G.plata + n * (cd.price || 0)) >= meta;
-    return { plata: true, meta: meta || 0, txt: prefijo + "vendé tus " + n + " " + (cd.label || conStock).toLowerCase() + (n > 1 ? "s" : "") + (alcanza ? " — con eso alcanza" : ""),
+    return { plata: true, meta: meta || 0, txt: prefijo + "vende tus " + n + " " + (cd.label || conStock).toLowerCase() + (n > 1 ? "s" : "") + (alcanza ? " — con eso alcanza" : ""),
       target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   }
   const plots = Array.isArray(G.plots) ? G.plots : [];
   const listos = plots.filter(p => p && p.state === "ready").length;
-  if (listos) return { plata: true, meta: meta || 0, txt: prefijo + "cosechá tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
+  if (listos) return { plata: true, meta: meta || 0, txt: prefijo + "cosecha tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   // Fixes.docx 14/8 #3: comprar más semillas sigue permitido en estos eslabones — antes,
   // al comprar UNA el sub saltaba a "plantá" y bloqueaba el resto de la tanda (de a 1, feo)
   if (plots.some(p => p && p.state === "growing")) return { plata: true, meta: meta || 0, txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   const semillas = Object.keys(G.seeds || {}).reduce((a, k) => a + Math.floor(G.seeds[k] || 0), 0);
-  if (semillas) return { plata: true, meta: meta || 0, txt: prefijo + "plantá tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
+  if (semillas) return { plata: true, meta: meta || 0, txt: prefijo + "planta tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   // 14/8 (dirección): el plan elige el MEJOR cultivo desbloqueado (mayor ganancia neta por
   // semilla) — cebolla rinde 10 netos contra 2 de la papa: 4-5 tandas en vez de 20. Con el
@@ -1022,16 +1022,16 @@ function tutoSubPlata(prefijo, meta) {
     const n = Math.max(1, Math.min(Math.floor(G.plata / precio), utiles));
     const deUna = falta && (G.plata - n * precio + n * (cd.price || 3)) >= meta;
     const nom = (cd.label || mejor).toLowerCase();
-    const accion = n > 1 ? "comprá " + n + " semillas de " + nom + " de UNA y plantalas todas" : "comprá 1 semilla de " + nom + " y plantala";
+    const accion = n > 1 ? "compra " + n + " semillas de " + nom + " de UNA y plantalas todas" : "compra 1 semilla de " + nom + " y plantala";
     return { plata: true, meta: meta || 0, txt: prefijo + accion + (deUna ? " — una tanda y alcanza" : ""),
       target: "market", panel: "ov-market", ui: "[data-buy='" + mejor + "']", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   }
   const premio=typeof logroLista==='function'&&logroLista().flatMap(f=>f.tiers).find(t=>t.cobrable);
-  if(premio)return {plata:true,meta:meta||0,txt:prefijo+'cobrá tu recompensa de Plata en Logros',panel:'ov-logros',ui:'[data-logro="'+premio.key+'"]'};
+  if(premio)return {plata:true,meta:meta||0,txt:prefijo+'cobra tu recompensa de Plata en Logros',panel:'ov-logros',ui:'[data-logro="'+premio.key+'"]'};
   const diario=typeof dailyState==='function'?dailyState():null;
-  if(diario?.claimable&&[2,7].includes(diario.day))return {plata:true,meta:meta||0,txt:prefijo+'reclamá '+(diario.day===7?'Plata':'semillas')+' en Premio diario',panel:'ov-paquete'};
+  if(diario?.claimable&&[2,7].includes(diario.day))return {plata:true,meta:meta||0,txt:prefijo+'reclama '+(diario.day===7?'Plata':'semillas')+' en Premio diario',panel:'ov-paquete'};
   const materiales=Object.keys(G.res||{}).some(k=>!CROP_DEF[k]&&(G.res[k]||0)>=1);
-  return { plata: true, meta: meta || 0, txt: prefijo + (materiales?'ofrecé materiales en el Mercado de jugadores; la venta depende de otro jugador':'sin semillas ni Plata: revisá las metas con recompensa en Logros'),
+  return { plata: true, meta: meta || 0, txt: prefijo + (materiales?'ofrece materiales en el Mercado de jugadores; la venta depende de otro jugador':'sin semillas ni Plata: revisa las metas con recompensa en Logros'),
     panel: materiales?'ov-p2p':'ov-logros', permite: ["plant", "harvest", "sell", "buyseed", "plotunlock", "chop", "mine"] };
 }
 /* ============ QUÉ HACER MIENTRAS SE ESPERA (19/8, dirección) =======================
@@ -1056,23 +1056,23 @@ function tutoSubNodoEnEspera(st) {
   const plots = Array.isArray(G.plots) ? G.plots : [];
   const listos = plots.filter(p => p && p.state === "ready").length;
   if (listos) return { esperaNodo: true, guiaPlot: "ready",
-    txt: recurso + ": cosechá " + listos + " cultivo" + (listos > 1 ? "s" : "") + " mientras vuelven los " + nodos,
+    txt: recurso + ": cosecha " + listos + " cultivo" + (listos > 1 ? "s" : "") + " mientras se regeneran los " + nodos,
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
   const semillas = Object.keys(G.seeds || {}).reduce((n, k) => n + Math.floor(G.seeds[k] || 0), 0);
   const seca = plots.some(p => p && p.state === "dry");
   if (semillas && seca) return { esperaNodo: true, guiaPlot: "dry",
-    txt: recurso + ": plantá " + semillas + " semilla" + (semillas > 1 ? "s" : "") + " mientras vuelven los " + nodos,
+    txt: recurso + ": planta " + semillas + " semilla" + (semillas > 1 ? "s" : "") + " mientras vuelven los " + nodos,
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
   const conStock = Object.keys(CROP_DEF || {}).filter(k => (G.res[k] || 0) > 0)
     .sort((a, b) => (CROP_DEF[b].price || 0) - (CROP_DEF[a].price || 0))[0];
   if (conStock) return { esperaNodo: true,
-    txt: recurso + ": vendé tus " + Math.floor(G.res[conStock]) + " " + (CROP_DEF[conStock].label || conStock).toLowerCase() + " mientras vuelven los " + nodos,
+    txt: recurso + ": vende tus " + Math.floor(G.res[conStock]) + " " + (CROP_DEF[conStock].label || conStock).toLowerCase() + " mientras vuelven los " + nodos,
     target: "market", panel: "ov-market", ui: "#vb-" + conStock, permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
   if (plots.some(p => p && p.state === "growing")) return { esperaNodo: true, guiaPlot: "growing",
-    txt: recurso + ": tus cultivos crecen; la mariposa vuelve a los " + nodos + " al estar listos",
+    txt: recurso + ": tus cultivos siguen creciendo mientras se regeneran los " + nodos,
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
   return { esperaNodo: true,
-    txt: recurso + ": los " + nodos + " vuelven solos; la mariposa los señalará al estar listos",
+    txt: recurso + ": los " + nodos + " se están regenerando",
     permite: ["plant", "harvest", "sell", "buyseed", "chop", "mine"] };
 }
 function tutoSub() {
@@ -1107,7 +1107,7 @@ function tutoSub() {
     if (hachas > 0) {
       const costo = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
       const plataNec = hachas * costo;
-      if (G.plata >= plataNec) return { txt: "Fabricá " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataNec + " Plata" + (vipVigente() && hachas >= 5 ? ", botón ×5" : ", de a una") + ")",
+      if (G.plata >= plataNec) return { txt: "Fabrica " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataNec + " Plata" + (vipVigente() && hachas >= 5 ? ", botón ×5" : ", de una en una") + ")",
         target: "store", panel: "ov-forge", ui: vipVigente() && hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool"] };
       return tutoSubPlata("Te faltan " + hachas + " hachas (" + plataNec + " de plata): ", plataNec);
     }
@@ -1133,7 +1133,7 @@ function tutoSub() {
       const f = obraFalta(st.dep).find(x => x[0] === "madera"); if (f) reservada = f[1];
     }
     const libre = Math.max(0, Math.floor(G.res.madera || 0) - reservada);
-    if (libre >= madNecT && G.plata >= plataNec) return { txt: "Fabricá " + picos + " pico" + (picos > 1 ? "s" : "") + " (" + (madNecT ? madNecT + " madera + " : "") + plataNec + " Plata" + (vipVigente() && picos >= 5 ? ", botón ×5" : ", de a uno") + ")",
+    if (libre >= madNecT && G.plata >= plataNec) return { txt: "Fabrica " + picos + " pico" + (picos > 1 ? "s" : "") + " (" + (madNecT ? madNecT + " madera + " : "") + plataNec + " Plata" + (vipVigente() && picos >= 5 ? ", botón ×5" : ", de uno en uno") + ")",
       target: "store", panel: "ov-forge", ui: vipVigente() && picos >= 5 ? "[data-craft5='stone']" : "[data-craft='stone']", permite: ["craftpick", "mine", "chop", "crafttool"] };
     if (G.plata < plataNec) return tutoSubPlata("Para " + picos + " picos (" + plataNec + " de plata): ", plataNec);
     // plata alcanza pero falta madera LIBRE: talar (con hachas o su plan)
@@ -1142,11 +1142,11 @@ function tutoSub() {
     if (hachas > 0) {
       const costoHacha = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
       const plataHachas = hachas * costoHacha;
-      if (G.plata >= plataNec + plataHachas) return { txt: "Para los picos falta madera: crafteá " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataHachas + " de plata" + (vipVigente() && hachas >= 5 ? ", botón ×5" : "") + ")",
+      if (G.plata >= plataNec + plataHachas) return { txt: "Para los picos falta madera: fabrica " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataHachas + " de plata" + (vipVigente() && hachas >= 5 ? ", botón ×5" : "") + ")",
         target: "store", panel: "ov-forge", ui: vipVigente() && hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool", "chop", "craftpick", "mine"] };
       return tutoSubPlata("Para los picos y sus hachas (" + (plataNec + plataHachas) + " de plata): ", plataNec + plataHachas);
     }
-    return { txt: "Talá " + madFalta + " árbol" + (madFalta > 1 ? "es" : "") + " — madera para los picos (lo de la obra no se toca)",
+    return { txt: "Tala " + madFalta + " árbol" + (madFalta > 1 ? "es" : "") + " — madera para los picos (lo de la obra no se toca)",
       target: "tree", permite: ["chop", "crafttool", "craftpick", "mine"] };
   }
   // 14/8 (sim escrita, traba 1): el paso del Hacha con 9 de plata era un muro de 9 min —
@@ -1161,7 +1161,7 @@ function tutoSub() {
     if (!(G.built && G.built.store)) return null;
     const plata = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
     if (G.plata < plata) return tutoSubPlata("Sin hachas (cuesta " + plata + " de plata): ", plata);
-    return { txt: "Te quedaste sin hachas: crafteá una en la Herrería (" + plata + " de plata)",
+    return { txt: "Te quedaste sin hachas: fabrica una en la Herrería (" + plata + " de plata)",
       target: "store", panel: "ov-forge", ui: "[data-ctool='axe']", permite: ["crafttool"] };
   }
   return tutoSubNodoEnEspera(st);
@@ -1227,7 +1227,7 @@ function obraDepositar(t, cantidades) {   // devuelve true si con este depósito
   if (!tutoOn && b.lvl && G.level < b.lvl) { toast(b.label + " pide granja nivel " + b.lvl); return false; }
   if(cantidades!==undefined){
     const limites=Object.fromEntries(obraFalta(t).map(([r,n])=>[r,Math.min(n,r==='golden'?G.golden:Math.floor(G.res[r]||0))]));
-    if(!cantidades||typeof cantidades!=='object'||Object.entries(cantidades).some(([r,n])=>!Object.prototype.hasOwnProperty.call(limites,r)||!Number.isSafeInteger(n)||n<0||n>limites[r])){toast('El aporte cambió o no es válido; revisá las cantidades');return false;}
+    if(!cantidades||typeof cantidades!=='object'||Object.entries(cantidades).some(([r,n])=>!Object.prototype.hasOwnProperty.call(limites,r)||!Number.isSafeInteger(n)||n<0||n>limites[r])){toast('El aporte cambió o no es válido; revisa las cantidades');return false;}
   }
   G.obraDep = G.obraDep || {}; const dep = G.obraDep[t] = G.obraDep[t] || {};
   const puso = [];
@@ -1314,7 +1314,7 @@ function matCdLeft(id) { G.matCd = G.matCd || {}; return Math.max(0, (G.matCd[id
 // crafteo en LOTE genérico: repite la acción hasta N veces y corta si ya no se puede (doc 2/8)
 function craftLote(fn, id, n) {
   n = Math.max(1, n || 1);
-  if(n>1&&!vipVigente()){toast("La fabricación en lotes requiere VIP. Podés fabricar de a uno.");return;}
+  if(n>1&&!vipVigente()){toast("La fabricación en lotes requiere VIP. Puedes fabricar de uno en uno.");return;}
   for (let i = 0; i < n; i++) {
     /* 24/8: la huella incluye la COLA DEL HORNO. Antes solo miraba bolsa y monedas, y como
        encolar no cambia ninguna de las dos, el ×5 se daba por muerto en la primera vuelta.
@@ -1441,13 +1441,13 @@ function craftMat(id) {
 function hornoCancelar(idx) {
   const l = hornoList(), p = l[idx];
   if (!p) { toast("Esa pieza ya no está en la fila"); return false; }
-  if (p.listo) { toast("Ya está lista — tocá « Recoger »"); return false; }
+  if (p.listo) { toast("Ya está lista — pulsa « Recoger »"); return false; }
   if (!hornoEsperando(p)) { toast("Ya está al fuego: no se puede cancelar"); return false; }
   const md = MAT_DEF[p.id]; if (!md) { l.splice(idx, 1); return false; }
   /* los materiales vuelven a la bolsa: si no entran, no se cancela — dejarlos caer al vacío
      sería peor que dejar la pieza en la fila */
   const sinLugar = Object.keys(md.cost).find(k => !roomForRes(k, md.cost[k]));
-  if (sinLugar) { toast("Bolsa llena — hacé lugar para recuperar " + md.cost[sinLugar] + " " + (RES_LABEL[sinLugar] || sinLugar)); return false; }
+  if (sinLugar) { toast("Bolsa llena — haz lugar para recuperar " + md.cost[sinLugar] + " " + (RES_LABEL[sinLugar] || sinLugar)); return false; }
   const dura = p.total || matCdMs(p.id);
   l.splice(idx, 1);
   for (const q of l) if ((q.listoAt || 0) > (p.listoAt || 0)) q.listoAt -= dura;   // las de atrás adelantan
@@ -1800,7 +1800,7 @@ function addCookXp(amt) {
   if (typeof passEvent === "function") passEvent("cooking");   // misión "cociná" del Pase
   if (after > before) {
     const rec = RECIPE_ORDER.filter(id => RECIPE_DEF[id].lvl === after && !RECIPE_DEF[id].desc).map(id => RECIPE_DEF[id].label);
-    log("Cocina subió a nivel " + after + (rec.length ? ". Nueva receta: " + rec.join(" · ") : "") + (after === 8 && DISH_VENTA_LIBRE ? ". ¡Ya podés vender platos por $Golden!" : "") + ".", "good");
+    log("Cocina subió a nivel " + after + (rec.length ? ". Nueva receta: " + rec.join(" · ") : "") + (after === 8 && DISH_VENTA_LIBRE ? ". ¡Ya puedes vender platos por $Golden!" : "") + ".", "good");
     if (window.celebrate) celebrate({ title: "¡NIVEL " + after + "!", sub: "Cocina" + (after >= 10 ? " maestra" : ""), big: after >= 10,
       reward: (rec.length ? "Nueva receta: " + rec.join(" · ") : "") + (after === 8 && DISH_VENTA_LIBRE ? (rec.length ? " · " : "") + "Venta en $Golden" : "") });
     else { toast("Cocina nivel " + after); if (window.sfx) sfx("level"); }
@@ -2376,7 +2376,7 @@ function expansionSiguiente() {
 function expansionPrecioCupo(i) { const base=20 + 10*i + 5*i*i + Math.round(.5*Math.pow(Math.max(0,i-2),3));return i>=2?Math.ceil(base*1.3):base; }
 function expansionComprar() {
   const e = expansionSiguiente();
-  if (!e) { toast("Ya tenés las " + EXPANSION_MAX + " expansiones"); return false; }
+  if (!e) { toast("Ya tienes las " + EXPANSION_MAX + " expansiones"); return false; }
   if ((G.level || 1) < e.nivel) { toast("La expansión " + e.n + " se abre en el nivel " + e.nivel); return false; }
   if (!canAfford(e.costo)) { toast("Te faltan materiales para expandir"); return false; }
   if (expansionObra()) { toast("Ya hay una expansión en obra: termina en " + expansionObraTxt()); return false; }
@@ -2453,7 +2453,7 @@ function expansionEntregar(e) {
      rematarla. */
   if (typeof closeOv === "function") { closeOv("ov-market"); closeOv("ov-deco"); }
   const festejar = () => {
-    toast(G.produccion ? "¡La granja creció! Elegí tu nodo gratuito en el Cobertizo." : "¡La granja creció!");
+    toast(G.produccion ? "¡La granja creció! Elige tu nodo gratuito en el Cobertizo." : "¡La granja creció!");
     if (window.celebrate) celebrate({ title: "¡GRANJA MÁS GRANDE!", sub: "Expansión " + e.n + " de " + EXPANSION_MAX,
       big: true, reward: superficie + " celdas nuevas" + (G.produccion ? " · +1 cupo · +1 nodo a elección en el Cobertizo" : "") });
   };
@@ -2474,7 +2474,7 @@ function expansionEntregar(e) {
       G.layoutPlots[idx] = { col: e.bloque.parcela.col, row: e.bloque.parcela.row };
       G.plotsOwned = idx + 1;
       if (typeof GF !== "undefined" && GF.ocupCambio) GF.ocupCambio();
-      log("La expansión trae una parcela ya arada. Si la querés en otro lado, movela en modo edición.", "gold");
+      log("La expansión trae una parcela ya arada. Si la quieres en otro lado, movela en modo edición.", "gold");
     }
     G.expParcelasDadas = e.i + 1;   // entregada: quede donde quede la parcela, esto no se repite
   }
@@ -2748,12 +2748,12 @@ function produccionVipTick(sinEscena) {
   return true;
 }
 function produccionVipPaseTexto() {
-  return "50 de energía Free / 100 VIP, recarga completa en 4 h. VIP: cocina, expansiones y nodos un 10% más rápidos; fabricación en lotes; P2P hasta 10 publicaciones diarias y comisión del 7% (Free: una publicación diaria, 10%); Objetos de Granja sin límite (Free: uno). Pase desactivado. Retiros desactivados; futura política: Free uno/mes, VIP sin límite de frecuencia, sujetos a saldo y reservas.";
+  return "50 de energía Sin VIP / 100 VIP, recarga completa en 4 h. VIP: cocina, expansiones y nodos un 10% más rápidos; fabricación en lotes; P2P hasta 10 publicaciones diarias y comisión del 7% (Sin VIP: una publicación diaria, 10%); Objetos de Granja sin límite (Sin VIP: uno). Pase desactivado. Retiros desactivados; futura política: Sin VIP uno/mes, VIP sin límite de frecuencia, sujetos a saldo y reservas.";
 }
 function produccionVipComprar() {
   produccionVipTick();
   if (!G.produccion || produccionVipActivo()) { toast("El VIP ya está activo."); return false; }
-  if (!Number.isFinite(G.golden) || G.golden < PRODUCCION_VIP_PRECIO) { toast("Necesitás " + PRODUCCION_VIP_PRECIO + " $Golden."); return false; }
+  if (!Number.isFinite(G.golden) || G.golden < PRODUCCION_VIP_PRECIO) { toast("Necesitas " + PRODUCCION_VIP_PRECIO + " $Golden."); return false; }
   energiaGranjaTick(); // Cerrar el tramo Free antes del VIP: no regenerar horas anteriores a la tarifa VIP.
   G.golden -= PRODUCCION_VIP_PRECIO;
   G.produccion.vipHasta = nowMs() + PRODUCCION_VIP_DIAS * 86400000;
@@ -2809,12 +2809,12 @@ function produccionAlternar(clave) {
   if (!G.produccion || !/^[np]:\d+$/.test(clave)) return false;
   const item = produccionItems().find(o => produccionClave(o) === clave); if (!item) return false;
   const sc = window.farmScene;
-  if (sc && sc.action) { toast("Terminá o cancelá la acción antes de cambiar la producción."); return false; }
+  if (sc && sc.action) { toast("Termina o cancela la acción antes de cambiar la producción."); return false; }
   const fuente = item.type === "plot" ? (sc && sc.plots && sc.plots[item.i]) || G.plots[item.i] || {state:"dry"}
     : (sc && sc.objs && sc.objs.find(o => o.i === item.i)) || (G.nodos || {})[produccionNodoKey(item.i)] || {};
   const pausa = G.produccion.pausas[clave], t = nowMs();
   if (pausa) {
-    if (!produccionHayCupo()) { toast("Capacidad completa: pausá otra producción o expandí."); return false; }
+    if (!produccionHayCupo()) { toast("Capacidad completa: pausa otra producción o expande."); return false; }
     const copia = {...pausa.estado}, delta = Math.max(0, t - pausa.at);
     for (const k of ["readyAt", "halfAt", "cdIni", "witherAt"]) if (copia[k]) copia[k] += delta;
     Object.assign(fuente, copia);
@@ -2844,7 +2844,7 @@ function produccionEmplazamiento(tipo) {
   });
 }
 function produccionComprar(tipo) {
-  if (!G.produccion || !produccionHayCupo()) { toast("No queda capacidad. Pausá otra producción o expandí."); return false; }
+  if (!G.produccion || !produccionHayCupo()) { toast("No queda capacidad. Pausa otra producción o expande."); return false; }
   let nuevaClave, confirmacion;
   if (tipo === "plot") {
     if ((G.plotsOwned || 3) >= PLOT_MAX) { toast("Ya alcanzaste el máximo de parcelas."); return false; }
@@ -2859,11 +2859,11 @@ function produccionComprar(tipo) {
     const def = { tree: { precio: 30, nivel: 1 }, rock: { precio: 30, nivel: 1 }, bronce: { precio: 180, nivel: 3 }, hierro: { precio: 300, nivel: 6 }, oro: { precio: 500, nivel: 9 }, diamante: { precio: 900, nivel: 13 }, netherita: { precio: 1400, nivel: 17 } }[tipo];
     if (!def || G.level < def.nivel) { toast("Ese nodo todavía no está disponible."); return false; }
     const i = produccionEmplazamiento(tipo);
-    if (i < 0) { toast("No quedan emplazamientos de este tipo en tu terreno. Expandí para abrir más."); return false; }
+    if (i < 0) { toast("No quedan emplazamientos de este tipo en tu terreno. Expande para abrir más."); return false; }
     const base = GF.WORLD_OBJECTS[i], lp = G.layout && G.layout[i];
     const col = lp ? Math.floor(lp.cx / GF.TILE - (base.wCells || 1) / 2) : base.leftCol;
     const row = (lp ? Math.round(lp.by / GF.TILE) : base.baseRow) - 1;
-    for (let c = col; c < col + (base.wCells || 1); c++) if (GF.celdaOcupada && GF.celdaOcupada(c, row)) { toast("El emplazamiento está ocupado. Mové ese objeto en modo edición antes de comprar."); return false; }
+    for (let c = col; c < col + (base.wCells || 1); c++) if (GF.celdaOcupada && GF.celdaOcupada(c, row)) { toast("El emplazamiento está ocupado. Mueve ese objeto en modo edición antes de comprar."); return false; }
     const gratis = G.produccion.vale > 0 && (tipo === "tree" || tipo === "rock");
     if (!gratis && G.plata < def.precio) { toast("Te falta plata para ese nodo."); return false; }
     if (gratis) G.produccion.vale--; else G.plata -= def.precio;
@@ -2954,7 +2954,7 @@ function regaloReclamar(tipo) {
   if (!q[tipo]) return false;
   q[tipo]--;                                   // sale del baúl…
   cobertizoBolsa()[tipo] = (cobertizoBolsa()[tipo] || 0) + 1;   // …y entra en el cobertizo
-  log((REGALO_LABEL[tipo] || tipo) + " al Cobertizo — desde ahí elegís dónde va.", "gold");
+  log((REGALO_LABEL[tipo] || tipo) + " al Cobertizo — desde ahí eliges dónde va.", "gold");
   toast((REGALO_LABEL[tipo] || tipo) + " al Cobertizo 🏚");
   if (window.sfx) sfx("level");
   refreshHud(); if (typeof syncCobertizo === "function") syncCobertizo();
@@ -2977,11 +2977,11 @@ function nodoIndicePorLock(tipo, lockIdx) {
 function regaloColocar(tipo, col, row) {
   const q = cobertizoBolsa();   // 18/8: se coloca lo que está EN EL COBERTIZO, no lo que sigue en el baúl
   if (!q[tipo]) { toast("No te queda " + REGALO_NADA(tipo)); return false; }
-  if (!produccionHayCupo()) { toast("Capacidad completa: pausá otro nodo en el Cobertizo o expandí."); return false; }
+  if (!produccionHayCupo()) { toast("Capacidad completa: pausa otro nodo en el Cobertizo o expande."); return false; }
   const T = GF.TILE;
   if (tipo === "plot") {
     const tope = typeof PLOT_MAX !== "undefined" ? PLOT_MAX : 60;
-    if ((G.plotsOwned || 3) >= tope) { toast("Ya tenés todas las parcelas"); return false; }
+    if ((G.plotsOwned || 3) >= tope) { toast("Ya tienes todas las parcelas"); return false; }
     /* 18/8 — ERROR DE ÍNDICE (reporte: "se ha plantado en el centro de la granja, como si fuera
        una posición por defecto"). Se guardaba la celda elegida en layoutPlots[GF.PLOTS.length],
        o sea en el hueco 12 — el de la primera parcela EXTRA. Pero las 12 primeras ya existen en
@@ -2998,7 +2998,7 @@ function regaloColocar(tipo, col, row) {
     const tabla = tipo === "tree" ? NIVEL_ARBOLES : NIVEL_ROCAS;
     const abiertos = tipo === "tree" ? (G.treesOpen = G.treesOpen || [0]) : (G.rocksOpen = G.rocksOpen || [0]);
     const libre = tabla.map((_, i) => i).find(i => !abiertos.includes(i));
-    if (libre == null) { toast(tipo === "tree" ? "Ya tenés todos los árboles" : "Ya tenés todas las rocas"); return false; }
+    if (libre == null) { toast(tipo === "tree" ? "Ya tienes todos los árboles" : "Ya tienes todas las rocas"); return false; }
     const idx = nodoIndicePorLock(tipo, libre);
     if (idx < 0) { toast("No encuentro dónde ponerlo"); return false; }
     const o = GF.WORLD_OBJECTS[idx];
@@ -3020,7 +3020,7 @@ function regaloColocar(tipo, col, row) {
   return true;
 }
 function prestige() {
-  if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; }
+  if (G.level < FARM_NIVEL_MAX) { toast("Llega a nivel " + FARM_NIVEL_MAX); return; }
   G.prestige++; G.level = 1;
   G.skills.farming = 0;            // si no se resetea, el próximo addXp volvía a nivel 10 de golpe
   G.farmXpEdificios = 0;
@@ -3214,7 +3214,7 @@ function craftPick(id) {
   if (first || !G.picks.eq) G.picks.eq = id;
   addXp("crafting", 10 + pd.tier * 4);
   if (typeof tutoEvent === "function") { tutoEvent("crafttool"); tutoEvent("craftpick"); }
-  log("Crafteaste " + pd.label + ((pd.dur || 1) > 1 ? " ×" + pd.dur : "") + " (tenés " + G.picks.dur[id] + ").", "gold"); toast("+" + (pd.dur || 1) + " " + pd.label);
+  log("Has fabricado " + pd.label + ((pd.dur || 1) > 1 ? " ×" + pd.dur : "") + " (tienes " + G.picks.dur[id] + ").", "gold"); toast("+" + (pd.dur || 1) + " " + pd.label);
   forgeWork(); refreshForge(); refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
 }
 // modelo SFL (31/7): los picos NO se reparan — se rompen y se craftean de nuevo
@@ -3237,8 +3237,8 @@ function uiRefreshAfterBreak() {
 function repairCostOf(id) { const pd=PICK_DEF[id]; const c={}; for (const k in pd.cost) c[k]=Math.max(1,Math.ceil(pd.cost[k]*0.3)); return c; }
 // 14/8 (dirección): los picos NO se reparan — son apilables como las hachas (1 pico = 1
 // picada, se craftean más). Reparar "el stock" ponía dur=1 y te DESTRUÍA la pila entera.
-function repairPick(id) { toast("Los picos no se reparan — crafteá más en la Herrería"); }
-function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tenés"); return; } G.picks.eq=id; log("Equipaste "+PICK_DEF[id].label+".");  toast("Equipado"); refreshForge(); refreshInv(); }
+function repairPick(id) { toast("Los picos no se reparan — fabrica más en la Herrería"); }
+function equipPick(id) { if (!G.picks.owned[id]){ toast("No lo tienes"); return; } G.picks.eq=id; log("Equipaste "+PICK_DEF[id].label+".");  toast("Equipado"); refreshForge(); refreshInv(); }
 
 // --- herramientas (hacha + caña con durabilidad; el pico se maneja aparte) ---
 const TOOL_DEF = {
@@ -3266,11 +3266,11 @@ const TUTO_STEPS = [
   // aprendido y no se vuelve a pedir: de acá en más la plata repetitiva llega de PREMIO.
   // 14/8 v4: los CUATRO pasos del arranque verifican CANTIDADES (3/3/3/3) — el capataz
   // no avanza hasta que compraste, plantaste, cosechaste y vendiste las TRES
-  { id: "kit",       n: 1, txt: "Abrí el baúl junto al granero — tu kit de bienvenida te espera", target: "cofre_diario" },
-  { id: "buyseed",   n: 3, txt: "Comprá 3 semillas de papa en el Mercado (tenés 3 de plata)", target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
-  { id: "plant",     n: 3, txt: "Plantá tus 3 papas en las parcelas",              target: "plot" },
-  { id: "harvest",   n: 3, txt: "Cosechá tus 3 papas",                             target: "plot" },
-  { id: "sell",      n: 3, txt: "Vendé tus 3 papas en el Mercado",                 target: "market", panel: "ov-market", ui: "#vb-papa" },
+  { id: "kit",       n: 1, txt: "Abre el baúl junto al granero — tu kit de bienvenida te espera", target: "cofre_diario" },
+  { id: "buyseed",   n: 3, txt: "Compra 3 semillas de papa en el Mercado (tienes 3 de plata)", target: "market", panel: "ov-market", ui: "[data-buy='papa']" },
+  { id: "plant",     n: 3, txt: "Planta tus 3 papas en las parcelas",              target: "plot" },
+  { id: "harvest",   n: 3, txt: "Cosecha tus 3 papas",                             target: "plot" },
+  { id: "sell",      n: 3, txt: "Vende tus 3 papas en el Mercado",                 target: "market", panel: "ov-market", ui: "#vb-papa" },
   // — la Herrería ya no viene hecha (10/8): es la primera construcción, y es barata a propósito —
   // 13/8 v2 (audio): el orden LÓGICO — primero se coloca el plano (la obra queda a la vista
   // con su cartel), DESPUÉS se juntan sus materiales, y al final se depositan. Lo depositado
@@ -3290,19 +3290,19 @@ const TUTO_STEPS = [
      así, no lo encuentra, y la flecha le está señalando algo que se llama "Menú": el cartel y la
      flecha discrepaban. Es el mismo fallo de ayer con la barra rápida, con otra ropa.
      Ahora el texto nombra las dos paradas, en orden, y coincide con lo que la flecha va haciendo. */
-  { id: "place_store", n: 1, txt: "Abrí el Menú ☰ → Cobertizo y colocá el PLANO de la Herrería", panel: "ov-cobertizo", ui: ".slot.k-plano" },
+  { id: "place_store", n: 1, txt: "Abre el Menú ☰ → Cobertizo y coloca el PLANO de la Herrería", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "wood_st",  res: "madera", dep: "store", need: () => BUILD_DEF.store.cost.madera || 5,
-    txt: "Juntá # de madera talando árboles (para la obra de la Herrería)",        target: "tree" },
+    txt: "Reúne # de madera talando árboles (para la obra de la Herrería)",        target: "tree" },
   { id: "stone_st", res: "piedra", dep: "store", need: () => BUILD_DEF.store.cost.piedra || 2,
-    txt: "Juntá # de piedra picando rocas (para la obra de la Herrería)",          target: "rock" },
-  { id: "build_store", n: 1, txt: "Depositá los materiales en la obra de la Herrería (clic encima)", target: "store" },
+    txt: "Reúne # de piedra picando rocas (para la obra de la Herrería)",          target: "rock" },
+  { id: "build_store", n: 1, txt: "Deposita los materiales en la obra de la Herrería (clic encima)", target: "store" },
   // — cadena del Horno: plano → materiales de SU receta → depósito —
-  { id: "place_horno", n: 1, txt: "Colocá el plano del Horno de Piedra (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
+  { id: "place_horno", n: 1, txt: "Coloca el plano del Horno de Piedra (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "wood",  res: "madera", dep: "horno", need: () => BUILD_DEF.horno.cost.madera || 10,
-    txt: "Juntá # de madera talando árboles (para la obra del Horno)",             target: "tree" },
+    txt: "Reúne # de madera talando árboles (para la obra del Horno)",             target: "tree" },
   { id: "stone", res: "piedra", dep: "horno", need: () => BUILD_DEF.horno.cost.piedra || 8,
-    txt: "Juntá # de piedra picando rocas (para la obra del Horno)",               target: "rock" },
-  { id: "build_horno", n: 1, txt: "Depositá los materiales en la obra del Horno (clic encima)", target: "horno" },
+    txt: "Reúne # de piedra picando rocas (para la obra del Horno)",               target: "rock" },
+  { id: "build_horno", n: 1, txt: "Deposita los materiales en la obra del Horno (clic encima)", target: "horno" },
   // — el Hacha: la plata llega de ADELANTO al entrar (ya sabés ganarla — dirección 14/8) —
   /* 19/8 (dirección): acá había un "Crafteá un Hacha" que no enseñaba NADA — el baúl de bienvenida
      ya entrega 35 hachas, así que el paso era una vuelta en falso. En su lugar van los dos gestos
@@ -3311,42 +3311,42 @@ const TUTO_STEPS = [
      saber dónde se equipa. */
   // 20/8 (jugada completa): el texto decía "(5 de madera)" y la espada TAMBIÉN pide 10 de plata —
   // el jugador chocaba con « Te falta plata » sin que nadie se lo hubiera contado.
-  { id: "craftarm", n: 1, txt: "Forjá una Espada de Madera en la Herrería (5 de madera + 10 de plata)", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
-  { id: "equiparm", n: 1, txt: "Equipate la espada en el panel de Equipo (Menú ☰ → Equipo)", panel: "ov-equip", ui: "#eq-arma" },
+  { id: "craftarm", n: 1, txt: "Forja una Espada de Madera en la Herrería (5 de madera + 10 de plata)", target: "store", panel: "ov-forge", ui: "[data-carm='espada_madera']" },
+  { id: "equiparm", n: 1, txt: "Equípate la espada en el panel de Equipo (Menú ☰ → Equipo)", panel: "ov-equip", ui: "#eq-arma" },
   /* 19/9 (dirección: « si falla la barra de objetivos, hacé los cambios para que no falle ») —
      EL MUÑECO ESTABA EN EL MAPA DESDE EL PRIMER SEGUNDO Y NADIE LO NOMBRABA. Es el único
      entrenamiento offline del juego y daba XP de espada sin que ningún paso, carta o aviso lo
      presentara: solo el rótulo del cursor si pasabas por encima. Entra acá, recién equipada la
      espada, que es exactamente cuando el jugador tiene con qué pegarle. */
-  { id: "dummy",    n: 1, txt: "Probá la espada en el muñeco de entrenamiento (junto al granero)", target: "dummy" },
+  { id: "dummy",    n: 1, txt: "Prueba la espada en el muñeco de entrenamiento (junto al granero)", target: "dummy" },
   // ——— ETAPA 2: los sistemas nuevos (Cocina, Armas, Zona Negra, Pesca, Altar) ———
-  { id: "place_cocina", n: 1, txt: "Colocá el plano de la Cocina (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
+  { id: "place_cocina", n: 1, txt: "Coloca el plano de la Cocina (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" },
   { id: "woodc",  res: "madera", dep: "cocina", need: () => BUILD_DEF.cocina.cost.madera || 20,
-    txt: "Juntá # de madera (para la obra de la Cocina)",                          target: "tree" },
+    txt: "Reúne # de madera (para la obra de la Cocina)",                          target: "tree" },
   { id: "stonec", res: "piedra", dep: "cocina", need: () => BUILD_DEF.cocina.cost.piedra || 15,
-    txt: "Juntá # de piedra (para la obra de la Cocina)",                          target: "rock" },
-  { id: "build_cocina", n: 1, txt: "Depositá los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
-  { id: "cook",     n: 1, txt: "Cociná tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']", receta: "papa_asada" },
-  { id: "eat",      n: 1, txt: "Abrí Menú ☰ → Inventario y comé tu Papa Asada", panel: "ov-inv", ui: ".slot.k-dish" },
+    txt: "Reúne # de piedra (para la obra de la Cocina)",                          target: "rock" },
+  { id: "build_cocina", n: 1, txt: "Deposita los materiales en la obra de la Cocina (clic encima)", target: "cocina" },
+  { id: "cook",     n: 1, txt: "Cocina tu primer plato: Papa Asada",   target: "cocina", panel: "ov-cocina", ui: "[data-cook='papa_asada']", receta: "papa_asada" },
+  { id: "eat",      n: 1, txt: "Abre Menú ☰ → Inventario y come tu Papa Asada", panel: "ov-inv", ui: ".slot.k-dish" },
   /* EL ÚLTIMO CAPÍTULO, Y EL MÁS IMPORTANTE PARA EL TIEMPO MUERTO (19/8). Medido: en una sesión de
      12 minutos al empezar hay 42 clics — 36 segundos de acción y el 95% mirando crecer una papa.
      Todo lo que la granja ofrece tiene reloj. La Zona Negra no: es lo único que se puede jugar
      seguido, y la estamina ya la regula sola (120 bichos al día, unos 30 minutos, el 1,7% de la
      economía). O sea que el que quiere jugar tiene dónde, y el que quiere estar tranquilo no
      pierde nada por no ir. Solo faltaba que alguien se lo dijera. */
-  { id: "portal",   n: 1, txt: "Entrá al portal de la Zona Negra con la espada equipada", target: "portal" },
+  { id: "portal",   n: 1, txt: "Entra al portal de la Zona Negra con la espada equipada", target: "portal" },
   /* 19/8: el paso pide la CARNE, no un número de muertes. Así el botín deja de ser un adorno —
      es lo que cierra el tutorial— y de paso el jugador aprende que en la Zona el botín es azaroso:
      la rata la suelta el 18% de las veces, el murciélago el 24%. De media son cuatro o cinco
      bichos, unos 20 de estamina de los 100 que tiene. */
   { id: "hunt", res: "carne", need: () => (RECIPE_DEF.estofado && RECIPE_DEF.estofado.res.carne) || 1,
-    txt: "Cazá en el Pantano hasta traer # de carne" },
-  { id: "estofado", n: 1, txt: "Cociná un Estofado con lo que cazaste", target: "cocina", panel: "ov-cocina", ui: "[data-cook='estofado']", receta: "estofado" },
+    txt: "Caza en el Pantano hasta traer # de carne" },
+  { id: "estofado", n: 1, txt: "Cocina un Estofado con lo que cazaste", target: "cocina", panel: "ov-cocina", ui: "[data-cook='estofado']", receta: "estofado" },
   /* 19/9 — LA INCURSIÓN SOLO SE DESCUBRÍA APRETANDO « NO » EN EL DIÁLOGO DEL PORTAL. Es el combate
      de un clic (tres por día, para el que no quiere jugar la Zona a mano) y el que confirmaba
      « Preparar el viaje » la primera vez no se enteraba nunca de que existía. Se presenta acá,
      ya con la Zona conocida, para que el jugador sepa que hay dos formas de ir. */
-  { id: "incursion", n: 1, txt: "Mandá una incursión de un clic desde el portal (tenés 3 por día)", target: "portal" },
+  { id: "incursion", n: 1, txt: "Envía una incursión de un clic desde el portal (tienes 3 por día)", target: "portal" },
   /* ======= EL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO QUE NO SE ENSEÑABA (19/8, dirección) =======
      Desde el rediseño, las EXPANSIONES son la única fuente de nodos: no hay otra forma de tener una
      parcela, un árbol o una roca más. Y la cadena tiene tres eslabones que el jugador tenía que
@@ -3363,11 +3363,11 @@ const TUTO_STEPS = [
      perfecta, el juego no.
      Con el panel correcto la flecha ya sabe sola bajar hasta la pestaña oculta (tutoHighlight
      detecta el .shoppane escondido y apunta primero a su .shoptab). */
-  { id: "expandir", n: 1, txt: "Comprá tu primera expansión de terreno (Mercado → Adornos)", target: "market", panel: "ov-market", ui: "#exp-comprar" },
+  { id: "expandir", n: 1, txt: "Compra tu primera expansión de terreno (Mercado → Adornos)", target: "market", panel: "ov-market", ui: "#exp-comprar" },
   /* Y como la parcela ya viene puesta, lo único que queda por enseñar es que SE PUEDE MOVER. El
      modo edición es de esas cosas que el jugador no descubre solo y que cambian por completo lo que
      cree que puede hacer con su granja. */
-  { id: "editar",   n: 1, txt: "Probá el modo edición: todo lo de tu granja se puede mover (Menú ☰ → Configuración)", panel: "ov-config", ui: "#cfg-edit" },
+  { id: "editar",   n: 1, txt: "Prueba el modo edición: todo lo de tu granja se puede mover (Menú ☰ → Configuración)", panel: "ov-config", ui: "#cfg-edit" },
   /* ======= LOS DOS QUE FALTABAN (19/8) =======
      LA PESCA: la caña viene en el kit de bienvenida con 15 usos y hasta hoy nadie decía para qué
      sirve — un icono muerto en la bolsa desde el minuto uno. Ojo: pescar pide UNA LOMBRIZ, que se
@@ -3381,13 +3381,13 @@ const TUTO_STEPS = [
      metros era enseñarle el camino largo. Los montículos son tres por día, se cavan con un clic sin
      herramienta y siempre dan lombriz — y son otro sistema que nadie le explicaba. El Mercado sigue
      ahí para cuando se le acaben. */
-  { id: "excavar",  n: 1, txt: "Cavá uno de los montículos de tierra: adentro hay carnada", target: "excav" },
-  { id: "fish",     n: 1, txt: "Probá la caña en la laguna (la lombriz es el cebo)", target: "fish" },
+  { id: "excavar",  n: 1, txt: "Cava uno de los montículos de tierra: adentro hay carnada", target: "excav" },
+  { id: "fish",     n: 1, txt: "Prueba la caña en la laguna (la lombriz es el cebo)", target: "fish" },
   /* 19/9 — LA LONJA ES UN CARTEL JUNTO A LA LAGUNA CON CUATRO PESTAÑAS ADENTRO (pedido de marea,
      tienda, venta, títulos) y su propia moneda, y nada la presentaba. El paso pide lo más simple
      —vender un pez— porque el resto se descubre solo una vez que el panel está abierto. */
-  { id: "lonja",    n: 1, txt: "Vendé un pescado en la Lonja, junto a la laguna", target: "lonja" },
-  { id: "pedido",   n: 1, txt: "Entregá la nota de prueba en el tablón (no pide materiales)", target: "tablon_pedidos", panel: "ov-pedidos", ui: '[data-pd-entregar="T"]' },
+  { id: "lonja",    n: 1, txt: "Vende un pescado en la Lonja, junto a la laguna", target: "lonja" },
+  { id: "pedido",   n: 1, txt: "Entrega la nota de prueba en el tablón (no pide materiales)", target: "tablon_pedidos", panel: "ov-pedidos", ui: '[data-pd-entregar="T"]' },
   // (14/8, reversión del capataz: la cadena TERMINA acá — el tutorial enseña LO BÁSICO de
   //  la granja. Armas, Zona Negra, minería avanzada y Altar se aprenden jugando: sus
   //  planos caen por nivel y cada sistema se presenta solo.)
@@ -3445,17 +3445,17 @@ function tutoCosechaEstado(st) {
   const nombre = soloPapas ? "papa" : "cultivo";
   const etiqueta = n => nombre + (n === 1 ? "" : "s");
   const sig = [need, yaCosechadas, sembradas, listas, soloPapas ? "p" : "c"].join(":");
-  if (yaCosechadas >= need) return { sig, txt: "Cosechá tus " + need + " " + etiqueta(need) };
+  if (yaCosechadas >= need) return { sig, txt: "Cosecha tus " + need + " " + etiqueta(need) };
   if (listas > 0) {
     const n = Math.min(listas, faltan);
-    return { sig, txt: "Cosechá " + n + " " + etiqueta(n) + (listas < faltan ? " — los demás siguen creciendo" : "") };
+    return { sig, txt: "Cosecha " + n + " " + etiqueta(n) + (listas < faltan ? " — los demás siguen creciendo" : "") };
   }
   if (sembradas > 0) {
     const plural = sembradas !== 1;
     return { sig, txt: (plural ? "Tus " : "Tu ") + sembradas + " " + etiqueta(sembradas) +
-      (plural ? " están creciendo — esperá a que estén listas para cosechar" : " está creciendo — esperá a que esté lista para cosechar") };
+      (plural ? " están creciendo — espera a que estén listas para cosechar" : " está creciendo — espera a que esté lista para cosechar") };
   }
-  return { sig, txt: "Esperá a que haya " + etiqueta(1) + " lista para cosechar" };
+  return { sig, txt: "Espera a que haya " + etiqueta(1) + " lista para cosechar" };
 }
 /* 26/8 — UN PASO QUE PIDE COCINAR TIENE QUE MIRAR LA DESPENSA.
    El paso del Estofado decía « Cociná un Estofado con lo que cazaste » y señalaba la receta con
@@ -3519,7 +3519,7 @@ function tutoActivo() {
   // Paso contextual sin insertar índices: los tutoriales guardados mantienen su posición.
   if (st && st.id.startsWith("place_") && G.espacioV === 4 && !tutoCabePlano(st.id.slice(6))) {
     const e=expansionSiguiente();
-    if(e) return {id:"espacio_inicial",n:1,txt:"Necesitás espacio para el plano: cultivá y reuní los materiales de la expansión " + e.n + " (nivel " + e.nivel + "). Comprala en Mercado → Adornos y esperá a que termine la obra.",target:"market",panel:"ov-market",ui:"#exp-comprar"};
+    if(e) return {id:"espacio_inicial",n:1,txt:"Necesitas espacio para el plano: cultiva y reúne los materiales de la expansión " + e.n + " (nivel " + e.nivel + "). Comprala en Mercado → Adornos y espera a que termine la obra.",target:"market",panel:"ov-market",ui:"#exp-comprar"};
   }
   return st;
 }
@@ -3711,12 +3711,12 @@ function brujula() {
     /* 1 · ganado y sin cobrar */
     for (const t in (G.planos || {})) {
       if (!BUILD_DEF[t] || (G.built && G.built[t]) || (G.obras && G.obras[t])) continue;
-      return B({ txt: "Tenés el plano de " + BUILD_DEF[t].label + " esperando: colocalo (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: '[data-plano="'+t+'"]' });
+      return B({ txt: "Tienes el plano de " + BUILD_DEF[t].label + " esperando: colócalo (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: '[data-plano="'+t+'"]' });
     }
     if((G.produccion?.vale||0)>0)
-      return B({txt:'Tenés '+G.produccion.vale+' vale(s): elegí tu próximo nodo en el Cobertizo',panel:'ov-cobertizo',ui:'#prod-elegir>summary',beneficio:'Elegí parcela, árbol o roca para especializar tu granja'});
+      return B({txt:'Tienes '+G.produccion.vale+' vale(s): elige tu próximo nodo en el Cobertizo',panel:'ov-cobertizo',ui:'#prod-elegir>summary',beneficio:'Elige parcela, árbol o roca para especializar tu granja'});
     if (typeof dailyState === "function" && dailyState().claimable)
-      return B({ txt: "Te llegó el paquete del día: abrí el buzón", target: "buzon" });
+      return B({ txt: "Te llegó el paquete del día: abre el buzón", target: "buzon" });
     if (typeof cartaAbueloPendiente === "function" && cartaAbueloPendiente())
       return B({ txt: "Hay una carta de tu abuelo en el buzón", target: "buzon" });
     /* 2 · a medias */
@@ -3724,7 +3724,7 @@ function brujula() {
       if (!BUILD_DEF[t] || (G.built && G.built[t])) continue;
       const falta = (typeof obraFalta === "function") ? obraFalta(t) : [];
       const partes = falta.slice(0, 2).map(f => f[1] + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[f[0]]) || f[0]).toLowerCase());
-      return B({ txt: "Terminá la obra de " + BUILD_DEF[t].label + (partes.length ? ": faltan " + partes.join(" y ") : ""), target: t });
+      return B({ txt: "Termina la obra de " + BUILD_DEF[t].label + (partes.length ? ": faltan " + partes.join(" y ") : ""), target: t });
     }
     if (typeof expansionObra === "function" && expansionObra())
       return B({ txt: "La expansión " + expansionObra().n + " está en obra: lista en " + expansionObraTxt(), panel: "ov-expandir" });
@@ -3739,8 +3739,8 @@ function brujula() {
         const falta = faltantes.map(k => (costo[k] - tengo(k)) + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || k).toLowerCase());
         const objetivo = faltantes.includes("madera") ? "tree" : faltantes.includes("piedra") ? "rock" : faltantes.some(k=>['bronce','hierro','oro','diamante','netherita'].includes(k)) ? 'ore' : "market";
         return B({ txt: falta.length
-          ? "Juntá " + falta.join(" y ") + " para la expansión " + e.n
-          : "Podés comprar la expansión " + e.n + " (Mercado → Adornos)",
+          ? "Reúne " + falta.join(" y ") + " para la expansión " + e.n
+          : "Puedes comprar la expansión " + e.n + " (Mercado → Adornos)",
           target: objetivo,
           panel: objetivo === "market" ? "ov-market" : null, ui: !falta.length?'#exp-comprar':null, beneficio:'Más terreno + 1 cupo + 1 nodo a elección' });
       }
@@ -3754,7 +3754,7 @@ function brujula() {
     const sig = (G.level || 1) + 1;
     if (typeof FARM_NIVEL_MAX !== "undefined" && sig <= FARM_NIVEL_MAX && typeof farmUnlockTxt === "function") {
       const trae = String(farmUnlockTxt(sig) || "").split(" + ")[0];   // lo primero es lo que importa; el bono va siempre
-      return B({ txt: "Granja " + sig + " trae " + trae + " — cosechá, talá y picá para subir", panel:'ov-barn',beneficio:trae });
+      return B({ txt: "Granja " + sig + " trae " + trae + " — cosecha, tala y pica para subir", panel:'ov-barn',beneficio:trae });
     }
   } catch (e) { console.warn("brújula:", e && e.message); }
   return null;
@@ -3771,7 +3771,7 @@ function guiaActiva() { return tutoActivo() || brujula(); }
 function tutoTerminar() {
   /* 19/9: y se le dice que la barra sigue — antes se apagaba acá para siempre y el jugador se
      quedaba sin nadie que le señalara nada. Ahora pasa a ser la brújula (ver brujula()). */
-  log("¡Tutorial completo! Ya sabés lo básico — la granja es toda tuya. La barra de arriba te sigue marcando lo más útil para hacer.", "gold");
+  log("¡Tutorial completo! Ya sabes lo básico — la granja es toda tuya. La barra de arriba te sigue marcando lo más útil para hacer.", "gold");
   if (window.celebrate) celebrate({ title: "¡GRANJA LISTA!", sub: "Tutorial completo", big: true });
   if (typeof refreshHud === "function") refreshHud();
 }
@@ -4013,11 +4013,11 @@ function paseDesviados(tol) {
    que ya estaba.) */
 const PASS_HITOS = { 1:"★", 5:"★", 10:"★★", 15:"★", 20:"★★", 25:"★", 30:"★★" };
 const PASS_MISIONES = {   // una por pilar del juego (doc)
-  cosechar: { label: "Cosechá # cultivos",        goals: [6, 10, 15] },
-  minar:    { label: "Miná, talá o pescá # veces", goals: [8, 12, 18] },
-  cocinar:  { label: "Cociná # platos",           goals: [2, 3, 5] },
+  cosechar: { label: "Cosecha # cultivos",        goals: [6, 10, 15] },
+  minar:    { label: "Mina, tala o pesca # veces", goals: [8, 12, 18] },
+  cocinar:  { label: "Cocina # platos",           goals: [2, 3, 5] },
   combatir: { label: "Pelea: # acciones de combate", goals: [5, 8, 12] },
-  craftear: { label: "Crafteá # objetos",         goals: [2, 3, 5] },
+  craftear: { label: "Fabrica # objetos",         goals: [2, 3, 5] },
 };
 const PASS_PILAR = { farming:"cosechar", mining:"minar", fishing:"minar", cooking:"cocinar", sword:"combatir", hacha:"combatir", mazo:"combatir", range:"combatir", crafting:"craftear" };
 function passInit() {
@@ -4046,7 +4046,7 @@ function passAddStars(n) {
   p.stars += Math.round(n * (p.vip ? PASS_VIP_BOOST : 1));
   const ahora = passLvl();
   if (ahora > antes) {
-    log("¡Pase de Batalla nivel " + ahora + "! Reclamá tu recompensa en el Pase.", "gold");
+    log("¡Pase de Batalla nivel " + ahora + "! Reclama tu recompensa en el Pase.", "gold");
     if (window.celebrate) celebrate({ title: "¡NIVEL " + ahora + "!", sub: "Pase de Batalla", big: !!PASS_HITOS[ahora], reward: "Recompensa lista para reclamar" });
   }
   if (typeof refreshPass === "function" && isOpen("ov-pass")) refreshPass();
@@ -4269,16 +4269,16 @@ function mkPendAdd(kind, key, n, payload) {
   G.mkPend = G.mkPend || [];
   G.mkPend.push({ kind, item: key, qty: n, payload: payload || null });
   toast("Sin lugar — quedó pendiente en el Mercado de jugadores");
-  log("No entró en la bolsa: " + n + " × " + mkNombre(kind, key) + ". Hacé lugar y reclamalo desde el Mercado de jugadores.", "bad");
+  log("No entró en la bolsa: " + n + " × " + mkNombre(kind, key) + ". Haz lugar y reclamalo desde el Mercado de jugadores.", "bad");
 }
 function mkPendCount() { return (G.mkPend || []).length; }
 function mkPendCobrar() {
-  if (!G.mkPend || !G.mkPend.length) { toast("No tenés nada pendiente"); return 0; }
+  if (!G.mkPend || !G.mkPend.length) { toast("No tienes nada pendiente"); return 0; }
   const quedan = []; let dados = 0;
   for (const p of G.mkPend) { if (mkPoner(p.kind, p.item, p.qty, p.payload)) dados++; else quedan.push(p); }
   G.mkPend = quedan;
   if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s) del Mercado de jugadores.", "good"); toast("+" + dados + " entrega(s)"); }
-  else toast("Sigue sin entrar — liberá espacio en la bolsa");
+  else toast("Sigue sin entrar — libera espacio en la bolsa");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshP2P === "function" && isOpen("ov-p2p")) refreshP2P();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -4298,14 +4298,14 @@ async function marketPublicar(kind, key, n, precio) {
   if(typeof sb!=='undefined'&&sb&&typeof mercadoP2POperar==='function')return mercadoP2POperar({accion:'publicar',kind,item:key,qty:Math.max(1,Math.floor(n||1)),price:Math.max(1,Math.floor(precio||1)),name:mkNombre(kind,key)});
   n = Math.max(1, Math.floor(n || 1)); precio = Math.max(1, Math.floor(precio || 1));
   if (!MARKET_KINDS[kind]) return;
-  if (mkTengo(kind, key) < n) { toast("No tenés " + n + " de eso"); return; }
+  if (mkTengo(kind, key) < n) { toast("No tienes " + n + " de eso"); return; }
   const mias = await mkMine();
-  if (mias.filter(r => String(r.created_at).slice(0,10) === dayStamp(0)).length >= (vipVigente()?10:1)) { toast(vipVigente()?"VIP: diez publicaciones P2P por día UTC":"Free: una publicación P2P por día UTC"); return; }
+  if (mias.filter(r => String(r.created_at).slice(0,10) === dayStamp(0)).length >= (vipVigente()?10:1)) { toast(vipVigente()?"VIP: diez publicaciones P2P por día UTC":"Sin VIP: una publicación P2P por día UTC"); return; }
   const pieza = kind === "armor" ? armorPieza(key) : null;
   const payload = pieza ? { dur: armorDur(pieza.set, pieza.pieza) } : (kind === "arm" && G.weapons[key]) ? JSON.parse(JSON.stringify(G.weapons[key])) : null;
   if (!mkSacar(kind, key, n)) { toast("No se pudo publicar"); return; }
   const fila = await mkPublish({ kind, item: key, qty: n, price: precio, payload, name: mkNombre(kind, key) });
-  if (!fila) { mkEntregar(kind, key, n, payload); toast("No se pudo publicar — revisá tus publicaciones antes de reintentar"); return; }   // falló: te devolvemos lo tuyo
+  if (!fila) { mkEntregar(kind, key, n, payload); toast("No se pudo publicar — revisa tus publicaciones antes de reintentar"); return; }   // falló: te devolvemos lo tuyo
   log("Publicaste " + n + " × " + mkNombre(kind, key) + " por " + fmt(precio) + " de plata.", "gold");
   toast("Publicado");
   refreshHud(); if (isOpen("ov-inv")) refreshInv();
@@ -4316,9 +4316,9 @@ let mkBusy = false;   // un solo movimiento de mercado a la vez (el doble clic d
 async function marketComprar(fila) {
   if(fila&&typeof sb!=='undefined'&&sb&&typeof mercadoP2POperar==='function')return mercadoP2POperar({accion:'comprar',id:fila.id,price:fila.price});
   if (!fila || mkBusy) return;
-  if (fila.seller === (typeof UID === "string" ? UID : "")) { toast("Eso lo publicaste vos"); return; }
+  if (fila.seller === (typeof UID === "string" ? UID : "")) { toast("Eso lo publicaste tú"); return; }
   if (G.plata < fila.price) { toast("Te falta plata (" + fmt(fila.price) + ")"); return; }
-  if (fila.kind === "arm" && G.weapons && G.weapons[fila.item]) { toast("Ya tenés esa arma — no se puede tener dos iguales"); return; }
+  if (fila.kind === "arm" && G.weapons && G.weapons[fila.item]) { toast("Ya tienes esa arma — no se puede tener dos iguales"); return; }
   if (fila.kind === "armor" && (mkTengo("armor", fila.item) || !armorPieza(fila.item) || fila.qty !== 1 || !fila.payload || !Number.isFinite(fila.payload.dur) || fila.payload.dur < 0 || fila.payload.dur > ARMOR_DUR_MAX)) { toast("Armadura duplicada o publicación inválida"); return; }
   mkBusy = true;
   const ok = await mkBuy(fila.id).catch(() => false);
@@ -4400,16 +4400,16 @@ function incCupoHoy() {
 function incActiva() { return G.incursion || null; }
 function incFalta() { const i = incActiva(); return i ? Math.max(0, i.endAt - nowMs()) : 0; }
 function incSalir(zona) {
-  if(!vipVigente()){toast('La excursión de un clic requiere VIP. Podés entrar a la Zona Negra a pie.');return;}
+  if(!vipVigente()){toast('La excursión de un clic requiere VIP. Puedes entrar a la Zona Negra a pie.');return;}
   const z = INCURSIONES[zona]; if (!z) return;
   if (incActiva()) { toast("Ya hay una incursión en curso"); return; }
   /* 26/9: si el granjero está EN la Zona a pie, tampoco sale de incursión (la puerta al revés) */
-  if (typeof GF !== "undefined" && GF.scene === "forest") { toast("Estás en la Zona: volvé a la granja para mandar la incursión"); return; }
+  if (typeof GF !== "undefined" && GF.scene === "forest") { toast("Estás en la Zona: vuelve a la granja para mandar la incursión"); return; }
   const cupo = incCupoHoy();
   if (INC_CUPO_DIA && cupo.n >= INC_CUPO_DIA) { toast("Ya hiciste las " + INC_CUPO_DIA + " incursiones de hoy"); return; }
   if (!incPuedeNivel(zona)) { toast(z.label + " pide Combate " + incNivelReq(zona) + " — igual que entrar a pie"); return; }   // 23/9
   const id = armaEq();
-  if (!id) { toast("Necesitás un arma equipada"); return; }
+  if (!id) { toast("Necesitas un arma equipada"); return; }
   if ((G.weapons[id].dur || 0) <= 5) { toast("El arma está muy gastada — reparala en la Herrería"); return; }
   const poder = incPoder();
   if (poder <= 0) { toast("Tu arma no sirve para pelear"); return; }
@@ -4418,7 +4418,7 @@ function incSalir(zona) {
   cupo.n++;
   if (typeof statAdd === "function") statAdd("incursion", "_", 1);   // 19/9: deja rastro (el paso del tutorial lo lee)
   if (typeof tutoEvent === "function") tutoEvent("incursion");
-  log("Saliste de incursión a " + z.label + " (" + fmtSecs(z.min * 60) + "). Volvés con el botín.", "gold");
+  log("Saliste de incursión a " + z.label + " (" + fmtSecs(z.min * 60) + "). Vuelves con el botín.", "gold");
   toast("Incursión: " + z.label);
   refreshHud(); if (typeof refreshIncursion === "function" && isOpen("ov-incursion")) refreshIncursion();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -4503,12 +4503,12 @@ function dummyMsUtiles() {
 }
 function dummyIniciar() {
   const aid = armaEq();
-  if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipá un arma cuerpo a cuerpo para entrenar"); return; }
+  if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipa un arma cuerpo a cuerpo para entrenar"); return; }
   G.dummyTrain = { desde: nowMs(), arma: aid };
   G.dummyUsedAt = nowMs();   // 19/9: el campo existía desde el 9/8 y nadie lo escribía — el paso del tutorial lo lee
   if (typeof tutoEvent === "function") tutoEvent("dummy");
   if (typeof openOv === "function") openOv("ov-entrenando");   // tapa el juego: entrenar no es gratis
-  log("Dejaste al granjero entrenando en el dummy. El primer minuto no cuenta; de ahí en más cobrás la XP del tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h.", "good");
+  log("Dejaste al granjero entrenando en el muñeco. El primer minuto no cuenta; de ahí en más cobras la XP del tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h.", "good");
   toast("Entrenando…");
   if (typeof saveFarm === "function") saveFarm(true);
 }
@@ -4560,14 +4560,14 @@ function decoPuestos() { return (G.decos || []).length; }
 function comprarDeco(id) {
   const d = DECO_DEF[id]; if (!d) { console.warn("[comprarDeco] adorno inexistente:", id); return; }
   if (d.cofre) { toast("Ese solo sale del cofre de login"); return; }   // no tiene precio: no se puede comprar
-  if (G.tuto && !G.tuto.done) { toast("🎯 Los adornos se abren al terminar el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
+  if (G.tuto && !G.tuto.done) { toast("🎯 Los adornos se abren al terminar el tutorial — sigue el objetivo de arriba"); return; }   // embudo (13/8)
   if (d.plata && G.plata < d.plata) { toast("Te falta plata (" + fmt(d.plata) + ")"); return; }
   if (d.golden && G.golden < d.golden) { toast("Te falta $Golden (" + d.golden + ")"); return; }
   if (d.plata) G.plata -= d.plata;
   if (d.golden) G.golden -= d.golden;
   G.decoBolsa = G.decoBolsa || {};
   G.decoBolsa[id] = (G.decoBolsa[id] || 0) + 1;
-  log("Compraste " + d.label + ". Está en tu bolsa: colocalo desde el modo edición de la granja.", "gold");
+  log("Compraste " + d.label + ". Está en tu bolsa: colócalo desde el modo edición de la granja.", "gold");
   toast("+1 " + d.label + " — en tu bolsa (✏️ modo edición para ponerlo)");
   refreshHud(); if (typeof refreshMarket === "function" && isOpen("ov-market")) refreshMarket();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -4575,7 +4575,7 @@ function comprarDeco(id) {
 // coloca uno en la granja (lo llama la escena, que sabe dónde hay lugar)
 function decoColocar(id, col, row) {
   if (decoTengo(id) <= 0) { toast("No te queda ninguno"); return false; }
-  if (decoPuestos() >= DECO_MAX) { toast("Ya tenés " + DECO_MAX + " adornos puestos (el tope)"); return false; }
+  if (decoPuestos() >= DECO_MAX) { toast("Ya tienes " + DECO_MAX + " adornos puestos (el tope)"); return false; }
   G.decoBolsa[id]--;
   G.decos = G.decos || [];
   G.decos.push({ id, col, row });
@@ -4617,9 +4617,9 @@ function parcelaColocar(col, row) {   // la llama la escena con la celda que eli
 }
 function comprarParcela() {
   if (G.produccion) { produccionComprar("plot"); return; }
-  if (!produccionHayCupo()) { toast("Capacidad completa: pausá otro nodo en el Cobertizo o expandí."); return; }
-  if ((G.plotsOwned || 3) >= PLOT_MAX) { toast("Ya tenés las " + PLOT_MAX + " parcelas"); return; }
-  if (G.tuto && !G.tuto.done) { toast("🎯 Durante el tutorial alcanzan las parcelas que tenés — seguí el objetivo"); return; }   // embudo (13/8)
+  if (!produccionHayCupo()) { toast("Capacidad completa: pausa otro nodo en el Cobertizo o expande."); return; }
+  if ((G.plotsOwned || 3) >= PLOT_MAX) { toast("Ya tienes las " + PLOT_MAX + " parcelas"); return; }
+  if (G.tuto && !G.tuto.done) { toast("🎯 Durante el tutorial alcanzan las parcelas que tienes — sigue el objetivo"); return; }   // embudo (13/8)
   {
     const c = plotUnlockCost();
     if (G.plata < c) { toast("Te falta plata (" + fmt(c) + ")"); return; }
@@ -4627,7 +4627,7 @@ function comprarParcela() {
   }
   G.plotsCompradas = (G.plotsCompradas || 0) + 1;   // el precio de la próxima sube por ESTA compra, no por las expansiones
   G.plotsOwned = Math.min(PLOT_MAX, (G.plotsOwned || 3) + 1);
-  log("Desbloqueaste una parcela nueva. Ahora tenés " + G.plotsOwned + ".", "gold");
+  log("Desbloqueaste una parcela nueva. Ahora tienes " + G.plotsOwned + ".", "gold");
   if (G.plotsOwned > GF.PLOTS.length) {   // la 13 en adelante: se coloca a mano (#17)
     toast("¡Parcela nueva! Está en tu zona de edición: ✏️ ponela donde quieras");
     if (typeof syncEditDeco === "function") syncEditDeco();   // refresca el botón "Poner parcela"
@@ -4695,7 +4695,7 @@ function pasivaMejorada(k) { return G.mejorasPasivas?.niveles?.[k] === 2; }
 function pasivaBono(k) { return tengoNft(k) ? (pasivaMejorada(k) ? 0.15 : NFT_BONO) : 0; }
 function mejorarPasiva(k) {
   if (!Object.prototype.hasOwnProperty.call(NFT_DEF,k) || !tengoNft(k) || pasivaMejorada(k)) return;
-  if ((G.plata || 0) < PASIVA_MEJORA_PLATA) { toast('Necesitás 50.000 Plata'); return; }
+  if ((G.plata || 0) < PASIVA_MEJORA_PLATA) { toast('Necesitas 50.000 Plata'); return; }
   return economiaSolicitar({mejora:{id:k}});
 }
 function bonoNft(res, n) { const k = nftDeRes(res); return n + (k ? pasivaBono(k) : 0); }
@@ -4713,14 +4713,14 @@ function nftPrecioGolden(k) {
 function darNft(k, como) {
   G.nfts = G.nfts || {}; G.nfts[k] = true;
   const d = NFT_DEF[k];
-  log("Tenés " + d.label + (como ? " (" + como + ")" : "") + ": " + d.desc, "gold");
+  log("Tienes " + d.label + (como ? " (" + como + ")" : "") + ": " + d.desc, "gold");
   if (window.celebrate) celebrate({ title: d.label.toUpperCase(), sub: "NFT de recolección", big: true, reward: "+0,1 " + (RES_LABEL[d.res] || d.res) + " por golpe" });
 }
 function comprarNft(k) {
   const d = NFT_DEF[k]; if (!d) return false;
-  if (tengoNft(k)) { toast("Ya tenés " + d.label); return false; }
+  if (tengoNft(k)) { toast("Ya tienes " + d.label); return false; }
   if (k === NFT_DEL_PASE) { toast(d.label + " solo se consigue en el Pase VIP (nivel 26)"); return false; }
-  if (G.tuto && !G.tuto.done) { toast("🎯 Los NFTs se abren al terminar el tutorial — seguí el objetivo de arriba"); return false; }
+  if (G.tuto && !G.tuto.done) { toast("🎯 Los NFTs se abren al terminar el tutorial — sigue el objetivo de arriba"); return false; }
   const precio = nftPrecioGolden(k);
   if ((G.golden || 0) < precio) { toast("Te falta $Golden (" + precio + ")"); return false; }
   G.golden -= precio;
@@ -4732,8 +4732,8 @@ function comprarNft(k) {
 var GODHAND_GOLDEN = 500;
 function tengoGodHand() { return !!G.godHand; }
 function comprarGodHand() {
-  if (tengoGodHand()) { toast("Ya tenés la GOD HAND"); return; }
-  if (G.tuto && !G.tuto.done) { toast("🎯 La GOD HAND se abre al terminar el tutorial — seguí el objetivo de arriba"); return; }   // embudo (13/8)
+  if (tengoGodHand()) { toast("Ya tienes la GOD HAND"); return; }
+  if (G.tuto && !G.tuto.done) { toast("🎯 La GOD HAND se abre al terminar el tutorial — sigue el objetivo de arriba"); return; }   // embudo (13/8)
   if (G.golden < GODHAND_GOLDEN) { toast("Te falta $Golden (" + GODHAND_GOLDEN + ")"); return; }
   G.golden -= GODHAND_GOLDEN;
   G.godHand = true;
@@ -4761,7 +4761,7 @@ function godHandCargar(slot, key) {   // pasa semillas de tu bolsa al puño (has
   if (s && s.key !== key && s.n > 0) { toast("Ese espacio ya tiene " + CROP_DEF[s.key].label); return; }
   const cabe = GODHAND_CAP_SLOT - (s ? s.n : 0), hay = Math.floor(G.seeds[key] || 0);
   const n = Math.min(cabe, hay);
-  if (n <= 0) { toast(hay <= 0 ? "No tenés semillas de " + CROP_DEF[key].label : "Ese espacio está lleno"); return; }
+  if (n <= 0) { toast(hay <= 0 ? "No tienes semillas de " + CROP_DEF[key].label : "Ese espacio está lleno"); return; }
   G.seeds[key] -= n;
   inv[slot] = { key, n: (s ? s.n : 0) + n };
   toast("+" + n + " " + CROP_DEF[key].label + " al GOD HAND");
@@ -4844,7 +4844,7 @@ const ZONA_ORDER = ["pantano", "piedra", "fuego", "guarida"];
 const ZONA_DEF = {
   pantano: {
     label: "Pantano", lvl: 1,
-    ds: "Agua estancada y bichos chicos. Por acá se empieza.",
+    ds: "Agua estancada y criaturas chicos. Por aquí se empieza.",
     piso: [0x2f4a20, 0x2a431c], mata: 0x223a16, hierba: 0x3a5527,
     arboles: 28,
     /* 15/9 (dirección): « que los primeros mobs sean solo ratas… inicio ratas, medio vampiros
@@ -4855,7 +4855,7 @@ const ZONA_DEF = {
   },
   piedra: {
     label: "Cañón de Piedra", lvl: 10,
-    ds: "Roca pelada y cosas que sí pegan. Traé algo mejor que la espada de madera.",
+    ds: "Roca pelada y cosas que sí pegan. Trae algo mejor que la espada de madera.",
     piso: [0x3b3a33, 0x35342e], mata: 0x2a2924, hierba: 0x4a4838,
     arboles: 14,
     mobs: [["baba", 0.08, 0.35, 3], ["arana", 0.20, 0.55, 3], ["goblin", 0.35, 0.70, 3],
@@ -4863,7 +4863,7 @@ const ZONA_DEF = {
   },
   fuego: {
     label: "Grietas de Fuego", lvl: 22,
-    ds: "El suelo está caliente. Acá abajo se saca lo que vale de verdad.",
+    ds: "El suelo está caliente. Aquí abajo se saca lo que vale de verdad.",
     piso: [0x4a2a20, 0x42251c], mata: 0x33170f, hierba: 0x6b3a22,
     arboles: 8,
     mobs: [["esqueleto", 0.08, 0.40, 3], ["golem", 0.25, 0.60, 3], ["hombre_lobo", 0.40, 0.75, 3],
@@ -4968,7 +4968,7 @@ function zonaPuertaCerrada() {
     return "El granjero está de incursión en " + z.label + " — vuelve en " + fmtDur(incFalta());
   }
   const espera = zonaCdLeft();
-  if (espera > 0) return "El granjero está descansando — podés volver en " + fmtDur(espera);
+  if (espera > 0) return "El granjero está descansando — puedes volver en " + fmtDur(espera);
   return null;
 }
 function zonaMatados() {
@@ -5039,8 +5039,8 @@ function zonaPosGuardada() {
    puede permitirse dejarte sin ninguno. */
 var CONT_ORDER = ["bag", "backpack"];
 var CONT_DEF = {
-  bag:      { label: "Bolsa",   emoji: "👝", huecos: 8,  plata: 20,  ds: "Ocho huecos. Va suelta o dentro de una mochila, y es lo que se lleva el botín de la Zona Negra." },
-  backpack: { label: "Mochila", emoji: "🎒", huecos: 20, plata: 200, ds: "Veinte huecos, y adentro le caben bolsas que suman los suyos. Lo que llevás puesto al morir se pierde entero." },
+  bag:      { label: "Bolsa",   emoji: "👝", huecos: 8,  plata: 20,  ds: "Ocho espacios. Va suelta o dentro de una mochila, y es lo que se lleva el botín de la Zona Negra." },
+  backpack: { label: "Mochila", emoji: "🎒", huecos: 20, plata: 200, ds: "Veinte espacios, y adentro le caben bolsas que suman los suyos. Lo que llevas puesto al morir se pierde entero." },
 };
 var CONT_PROF_MAX = 2;            // raíz + un nivel de bolsas adentro. No hay muñeca rusa.
 function contDef(c) { return CONT_DEF[c] || null; }
@@ -5242,7 +5242,7 @@ function viajeElegir(c) {
   /* el que ya tenías vuelve a la granja ANTES de contar, o cambiar de mochila a bolsa fallaría
      por no ver la que acabás de soltar */
   if (puesto) viajeSoltar();
-  if (contsTengo(c) < 1) { toast("No tenés " + (c === "bag" ? "ninguna bolsa" : "ninguna mochila")); return false; }
+  if (contsTengo(c) < 1) { toast("No tienes " + (c === "bag" ? "ninguna bolsa" : "ninguna mochila")); return false; }
   contsSumar(c, -1);
   G.cont = contCrear(c);
   return true;
@@ -5311,7 +5311,7 @@ function viajeBajar(kind, key, n) {
   if (n <= 0) return 0;
   /* y de vuelta: el arma tiene que volver con lo suyo, o bajarla de la mochila la degradaría */
   const pila = contAplanar(raiz).find(e => e.kind === kind && e.k === key);
-  if (!viajePoner(kind, key, n, pila && pila.w)) { toast("No entra en la bolsa — hacé lugar"); return 0; }
+  if (!viajePoner(kind, key, n, pila && pila.w)) { toast("No entra en la bolsa — haz lugar"); return 0; }
   contGastar(raiz, kind, key, n);
   return n;
 }
@@ -5380,7 +5380,7 @@ function modoPelea() { return MODO_PELEA.indexOf(G.modoPelea) >= 0 ? G.modoPelea
 function modoPeleaSet(m) {
   if (MODO_PELEA.indexOf(m) < 0) return modoPelea();
   G.modoPelea = m;
-  toast(m === "perseguir" ? "Perseguir: vas hacia el objetivo" : "Parado: atacás sin moverte");
+  toast(m === "perseguir" ? "Perseguir: vas hacia el objetivo" : "Parado: atacas sin moverte");
   if (typeof refreshCombate === "function") refreshCombate();
   if (typeof saveFarm === "function") saveFarm();
   return m;
@@ -5540,7 +5540,7 @@ function zonaSalir(derrotado) {
     const q = sobran + " cosa" + (sobran === 1 ? "" : "s");
     if (typeof toast === "function") toast("Bolsa llena — " + q + " te espera" + (sobran === 1 ? "" : "n") + " en el contenedor");
     if (typeof log === "function") log("La bolsa no daba para todo: " + q + " sigue" + (sobran === 1 ? "" : "n") +
-      " en tu " + ((CONT_DEF[raiz.c] || {}).label || "contenedor") + ". Hacé sitio y vaciálo desde la puerta del portal.", "bad");
+      " en tu " + ((CONT_DEF[raiz.c] || {}).label || "contenedor") + ". Haz sitio y vaciálo desde la puerta del portal.", "bad");
   }
   if (!v) return null;
   const gan = {};
@@ -5575,10 +5575,10 @@ function ofrendaPuntos() { return Math.floor(G.ofrendaPts || 0); }
 function ofrendaValor(k) { return OFRENDA_PTS[k] || 0; }
 function ofrendar(k, n) {
   n = Math.max(1, Math.floor(n || 1));
-  if (!(G.built && G.built.ofrendas)) { toast("Primero construí el Altar de Ofrendas"); return; }
+  if (!(G.built && G.built.ofrendas)) { toast("Primero construye el Altar de Ofrendas"); return; }
   const pts = ofrendaValor(k); if (!pts) { toast("Ese recurso no se puede ofrendar"); return; }
   const tengo = Math.floor(G.res[k] || 0);
-  if (tengo < n) { toast("No tenés " + n + " de " + (RES_LABEL[k] || k)); return; }
+  if (tengo < n) { toast("No tienes " + n + " de " + (RES_LABEL[k] || k)); return; }
   G.res[k] -= n;                      // se QUEMAN: no vuelven al juego
   const gana = pts * n;
   G.ofrendaPts = ofrendaPuntos() + gana;
@@ -5602,7 +5602,7 @@ const ARMOR_SETS = {
     bono:{ txt:"+15% vel. ataque + 12% evasión", atkSpd:15, evade:12 },
     piezas:{ yelmo:{mat:2,plata:30,def:3}, pecho:{mat:4,plata:60,def:5}, pantalones:{mat:3,plata:45,def:4}, botas:{mat:2,plata:25,def:2}, guantes:{mat:1,plata:20,def:1} } },
   piel:     { label:"Armadura de Piel",     animal:"conejo", mat:"pelaje",   tipo:"vitalidad",
-    bono:{ txt:"+2 HP/s de regeneración + 12% vel. de farmeo", regen:2, farm:12 },
+    bono:{ txt:"+2 HP/s de regeneración + 12% vel. de recolección", regen:2, farm:12 },
     piezas:{ yelmo:{mat:2,plata:35,def:3}, pecho:{mat:5,plata:70,def:6}, pantalones:{mat:4,plata:55,def:5}, botas:{mat:2,plata:30,def:2}, guantes:{mat:2,plata:25,def:2} } },
   cuero:    { label:"Armadura de Cuero",    animal:"toro",   mat:"cuero",    tipo:"equilibrada",
     bono:{ txt:"+40 de vida máxima + 8% de defensa", hpmax:40, defPct:8 },
@@ -5654,9 +5654,9 @@ function armorAlternarPieza(key) {
   const anteriorSet = G.armorEq, anteriorOff = { ...(G.armorOff || {}) };
   G.armorOff = G.armorOff || {};
   if (G.armorEq !== p.set) { G.armorEq = p.set; for (const pieza of ARMOR_SLOTS) G.armorOff[armorKey(p.set, pieza)] = true; }
-  if (armorActiva(p.set, p.pieza) && canonicalStacks().length >= invSlots()) { toast("Hacé lugar en la bolsa para desequipar"); return false; }
+  if (armorActiva(p.set, p.pieza) && canonicalStacks().length >= invSlots()) { toast("Haz lugar en la bolsa para desequipar"); return false; }
   G.armorOff[key] = !G.armorOff[key];
-  if (canonicalStacks().length > invSlots()) { G.armorEq = anteriorSet; G.armorOff = anteriorOff; toast("No hay lugar para guardar las piezas que te quitás"); return false; }
+  if (canonicalStacks().length > invSlots()) { G.armorEq = anteriorSet; G.armorOff = anteriorOff; toast("No hay lugar para guardar las piezas que te quitas"); return false; }
   applyCombatHp(); syncSlots(); refreshHud(); if (isOpen("ov-inv")) refreshInv(); if (isOpen("ov-equip")) refreshEquip();
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
@@ -5685,8 +5685,8 @@ function armorReparaCosto(set, pieza) {
 }
 function repararArmor(set, pieza) {
   const sd = ARMOR_SETS[set]; if (!sd) return 0;
-  if (!(G.built && G.built.curtiduria)) { toast("Necesitás la Curtiduría para reparar"); return 0; }
-  if (!armorTiene(set, pieza)) { toast("No tenés esa pieza"); return 0; }
+  if (!(G.built && G.built.curtiduria)) { toast("Necesitas la Curtiduría para reparar"); return 0; }
+  if (!armorTiene(set, pieza)) { toast("No tienes esa pieza"); return 0; }
   const c = armorReparaCosto(set, pieza);
   if (!c) { toast(ARMOR_SLOT_LABEL[pieza] + " está entera"); return 0; }
   const falta = [];
@@ -5779,9 +5779,9 @@ function atkSpdMult() { return 1 + ((typeof eqRunaVal === "function" ? eqRunaVal
 function evadeChance() { return armorBonoVal("evade") / 100; }   // 0..1
 function craftArmor(set, pieza) {
   const sd = ARMOR_SETS[set]; if (!sd) return;
-  if (!(G.built && G.built.curtiduria)) { toast("Necesitás la Curtiduría"); return; }
-  if (armorTiene(set, pieza)) { toast("Ya tenés esa pieza"); return; }
-  if (canonicalStacks().length >= invSlots()) { toast("Hacé lugar en la bolsa para la armadura"); return; }
+  if (!(G.built && G.built.curtiduria)) { toast("Necesitas la Curtiduría"); return; }
+  if (armorTiene(set, pieza)) { toast("Ya tienes esa pieza"); return; }
+  if (canonicalStacks().length >= invSlots()) { toast("Haz lugar en la bolsa para la armadura"); return; }
   const p = sd.piezas[pieza]; if (!p) return;
   const falta = [];
   if ((G.res[sd.mat] || 0) < p.mat) falta.push(p.mat + " " + RES_LABEL[sd.mat]);
@@ -5800,7 +5800,7 @@ function craftArmor(set, pieza) {
   syncSlots();
   addXp("crafting", 12);
   const completo = armorSetCompleto(set);
-  log("Crafteaste " + ARMOR_SLOT_LABEL[pieza] + " de " + sd.label + " (+" + p.def + " de defensa)." + (completo ? " ¡SET COMPLETO: " + sd.bono.txt + "!" : ""), "gold");
+  log("Has fabricado " + ARMOR_SLOT_LABEL[pieza] + " de " + sd.label + " (+" + p.def + " de defensa)." + (completo ? " ¡SET COMPLETO: " + sd.bono.txt + "!" : ""), "gold");
   if (completo && window.celebrate) celebrate({ title: "¡SET COMPLETO!", sub: sd.label, big: true, reward: sd.bono.txt });
   else toast(ARMOR_SLOT_LABEL[pieza] + " lista");
   applyCombatHp();
@@ -5809,11 +5809,11 @@ function craftArmor(set, pieza) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 function equiparSet(set) {
-  if (!ARMOR_SETS[set] || !armorPuestas(set)) { toast("Todavía no tenés piezas de ese set"); return; }
+  if (!ARMOR_SETS[set] || !armorPuestas(set)) { toast("Todavía no tienes piezas de ese set"); return; }
   const antesSet = G.armorEq, antesOff = { ...(G.armorOff || {}) };
   G.armorEq = set;
   G.armorOff = G.armorOff || {}; for (const pieza of ARMOR_SLOTS) delete G.armorOff[armorKey(set, pieza)];
-  if (canonicalStacks().length > invSlots()) { G.armorEq = antesSet; G.armorOff = antesOff; toast("Hacé lugar para guardar la armadura anterior"); return false; }
+  if (canonicalStacks().length > invSlots()) { G.armorEq = antesSet; G.armorOff = antesOff; toast("Haz lugar para guardar la armadura anterior"); return false; }
   syncSlots();
   applyCombatHp(); refreshHud();
   log("Te pusiste la " + ARMOR_SETS[set].label + " (" + armorDefensa() + " de defensa" + (armorSetCompleto(set) ? " · " + ARMOR_SETS[set].bono.txt : "") + ").", "good");
@@ -6002,30 +6002,30 @@ function comprarAnimal(k) {
   /* 18/8 (dirección): la skill de GANADERÍA abre los animales. La alpaca desde el principio; el
      conejo, el toro y el jabalí según vas cuidando el establo. */
   if (typeof animalUnlocked === "function" && !animalUnlocked(k)) {
-    toast("Necesitás Ganadería nivel " + animalNivelReq(k) + " para " + (ANIMAL_DEF[k] ? ANIMAL_DEF[k].label : k));
+    toast("Necesitas Ganadería nivel " + animalNivelReq(k) + " para " + (ANIMAL_DEF[k] ? ANIMAL_DEF[k].label : k));
     return;
   }
   const d = ANIMAL_DEF[k]; if (!d) { console.warn("[comprarAnimal] especie inexistente:", k); return; }
-  if (!(G.built && G.built.establo)) { toast("Primero construí el Establo"); return; }
+  if (!(G.built && G.built.establo)) { toast("Primero construye el Establo"); return; }
   /* 2/9 — LA OTRA MITAD de la dieta estricta: un animal cuya comida no podés cultivar es una
      trampa (la alpaca se abre a Ganadería 1 y el trigo pide Cultivo 6 — ese era el agujero que
      la regla genérica del 14/8 tapaba con parche). Ahora la tienda es honesta: si no podés
      producir NINGUNO de sus cultivos ni tenés existencias, no te lo vende, y te dice qué falta. */
   const puedeComer = d.come.some(c => (G.res[c] || 0) > 0 || (typeof cropUnlocked === "function" && cropUnlocked(c)));
   if (!puedeComer) {
-    toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — necesitás Cultivo nivel " +
+    toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — necesitas Cultivo nivel " +
       Math.min.apply(null, d.come.map(c => CROP_DEF[c].lvl || 1)) + " para alimentarla");
     return;
   }
   const tengo = animalCant(k);
-  if (tengo >= ANIMAL_MAX) { toast("Ya tenés " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)"); return; }
+  if (tengo >= ANIMAL_MAX) { toast("Ya tienes " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)"); return; }
   /* 22/8: el cupo TOTAL sale del nivel de Ganadería (2 al arrancar, +1 por nivel, techo 20) */
   if (animalesTotal() >= establoCupo()) { toast("El establo está lleno (" + establoCupo() + " lugares) — Ganadería " + (nivelOficio("ganaderia") + 1) + " suma uno más"); return; }
   const precio = animalPrecio(k);
   if (G.plata < precio) { toast("Te falta plata (" + precio + ")"); return; }
   G.plata -= precio;
   animalLista(k).push({ desde: nowMs(), feliz: 50, comidoAt: nowMs(), prodAt: nowMs() });
-  log("Compraste " + d.label + " por " + precio + " de plata (ahora tenés " + animalCant(k) + "). Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
+  log("Compraste " + d.label + " por " + precio + " de plata (ahora tienes " + animalCant(k) + "). Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
   toast("¡" + d.label + " en el Establo!");
   if (!tengo && window.celebrate) celebrate({ title: "¡" + d.label.toUpperCase() + "!", sub: "Establo", reward: "Desbloquea la armadura de " + d.mat });
   refreshHud(); establoRepintar();   // 10/9: aplazado (ver « EL ESTABLO SE REPINTA DESPUÉS DEL CLIC »)
@@ -6061,7 +6061,7 @@ function alimentarUno(k, i, silencio) {
     .sort((x, y) => ((CROP_DEF[x] || {}).price || 0) - ((CROP_DEF[y] || {}).price || 0))[0];
   if (!cultivo) {
     if (!silencio) {
-      const opciones = d.come.map(c => racion + " " + (CROP_DEF[c].label || c) + " (tenés " + Math.floor(G.res[c] || 0) + ")").join(" o ");
+      const opciones = d.come.map(c => racion + " " + (CROP_DEF[c].label || c) + " (tienes " + Math.floor(G.res[c] || 0) + ")").join(" o ");
       toast(d.label + " come " + opciones + " — no te alcanza");
     }
     return 0;
@@ -6099,7 +6099,7 @@ function alimentarAnimal(k, silencio) {
   const d = ANIMAL_DEF[k], l = animalLista(k); if (!d || !l.length) return 0;
   let dados = 0;
   for (let i = 0; i < l.length; i++) dados += alimentarUno(k, i, true);
-  if (!dados) { if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tenés en la bolsa (o ya comieron)"); return 0; }
+  if (!dados) { if (!silencio) toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — no tienes en la bolsa (o ya comieron)"); return 0; }
   log("Alimentaste " + dados + " " + d.label + ": comieron, y al cumplir el ciclo dan su " + RES_LABEL[d.mat] + ".", "good");
   if (!silencio) {
     toast(d.label + " · " + dados + " comieron");
@@ -6396,7 +6396,7 @@ const RUNA_TIPOS = {
   veloz:     { label:"Runa Veloz",          buff:"Vel. de ataque",            vals:[4,7,10,14,20],    uni:"%" },
   sangrante: { label:"Runa Sangrante",      buff:"Sangrado al golpear (3 s)", vals:[1,2,3,4,6],       uni:"/s" },
   guardiana: { label:"Runa Guardiana",      buff:"Vida máxima",               vals:[15,30,50,80,120], uni:"" },
-  fortuna:   { label:"Runa de Fortuna",     buff:"Suerte en drops",           vals:[5,8,12,18,25],    uni:"%" },
+  fortuna:   { label:"Runa de Fortuna",     buff:"Suerte en botín",           vals:[5,8,12,18,25],    uni:"%" },
   dorada:    { label:"Runa Dorada",         buff:"$Golden por kill",          vals:[3,5,8,12,18],     uni:"%" },
 };
 const RUNA_ROMAN = ["", "I", "II", "III", "IV", "V"];
@@ -6467,7 +6467,7 @@ function craftAltarItem(id) {
   if (!energiaGranjaPagar('craft')) return;
   payCost(c.cost); if (c.plata) G.plata -= c.plata; if (c.golden) G.golden -= c.golden;
   G.res[id] = (G.res[id] || 0) + 1;
-  addXp("crafting", 6); log("Crafteaste 1 " + RES_LABEL[id] + ".", "good"); toast("+1 " + RES_LABEL[id]);
+  addXp("crafting", 6); log("Has fabricado 1 " + RES_LABEL[id] + ".", "good"); toast("+1 " + RES_LABEL[id]);
   altarRefresh();
 }
 function craftRunaI(tipo) {
@@ -6477,13 +6477,13 @@ function craftRunaI(tipo) {
   if (!energiaGranjaPagar('craft')) return;
   payCost(RUNA_CRAFT.cost); G.plata -= RUNA_CRAFT.plata;
   const k = runaKey(tipo, 1); G.res[k] = (G.res[k] || 0) + 1;
-  addXp("crafting", 8); log("Crafteaste 1 " + runaLabel(tipo, 1) + ".", "good"); toast("+1 " + runaLabel(tipo, 1));
+  addXp("crafting", 8); log("Has fabricado 1 " + runaLabel(tipo, 1) + ".", "good"); toast("+1 " + runaLabel(tipo, 1));
   altarRefresh();
 }
 function fuseRuna(tipo, r) {   // 3 runas de rareza r → 1 de rareza r+1 (muy Silkroad)
   if (r >= 5) return;
   const k = runaKey(tipo, r), gold = FUSE_GOLD[r];
-  if ((G.res[k] || 0) < 3) { toast("Necesitás 3 " + runaLabel(tipo, r)); return; }
+  if ((G.res[k] || 0) < 3) { toast("Necesitas 3 " + runaLabel(tipo, r)); return; }
   if (gold && G.golden < gold) { toast("Te falta $Golden (" + gold + ")"); return; }
   G.res[k] -= 3; if (gold) G.golden -= gold;
   const k2 = runaKey(tipo, r + 1); G.res[k2] = (G.res[k2] || 0) + 1;
@@ -6497,12 +6497,12 @@ function socketRuna(id, slot, tipo, r) {   // socketear DESTRUYE la runa anterio
   if (tipo === null) { sk[slot] = null; log("Vaciaste la ranura " + slot + " (la runa se destruyó).", "bad"); }
   else {
     const k = runaKey(tipo, r);
-    if ((G.res[k] || 0) < 1) { toast("No tenés " + runaLabel(tipo, r)); return; }
+    if ((G.res[k] || 0) < 1) { toast("No tienes " + runaLabel(tipo, r)); return; }
     G.res[k] -= 1;
-    if (sk[slot]) log("La " + runaLabel(sk[slot].t, sk[slot].r) + " anterior se destruyó al socketear encima.", "bad");
+    if (sk[slot]) log("La " + runaLabel(sk[slot].t, sk[slot].r) + " anterior se destruyó al engarzar encima.", "bad");
     sk[slot] = { t: tipo, r };
-    log("Socketeaste " + runaLabel(tipo, r) + " (" + RUNA_TIPOS[tipo].buff + " +" + runaVal(tipo, r) + RUNA_TIPOS[tipo].uni + ").", "gold");
-    toast("Runa socketeada");
+    log("Has engarzado " + runaLabel(tipo, r) + " (" + RUNA_TIPOS[tipo].buff + " +" + runaVal(tipo, r) + RUNA_TIPOS[tipo].uni + ").", "gold");
+    toast("Runa engarzada");
     if (typeof tutoEvent === "function") tutoEvent("socket");
   }
   applyCombatHp();   // la Guardiana suma vida máxima
@@ -6712,8 +6712,8 @@ function armCdLeft(id) { return Math.max(0, ((G.armCd && G.armCd[id]) || 0) - no
 var ARMA_ENTRADA = "espada_madera";
 function craftWeapon(id) {
   const w = ARM_DEF[id]; if (!w) return;
-  if (!G.armasUnlocked && id !== ARMA_ENTRADA) { toast("Desbloqueá la sección de Armas primero"); return; }
-  if (G.weapons[id]) { toast("Ya tenés " + w.label); return; }
+  if (!G.armasUnlocked && id !== ARMA_ENTRADA) { toast("Desbloquea la sección de Armas primero"); return; }
+  if (G.weapons[id]) { toast("Ya tienes " + w.label); return; }
   /* 9/9 — ACÁ HABÍA PUESTO UNA PUERTA DE NIVEL DE OFICIO, Y LA SAQUÉ DESPUÉS DE MEDIRLA.
      La idea era buena y el hueco es real (ver oficiosSinContenido): Espada, Hacha, Mazo y Arco
      suben de nivel sin abrir nada. Atarles las cinco rarezas parecía la forma obvia de darles
@@ -6747,7 +6747,7 @@ function craftWeapon(id) {
      no un accidente, pero si en la semana alguien se queda trabado sin entender por qué, la
      puerta es el primer sospechoso. */
   if (typeof combatInfo === "function" && w.lvl && combatInfo().lvl < w.lvl) {
-    toast(w.label + " pide Combate " + w.lvl + " — tenés " + combatInfo().lvl + " (subís matando en la Zona Negra)");
+    toast(w.label + " pide Combate " + w.lvl + " — tienes " + combatInfo().lvl + " (subes matando en la Zona Negra)");
     return;
   }
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
@@ -6935,7 +6935,7 @@ function craftArrows() {
   if (!energiaGranjaPagar('craft')) return;
   payCost(ARROW_COST); G.res.flecha = (G.res.flecha || 0) + 10;   // van a la bolsa, NO se autoequipan (detalles jueves)
   addXp("crafting", 3);
-  log("Crafteaste 10 flechas — están en tu bolsa; equipalas en el panel de Equipo.", "good"); toast("+10 flechas en la bolsa"); forgeWork();
+  log("Has fabricado 10 flechas — están en tu bolsa; equípalas en el panel de Equipo.", "good"); toast("+10 flechas en la bolsa"); forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 // viernes (2): la pestaña Armas de la Herrería se desbloquea pagando
@@ -7120,10 +7120,10 @@ const RECIPE_DEF = {
     desc:"Carne ahumada a la leña con choclo asado. Al orco, al lancero, al guerrero y al trol les ENCANTA: llevalo a la Zona Negra y, al vencerlos, se lo devoran — con suerte, te siguen a casa y atienden tus árboles y rocas." },
   galletita_cereza: { label:"Galletita de Cereza", emoji:"🍪", sprite:"dish_pan_trigo", res:{cereza:2, papa:1}, lvl:4,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:8,
-    desc:"Masa de papa con cerezas del carril corto. A la RATA le encanta: vencela en la Zona Negra con una encima y quizás se mude a tu granja — escarba montículos y te junta lombrices mientras no estás." },
+    desc:"Masa de papa con cerezas del carril corto. A la RATA le encanta: véncela en la Zona Negra con una encima y quizás se mude a tu granja — escarba montículos y te junta lombrices mientras no estás." },
   papilla_remolacha: { label:"Papilla de Remolacha", emoji:"🥣", sprite:"dish_crema_calabaza", res:{remolacha:2, calabaza:1}, lvl:7,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:28,
-    desc:"Dulce, espesa y de un violeta sospechoso. A la LARVA le encanta: vencela en la Zona Negra con una encima y quizás te siga — abona la tierra y tus cultivos avanzan mientras no estás." },
+    desc:"Dulce, espesa y de un violeta sospechoso. A la LARVA le encanta: véncela en la Zona Negra con una encima y quizás te siga — abona la tierra y tus cultivos avanzan mientras no estás." },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:5,   // 22/8: baja 6→5 — sus ingredientes (carne + calabaza 2) ya están hace rato
     heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
     desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
@@ -7167,13 +7167,13 @@ function dishPrice(r) {      // precio base de venta (antes de la maestría)
 function dishBuffLabel(b, pot) {
   const v = Math.round((b.val || 0) * (pot || 1));
   switch (b.type) {
-    case "farm": return "+" + v + "% vel. de farmeo";
+    case "farm": return "+" + v + "% vel. de recolección";
     case "regen": return "regenera +" + v + " HP/s";
     case "speed": return "+" + v + "% vel. de movimiento";
     case "def": return "+" + v + "% defensa";
     case "dmg": return "+" + v + "% daño";
     case "cookxp": return "+" + v + "% XP de cocina";
-    case "luck": return "+" + v + "% suerte en drops";
+    case "luck": return "+" + v + "% suerte en botín";
     case "combatxp": return "+" + v + "% XP de combate";
     case "hpmax": return "+" + v + " de vida máxima";
     case "stam": return "+" + v + " de estamina";
@@ -7307,7 +7307,7 @@ function cocinaCancelar(idx) {
   G.res = { ...oldRes }; G.fish = { ...(oldFish || {}) };
   for (const [k, n] of Object.entries(devolver.res || {})) G.res[k] = (G.res[k] || 0) + n;
   for (const [k, n] of Object.entries(devolver.fish || {})) G.fish[k] = (G.fish[k] || 0) + n;
-  if (canonicalStacks().length > invSlots()) { G.res = oldRes; G.fish = oldFish; toast("Hacé lugar en la bolsa para recuperar los ingredientes"); return false; }
+  if (canonicalStacks().length > invSlots()) { G.res = oldRes; G.fish = oldFish; toast("Haz lugar en la bolsa para recuperar los ingredientes"); return false; }
   l.splice(idx, 1);
   for (const q of l) if (q.endAt > c.endAt) q.endAt -= c.total || 0;
   toast("Plato cancelado · ingredientes devueltos");
@@ -7365,7 +7365,7 @@ function eatDish(id) {
      la fuga más cómoda de todas, y la que volvía inofensiva a la muerte. */
   const r = RECIPE_DEF[id]; if (!r || llevoTengo("dish", id) <= 0) return;
   const falta = comerFalta();
-  if (falta > 0) { toast("Esperá " + (falta / 1000).toFixed(1) + " s para comer otra vez"); return; }
+  if (falta > 0) { toast("Espera " + (falta / 1000).toFixed(1) + " s para comer otra vez"); return; }
   G.comerHasta = nowMs() + COMER_CD_MS;
   llevoGastar("dish", id, 1);
   if (window.sfx) sfx("eat");
@@ -7450,7 +7450,7 @@ function craftChest() {
   payCost(CHEST_COST); G.plata -= CHEST_PLATA;
   G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS + (G.chestCap || 0)).fill(null) });   // capacidad base + la ganada por niveles de granja
   addXp("crafting", 8);
-  log("Crafteaste un cofre depósito — está en tu bolsa. Colocalo con un clic desde la bolsa.", "gold");
+  log("Has fabricado un cofre depósito — está en tu bolsa. Colócalo con un clic desde la bolsa.", "gold");
   toast("Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")"); forgeWork();
   if (typeof tutoEvent === "function") tutoEvent("chest");
   refreshForge(); refreshHud();
@@ -7693,7 +7693,7 @@ function tutoPity(def, out) {
   if (G.tuto.pity < TUTO_PITY) return;
   G.tuto.pity = 0;
   out[st.res] = Math.max(1, tutoNeed(st) - (typeof tutoTiene === "function" ? tutoTiene(st) : 0));
-  if (typeof log === "function") log("El bicho suelta justo lo que te falta.", "gold");
+  if (typeof log === "function") log("La criatura suelta justo lo que te falta.", "gold");
 }
 // modelo SFL APILABLE (31/7): G.tools[axe/rod] es la CANTIDAD de herramientas (1 uso cada una).
 // Craftear suma al stock; usar consume 1. La espada y el arco conservan durabilidad + reparación.
@@ -7733,7 +7733,7 @@ function craftTool(id, lote) {
     let hechas = 0;
     while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata && energiaGranjaPuede('craft')) { energiaGranjaPagar('craft'); payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
     if (!hechas) { toast("Te faltan materiales o plata"); return; }
-    addXp("crafting", 5 * hechas); log("Crafteaste " + hechas + " × " + td.label + " (tenés " + G.tools[id] + ").", "good"); toast("+" + hechas + " " + td.label);
+    addXp("crafting", 5 * hechas); log("Has fabricado " + hechas + " × " + td.label + " (tienes " + G.tools[id] + ").", "good"); toast("+" + hechas + " " + td.label);
   if (typeof tutoEvent === "function") tutoEvent("crafttool");
     forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
     return;
@@ -7744,10 +7744,10 @@ function craftTool(id, lote) {
   if (!energiaGranjaPagar('craft')) return;
   payCost(tc.cost); G.plata -= tc.plata;
   G.tools[id] = toolCount(id) + 1;
-  addXp("crafting", 5); log("Crafteaste " + td.label + " (tenés " + G.tools[id] + ").", "good"); toast("+1 " + td.label);
+  addXp("crafting", 5); log("Has fabricado " + td.label + " (tienes " + G.tools[id] + ").", "good"); toast("+1 " + td.label);
   forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
 }
-function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolLost(id)) { toast("No tenés esa herramienta — la tiraste"); return; } if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
+function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolLost(id)) { toast("No tienes esa herramienta — la tiraste"); return; } if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
 // --- inventario (base + filas extra) ---
 /* 2/9 (dirección, con el visto de Suren): « agregar 15 espacios al bag — 20 son muy pocos,
@@ -7799,7 +7799,7 @@ function roomForDish(id) {
   if (before) G.dishes[id] = before; else delete G.dishes[id];
   return ok;
 }
-function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No tenés espacio en la bolsa: liberá un hueco para " + what + ".", "bad"); }
+function bagFull(what) { toast("Bolsa llena — no puedes " + what); log("No tienes espacio en la bolsa: libera un hueco para " + what + ".", "bad"); }
 
 /* ============ UNA SOLA PUERTA POR ACCIÓN (20/8) =====================================
    Dirección: "cada cosa que tocamos rompe otras. ¿El código está bien modulado?"
@@ -7822,7 +7822,7 @@ function bagFull(what) { toast("Bolsa llena — no podés " + what); log("No ten
 function sinKitTxt(m) { return !G.kitReclamado ? "Tu kit de bienvenida está en el baúl, junto al granero" : m; }
 function puedeAccion(tipo, o, rotulo) {
   if (tipo === "fish" && !GF.PESCA_ACTIVA) return {ok:false,toast:"La pesca está pausada; tu equipo y progreso se conservan."};
-  if (typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) return { ok: false, toast: "Esperá la confirmación de la venta" };
+  if (typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) return { ok: false, toast: "Espera la confirmación de la venta" };
   o = o || {};
   produccionVipTick();
   if (["chop", "mine", "plant", "harvest"].includes(tipo) && produccionPausada(o)) return { ok: false, toast: "Producción pausada. Reactivala en el Cobertizo." };
@@ -7861,7 +7861,7 @@ function puedeAccion(tipo, o, rotulo) {
        cerrarle la puerta teniendo la llave en la mano. */
     const ceb = (typeof ceboPuesto === "function") ? ceboPuesto() : "lombriz";
     if (typeof ceboTengo === "function" && !ceboTengo(ceb) && !ceboTengo("lombriz"))
-      return { ok: false, toast: "Necesitás carnada — cavá un montículo o echá cultivos al Lombricario" };
+      return { ok: false, toast: "Necesitas carnada — cava un montículo o echa cultivos al Lombricario" };
     /* 23/9 — la caña se gasta (CANA_USOS) y el día tiene cupo (PESCA_LANCES_DIA). Las dos
        puertas nuevas se preguntan ACÁ, en la única puerta del agua, y no en el botón. */
     if (typeof pescaV4Cana === "function" && !pescaV4Cana())
@@ -7869,14 +7869,14 @@ function puedeAccion(tipo, o, rotulo) {
     if (typeof lanceExtraPrecio === "function") {
       const extra = lanceExtraPrecio();
       if (extra > 0 && (G.plata || 0) < extra)
-        return { ok: false, toast: "Ya tiraste los " + PESCA_LANCES_DIA + " lances de hoy: el siguiente cuesta " + extra + " de plata y tenés " + Math.floor(G.plata || 0) };
+        return { ok: false, toast: "Ya tiraste los " + PESCA_LANCES_DIA + " lances de hoy: el siguiente cuesta " + extra + " de plata y tienes " + Math.floor(G.plata || 0) };
     }
     if (!roomForFish()) return { ok: false, bag: "pescar" };
     return OK;
   }
 
   if (tipo === "chop") {
-    if (toolDur("axe") <= 0) return { ok: false, toast: sinKitTxt("No tenés hacha — craftéala en la Herrería") };
+    if (toolDur("axe") <= 0) return { ok: false, toast: sinKitTxt("No tienes hacha — craftéala en la Herrería") };
     if (!roomForRes("madera")) return { ok: false, bag: "talar" };
     return OK;
   }
@@ -7892,14 +7892,14 @@ function puedeAccion(tipo, o, rotulo) {
     if (!pk) {
       const falta = picoQueHaceFalta(o), fd = falta && PICK_DEF[falta];
       const nom = fd ? fd.label : "un pico";
-      return { ok: false, toast: sinKitTxt("Necesitás " + nom + " — crafteálo en la Herrería"),
+      return { ok: false, toast: sinKitTxt("Necesitas " + nom + " — fabrícalo en la Herrería"),
         log: "Para esto hace falta " + nom + " (Herrería).", logTipo: "bad" };
     }
     if (o.type === "ore") {
       // La SKILL decide si ya SABÉS hacerlo. Las dos puertas existen y cada una dice lo suyo.
       const od = ORE_DEF[o.ore];
       if (typeof oreUnlocked === "function" && !oreUnlocked(o.ore))
-        return { ok: false, toast: "Necesitás Minería nivel " + oreNivelReq(o.ore) + " para " + od.label,
+        return { ok: false, toast: "Necesitas Minería nivel " + oreNivelReq(o.ore) + " para " + od.label,
           log: "El " + od.label + " se aprende a picar con Minería nivel " + oreNivelReq(o.ore) + ".", logTipo: "info" };
     }
     const res = o.type === "ore" ? o.ore : "piedra";
@@ -7909,9 +7909,9 @@ function puedeAccion(tipo, o, rotulo) {
 
   if (tipo === "plant") {
     const ck = o.seed || G.selSeed, cd = CROP_DEF[ck];
-    if (!cd) return { ok: false, toast: "Elegí una semilla en la bolsa (I)" };
-    if (!cropUnlocked(ck)) return { ok: false, toast: "Necesitás Cultivo nivel " + cd.lvl + " para " + cd.label };
-    if ((G.seeds[ck] || 0) <= 0) return { ok: false, toast: "Sin semillas de " + cd.label + " — comprá en la Tienda" };
+    if (!cd) return { ok: false, toast: "Elige una semilla en la bolsa (I)" };
+    if (!cropUnlocked(ck)) return { ok: false, toast: "Necesitas Cultivo nivel " + cd.lvl + " para " + cd.label };
+    if ((G.seeds[ck] || 0) <= 0) return { ok: false, toast: "Sin semillas de " + cd.label + " — compra en la Tienda" };
     return OK;
   }
 
@@ -7992,7 +7992,7 @@ function mudanzaCanaVieja() {
   if (n <= 0) return 0;
   G.tools.rod = 0;
   G.res.madera = (G.res.madera || 0) + n;
-  log("La caña vieja se jubiló: te devolvimos " + n + " de madera. Para pescar ahora usás la caña de la Herrería y una lombriz.", "gold");
+  log("La caña vieja se jubiló: te devolvimos " + n + " de madera. Para pescar ahora usas la caña de la Herrería y una lombriz.", "gold");
   return n;
 }
 function mudanzaPescaV4() {
@@ -8454,18 +8454,18 @@ function ventaMinGolden(res) {
 function sellItem(res) {
   const paso = (typeof tutoActivo === "function") ? tutoActivo() : null;
   if (paso && paso.id === "sell") marketCur = "plata";   // el arranque enseña la moneda del bucle, no la premium
-  if(marketCur!=='plata'){toast('La venta paga Plata. Usá el Banco para cambiar por Golden.');return;}
+  if(marketCur!=='plata'){toast('La venta paga Plata. Usa el Banco para cambiar por Golden.');return;}
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
   q = Math.max(0, Math.min(q, G.res[res]));
   if (!SELLABLE.includes(res) || !Number.isSafeInteger(q)) { toast("Ese recurso no se vende en este mercado"); return; }
-  if (q <= 0) { toast("Poné una cantidad"); return; }
+  if (q <= 0) { toast("Pon una cantidad"); return; }
   if (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo()) return mercadoSistemaVender(res, q, marketCur);
   // candado anti-exploit (12/8): durante un "juntá X" no se puede VENDER ese recurso por
   // debajo de la meta — si no, vender para quedar en 9/10 mantenía el boost vivo infinito
   const cotizacion = cotizarVenta(res, q);
   if (cotizacion.total <= 0) { toast("Este lote no tiene una cotización válida. No se descontó ningún recurso."); return; }
   if (marketCur === "plata") { const t=cotizacion.total; G.plata+=t; G.res[res]-=q; log(`Vendiste ${q} ${RES_LABEL[res]} por ${t} de plata.`); toast("+"+t+" plata"); }
-  else { const g = Math.floor(cotizacion.total / GOLDEN_EN_PLATA); if (g<1){ toast("Para 1 $Golden necesitás " + fmt(ventaMinGolden(res)) + " " + RES_LABEL[res]); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
+  else { const g = Math.floor(cotizacion.total / GOLDEN_EN_PLATA); if (g<1){ toast("Para 1 $Golden necesitas " + fmt(ventaMinGolden(res)) + " " + RES_LABEL[res]); return; } G.res[res]-=q; G.golden+=g; log(`Vendiste ${q} ${RES_LABEL[res]} por ${g} $Golden.`,"gold"); toast("+"+g+" $Golden"); }
   registrarVenta(res, q, cotizacion);
   if (window.sfx) sfx("coin");
   if (CROP_DEF[res] && typeof tutoEvent === "function") for (let i = 0; i < q; i++) tutoEvent("sell");   // 14/8 v4: un evento POR UNIDAD vendida — el capataz verifica cantidades
@@ -8807,10 +8807,10 @@ function pezSacar(cual, n) {
 function pezVender(clave, n) {
   if (!GF.PESCA_ACTIVA) return false;
   const t = Math.floor((G.fish || {})[clave] || 0);
-  if (t <= 0) { toast("No tenés ese pez"); return 0; }
+  if (t <= 0) { toast("No tienes ese pez"); return 0; }
   n = Math.max(1, Math.min(n || 1, t));
   const pc = pezDeClave(clave), d = PEZ_DEF[pc.id];
-  if (!d) { toast("Ese pez no se vende acá"); return 0; }
+  if (!d) { toast("Ese pez no se vende aquí"); return 0; }
   const u = pezPrecio(pc.id, pc.kg == null ? undefined : pc.kg);
   const plata = Math.round(u * n * 10) / 10;
   G.fish[clave] -= n; if (G.fish[clave] <= 0) delete G.fish[clave];
@@ -9047,7 +9047,7 @@ function canaV4Costo(id) {
 }
 function canaV4Falta(id) {
   const d = CANA_V4_DEF[id]; if (!d) return "no existe";
-  if ((G.canas || {})[id]) return "ya la tenés";
+  if ((G.canas || {})[id]) return "ya la tienes";
   if (d.presupuesto == null) return "se gana en la Lonja, no se compra";
   if (nivelOficio("fishing") < d.lvl) return "se abre en Pesca " + d.lvl;
   /* qué falta, POR NOMBRE Y CANTIDAD. « Te falta material » obliga al jugador a ir a la bolsa a
@@ -9142,7 +9142,7 @@ function canaReparaPlata(id) {
 function canaReparar(id) {
   if (!GF.PESCA_ACTIVA) return false;
   const d = CANA_V4_DEF[id];
-  if (!d || !(G.canas || {})[id]) { toast("No tenés esa caña"); return false; }
+  if (!d || !(G.canas || {})[id]) { toast("No tienes esa caña"); return false; }
   if (!canaSeGasta(id)) { toast("La " + d.label + " no se gasta"); return false; }
   const p = canaReparaPlata(id);
   if (p <= 0) { toast("La " + d.label + " está entera"); return false; }
@@ -9191,7 +9191,7 @@ function lanceCobrarCupo() {
   /* 25/9: al gastar el último gratis se avisa, para que el 16.º no sorprenda con un cobro */
   if (G.pescaDia.n === PESCA_LANCES_DIA) {
     toast("Fueron los " + PESCA_LANCES_DIA + " lances gratis de hoy · el próximo cuesta " + PESCA_LANCE_EXTRA_PLATA + " plata");
-    log("🎣 Tiraste los " + PESCA_LANCES_DIA + " lances gratis de hoy. Podés seguir: cada lance extra cuesta " + PESCA_LANCE_EXTRA_PLATA + " de plata más que el anterior (5, 10, 15…). El cupo vuelve a las 00:00 UTC.", "info");
+    log("🎣 Tiraste los " + PESCA_LANCES_DIA + " lances gratis de hoy. Puedes seguir: cada lance extra cuesta " + PESCA_LANCE_EXTRA_PLATA + " de plata más que el anterior (5, 10, 15…). El cupo vuelve a las 00:00 UTC.", "info");
   }
   return true;
 }
@@ -9354,8 +9354,8 @@ function nasaBasura() {
 function nasaCalar(id) {
   if (!GF.PESCA_ACTIVA) return false;
   if (!nasaAbierta(id)) { toast("La " + (NASA_DEF[id] || {}).label + " se abre en Pesca " + (NASA_DEF[id] || {}).lvl); return false; }
-  if (nasaLibres() <= 0) { toast("Ya tenés " + nasaCupo() + " nasas caladas — cobrá alguna"); return false; }
-  if ((G.res.lombriz || 0) < PESCA_V4_NASA_CEBO) { toast("Una nasa pide " + PESCA_V4_NASA_CEBO + " lombrices (tenés " + Math.floor(G.res.lombriz || 0) + ")"); return false; }
+  if (nasaLibres() <= 0) { toast("Ya tienes " + nasaCupo() + " nasas caladas — cobra alguna"); return false; }
+  if ((G.res.lombriz || 0) < PESCA_V4_NASA_CEBO) { toast("Una nasa pide " + PESCA_V4_NASA_CEBO + " lombrices (tienes " + Math.floor(G.res.lombriz || 0) + ")"); return false; }
   const d = NASA_DEF[id];
   if (!canAfford(d.cost)) { toast("Te falta material para la " + d.label); return false; }
   if (!energiaGranjaPagar('nasa')) return false;
@@ -9754,7 +9754,7 @@ function carreteTick(l, dt, hold, rnd) {
   return "sigue";
 }
 var CARRETE_AVISO = {   // qué contesta cada final (regla 9: toda acción contesta)
-  escapo: "¡Se escapó con tu lombriz! Mantené al pez dentro de la zona",
+  escapo: "¡Se escapó con tu lombriz! Mantén al pez dentro de la zona",
   tiempo: "El pez se cansó de pelear y se fue — con tu lombriz",
 };
 
@@ -9889,10 +9889,10 @@ var PESCA2_DIF = {   // vel: qué tan rápido persigue su rumbo · nervio: cambi
 
 
 var PESCA2_AVISO = {   // qué contesta cada final (un clic siempre contesta algo)
-  pronto: "¡Muy pronto! Esperá las burbujas para clavar el anzuelo",
+  pronto: "¡Muy pronto! Espera las burbujas para clavar el anzuelo",
   tarde: "El pez se llevó la carnada — había 1 segundo para clavar",
-  escapo: "¡Se escapó! Mantené al pez dentro de la zona",
-  tiempo: "El pez se cansó de pelear… y vos también. Se fue",
+  escapo: "¡Se escapó! Mantén al pez dentro de la zona",
+  tiempo: "El pez se cansó de pelear… y tú también. Se fue",
 };
 
 
@@ -9942,7 +9942,7 @@ function amarresCupo() {
 var BOYA_ESTADO = {
   guardada:   { label: "Guardada",   txt: "En el cobertizo, con usos restantes" },
   calando:    { label: "Calando",    txt: "Corre su reloj. Falta" },
-  cabeceando: { label: "Cabeceando", txt: "Hay algo. Vení" },
+  cabeceando: { label: "Cabeceando", txt: "Hay algo. Ven" },
   soltada:    { label: "Soltada",    txt: "Se venció la ventana. Perdiste el cebo" },
 };
 function amarres() {
@@ -10115,7 +10115,7 @@ function excavCavar(i, carnada) {   // devuelve el botín si se pudo cavar
   if (e.hechos.includes(i)) { toast("Ese montículo ya lo cavaste — mañana hay " + excavPorDia() + " nuevos"); return null; }
   const b = excavBotin(i, carnada);
   if(!energiaGranjaPuede('mine')){energiaGranjaPagar('mine');return null;}
-  if (b.res) { if (!tryAddRes(b.res, b.n)) { toast("Bolsa llena — hacé lugar y volvé"); return null; } }
+  if (b.res) { if (!tryAddRes(b.res, b.n)) { toast("Bolsa llena — haz lugar y vuelve"); return null; } }
   else if (b.seed) G.seeds[b.seed] = (G.seeds[b.seed] || 0) + b.n;
   energiaGranjaPagar('mine');
   e.hechos.push(i);
@@ -10219,7 +10219,7 @@ function lombricarioCultivo() {
 function lombricarioEchar(k) {
   if (!lombricarioAbierto()) { toast("El Lombricario se abre con Cultivo " + LOMBRICARIO_LVL); return false; }
   if (lombricarioLibres() <= 0) { toast("Las " + lombricarioBocas() + " bocas están llenas"); return false; }
-  if (!k || !CROP_DEF[k]) { toast("Elegí qué cultivo echar"); return false; }
+  if (!k || !CROP_DEF[k]) { toast("Elige qué cultivo echar"); return false; }
   if (Math.floor(G.res[k] || 0) < LOMBRICARIO_PIDE) { toast("Hace falta " + LOMBRICARIO_PIDE + " " + (CROP_DEF[k].label || k)); return false; }
   const da = lombricarioDa(k);
   /* el cupo del día (ver LOMBRICES_POR_DIA). Se rechaza entero en vez de recortar: recortar le
@@ -10234,7 +10234,7 @@ function lombricarioEchar(k) {
   if (da > libre) {
     toast("Te quedan " + libre + " del cupo de hoy");
     log((CROP_DEF[k].label || k) + " daría " + da + " lombrices y hoy te quedan " + libre + " de las " +
-        LOMBRICES_POR_DIA + ". Echá un cultivo más barato o esperá al reset de las 00:00 UTC.", "bad");
+        LOMBRICES_POR_DIA + ". Echa un cultivo más barato o espera al reset de las 00:00 UTC.", "bad");
     return false;
   }
   if(!energiaGranjaPagar('cook'))return false;
@@ -10747,17 +10747,17 @@ var TITULO_PESCA_ORDER = ["pies_mojados", "cebador", "anzuelo_firme", "lector", 
 var TITULO_PESCA_DEF = {
   pies_mojados:    { label: "Pies Mojados",       lvl: 1,  mide: "Entraste al agua." },
   cebador:         { label: "Cebador",            lvl: 3,  capturas: 25,
-                     mide: "Volumen: sabés cómo se tira." },
+                     mide: "Volumen: sabes cómo se tira." },
   anzuelo_firme:   { label: "Anzuelo Firme",      lvl: 5,  bandaCompleta: "poco_comun",
                      mide: "Variedad: entraste al álbum." },
   lector:          { label: "Lector de Aguas",    lvl: 8,  banda: "raro",
                      mide: "Aprendiste a leer los tirones." },
   nasero:          { label: "Nasero",             lvl: 10, nasas: 20,
-                     mide: "Jugás también la mitad pasiva." },
+                     mide: "Juegas también la mitad pasiva." },
   cazador_sombras: { label: "Cazador de Sombras", lvl: 13, banda: "epico",
                      mide: "Aguantaste una pulseada larga." },
   rompeolas:       { label: "Rompeolas",          lvl: 16, gigantes: 3,
-                     mide: "Peso: cazás récords, no cantidad." },
+                     mide: "Peso: cazas récords, no cantidad." },
   maestro_lonja:   { label: "Maestro de la Lonja", lvl: 18, pedidos: 50,
                      mide: "Constancia: tres visitas al día." },
   domador:         { label: "Domador de Colosos", lvl: 20, banda: "legendario",
@@ -10914,7 +10914,7 @@ function lonjaTiendaTengo(k) {
    apagado sin motivo es la regla 9 rota: el jugador se queda mirando algo que no responde. */
 function lonjaTiendaFalta(k) {
   const d = LONJA_TIENDA[k]; if (!d) return "no existe";
-  if (lonjaTiendaTengo(k)) return "ya lo tenés";
+  if (lonjaTiendaTengo(k)) return "ya lo tienes";
   if (escamasLonja() < d.esc) return "te faltan " + (d.esc - escamasLonja()) + " Escamas";
   if (d.cost && !canAfford(d.cost)) return "te falta material";
   if (d.pideLegendario && !pecesDeBanda("legendario").some(x => ((G.pescaStats || {}).vistos || {})[x]))
@@ -10958,25 +10958,25 @@ function passPendientes() {
      · 60-90 palabras, voz del Abuelo: práctico, socarrón, una gota de misterio al final. */
 var CARTAS_ABUELO = [
   { n: 1, nivel: 2, titulo: "Si estás leyendo esto",
-    txt: "Si estás leyendo esto, ya vendiste tus primeras papas y el Capataz decidió que no sos un inútil. Bien. La granja es tuya: la cerca, el baúl, los tres árboles torcidos. No me morí, que conste — me FUI, y hay una diferencia. Construí la Herrería primero: acá las herramientas se gastan más rápido de lo que un viejo escribe cartas. Lo demás, a su tiempo. — Tu abuelo" },
+    txt: "Si estás leyendo esto, ya has vendido tus primeras papas y el Capataz ha decidido que no eres un inútil. Bien. La granja es tuya: la cerca, el baúl y los tres árboles torcidos. No he muerto, que quede claro: me FUI, y no es lo mismo. Construye primero la Herrería; aquí las herramientas se gastan más rápido de lo que un viejo escribe cartas. Lo demás, a su tiempo. — Tu abuelo" },
   { n: 2, nivel: 3, titulo: "La cerca",
-    txt: "Ya podés comprar tu primer pedazo de terreno. Hacelo. Pero fijate una cosa: la cerca rodea la granja ENTERA, no solo el corral. La levanté yo, tabla por tabla, el año del agua nueva. El pueblo cree que es para que no se escapen las alpacas. Dejá que lo crean. — Tu abuelo" },
+    txt: "Ya puedes comprar tu primer terreno adicional. Hazlo. Pero fíjate en algo: la cerca rodea la granja ENTERA, no solo el corral. La levanté yo, tabla por tabla, el año del agua nueva. El pueblo cree que está para que no se escapen las alpacas. Deja que lo crean. — Tu abuelo" },
   { n: 3, nivel: 5, titulo: "Los animales saben",
-    txt: "Comprá animales apenas puedas, y no por la leche. Los animales del valle sienten las cosas antes que nosotros: la tormenta, el lobo, y lo OTRO. La noche que todo cambió, mis alpacas se apretaron contra la cerca del lado oeste dos horas antes. Desde entonces les creo más a ellas que al almanaque. — Tu abuelo" },
+    txt: "Compra animales en cuanto puedas, y no por la leche. Los animales del valle sienten las cosas antes que nosotros: la tormenta, el lobo y lo OTRO. La noche en que todo cambió, mis alpacas se apretaron contra la cerca del lado oeste dos horas antes. Desde entonces les creo más a ellas que al calendario. — Tu abuelo" },
   { n: 4, nivel: 7, titulo: "Las piedras que zumban",
-    txt: "El Capataz ya debe haberte dado el plano del Altar de Runas. Construilo, aunque el pueblo se persigne. No es un adorno místico: es un INSTRUMENTO. Lo armé para escuchar lo que viene del otro lado del valle — las piedras zumban distinto según lo que ande cerca. Si alguna vez zumban todas juntas, meté los animales adentro. — Tu abuelo" },
+    txt: "El Capataz ya debe haberte dado el plano del Altar de Runas. Constrúyelo, aunque el pueblo se persigne. No es un adorno místico: es un INSTRUMENTO. Lo hice para escuchar lo que viene del otro lado del valle; las piedras zumban de forma distinta según lo que se acerque. Si alguna vez zumban todas a la vez, mete a los animales dentro. — Tu abuelo" },
   { n: 5, nivel: 9, titulo: "El agua nueva",
-    txt: "Te habrás fijado que la laguna tiene peces que no figuran en ningún libro. Es que esa agua no es de acá: bajó del otro lado del valle la noche del cambio, y se quedó. Los comunes son comunes. Pero los raros pelean como si algo adentro no quisiera volver a la orilla. Pescalos igual. Cocinados son otra cosa. — Tu abuelo" },
+    txt: "Te habrás fijado en que la laguna tiene peces que no aparecen en ningún libro. Esa agua no es de aquí: bajó del otro lado del valle la noche del cambio y se quedó. Los peces comunes son comunes. Pero los raros luchan como si algo dentro no quisiera volver a la orilla. Péscalos igualmente. Una vez cocinados, son otra cosa. — Tu abuelo" },
   { n: 6, nivel: 10, titulo: "No todos son monstruos",
-    txt: "A esta altura ya habrás cruzado el portal y repartido espadazos. Escuchame bien: no todos los que viven en la Zona Negra son monstruos. Muchos eran vecinos — gente y bichos del viejo Bosque Claro, cambiados por la Noche. Un plato caliente les recuerda quiénes eran. Probá con comida antes que con hierro. Te vas a sorprender de quién te sigue a casa. — Tu abuelo" },
+    txt: "A estas alturas ya habrás cruzado el portal y repartido espadazos. Escúchame bien: no todos los que viven en la Zona Negra son monstruos. Muchos eran vecinos: personas y criaturas del viejo Bosque Claro, transformadas por la Noche. Un plato caliente les recuerda quiénes eran. Prueba con comida antes que con hierro. Te sorprenderá quién acaba siguiéndote a casa. — Tu abuelo" },
   { n: 7, nivel: 12, titulo: "Grjj, el mercader goblin",
-    txt: "Si un goblin de mala cara aparece junto al buzón ofreciendo trueques, no lo espantes: es Grjj. Le salvé el pellejo dos veces del lado oscuro del valle, y un goblin no se olvida de una deuda — le da vergüenza, que para ellos es peor. Por eso viene todos los días. Regateale igual: si no regateás, se ofende. — Tu abuelo" },
+    txt: "Si un goblin con cara de pocos amigos aparece junto al buzón ofreciendo trueques, no lo espantes: es Grjj. Le salvé la vida dos veces al otro lado del valle, y un goblin no se olvida de una deuda. Le da vergüenza, que para ellos es peor. Por eso viene todos los días. Regatéale igualmente: si no regateas, se ofende. — Tu abuelo" },
   { n: 8, nivel: 14, titulo: "La Noche",
-    txt: "Te debo la historia entera. Una noche, hace años, del otro lado del valle NO amaneció. La oscuridad se quedó quieta, como un animal que se echa. El Bosque Claro quedó adentro, con su gente. Los que salieron ya no eran los mismos; los que no salieron, tampoco. El pueblo decidió olvidar. Yo decidí lo contrario. Todo lo que ves en esta granja lo construí para eso. — Tu abuelo" },
+    txt: "Te debo la historia completa. Una noche, hace años, al otro lado del valle NO amaneció. La oscuridad se quedó quieta, como un animal que se tumba. El Bosque Claro quedó dentro, con su gente. Los que salieron ya no eran los mismos; los que no salieron, tampoco. El pueblo decidió olvidar. Yo decidí lo contrario. Todo lo que ves en esta granja lo construí para eso. — Tu abuelo" },
   { n: 9, nivel: 17, titulo: "El portal no es una salida",
-    txt: "El portal del fondo lo construí yo, y me costó años. El pueblo cree que es una reliquia del valle. No: lo hice para ENTRAR. La Noche tiene un centro, y las cosas con centro se pueden apagar. Cada viaje me traía menos respuestas y más frío en los huesos. Si estás leyendo esto, ya sos más fuerte que yo entonces. Todavía no vayas hondo. — Tu abuelo" },
+    txt: "El portal del fondo lo construí yo, y me costó años. El pueblo cree que es una reliquia del valle. No: lo hice para ENTRAR. La Noche tiene un centro, y las cosas que tienen un centro se pueden apagar. Cada viaje me traía menos respuestas y más frío en los huesos. Si estás leyendo esto, ya eres más fuerte de lo que yo era entonces. Aún no te adentres demasiado. — Tu abuelo" },
   { n: 10, nivel: 20, titulo: "Lo que duerme abajo",
-    txt: "Última carta, nieto. Encontré el centro: algo duerme en la Guarida de las Cavernas, y la Noche es su sueño derramado. Solo no pude — por eso me fui: a ganarle tiempo al valle. Una granja fuerte alimenta a muchos granjeros, y muchos granjeros pueden lo que yo no pude. Juntalos. Y cuando el valle vuelva a brillar, releé la primera carta. Nos vemos. — Tu abuelo" },
+    txt: "Última carta, nieto. Encontré el centro: algo duerme en la Guarida de las Cavernas, y la Noche es su sueño derramado. No pude hacerlo solo. Por eso me fui: para ganar tiempo para el valle. Una granja fuerte alimenta a muchos granjeros, y muchos granjeros pueden lograr lo que yo no pude. Reúnelos. Y cuando el valle vuelva a brillar, relee la primera carta. Nos vemos. — Tu abuelo" },
 ];
 function cartaAbueloPendiente() {   // la más vieja sin leer cuyo nivel ya alcanzaste — de a una
   const nv = (typeof farmLevel === "function") ? farmLevel() : (G.level || 1);
@@ -10993,17 +10993,17 @@ function buzonCartas() {
   G.buzonLeidas = G.buzonLeidas || {};
   if (!G.buzonLeidas.bienvenida) cartas.push({
     id: "bienvenida", de: "El Capataz", titulo: "¡Bienvenido a Golden Farm!",
-    txt: "Esta tierra ya es tuya. Plantá, cosechá, vendé y construí a tu ritmo — nadie te apura. Cuando haya novedades, te las dejo acá, en el buzón: si ves la banderita levantada, pasá a leer.",
+    txt: "Esta tierra ya es tuya. Planta, cosecha, vende y construye a tu ritmo — nadie te apura. Cuando haya novedades, te las dejo aquí, en el buzón: si ves la banderita levantada, pasa a leer.",
     leer: true });
   const hoy = dayStamp(0);
   try { if (typeof dailyState === "function" && dailyState().claimable && !G.buzonLeidas["cofre|" + hoy]) cartas.push({
     id: "cofre", de: "La Granja", titulo: "Te llegó tu paquete del día",
-    txt: "Está al pie del buzón, atado con cordel. Levantalo y es tuyo — si venís todos los días, la racha crece.",
+    txt: "Está al pie del buzón, atado con cordel. Levantalo y es tuyo — si vienes todos los días, la racha crece.",
     panel: "ov-paquete", btn: "Ver la racha" }); } catch (e) {}
   // TABLÓN (16/8): el pueblo se presenta una sola vez, cuando el tutorial ya terminó
   try { if (G.tuto && G.tuto.done && !G.buzonLeidas.tablon) cartas.push({
     id: "tablon", de: "El pueblo", titulo: "Colgamos nuestros pedidos en el tablón",
-    txt: "Cada mañana dejamos tres encargos en el tablón, junto al buzón. Pagamos en plata y en VALES — juntalos: en el mismo tablón se canjean por cosas que la plata no compra. El primer pedido que cumplas cada día paga doble.",
+    txt: "Cada mañana dejamos tres encargos en el tablón, junto al buzón. Pagamos en plata y en VALES — reúnelos: en el mismo tablón se canjean por cosas que la plata no compra. El primer pedido que cumplas cada día paga doble.",
     leer: true, panel: "ov-pedidos", btn: "Ver el tablón" }); } catch (e) {}
   // LA GRANJA ES TUYA (22/8, auditoría integral): el tutorial enseña el núcleo pero terminaba
   // sin presentar lo que espera afuera. Una sola carta, una sola vez, con las tres novedades.
@@ -11040,14 +11040,14 @@ function buzonCartas() {
   const mvp = (typeof GF !== "undefined" && GF.esOcultoMvp) ? GF.esOcultoMvp : (() => false);
   try { if (G.tuto && G.tuto.done && !G.buzonLeidas.granjatuya) cartas.push(mvp("ov-logros") ? {
     id: "granjatuya", de: "El Capataz", titulo: "Ahora sí: la granja es tuya",
-    txt: "Dos cosas que nadie te contó todavía. Al pie del buzón llega tu PAQUETE del día: si venís siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a vos te falta.",
+    txt: "Dos cosas que nadie te contó todavía. Al pie del buzón llega tu PAQUETE del día: si vienes siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a ti te falta.",
     leer: true } : {
     id: "granjatuya", de: "El Capataz", titulo: "Ahora sí: la granja es tuya",
-    txt: "Tres cosas que nadie te contó todavía. En el menú está la pestaña de LOGROS 🏆 — las metas pagan plata, cobralas ahí. Al pie del buzón llega tu PAQUETE del día: si venís siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a vos te falta.",
+    txt: "Tres cosas que nadie te contó todavía. En el menú está la pestaña de LOGROS 🏆 — las metas pagan plata, cóbralas ahí. Al pie del buzón llega tu PAQUETE del día: si vienes siete días seguidos, el séptimo es dorado. Y junto al buzón vas a ver a un GOBLIN de mala fama y buen corazón: hace un trueque por día, y siempre le sobra lo que a ti te falta.",
     leer: true, panel: "ov-logros", btn: "Ver los logros" }); } catch (e) {}
   try { const n = passPendientes(); if (!mvp("ov-pass") && n > 0 && !G.buzonLeidas["pase|" + hoy]) cartas.push({
     id: "pase", de: "El Pase de Batalla", titulo: n + (n > 1 ? " niveles" : " nivel") + " sin reclamar",
-    txt: "Tus estrellas ya destrabaron premios en el Pase. Pasá a retirarlos cuando quieras.",
+    txt: "Tus estrellas ya destrabaron premios en el Pase. Pasa a retirarlos cuando quieras.",
     panel: "ov-pass", btn: "Ver el Pase" }); } catch (e) {}
   try { buzonArchivar(cartas); } catch (e) {}
   return cartas;
@@ -11545,7 +11545,7 @@ function valeLabel(id) {
 function valesCanjear(id) {
   const it = VALES_SHOP.find(s => s.id === id); if (!it) { console.warn("[valesCanjear] premio inexistente:", id); return; }
   const cuesta = valeCosto(id);   // 18/8: sale de lo que entrega, no de una tabla
-  if ((G.vales || 0) < cuesta) { toast("Te faltan vales (tenés " + (G.vales || 0) + ", pide " + cuesta + ")"); return; }
+  if ((G.vales || 0) < cuesta) { toast("Te faltan vales (tienes " + (G.vales || 0) + ", pide " + cuesta + ")"); return; }
   if (id === "semillas") {
     const k = valeMejorCultivo(), nS = valeSemillasN();
     G.seeds[k] = (G.seeds[k] || 0) + nS; toast("+" + nS + " semillas de " + CROP_DEF[k].label);
@@ -11597,7 +11597,7 @@ function goblinOfertaHoy() {
 function goblinRechazar() {
   if (!goblinEstado().disponible) return { error: "hoy ya se fue" };
   G.goblin = G.goblin || {}; G.goblin.date = dayStamp(0);
-  log("🤝 Le dijiste que no al Mercader Goblin. «Grjj… vos te lo perdés. Mañana vuelvo con otra cosa.»", "info");
+  log("🤝 Le dijiste que no al Mercader Goblin. «Grjj… tú te lo pierdes. Mañana vuelvo con otra cosa.»", "info");
   toast("El Goblin se fue — vuelve mañana");
   if (typeof saveFarm === "function") saveFarm(true);
   return { ok: true };
@@ -11612,7 +11612,7 @@ function goblinAceptar() {
   G.res[of.pide] -= of.cant;
   if (!tryAddRes(of.da, of.entrega)) {
     G.res[of.pide] += of.cant;   // el trueque no se hace a medias
-    toast("Bolsa llena — hacé lugar para el trato");
+    toast("Bolsa llena — haz lugar para el trato");
     return { error: "bolsa" };
   }
   G.goblin = G.goblin || {}; G.goblin.date = dayStamp(0);
@@ -11714,18 +11714,18 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
   /* de acá para abajo el jugador SÍ trae el plato: cualquier "no" viene con su motivo */
   if (G.doma && G.doma.bicho) {
     const suyo = (MONSTER_DEF[G.doma.bicho] && MONSTER_DEF[G.doma.bicho].label) || "bicho";
-    log("🐾 Ese " + nomBicho + " olfateó tu " + platoNom + "… pero ya tenés un " + suyo + " en la granja. Solo cabe uno.", "warn");
-    toast("Ya tenés un " + suyo + " en casa");
+    log("🐾 Ese " + nomBicho + " olfateó tu " + platoNom + "… pero ya tienes un " + suyo + " en la granja. Solo cabe uno.", "warn");
+    toast("Ya tienes un " + suyo + " en casa");
     return false;   // sin intento, sin cobro
   }
   if (!domaAbre()) {
-    log("🐾 Ese " + nomBicho + " se acercó a tu " + platoNom + " y dio media vuelta: tu granja todavía no tiene sitio para él. La doma abre a GRANJA NIVEL " + DOMA_NIVEL + " (tenés " + (typeof farmLevel === "function" ? farmLevel() : G.level || 1) + ").", "warn");
+    log("🐾 Ese " + nomBicho + " se acercó a tu " + platoNom + " y dio media vuelta: tu granja todavía no tiene sitio para él. La doma abre a GRANJA NIVEL " + DOMA_NIVEL + " (tienes " + (typeof farmLevel === "function" ? farmLevel() : G.level || 1) + ").", "warn");
     toast("La doma abre a granja " + DOMA_NIVEL);
     return false;   // sin intento, sin cobro
   }
   G.dishes[plato] -= 1;   // se lo come, acepte o no: ya está servido
   if ((rnd || Math.random)() >= domaChance(especie)) {
-    log("🍖 El bicho devoró tu " + platoNom + "… y se fue igual. Grosero. (" + domaChanceTxt(especie) + " acepta.)", "warn");
+    log("🍖 La criatura devoró tu " + platoNom + "… y se fue igual. Grosero. (" + domaChanceTxt(especie) + " acepta.)", "warn");
     toast("Se comió el plato y se fue");
     if (typeof saveFarm === "function") saveFarm(true);
     return false;
@@ -11743,13 +11743,13 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
 }
 function domaHambriento() { return !!(G.doma && G.doma.bicho) && (G.doma.comidaHasta || 0) < nowMs(); }
 function domaAlimentar() {
-  if (!G.doma || !G.doma.bicho) return { error: "sin bicho" };
-  if (Math.floor(G.res.carne || 0) < 1) { toast("Necesitás 1 carne — la Zona Negra es su despensa"); return { error: "falta carne" }; }
+  if (!G.doma || !G.doma.bicho) return { error: "sin criatura" };
+  if (Math.floor(G.res.carne || 0) < 1) { toast("Necesitas 1 carne — la Zona Negra es su despensa"); return { error: "falta carne" }; }
   const tope = nowMs() + 3 * DOMA_COMIDA_H * 3600000;   // guarda hasta 3 días de comida en la panza
   if ((G.doma.comidaHasta || 0) >= tope) { toast("Ya está lleno — vuelve a tener hambre en unos días"); return { error: "lleno" }; }
   G.res.carne -= 1;
   G.doma.comidaHasta = Math.max(nowMs(), G.doma.comidaHasta || 0) + DOMA_COMIDA_H * 3600000;
-  log("🍖 Tu bicho comió: trabaja hasta " + new Date(G.doma.comidaHasta).toLocaleString() + ".", "good");
+  log("🍖 Tu criatura comió: trabaja hasta " + new Date(G.doma.comidaHasta).toLocaleString() + ".", "good");
   toast("🍖 Ñam — a trabajar");
   if (typeof refreshHud === "function") refreshHud();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -11987,7 +11987,7 @@ function cultivoDuracion(ck,boost=1,starter=false,t=nowMs()){
 }
 async function claimDaily() {
   const st = dailyState();
-  if (!st.claimable) { toast("Ya reclamaste hoy — volvé mañana"); return false; }
+  if (!st.claimable) { toast("Ya reclamaste hoy — vuelve mañana"); return false; }
   const r = DAILY_REWARDS[st.day - 1];
   const confirmado = await diarioSolicitar();
   if (!confirmado || !confirmado.ok) return false;

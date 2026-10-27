@@ -77,7 +77,7 @@ console.log("\nLA PUERTA SE ARRASTRA — y el gesto no puede inventar movimiento
   const h = $("viaje-cuerpo").innerHTML;
   ok("las dos columnas son destino", /data-vzona="granja"/.test(h) && /data-vzona="cont"/.test(h));
   ok("y las casillas se pueden agarrar", (h.match(/draggable="true"/g) || []).length >= 1);
-  ok("el pie enseña el gesto nuevo, sin esconder el atajo", /Arrastrá de una columna a la otra/.test(h) && /shift/.test(h));
+  ok("el pie enseña el gesto nuevo, sin esconder el atajo", /Arrastra de una columna a la otra/.test(h) && /shift/.test(h));
 
   const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
   /* soltar en la columna de la que salió es « me arrepentí a mitad de gesto », no un error:
@@ -96,7 +96,7 @@ console.log("\nY MOVER DE VERDAD SIGUE SIN DUPLICAR NI EVAPORAR");
   ctx.viajeCargar("res", "flecha", 12);
   ok("lo que sube al contenedor baja de la granja",
     ctx.contContar(raiz, "res", "flecha") === 12 && Math.floor(G.res.flecha) === antes - 12,
-    "granja " + G.res.flecha + " · llevás " + ctx.contContar(raiz, "res", "flecha"));
+    "granja " + G.res.flecha + " · llevas " + ctx.contContar(raiz, "res", "flecha"));
   ctx.viajeBajar("res", "flecha", 12);
   ok("y al revés vuelve entero", Math.floor(G.res.flecha) === antes && ctx.contContar(raiz, "res", "flecha") === 0);
 }
@@ -111,15 +111,15 @@ console.log("\nLA COMIDA A LA BARRA RÁPIDA, DENTRO DE LA ZONA");
   ok("arrastrar a la barra deja el hueco apuntando al plato",
     G.hotbar[0] && G.hotbar[0].kind === "dish" && G.hotbar[0].key === "papa_asada", JSON.stringify(G.hotbar[0]));
   ok("y dice qué tecla apretar — un atajo que no se anuncia no existe",
-    avisos.some(a => /apretá 1/.test(a)), avisos.join(" · "));
+    avisos.some(a => /pulsa 1/.test(a)), avisos.join(" · "));
   /* apuntar NO mueve: si sacara el plato del contenedor, la barra sería un tercer inventario */
   ok("apuntar no saca nada del contenedor", ctx.contContar(ctx.contLlevado(), "dish", "papa_asada") === 2);
   ok("ni de la granja", G.dishes.papa_asada === 3, "granja " + G.dishes.papa_asada);
 
   /* y la cuenta que enseña la barra es la del CONTENEDOR: decir « 3 » cuando llevás 2 hace que
      el jugador apriete la tecla en mitad de una pelea y no pase nada */
-  ok("la barra cuenta lo que llevás, no lo que dejaste", ctx.llevoTengo("dish", "papa_asada") === 2);
-  ok("y lo que no llevás sale opaco", ctx.hotItemExists({ kind: "seed", key: "papa" }) === false);
+  ok("la barra cuenta lo que llevas, no lo que dejaste", ctx.llevoTengo("dish", "papa_asada") === 2);
+  ok("y lo que no llevas sale opaco", ctx.hotItemExists({ kind: "seed", key: "papa" }) === false);
 
   /* y la tecla come del contenedor */
   G.hp = 10; G.hpMax = 100; G.comerHasta = 0;
@@ -140,7 +140,7 @@ console.log("\nY CRUZAR EL PORTAL NO LE BORRA LA BARRA AL JUGADOR");
   G.hotbar[1] = { kind: "dish", key: "papa_asada" };
   ctx.GF.scene = "forest";
   ctx.refreshHotbar(true);
-  ok("lo que no llevás sigue en su hueco, solo que apagado",
+  ok("lo que no llevas sigue en su hueco, solo que apagado",
     G.hotbar[0] && G.hotbar[0].key === "papa", JSON.stringify(G.hotbar.filter(Boolean)));
   ctx.GF.scene = "farm";
   ctx.refreshHotbar(true);

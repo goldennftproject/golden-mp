@@ -18,7 +18,7 @@ console.log("\nEL CARRETE DECLARA SU ENTRADA DE TECLADO\n");
   ok("la presión de teclado suma al clic sin reemplazarlo", /holdTeclado: false/.test(tramo) && /!!hold \|\| !!P4\.holdTeclado/.test(tramo));
   ok("la tecla tiene guardias para PC, decisiones, controles y botones", /function pescaV4CarreteTecladoDisponible/.test(tramo) && /window\.innerWidth <= 640/.test(tramo) && /selectorContextualPcAbierto/.test(tramo) && /ov-confirm/.test(tramo) && /controlDeTecladoActivo/.test(tramo) && /button, a, \[role=button\]/.test(tramo));
   ok("keyup, pérdida de foco y pestaña oculta sueltan la presión", /window\.addEventListener\("keyup", \(e\) => \{ pescaV4CarreteSoltarTecladoEnEvento\(e\); \}\)/.test(UI) && /window\.addEventListener\("blur", \(\) => \{ pescaV4CarreteSoltarAlPerderFoco\(\); \}\)/.test(UI) && /visibilitychange/.test(UI));
-  ok("la ayuda visual distingue escritorio de toque", /pm-pie-pc/.test(HTML) && /mantené clic o Espacio: la zona sube/.test(HTML) && /pm-pie-touch/.test(HTML));
+  ok("la ayuda visual distingue escritorio de toque", /pm-pie-pc/.test(HTML) && /mantén clic o Espacio: la zona sube/.test(HTML) && /pm-pie-touch/.test(HTML));
 }
 
 console.log("\nESPACIO SUBE LA ZONA SIN ENTREGAR EL MUNDO DETRÁS\n");

@@ -76,7 +76,7 @@ console.log("\n5 · Y EL JUGADOR SABE QUÉ VA A PASAR ANTES DE APRETAR\n");
   ok("el aviso dice que se guarda primero", /Se va a guardar tu granja/.test(UI));
   ok("y que la granja NO se borra, que es el miedo de cualquiera", /Tu granja no se borra/.test(UI));
   ok("y NOMBRA el correo con el que se vuelve (contesta « ¿y ahora cómo entro? »)",
-    /entrás con " \+ email/.test(UI));
+    /entras con " \+ email/.test(UI));
   ok("el botón de confirmar es rojo: es una salida, no un trámite", /yesClass: "red"/.test(UI));
   ok("y después se recarga, para que el juego arranque limpio", /location\.reload\(\)/.test(UI));
 }

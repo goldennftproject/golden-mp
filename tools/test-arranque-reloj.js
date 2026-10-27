@@ -66,7 +66,7 @@ console.log("\nY LA PANTALLA NO SE CONTRADICE");
   /* 18/9: el <p> lleva id (gate-sub) desde que la puerta pide también el correo y el texto
      cambia según el camino. Lo que este test custodia no es el texto sino que el <p> EXISTA,
      porque pantallaNoSePudo lo apaga con querySelector("p") para poner el motivo del fallo. */
-  ok("la puerta del apodo sigue teniendo su <p> (el que se apaga)", /<p[^>]*>Elegí un apodo/.test(gate));
+  ok("la puerta del apodo sigue teniendo su <p> (el que se apaga)", /<p[^>]*>Elige un apodo/.test(gate));
   ok("y su campo se llama nick", /id="nick"/.test(gate));
 }
 

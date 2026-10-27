@@ -85,8 +85,8 @@ const ok=(n,c,d)=>{if(!c)fallos++;console.log((c?"  ok   ":"  FALLA")+"  "+n+(d?
   const creciendo=g.tutoTxt(paso);
   g.G.plots[0].state="ready";
   const lista=g.tutoTxt(paso);
-  ok("mientras crece, el cartel explica que hay que esperar",/creciendo|esperá/i.test(creciendo),creciendo);
-  ok("cuando está lista, recién pide cosechar",/^Cosechá/i.test(lista),lista);
+  ok("mientras crece, el cartel explica que hay que esperar",/creciendo|espera/i.test(creciendo),creciendo);
+  ok("cuando está lista, recién pide cosechar",/^Cosecha/i.test(lista),lista);
 }
 // 5) NO SE PUEDE RECLAMAR DOS VECES
 {

@@ -101,7 +101,7 @@ class ForestScene extends Phaser.Scene {
         if (r.raid.estado === "vencido") {
           const jefe = this.monsters.find(m => m.def && m.def.boss);
           if (jefe) { jefe.dead = true; jefe.spr.setVisible(false); jefe.bar.clear(); }
-          toast("El Dragón ya está vencido" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "" : " — cobrá tu parte en Clan"));
+          toast("El Dragón ya está vencido" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "" : " — cobra tu parte en Clan"));
         }
       });
     }
@@ -535,7 +535,7 @@ class ForestScene extends Phaser.Scene {
        parecería perdido. La comprobación va ANTES de marcar el cuerpo como revisado: intentar
        mirarlo con Inventario abierto no puede apagar su brillo ni cambiar su estado. */
     if (typeof hayOvPcAbierto === "function" && hayOvPcAbierto()) {
-      toast("Cerrá la ventana antes de revisar el cuerpo"); return;
+      toast("Cierra la ventana antes de revisar el cuerpo"); return;
     }
     if (!this.cuerpoAlAlcance(c)) { toast("Estás demasiado lejos"); return; }   // la regla de Tibia, con sus palabras
     if (!c.revisado) { c.revisado = true; this.apagarBrillos(c); }
@@ -554,7 +554,7 @@ class ForestScene extends Phaser.Scene {
        antes de mutar el estado, pero abrir el panel también debe ser incapaz de colarse sobre
        un overlay normal de escritorio. */
     if (typeof hayOvPcAbierto === "function" && hayOvPcAbierto()) {
-      toast("Cerrá la ventana antes de revisar el cuerpo"); return;
+      toast("Cierra la ventana antes de revisar el cuerpo"); return;
     }
     const el = document.getElementById("cuerpo-panel"); if (!el) return;
     this._cuerpoAbierto = c;
@@ -620,7 +620,7 @@ class ForestScene extends Phaser.Scene {
     refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
     if (typeof refreshMorral === "function") refreshMorral();
     if (quedan.length) {
-      toast(raiz ? "Contenedor lleno — el resto queda en el cuerpo" : "No llevás contenedor — el botín queda en el cuerpo");
+      toast(raiz ? "Contenedor lleno — el resto queda en el cuerpo" : "No llevas contenedor — el botín queda en el cuerpo");
       this.abrirCuerpo(c); return;
     }
     this.cerrarCuerpo();
@@ -654,7 +654,7 @@ class ForestScene extends Phaser.Scene {
         // para siempre y tapaba cualquier otro aviso (10/8).
         if (nowMs() - (this._avisoLleno || 0) > 2500) {
           this._avisoLleno = nowMs();
-          toast(enZona() ? "Contenedor lleno — no te entra nada más" : "Bolsa llena — liberá espacio para recoger");
+          toast(enZona() ? "Contenedor lleno — no te entra nada más" : "Bolsa llena — libera espacio para recoger");
         }
         continue;
       }
@@ -695,22 +695,22 @@ class ForestScene extends Phaser.Scene {
          otra puerta: un aviso que manda a revisar la cosa correcta. */
       const puesta = G.gear.arma;
       if (puesta && G.weapons && G.weapons[puesta] && !(G.weapons[puesta].dur > 0))
-        return "Tu " + ((ARM_DEF[puesta] && ARM_DEF[puesta].label) || "arma") + " está rota — no se repara acá, volvé a la Herrería";
+        return "Tu " + ((ARM_DEF[puesta] && ARM_DEF[puesta].label) || "arma") + " está rota — no se repara aquí, vuelve a la Herrería";
       /* y « la tenés en la bolsa » solo es cierto en la granja: en la Zona lo que hay es lo que
          llevás en el contenedor, y si hay un arma ahí se dice dónde buscarla. */
       const guardadas = armasAMano().length;
       if (guardadas) return enZona()
-        ? "Llevás un arma en el contenedor — equipala en el panel de Equipo"
-        : "Equipate un arma — la tenés en la bolsa";
+        ? "Llevas un arma en el contenedor — equipala en el panel de Equipo"
+        : "Equípate un arma — la tienes en la bolsa";
       return enZona()
-        ? "No llevás ningún arma — se cargan en la puerta del portal antes de entrar"
-        : "Necesitás un arma. Se craftean en la Herrería";
+        ? "No llevas ningún arma — se cargan en la puerta del portal antes de entrar"
+        : "Necesitas un arma. Se fabrican en la Herrería";
     }
     if (ARM_DEF[id] && ARM_DEF[id].tipo === "arco") {
-      if (!G.gear.municion) return "El arco está puesto pero la munición no: equipá las flechas en el panel de Equipo";
+      if (!G.gear.municion) return "El arco está puesto pero la munición no: equipa las flechas en el panel de Equipo";
       if (llevoTengo("res", "flecha") <= 0) return enZona()
-        ? "Sin flechas en el contenedor — las que dejaste en la granja no cuentan acá"
-        : "Sin flechas — crafteálas en la Herrería";
+        ? "Sin flechas en el contenedor — las que dejaste en la granja no cuentan aquí"
+        : "Sin flechas — fabrícalas en la Herrería";
     }
     return null;
   }
@@ -796,7 +796,7 @@ class ForestScene extends Phaser.Scene {
     /* 8/9: el aviso cambia según dónde estés. Adentro de la Zona « crafteá en la Herrería » no
        sirve de nada: la Herrería está a un portal de distancia y el jugador necesita saber que
        el problema es la carga, no el stock. */
-    if (!canShoot()) { toast(enZona() ? "Sin flechas en el contenedor — las que dejaste en la granja no cuentan acá" : "Sin flechas — crafteá en la Herrería"); return; }
+    if (!canShoot()) { toast(enZona() ? "Sin flechas en el contenedor — las que dejaste en la granja no cuentan aquí" : "Sin flechas — fabrica en la Herrería"); return; }
     if (!this.cobrarEstamina(m)) return;   // la estamina se cobra ANTES: sin ella no se gasta ni la flecha ni la durabilidad
     const aid = armaEq();
     llevoGastar("res", "flecha", 1);
@@ -831,7 +831,7 @@ class ForestScene extends Phaser.Scene {
     if (!stamGastar(costo)) {
       if (!this._avisoStam || nowMs() > this._avisoStam) {
         this._avisoStam = nowMs() + 4000;
-        toast("Sin estamina — comé un guiso o esperá a que se recargue");
+        toast("Sin estamina — come un guiso o espera a que se recargue");
         log("Te quedaste sin estamina de combate. Se recupera sola (1 cada 3 min), comiendo guisos o con una recarga.", "bad");
       }
       return false;
@@ -976,7 +976,7 @@ class ForestScene extends Phaser.Scene {
       if (r && r.error) {
         if (nowMs() - (this._jefeAviso || 0) > 4000) {
           this._jefeAviso = nowMs();
-          toast(/clan/i.test(r.error) ? "Necesitás un clan con un asalto abierto" : "El Dragón no está en asalto");
+          toast(/clan/i.test(r.error) ? "Necesitas un clan con un asalto abierto" : "El Dragón no está en asalto");
         }
         return;
       }
@@ -984,8 +984,8 @@ class ForestScene extends Phaser.Scene {
       this._jefeHp = Number(q.hp); this._jefeMax = Number(q.hp_max);
       if (q.estado === "vencido") {
         this.floatTxt(m, "¡VENCIDO!", "#ffd75e");
-        log("¡El clan venció al Dragón! Cobrá tu parte" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "." : " en la ventana de Clan."), "gold");
-        toast("¡Dragón vencido!" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "" : " Cobrá en Clan"));
+        log("¡El clan venció al Dragón! Cobra tu parte" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "." : " en la ventana de Clan."), "gold");
+        toast("¡Dragón vencido!" + ((typeof GF !== "undefined" && GF.esOcultoMvp && GF.esOcultoMvp("ov-clan")) ? "" : " Cobra en Clan"));
         m.dead = true; m.spr.setVisible(false); if (m.bar) m.bar.clear();
         if (this.target === m) this.clearTarget();
       }
@@ -1312,10 +1312,10 @@ class ForestScene extends Phaser.Scene {
         const arm = armorAlMorir();
         if (arm.rotas.length) {
           log("💥 Se te ROMPIÓ " + arm.rotas.map(pz => ARMOR_SLOT_LABEL[pz]).join(" y ") +
-              ": estaba gastada del todo y la muerte la terminó. Esa pieza ya no existe — hay que volver a craftearla.", "bad");
+              ": estaba gastada del todo y la muerte la terminó. Esa pieza ya no existe — hay que volver a fabricarla.", "bad");
           toast("Se rompió " + arm.rotas.map(pz => ARMOR_SLOT_LABEL[pz]).join(" y "));
         } else if (arm.gastadas.length) {
-          log("Tu armadura perdió durabilidad al caer. Pasá por la Curtiduría: una pieza en cero se puede romper en la próxima muerte.", "bad");
+          log("Tu armadura perdió durabilidad al caer. Pasa por la Curtiduría: una pieza en cero se puede romper en la próxima muerte.", "bad");
         }
       }
       const teniaTumba = (typeof tumbaViva === "function") && !!tumbaViva();
@@ -1333,12 +1333,12 @@ class ForestScene extends Phaser.Scene {
         if (c.piezas) partes.push(c.piezas + " pieza(s) de equipo que llevabas puesta(s)");
         log("☠️ Te derrotaron. Se te cayó " + partes.join(" y ") + ". Tu cuerpo queda " + TUMBA_MIN +
             " minutos donde caíste" + (teniaTumba ? " — y pisó al cuerpo anterior, que se perdió" : "") +
-            ": volvé YA con otro contenedor a buscarlo. No hay que esperar el descanso — " +
+            ": vuelve YA con otro contenedor a buscarlo. No hay que esperar el descanso — " +
             "mientras tu cuerpo esté ahí, el portal queda abierto.", "bad");
         toast(c.piezas ? "Perdiste el contenedor y " + c.piezas + " pieza(s) de equipo — " + TUMBA_MIN + " min para recuperarlo"
                        : "Se te cayó el contenedor — tu cuerpo dura " + TUMBA_MIN + " min");
       } else {
-        log("Te derrotaron en la Zona Negra. Despertás en la granja — no llevabas nada encima.", "bad");
+        log("Te derrotaron en la Zona Negra. Despiertas en la granja — no llevabas nada encima.", "bad");
         toast("Te llevaron de vuelta a la granja");
       }
       G.hp = Math.ceil(G.hpMax / 2);
@@ -1491,7 +1491,7 @@ class ForestScene extends Phaser.Scene {
       if (!zonaPuedeEntrar(this.salidaDer)) {
         if (nowMs() - (this._avisoNivel || 0) > 2500) {
           this._avisoNivel = nowMs();
-          toast("Necesitás Combate nivel " + ZONA_DEF[this.salidaDer].lvl + " para entrar a " + ZONA_DEF[this.salidaDer].label);
+          toast("Necesitas Combate nivel " + ZONA_DEF[this.salidaDer].lvl + " para entrar a " + ZONA_DEF[this.salidaDer].label);
         }
         hero.x = this.W - 46;
       } else {
@@ -1513,7 +1513,7 @@ class ForestScene extends Phaser.Scene {
       /* 8/9: la cuenta es de ESTA zona. Antes sumaba el suelo de las cuatro, así que salir del
          pantano avisaba de objetos que estaban en la guarida. */
       const left = (GF.forestDrops || []).filter(g => g.zona == null || g.zona === this.zonaKey).length;
-      if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si volvés.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }
+      if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si vuelves.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }
       if (typeof zonaSalir === "function" && typeof mostrarResumenZona === "function") mostrarResumenZona(zonaSalir(false));
       if (typeof saveFarm === "function") saveFarm();
       this.leaving = true;

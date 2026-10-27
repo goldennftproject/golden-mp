@@ -42,7 +42,7 @@ console.log("\nENTER Y ESPACIO RECLAMAN UNA VEZ Y DEJAN UN SIGUIENTE PASO CLARO\
   dom.window.addEventListener("keydown", e => mundo.push(e.key));
   const img = dom.window.document.getElementById("paq-img"), btn = dom.window.document.getElementById("paq-abrir");
   ctx.refreshPaquete();
-  ok("el paquete disponible se anuncia como acción", img.getAttribute("role") === "button" && img.tabIndex === 0 && img.getAttribute("aria-label") === "Abrir y reclamar el paquete del día" && /Elegí el paquete/.test(dom.window.document.getElementById("paq-nota").textContent));
+  ok("el paquete disponible se anuncia como acción", img.getAttribute("role") === "button" && img.tabIndex === 0 && img.getAttribute("aria-label") === "Abrir y reclamar el paquete del día" && /Elige el paquete/.test(dom.window.document.getElementById("paq-nota").textContent));
 
   img.focus();
   const enter = new dom.window.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });

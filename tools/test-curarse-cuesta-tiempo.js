@@ -89,7 +89,7 @@ console.log("\n3 · Y COMER PASA A SER LA FORMA RÁPIDA\n");
   ok("y hasta el más barato ahorra minutos", peor / porSeg / 60 >= 2, Math.round(peor / porSeg / 60) + " min");
 }
 
-console.log("\n3b · Y LA BARRA LO DICE   (16/9: « colocá que dura 1 h en llenarse »)\n");
+console.log("\n3b · Y LA BARRA LO DICE   (16/9: « coloca que dura 1 h en llenarse »)\n");
 {
   const UI = fs.readFileSync(path.join(RAIZ, "public/game/ui.js"), "utf8");
   const HTML = fs.readFileSync(path.join(RAIZ, "public/index.html"), "utf8");
@@ -98,7 +98,7 @@ console.log("\n3b · Y LA BARRA LO DICE   (16/9: « colocá que dura 1 h en llen
     /llena en " \+ fmtDur\(minRestantes/.test(UI));
   ok("el total sale de la constante, no escrito a mano (si se mueve el número, el rótulo también)",
     /GRANJA_CURA_MIN === "number"\) \? GRANJA_CURA_MIN : 60/.test(UI));
-  ok("dentro de la Zona dice que ahí no se cura, que es donde importa saberlo", /sin cura acá/.test(UI));
+  ok("dentro de la Zona dice que ahí no se cura, que es donde importa saberlo", /sin cura aquí/.test(UI));
   ok("con la barra llena no dice nada (un cartel permanente deja de leerse)", /!falta \? "" :/.test(UI));
   ok("y va como TEXTO, no solo en el tooltip (en el móvil no hay tooltip)", /eta\.textContent =/.test(UI));
 }

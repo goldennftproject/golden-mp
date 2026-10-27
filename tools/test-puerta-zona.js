@@ -29,20 +29,20 @@ const limpio = () => {
   G.plata = 0; G.invRows = 6; G.slots = []; avisos.length = 0;
 };
 
-console.log("\nELEGIR CON QUÉ SALÍS — y arrepentirse no puede costar nada");
+console.log("\nELEGIR CON QUÉ SALES — y arrepentirse no puede costar nada");
 {
   limpio();
-  ok("sin elegir no llevás nada", ctx.contLlevado() === null);
+  ok("sin elegir no llevas nada", ctx.contLlevado() === null);
   ok("elegir la mochila la saca de los guardados",
     ctx.viajeElegir("backpack") === true && ctx.contsTengo("backpack") === 0 && ctx.contLlevado().c === "backpack");
   /* cambiar de idea: la mochila tiene que volver ANTES de contar la bolsa, o cambiar fallaría */
   ok("cambiar a la bolsa devuelve la mochila a la granja",
     ctx.viajeElegir("bag") === true && ctx.contsTengo("backpack") === 1 && ctx.contLlevado().c === "bag");
-  ok("elegir la que ya llevás no hace nada raro",
+  ok("elegir la que ya llevas no hace nada raro",
     ctx.viajeElegir("bag") === true && ctx.contsTengo("bag") === 1, "bolsas guardadas: " + ctx.contsTengo("bag"));
   G.conts = { bag: 0, backpack: 0 }; G.cont = null;
-  ok("y una que no tenés no se puede elegir — con su aviso",
-    ctx.viajeElegir("backpack") === false && avisos.some(a => /no ten[eé]s/i.test(a)), avisos.join(" · "));
+  ok("y una que no tienes no se puede elegir — con su aviso",
+    ctx.viajeElegir("backpack") === false && avisos.some(a => /no tienes/i.test(a)), avisos.join(" · "));
 }
 
 console.log("\nCARGAR: LO QUE ENTRA SALE DE LA GRANJA, NI SE DUPLICA NI SE EVAPORA");
@@ -53,7 +53,7 @@ console.log("\nCARGAR: LO QUE ENTRA SALE DE LA GRANJA, NI SE DUPLICA NI SE EVAPO
   ok("las flechas pasan al contenedor", ctx.contContar(raiz, "res", "flecha") === 20);
   ok("y SE DESCUENTAN de la granja — la suma no cambia",
     Math.floor(G.res.flecha) === 10 && ctx.contContar(raiz, "res", "flecha") + Math.floor(G.res.flecha) === 30,
-    "granja " + G.res.flecha + " · llevás " + ctx.contContar(raiz, "res", "flecha"));
+    "granja " + G.res.flecha + " · llevas " + ctx.contContar(raiz, "res", "flecha"));
   ctx.viajeCargar("dish", "papa_asada", 2);
   ok("la comida también — que es lo único con lo que se cura uno allá",
     ctx.contContar(raiz, "dish", "papa_asada") === 2 && G.dishes.papa_asada === 2);
@@ -61,8 +61,8 @@ console.log("\nCARGAR: LO QUE ENTRA SALE DE LA GRANJA, NI SE DUPLICA NI SE EVAPO
      es una mala idea, pero es SU mala idea. Una lista blanca envejece sola. */
   ok("y las semillas, aunque no sirvan de nada allá: es su decisión",
     ctx.viajeCargar("seed", "papa", 5) === 5 && Math.floor(G.seeds.papa) === 0);
-  ok("no se puede cargar más de lo que tenés", ctx.viajeCargar("res", "carne", 999) === 10 && Math.floor(G.res.carne) === 0);
-  ok("ni algo que no tenés", ctx.viajeCargar("res", "diamante", 1) === 0);
+  ok("no se puede cargar más de lo que tienes", ctx.viajeCargar("res", "carne", 999) === 10 && Math.floor(G.res.carne) === 0);
+  ok("ni algo que no tienes", ctx.viajeCargar("res", "diamante", 1) === 0);
 }
 
 console.log("\nBAJAR: Y EN EL SENTIDO CONTRARIO TAMPOCO SE PIERDE NADA");
@@ -75,13 +75,13 @@ console.log("\nBAJAR: Y EN EL SENTIDO CONTRARIO TAMPOCO SE PIERDE NADA");
   ok("y el contenedor queda vacío", ctx.contPilas(ctx.contLlevado()) === 0);
 }
 
-console.log("\nLAS BOLSAS SE ENGANCHAN A LA MOCHILA — no son carga, son huecos");
+console.log("\nLAS BOLSAS SE ENGANCHAN A LA MOCHILA — no son carga, son espacios");
 {
   limpio(); ctx.viajeElegir("backpack");
   const raiz = ctx.contLlevado();
   ok("una bolsa entra como bolsa, no como objeto",
     ctx.viajeCargar("cont", "bag", 1) === 1 && raiz.items.length === 1 && raiz.items[0].c === "bag");
-  ok("y suma sus huecos: 20 − 1 + 8", ctx.contLibres(raiz) === 27, ctx.contLibres(raiz) + " libres");
+  ok("y suma sus espacios: 20 − 1 + 8", ctx.contLibres(raiz) === 27, ctx.contLibres(raiz) + " libres");
   ok("sale de los guardados", ctx.contsTengo("bag") === 1);
   /* ojo: la mochila que llevás puesta YA no está en los guardados. Para probar el rechazo hay
      que tener otra de repuesto, o la función corta antes por no tener ninguna. */

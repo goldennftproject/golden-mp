@@ -119,7 +119,7 @@ console.log("\n2 · LA ARMADURA SE GASTA Y SE REPARA\n");
      Con el set entero y en el bolsillo, el pelaje tiene que seguir haciendo falta. */
   G.armorDur[g('armorKey("piel", "yelmo")')] = 10;
   const vuelta = g('armorReparaCosto("piel", "yelmo")');
-  ok("con el set ya crafteado, el material del animal SIGUE haciendo falta: hay a qué volver",
+  ok("con el set ya fabricado, el material del animal SIGUE haciendo falta: hay a qué volver",
     !!vuelta && vuelta.mat > 0, vuelta ? vuelta.mat + " de pelaje para dejarlo nuevo" : "no pide nada");
 
   ok("la durabilidad viaja en el guardado", "armorDur" in g("snapshot()"));
@@ -158,13 +158,13 @@ console.log("\n4 · LOS PANELES NO MIENTEN (bugs encontrados abriendo el juego)\
     /const tieneComida = d\.come\.some\(c => \(G\.res\[c\] \|\| 0\) >= racionDe\)/.test(UI));
   ok("el atajo de alimentar todo también exige una ración completa y se desactiva si no puede alimentar a nadie",
     /const puedeAlimTodo = typeof establoPuedeAlimentarTodo/.test(UI) && /bAli\.disabled = !puedeAlimTodo/.test(UI));
-  ok("y explica en el propio botón si falta comida o si ya comieron", /No tenés una ración completa para ningún animal con hambre/.test(UI) && /Todos los animales ya comieron este ciclo/.test(UI));
+  ok("y explica en el propio botón si falta comida o si ya comieron", /No tienes una ración completa para ningún animal con hambre/.test(UI) && /Todos los animales ya comieron este ciclo/.test(UI));
   ok("y la fila del establo dice cuántas unidades come", /const come = d\.come\.map\(c => racion \+ " "/.test(UI));
   ok("y cuántas le faltan cuando no alcanza", /te faltan <b>' \+ faltan/.test(UI));
   /* el panel decía « ACTIVO » del bono con una pieza en cero, mientras armorBono() devolvía null */
   ok("el cartel del bono pregunta por el set SANO, no por tener las cinco piezas",
     /armorSetSano\(set\) : completo/.test(UI) && /sano \? ' — ACTIVO'/.test(UI));
-  ok("y cuando está apagado lo dice en vez de callarse", /apagado: repará las piezas gastadas/.test(UI));
+  ok("y cuando está apagado lo dice en vez de callarse", /apagado: repara las piezas gastadas/.test(UI));
 
   /* 15/9 (dirección: « esta esencia golden hay que quitarla ») — el tooltip de la moneda del HUD
      decía « Esencia $Golden — se usa para pescar »: la llamaba Esencia, que no se llama así en

@@ -427,7 +427,7 @@ function pantallaNoSePudo() {
     sub.style.cssText = "font-size:13px;color:#cbbf9f;margin:6px 0 10px;max-width:340px;text-align:center;line-height:1.4";
     sub.textContent = "Tu granja está a salvo: no se tocó nada, y sigue guardada en tu cuenta. " +
       (window.CARGA_MOTIVO ? "Se colgó en « " + window.CARGA_MOTIVO + " ». " : "El servidor no contestó a tiempo. ") +
-      "Probá de nuevo en un minuto. NO empieces una partida nueva: tu avance no se perdió.";
+      "Prueba de nuevo en un minuto. NO empieces una partida nueva: tu avance no se perdió.";
     if (t && t.parentNode) t.parentNode.insertBefore(sub, t.nextSibling);
   }
   const b = document.getElementById("enter");
@@ -509,7 +509,7 @@ function pantallaNoSePudo() {
            (internet del jugador · librería bloqueada · base de datos caída), porque de eso
            depende si el jugador puede hacer algo o solo le toca esperar. */
         const m = (typeof motivoSinNube === "function") ? motivoSinNube()
-          : { largo: "Sin conexión con el servidor de guardado. Tu granja se guarda en este navegador.", corto: "Sin servidor — se guarda acá" };
+          : { largo: "Sin conexión con el servidor de guardado. Tu granja se guarda en este navegador.", corto: "Sin servidor — se guarda aquí" };
         if (typeof log === "function") log(m.largo, "warn");
         if (typeof toast === "function") toast(m.corto);
       });
@@ -631,7 +631,7 @@ function pintarPuerta(modo) {
   const alt = document.getElementById("gate-alt");
   gateMsg("");
   if (modo === "reinicio") {   // 24/9: la cuenta se reinició — solo el apodo, el correo ya está
-    if (sub) sub.textContent = "Tu granja se reinició. Elegí tu apodo y empezá de nuevo.";
+    if (sub) sub.textContent = "Tu granja se reinició. Elige tu apodo y empieza de nuevo.";
     if (nick) { nick.style.display = ""; nick.value = ""; }
     if (mail) mail.style.display = "none";
     if (btn) btn.textContent = "Empezar de nuevo";
@@ -639,17 +639,17 @@ function pintarPuerta(modo) {
     return;
   }
   if (modo === "volver") {
-    if (sub) sub.textContent = "Entrá con el correo de tu granja. Te mandamos un enlace, sin contraseñas.";
+    if (sub) sub.textContent = "Entra con el correo de tu granja. Te mandamos un enlace, sin contraseñas.";
     if (nick) nick.style.display = "none";
     if (mail) mail.style.display = "";
-    if (btn) btn.textContent = "Mandame el enlace";
-    if (alt) alt.innerHTML = '<button type="button" id="gate-ya">Soy nuevo — crear mi granja</button>';
+    if (btn) btn.textContent = "Enviar enlace";
+    if (alt) alt.innerHTML = '<button type="button" id="gate-ya">Crear cuenta</button>';
   } else {
-    if (sub) sub.textContent = "Elegí un apodo y dejá tu correo: con eso tu granja te sigue a cualquier dispositivo.";
+    if (sub) sub.textContent = "Elige un apodo y deja tu correo: con eso tu granja te sigue a cualquier dispositivo.";
     if (nick) nick.style.display = "";
     if (mail) mail.style.display = (typeof GF !== "undefined" && GF.SOLO_EMAIL) ? "" : "none";
     if (btn) btn.textContent = "Entrar";
-    if (alt) alt.innerHTML = '<button type="button" id="gate-ya">Ya tengo cuenta — entrar con mi correo</button>';
+    if (alt) alt.innerHTML = '<button type="button" id="gate-ya">Iniciar sesión</button>';
   }
   const ya = document.getElementById("gate-ya");
   if (ya) ya.addEventListener("click", () => pintarPuerta(MODO_PUERTA === "volver" ? "apodo" : "volver"));
@@ -664,7 +664,7 @@ async function mandarElEnlace() {
   const mail = document.getElementById("gmail");
   const btn = document.getElementById("enter");
   const v = mail ? String(mail.value || "").trim() : "";
-  if (!correoPlausible(v)) { gateMsg("Ese correo no parece completo. Revisalo y probá de nuevo.", "mal"); return; }
+  if (!correoPlausible(v)) { gateMsg("Ese correo no parece completo. Revisalo y prueba de nuevo.", "mal"); return; }
   if (btn) { btn.disabled = true; btn.textContent = "Mandando…"; }
   gateMsg("Mandando el enlace…");
   try { await window.SAVE_READY; } catch (e) {}
@@ -675,10 +675,10 @@ async function mandarElEnlace() {
     const n = (document.getElementById("nick") || {}).value;
     r = (typeof crearCuentaConEmail === "function") ? await crearCuentaConEmail(v, n) : { error: "no disponible" };
   }
-  if (btn) { btn.disabled = false; btn.textContent = MODO_PUERTA === "volver" ? "Mandame el enlace" : "Entrar"; }
+  if (btn) { btn.disabled = false; btn.textContent = MODO_PUERTA === "volver" ? "Enviar enlace" : "Entrar"; }
   if (r && r.ok) {
     gateMsg("Listo: te mandamos un enlace a <b>" + v.replace(/[<>&]/g, "") + "</b>.<br>" +
-      "Abrilo y volvés directo a tu granja. Si no aparece en un minuto, mirá el correo no deseado.", "ok");
+      "Abrilo y vuelves directo a tu granja. Si no aparece en un minuto, mira el correo no deseado.", "ok");
     return;
   }
   /* el error más probable del camino "volver" es un correo que nunca vinculó ninguna granja, y
@@ -686,9 +686,9 @@ async function mandarElEnlace() {
      necesita entender qué hacer: crear una granja nueva en vez de seguir intentando entrar. */
   const e = String((r && r.error) || "no se pudo");
   if (MODO_PUERTA === "volver" && /not found|no user|signups? not allowed|invalid/i.test(e)) {
-    gateMsg("No hay ninguna granja atada a ese correo. Si sos nuevo, volvé y elegí « Soy nuevo — crear mi granja ».", "mal");
+    gateMsg("No hay ninguna granja vinculada a ese correo. Si es tu primera vez, selecciona «Crear cuenta».", "mal");
   } else if (/rate|limit|too many|seconds/i.test(e)) {
-    gateMsg("Se mandaron muchos correos seguidos. Esperá un minuto y probá otra vez.", "mal");
+    gateMsg("Se mandaron muchos correos seguidos. Espera un minuto y prueba otra vez.", "mal");
   } else {
     gateMsg("No se pudo mandar el enlace: " + e.replace(/[<>]/g, ""), "mal");
   }

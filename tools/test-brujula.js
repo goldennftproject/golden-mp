@@ -131,7 +131,7 @@ console.log("\nB4 · DESPUÉS, LO QUE EL NIVEL YA ABRIÓ\n");
   G.res = { madera: e.costo.madera, piedra: e.costo.piedra };
   G.plata = e.costo.plata;
   b = g("brujula()");
-  ok("con la plata, dice que se puede comprar", /Podés comprar la expansión 1/.test(b.txt), b.txt);
+  ok("con la plata, dice que se puede comprar", /Puedes comprar la expansión 1/.test(b.txt), b.txt);
   ok("y apunta al Mercado", b.target === "market" && b.panel === "ov-market");
   G.level = e.nivel - 1;
   ok("un nivel por debajo, NO la ofrece (sería mandarlo a un « todavía no »)", !/expansión 1/.test(g("brujula()").txt), g("brujula()").txt);
@@ -146,7 +146,7 @@ console.log("\nB5 · Y SI NO HAY NADA PENDIENTE, EL NIVEL SIGUIENTE Y LO QUE TRA
   ok("nombra el nivel siguiente", /Granja 2 trae/.test(b.txt), b.txt);
   ok("y lo que trae sale de farmUnlockTxt, no está escrito a mano",
     b.txt.indexOf(String(g("farmUnlockTxt(2)")).split(" + ")[0]) >= 0);
-  ok("y dice los tres oficios productivos", /cosechá, talá y picá/.test(b.txt));
+  ok("y dice los tres oficios productivos", /cosecha, tala y pica/.test(b.txt));
   G.level = g("FARM_NIVEL_MAX");
   ok("en el techo de granja no promete un nivel que no existe", !/Granja \d+ trae/.test((g("brujula()") || {}).txt || ""));
   vm.runInContext("metaSemana = _metaReal;", ctx);

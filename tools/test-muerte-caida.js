@@ -57,7 +57,7 @@ console.log("\nEL CONTENEDOR CAE ENTERO — sin azar, porque fue tu decisión");
 {
   conCarga();
   const r = ctx.tumbaCaer("pantano", 100, 100, NUNCA);
-  ok("no llevás nada puesto después de morir", ctx.contLlevado() === null);
+  ok("no llevas nada puesto después de morir", ctx.contLlevado() === null);
   ok("el desglose dice cuántas pilas cayeron", r.pilas === 6, JSON.stringify(r));
   ok("y con qué contenedor te habían matado", r.cont === "backpack");
   ok("no cayó ninguna pieza de equipo con los dados en contra", r.piezas === 0);
@@ -77,7 +77,7 @@ console.log("\nY CADA PIEZA PUESTA TIRA SU PROPIO 5%");
   ok("con tres piezas puestas, el catálogo las ve", ctx.equipoPuesto().length === 3,
     ctx.equipoPuesto().map(p => p.slot).join(" · "));
   const r = ctx.tumbaCaer("pantano", 10, 10, NUNCA);
-  ok("con los dados en contra NO cae ninguna, y seguís equipado",
+  ok("con los dados en contra NO cae ninguna, y sigues equipado",
     r.piezas === 0 && G.gear.casco === "casco_cuero" && G.gear.arma === "espada_bronce");
 
   conCarga(); equipado();
@@ -148,7 +148,7 @@ console.log("\nEL AVISO DICE QUÉ SE PERDIÓ — un « perdiste cosas » no ense
   const FOREST = fs.readFileSync(path.join(RAIZ, "public/game/forest.js"), "utf8");
   ok("el aviso separa el contenedor del equipo: son dos castigos distintos",
     /pieza\(s\) de equipo que llevabas puesta/.test(FOREST) && /con " \+ c\.pilas \+ " cosa\(s\) dentro/.test(FOREST));
-  ok("y dice que hay que volver CON OTRO contenedor", /volvé YA con otro contenedor a buscarlo/.test(FOREST));
+  ok("y dice que hay que volver CON OTRO contenedor", /vuelve YA con otro contenedor a buscarlo/.test(FOREST));
   /* 8/9 (Suren, en vivo): « hay que quitar el CD de regresar porque acabo de morir y no puedo
      esperar, se pudre y no puedo recuperar ». El enfriamiento existe para pausar el farmeo, no
      para separarte de tu cuerpo — y si el aviso no lo dice, el jugador igual se queda esperando. */
@@ -163,7 +163,7 @@ console.log("\nEL AVISO DICE QUÉ SE PERDIÓ — un « perdiste cosas » no ense
     cuerpo.indexOf("tumbaCaer") < cuerpo.indexOf("zonaSalir(true)"));
 }
 
-console.log("\nEL ENFRIAMIENTO NO SE INTERPONE ENTRE VOS Y TU CUERPO   (Suren, en vivo, 8/9)");
+console.log("\nEL ENFRIAMIENTO NO SE INTERPONE ENTRE TÚ Y TU CUERPO   (Suren, en vivo, 8/9)");
 {
   /* « hay que quitar el CD de regresar a zona negra porque acabo de morir y no puedo esperar
      porque se pudre y no puedo recuperar ». El enfriamiento se diseñó cuando morir no costaba
@@ -180,5 +180,5 @@ console.log("\nEL ENFRIAMIENTO NO SE INTERPONE ENTRE VOS Y TU CUERPO   (Suren, e
     Math.round(ctx.zonaCdLeft() / 1000) + " s");
 }
 
-console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: cae lo que cargaste, el equipo solo a veces, y podés ir a buscarlo.\n");
+console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: cae lo que cargaste, el equipo solo a veces, y puedes ir a buscarlo.\n");
 process.exit(fallos ? 1 : 0);

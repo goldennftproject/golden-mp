@@ -1543,7 +1543,7 @@
            un vistazo mientras peleás; el número sigue estando porque saber que te faltan 12 para
            llenarte es lo que decide si comés ahora o después. -->
       <div class="pill hppill" id="hppill" title="Vida"><span class="hpcor">❤</span><span class="k">Vida</span><span class="hpbarw"><span class="hpfill" id="hp-fill"></span></span><b id="s-hp">100/100</b><span class="k hpeta" id="hp-eta"></span></div>
-      <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los kills, sin importar el arma"><span class="k">Combate · Nv.</span><b id="c-lvl">1</b><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k">XP</span><span class="k" id="c-xp">0/100</span></div>
+      <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los enemigos derrotados, sin importar el arma"><span class="k">Combate · Nv.</span><b id="c-lvl">1</b><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k">XP</span><span class="k" id="c-xp">0/100</span></div>
       <div class="pill" data-mvp-hud><span class="k">Semana</span><b id="s-week">1</b></div>
       <button class="btnpill" id="menu-btn">☰ Menú</button>
     </div>
@@ -1554,7 +1554,7 @@
          los menúes. Estas dos píldoras viven ahora en una REPISA flotante pegada bajo la barra,
          fuera de su flujo — vengan o se vayan, la barra no se entera. -->
     <div id="hud-flot">
-      <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: 50 Free / 100 VIP; recuperación continua, 4 horas de vacía a llena. Clic para ver costes y capacidad."><span class="k">⚡ Energía</span><span class="cbarw"><span class="cfill lvlf" id="energia-granja-fill"></span></span><span class="k" id="s-energia-granja">50/50</span></button>
+      <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: 50 sin VIP / 100 VIP; recuperación continua, 4 horas de vacía a llena. Clic para ver costes y capacidad."><span class="k">⚡ Energía</span><span class="cbarw"><span class="cfill lvlf" id="energia-granja-fill"></span></span><span class="k" id="s-energia-granja">50/50</span></button>
       <div class="pill cpill" id="stampill" role="button" tabindex="0" aria-label="Recargar estamina" aria-haspopup="dialog" aria-controls="ov-confirm" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">⚔ Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
       <!-- 31/8 (de los vídeos de referencia: « Food 00:00 » — la comida es un RELOJ). Los platos
            llevaban buffs con vencimiento desde el doc maestro del 2/8 y no se enseñaban en ningún
@@ -1597,14 +1597,14 @@
   <div class="ov" id="ov-barn"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-barn" aria-label="Cerrar ventana">×</button>
     <h3>Granja</h3>
-    <div class="sub">Del nivel 1 al 10 subís solo cosechando. Del 11 al 25 hace falta la XP y cumplir las tareas del nivel.</div>
+    <div class="sub">Del nivel 1 al 10 subes solo cosechando. Del 11 al 25 hace falta la XP y cumplir las tareas del nivel.</div>
     <div class="forge-list" id="barn-body" style="max-height:60vh"></div>
   </div></div>
 
   <!-- Cofre depósito: 10 espacios de guardado (detalles 29/7) -->
   <div class="ov" id="ov-cofre"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-cofre" aria-label="Cerrar ventana">×</button>
-    <h3>Cofre depósito</h3>
+    <h3>Cofre de depósito</h3>
     <div class="sub" id="cofre-info"></div>
     <div class="shophead">En el cofre — clic para sacar</div>
     <div class="slots" id="cofre-slots" style="grid-template-columns:repeat(5,1fr);max-height:none"></div>
@@ -1709,20 +1709,20 @@
     <button class="close" data-close="ov-forge" aria-label="Cerrar ventana">×</button>
     <h3>Herrería</h3>
     <div class="shoptabs">
-      <button class="shoptab forgetab active" data-forge="craft">Craftear</button>
+      <button class="shoptab forgetab active" data-forge="craft">Fabricar</button>
       <button class="shoptab forgetab" data-forge="armas">Armas</button>
       <button class="shoptab forgetab" data-forge="repair">Reparar</button>
     </div>
     <div id="forge-pane-craft">
-      <div class="sub">Elegí qué fabricar · costes por unidad · ×5 requiere VIP. Sin gasto de energía.</div>
+      <div class="sub">Elige qué fabricar · costes por unidad · ×5 requiere VIP. Sin gasto de energía.</div>
       <div class="forge-list" id="forge-craft"></div>
     </div>
     <div id="forge-pane-armas" style="display:none">
-      <div class="sub">Espada, arco y flechas. El daño escala con la skill de cada arma.</div>
+      <div class="sub">Espada, arco y flechas. El daño escala con la habilidad de cada arma.</div>
       <div class="forge-list" id="forge-armas"></div>
     </div>
     <div id="forge-pane-repair" style="display:none">
-      <div class="sub">Solo las armas se reparan. Herramientas y picos se rompen y se craftean de nuevo.</div>
+      <div class="sub">Solo las armas se reparan. Herramientas y picos se rompen y se fabrican de nuevo.</div>
       <div class="forge-list" id="forge-repair"></div>
     </div>
   </div></div>
@@ -1733,7 +1733,7 @@
     <div class="sub" id="inv-cap">Bolsa: 0/0 · recursos y semillas apilan hasta 99</div>
     <div class="slots" id="inv-slots"></div>
     <div class="sub" id="inv-selseed"></div>
-    <div class="invrow"><div class="invexp" id="inv-expand"></div><div id="inv-trash" title="Arrastrá un objeto acá para tirarlo">Tirar</div></div>
+    <div class="invrow"><div class="invexp" id="inv-expand"></div><div id="inv-trash" title="Arrastra un objeto aquí para tirarlo">Tirar</div></div>
   </div></div>
 
   <!-- 18/8 (dirección): "la bolsa se llena de recursos farmeables y termina todo mezclado con las
@@ -1743,13 +1743,13 @@
   <div class="ov" id="ov-cobertizo"><div class="card" style="width:min(432px,94%)">
     <button class="close" data-close="ov-cobertizo" aria-label="Cerrar ventana">×</button>
     <h3>🏚 Cobertizo</h3>
-    <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Elegí una pieza para decidir dónde va.</div>
+    <div class="sub" id="cob-sub">Lo que todavía no colocaste en la granja. Elige una pieza para decidir dónde va.</div>
     <div class="cob-contenido"><section class="cob-piezas">
     <h4>📦 Objetos por colocar</h4><div class="slots" id="cob-slots"></div>
     <div class="sub" id="cob-pie"></div>
     </section><section class="cob-gestion">
     <div id="prod-granja"></div>
-    <details class="ayuda-menu"><summary>⚡ Costes de energía</summary><p class="sub">50 Free / 100 VIP · recarga completa en 4 h.</p><p class="sub">1 ⚡: plantar, cosechar, cocinar y compostar.<br>2 ⚡: talar, picar y recoger productos animales.<br>Sin energía: comprar, fabricar, vender, ordenar y construir.</p><p class="sub">La estamina de combate es independiente. Pesca pausada.</p></details>
+    <details class="ayuda-menu"><summary>⚡ Costes de energía</summary><p class="sub">50 sin VIP / 100 VIP · recarga completa en 4 h.</p><p class="sub">1 ⚡: plantar, cosechar, cocinar y compostar.<br>2 ⚡: talar, picar y recoger productos animales.<br>Sin energía: comprar, fabricar, vender, ordenar y construir.</p><p class="sub">La estamina de combate es independiente. Pesca pausada.</p></details>
     </section></div>
   </div></div>
 
@@ -1761,7 +1761,7 @@
   <div class="ov" id="ov-visitas"><div class="card" style="width:min(640px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto">
     <button class="close" data-close="ov-visitas" aria-label="Cerrar ventana">×</button>
     <h3>🌱 Visitas VIP</h3>
-    <p class="sub">Vista de lectura: nunca modifica la granja del dueño. Recogé una semilla de papa por granja, hasta tres por día UTC; no se descuentan del dueño. VIP activo requerido.</p>
+    <p class="sub">Vista de lectura: nunca modifica la granja del dueño. Recoge una semilla de papa por granja, hasta tres por día UTC; no se descuentan del dueño. VIP activo requerido.</p>
     <div id="visitas-lista" aria-live="polite"></div>
     <div id="visitas-vista" aria-live="polite"></div>
   </div></div>
@@ -1838,10 +1838,10 @@
 
   <div class="ov bloquea" id="ov-entrenando"><div class="card" style="width:min(430px,92%)">
     <h3>Entrenando</h3>
-    <div class="sub">El granjero está golpeando el dummy. Mientras entrena no puede hacer otra cosa: cerrá el juego y volvé cuando quieras.</div>
+    <div class="sub">El granjero está golpeando el muñeco. Mientras entrena no puede hacer otra cosa: cierra el juego y vuelve cuando quieras.</div>
     <div class="info" id="entr-info">…</div>
     <div class="row" style="justify-content:center"><button class="gold" id="entr-fin">Dejar de entrenar y cobrar</button></div>
-    <div class="dynote">El primer minuto no cuenta · Suma hasta 8 h · Un clic en cualquier lado también corta el entrenamiento</div>
+    <div class="dynote">El primer minuto no otorga progreso · Máximo: 8 h · Haz clic en cualquier lugar para finalizar el entrenamiento</div>
   </div></div>
 
   <div class="ov" id="ov-lb"><div class="card" style="width:min(500px,94%)">
@@ -1850,7 +1850,7 @@
     <div class="lbtabs">
       <button class="lbtab active" data-lb="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
       <button class="lbtab" data-lb="exp">Experiencia</button>
-      <button class="lbtab" data-lb="skill">Mejor skill</button>
+      <button class="lbtab" data-lb="skill">Mejor habilidad</button>
     </div>
     <div class="lblist" id="lb-list"></div>
     <div class="lbnote" id="lb-note"></div>
@@ -1864,7 +1864,7 @@
       <p>Al terminar la alfa se reinicia el progreso. Las compras permanentes se conservan; comprar VIP en alfa dará 30 días desde el lanzamiento, sin acumular renovaciones.</p>
       <button class="ghost sm" id="cfg-alfa-compras">Ver mis compras conservadas</button>
       <div id="cfg-alfa-compras-lista" aria-live="polite"></div>
-      <p>Sin depósitos ni retiros de USDT. Si encontrás un fallo, copiá el informe y contanos cómo ocurrió.</p>
+      <p>Sin depósitos ni retiros de USDT. Si encuentras un fallo, copia el informe y cuéntanos cómo ocurrió.</p>
       <button class="ghost sm" id="cfg-alfa-copiar">Copiar informe técnico</button>
       <textarea id="cfg-alfa-informe" hidden readonly aria-label="Informe técnico de la alfa" style="width:100%;box-sizing:border-box;min-height:160px;margin-top:8px;font:12px monospace"></textarea>
     </div>
@@ -1879,32 +1879,32 @@
       <p id="cfg-auth-status" style="min-height:30px">—</p>
       <!-- 19/9: el campo y el botón de atar el correo VUELVEN, pero solo se muestran cuando la
            cuenta no tiene correo confirmado (una cuenta de antes del 18/9, o una que se quedó a
-           mitad de la confirmación). Con el correo atado están ocultos: no son una opción. -->
+           mitad de la confirmación). Con el correo vinculado están ocultos: no son una opción. -->
       <div class="row" id="cfg-atar-fila" style="display:none">
         <input id="cfg-email" type="email" placeholder="tu@correo.com" style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid #caa96a;background:#fdf6e3;font:inherit">
-        <button class="green sm" id="cfg-atar">Atar mi correo</button>
+        <button class="green sm" id="cfg-atar">Vincular correo</button>
       </div>
       <div class="row">
         <!-- desconectarse. Arranca DESHABILITADO: se enciende cuando se sabe que hay cuenta. -->
         <button class="red sm" id="cfg-salir" disabled>Cerrar sesión</button>
       </div>
-      <p id="cfg-auth-nota" style="min-height:26px">Tu granja te sigue a cualquier dispositivo: entrá con tu correo.</p>
+      <p id="cfg-auth-nota" style="min-height:26px">Tu granja te sigue a cualquier dispositivo: entra con tu correo.</p>
       <!-- 24/9 (dirección): reiniciar la cuenta — la granja vuelve a cero, el correo se queda -->
       <div class="cfg-danger">
-        <div class="row"><button class="red sm" id="cfg-reiniciar">Reiniciar mi cuenta</button></div>
-        <p class="sub">Borra TODA tu granja (nivel, plata, terreno, objetos) y empezás como un jugador nuevo. Tu correo se mantiene. No se puede deshacer.</p>
+        <div class="row"><button class="red sm" id="cfg-reiniciar">Reiniciar progreso</button></div>
+        <p class="sub">Borra TODA tu granja (nivel, plata, terreno, objetos) y empiezas como un jugador nuevo. Tu correo se mantiene. No se puede deshacer.</p>
       </div>
     </div>
     <div class="cfgsec">
       <h4>Sonido</h4>
-      <div class="row"><button class="ghost sm" id="cfg-sound">Sonidos: Sí</button></div>
+      <div class="row"><button class="ghost sm" id="cfg-sound">Sonido: Activado</button></div>
       <!-- 14/8: la guía de objetivos es OPCIONAL — se puede apagar y jugar libre -->
-      <div class="row"><button class="ghost sm" id="cfg-guia">Guía de objetivos: Sí</button></div>
+      <div class="row"><button class="ghost sm" id="cfg-guia">Guía de objetivos: Activada</button></div>
     </div>
     <div class="cfgsec">
       <h4>Editar granja</h4>
-      <p>Colocar y mover objetos por celda llega en otra fase.</p>
-      <div class="row"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restaurar</button></div>
+      <p>Mueve los objetos para reorganizar tu granja. Restablecer distribución recupera sus posiciones originales.</p>
+      <div class="row"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restablecer distribución</button></div>
     </div>
   </div></div>
 
@@ -1926,7 +1926,7 @@
   <div class="ov" id="ov-mapa"><div class="card" style="width:min(520px,94%)">
     <button class="close" data-close="ov-mapa" aria-label="Cerrar ventana">×</button>
     <h3>Mapa</h3>
-    <div class="sub">Dónde estás y a dónde podés ir.</div>
+    <div class="sub">Dónde estás y a dónde puedes ir.</div>
     <div class="forge-list" id="mapa-list" style="max-height:58vh"></div>
   </div></div>
 
@@ -1971,7 +1971,7 @@
   <div class="ov" id="ov-album"><div class="card" style="width:min(600px,94%)">
     <button class="close" data-close="ov-album" aria-label="Cerrar ventana">×</button>
     <h3>📖 Álbum de la granja</h3>
-    <div class="sub">Cada cosa que conseguís por primera vez revela su lámina. <b id="alb-prog"></b></div>
+    <div class="sub">Cada cosa que consigues por primera vez revela su lámina. <b id="alb-prog"></b></div>
     <div class="forge-list" id="album-list" style="max-height:58vh"></div>
   </div></div>
 
@@ -1982,7 +1982,7 @@
       <div class="pm-pista"><div class="pm-zona" id="pm-zona"></div><img class="pm-pez" id="pm-pez" src="assets/farm/fish_comun.png?a=7" draggable="false" alt=""></div>
       <div class="pm-prog"><i id="pm-fill"></i></div>
     </div>
-    <div class="pm-pie"><span class="pm-pie-touch">mantené apretado: la zona sube · soltá: baja</span><span class="pm-pie-pc">mantené clic o Espacio: la zona sube · soltá: baja</span></div>
+    <div class="pm-pie"><span class="pm-pie-touch">mantén apretado: la zona sube · soltá: baja</span><span class="pm-pie-pc">mantén clic o Espacio: la zona sube · soltá: baja</span></div>
   </div>
 
   <div class="ov" id="ov-logros"><div class="card" style="width:min(560px,94%)">
@@ -2001,14 +2001,14 @@
   <div class="ov" id="ov-cos"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-cos" aria-label="Cerrar ventana">×</button>
     <h3>Cosméticos</h3>
-    <div class="sub">Lo que ganaste jugando: títulos, color de nombre, marcos y el aura. Elegí qué lucir — los demás jugadores lo ven en el ranking, el chat y la plaza.</div>
+    <div class="sub">Lo que ganaste jugando: títulos, color de nombre, marcos y el aura. Elige qué lucir — los demás jugadores lo ven en el ranking, el chat y la plaza.</div>
     <div class="forge-list" id="cos-list" style="max-height:58vh"></div>
   </div></div>
 
   <div class="ov" id="ov-p2p"><div class="card" style="width:min(680px,94%)">
     <button class="close" data-close="ov-p2p" aria-label="Cerrar ventana">×</button>
     <h3>Mercado de jugadores</h3>
-    <div class="sub">Comprá y vendé con otros jugadores. Revisá la comisión al publicar; el cobro te espera en Mis publicaciones.</div>
+    <div class="sub">Compra y vende con otros jugadores. Revisa la comisión al publicar; el cobro te espera en Mis publicaciones.</div>
     <div class="shoptabs">
       <button class="shoptab active" data-p2p="comprar">Comprar</button>
       <button class="shoptab" data-p2p="vender">Vender</button>
@@ -2031,21 +2031,21 @@
   <div class="ov" id="ov-incursion"><div class="card" style="width:min(600px,94%)">
     <button class="close" data-close="ov-incursion" aria-label="Cerrar ventana">×</button>
     <h3>Incursión</h3>
-    <div class="sub">Mandá al granjero a pelear solo: tarda tiempo real y vuelve con botín y XP. Rinde menos que pelear a mano, gasta durabilidad y estamina, y si vas flojo de poder volvés herido. Al jefe hay que ir en persona.</div>
+    <div class="sub">Envía al granjero a pelear solo: tarda tiempo real y vuelve con botín y XP. Rinde menos que pelear a mano, gasta durabilidad y estamina, y si vas flojo de poder vuelves herido. Al jefe hay que ir en persona.</div>
     <div class="forge-list" id="inc-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-ofrendas"><div class="card" style="width:min(620px,94%)">
     <button class="close" data-close="ov-ofrendas" aria-label="Cerrar ventana">×</button>
     <h3>Altar de Ofrendas</h3>
-    <div class="sub">Entregá recursos y se queman para siempre a cambio de Puntos de Ofrenda. El pozo del airdrop es FIJO y se reparte proporcionalmente entre todos: entregar más no crea más token, solo cambia tu porción.</div>
+    <div class="sub">Entrega recursos y se queman para siempre a cambio de Puntos de Ofrenda. El pozo del airdrop es FIJO y se reparte proporcionalmente entre todos: entregar más no crea más token, solo cambia tu porción.</div>
     <div class="forge-list" id="ofr-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-curtiduria"><div class="card" style="width:min(660px,94%)">
     <button class="close" data-close="ov-curtiduria" aria-label="Cerrar ventana">×</button>
     <h3>Curtiduría</h3>
-    <div class="sub">La contraparte defensiva de la Herrería. Cada set son 5 piezas: podés usar sueltas (defensa parcial) y completar las 5 activa el bono del set. El material sale de los animales del Establo.</div>
+    <div class="sub">La contraparte defensiva de la Herrería. Cada set son 5 piezas: puedes usar sueltas (defensa parcial) y completar las 5 activa el bono del set. El material sale de los animales del Establo.</div>
     <div class="forge-list" id="curti-list" style="max-height:62vh"></div>
   </div></div>
 
@@ -2053,7 +2053,7 @@
   <div class="ov" id="ov-godhand"><div class="card" style="width:min(620px,94%)">
     <button class="close" data-close="ov-godhand" aria-label="Cerrar ventana">×</button>
     <h3>✋ GOD HAND</h3>
-    <div class="sub">Cargale semillas (6 espacios · 50 c/u · 300 en total) y mientras no estás hace el ciclo entero: siembra, cosecha y resiembra tus parcelas vacías. Al volver te entrega todo junto. Cobra 100 de plata la primera hora y cada hora sale 10% más — trabaja hasta 24 h por ausencia.</div>
+    <div class="sub">Cárgale semillas (6 espacios · 50 c/u · 300 en total) y mientras no estás hace el ciclo entero: siembra, cosecha y resiembra tus parcelas vacías. Al volver te entrega todo junto. Cobra 100 de plata la primera hora y cada hora sale 10% más — trabaja hasta 24 h por ausencia.</div>
     <div class="forge-list" id="godhand-list" style="max-height:62vh"></div>
   </div></div>
 
@@ -2121,7 +2121,7 @@
   <div class="ov" id="ov-establo"><div class="card" style="width:min(620px,94%)">
     <button class="close" data-close="ov-establo" aria-label="Cerrar ventana">×</button>
     <h3>Establo</h3>
-    <div class="sub">Comprá el animal con Plata y dale una ración completa por ciclo para que produzca su material. Sin comida no produce. Los materiales se usan para fabricar en la Curtiduría. <b id="establo-cupo"></b></div>
+    <div class="sub">Compra el animal con Plata y dale una ración completa por ciclo para que produzca su material. Sin comida no produce. Los materiales se usan para fabricar en la Curtiduría. <b id="establo-cupo"></b></div>
     <!-- 23/8 (QoL): con hasta 20 animales, el clic por especie era un castigo -->
     <div class="row" style="gap:8px;margin:4px 0 6px"><button class="green sm" id="est-alim-todo">🍽 Alimentar todo</button><button class="gold sm" id="est-rec-todo">🧺 Recoger todo</button></div>
     <div class="forge-list" id="establo-list" style="max-height:56vh"></div>
@@ -2130,14 +2130,14 @@
   <div class="ov" id="ov-altar"><div class="card" style="width:min(640px,94%)">
     <button class="close" data-close="ov-altar" aria-label="Cerrar ventana">×</button>
     <h3>Altar de Runas</h3>
-    <div class="sub">Mejorá tus armas de +1 a +15 (con su % de éxito a la vista) y socketeá runas de atributo. La esencia rúnica la sueltan los mobs fuertes de la Zona Negra.</div>
+    <div class="sub">Mejorá tus armas de +1 a +15 (con su % de éxito a la vista) y engarza runas de atributo. La esencia rúnica la sueltan los enemigos fuertes de la Zona Negra.</div>
     <div class="forge-list" id="altar-list" style="max-height:60vh"></div>
   </div></div>
 
   <div class="ov" id="ov-horno"><div class="card" style="width:min(460px,94%)">
     <button class="close" data-close="ov-horno" aria-label="Cerrar ventana">×</button>
     <h3>Horno de Piedra</h3>
-    <div class="sub">Acá se funden todos los lingotes y barras. Cada fundición tiene un enfriamiento.</div>
+    <div class="sub">Aquí se funden todos los lingotes y barras. Cada fundición tiene un enfriamiento.</div>
     <div class="forge-list" id="horno-mats"></div>
   </div></div>
 
@@ -2172,7 +2172,7 @@
   <div class="gmenu collapsed" id="gmenu">
     <div class="gmitems" role="navigation" aria-label="Menús del juego">
       <div class="menu-seccion">Mi granja</div>
-      <button class="gmi" title="Objetos, semillas y materiales que llevás." data-panel="ov-inv"><span class="ic" aria-hidden="true">🎒</span> Inventario <b class="key">I</b></button>
+      <button class="gmi" title="Objetos, semillas y materiales que llevas." data-panel="ov-inv"><span class="ic" aria-hidden="true">🎒</span> Inventario <b class="key">I</b></button>
       <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="ic" aria-hidden="true">🏚</span> Cobertizo <b class="key" id="gm-cob"></b></button>
       <button class="gmi" title="Elegir armas, armaduras y herramientas." data-panel="ov-equip"><span class="ic" aria-hidden="true">⚔️</span> Equipo <b class="key">P</b></button>
       <button class="gmi" title="Niveles de cultivo, tala, minería y combate." data-panel="ov-skills"><span class="ic" aria-hidden="true">📊</span> Habilidades <b class="key">X</b></button>
@@ -2206,8 +2206,8 @@
 
   <!-- barra flotante del modo edición -->
   <div id="editbar">
-    <button class="green sm" id="edit-done">Terminar edición</button>
-    <button class="ghost sm" id="edit-reset">↺ Restaurar</button>
+    <button class="green sm" id="edit-done">Finalizar edición</button>
+    <button class="ghost sm" id="edit-reset">↺ Restablecer distribución</button>
     <!-- 10/8: desde el modo edición se ponen y se levantan los adornos comprados -->
     <select id="edit-deco" title="Adorno para colocar"></select>
     <button class="gold sm" id="edit-poner">Poner adorno</button>
@@ -2235,7 +2235,7 @@
       <div id="log" class="pane"></div>
       <div id="chatpane" class="pane" style="display:none">
         <div id="chat-msgs"></div>
-        <div class="chatbar"><input id="chat-in" maxlength="140" placeholder="Escribí y Enter…" autocomplete="off"><button id="chat-send">▶</button></div>
+        <div class="chatbar"><input id="chat-in" maxlength="140" placeholder="Escribe y Enter…" autocomplete="off"><button id="chat-send">▶</button></div>
       </div>
     </div>
   </div>
@@ -2272,7 +2272,7 @@
   <div id="gate" style="display:none">
     <div class="gcard">
       <h1>GOLDEN FARM</h1>
-      <p id="gate-sub">Elegí un apodo para entrar a tu granja.</p>
+      <p id="gate-sub">Elige un apodo para entrar a tu granja.</p>
       <p class="sub">Alfa de pruebas: el progreso se reiniciará al finalizar. Conservaremos las compras permanentes y 30 días de VIP desde el lanzamiento para quienes lo compren en alfa. Sin depósitos ni retiros USDT.</p>
       <input id="nick" maxlength="14" placeholder="Tu apodo" autocomplete="off">
       <!-- 18/9 — el correo entra en la puerta. Antes vivía tres clics adentro (Configuración →
@@ -2283,7 +2283,7 @@
              placeholder="Tu correo" style="display:none">
       <button class="enter" id="enter">Entrar</button>
       <div id="gate-alt" class="gate-alt" style="display:none">
-        <button type="button" id="gate-ya">Ya tengo cuenta — entrar con mi correo</button>
+        <button type="button" id="gate-ya">Iniciar sesión</button>
       </div>
       <div id="gate-msg" class="gate-msg" style="display:none"></div>
     </div>
@@ -2343,7 +2343,7 @@
       var f = document.getElementById("ldfill");
       mostrar("Tarda más de lo normal.\n\nPaso: " + ((m && m.textContent) || "?") +
               "\nBarra: " + ((f && f.style.width) || "?") +
-              "\n\nSuele ser el servidor despertando. Recargá la página; si se repite, mandame esta pantalla.");
+              "\n\nSuele ser el servidor despertando. Recarga la página; si se repite, mandame esta pantalla.");
     }, 20000);
   })();
   </script>
@@ -2389,7 +2389,7 @@
         const r = (retry || 0) + 1;
         if (r > 8) {
           const el = document.getElementById("loading");
-          if (el) el.innerHTML += "<div style='color:#ffd24a;font-size:13px;margin-top:8px'>El servidor está despertando… <a href='' style='color:#8fc46a'>recargá la página</a></div>";
+          if (el) el.innerHTML += "<div style='color:#ffd24a;font-size:13px;margin-top:8px'>El servidor está despertando… <a href='' style='color:#8fc46a'>recarga la página</a></div>";
           return;
         }
         setTimeout(function () { next(r); }, 250 * r);   // espera creciente entre reintentos

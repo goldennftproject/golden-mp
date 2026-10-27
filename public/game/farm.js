@@ -525,7 +525,7 @@ class FarmScene extends Phaser.Scene {
          arreglarlo — dándole voz, que es la regla 9 y no una concesión al medidor. */
       if (typeof P4 !== "undefined" && P4) {
         if (P4.carrete) this.lanceHold = true;
-        else toast("El corcho ya está en el agua — esperá el pique");
+        else toast("El corcho ya está en el agua — espera el pique");
         return;
       }
       /* 21/8 (diseñador: "con doce semillas, el clic derecho planta la última en vez de abrir la
@@ -554,7 +554,7 @@ class FarmScene extends Phaser.Scene {
            OTRA interfaz sobre ellas —semillas y aparejos— se frenan en sus propias puertas de
            UI, más abajo, sin convertir un gesto normal del mundo en un callejón sin salida. */
         if (GF.uiOpen) {
-          if (!GF.typing) toast("Cerrá la ventana para sembrar en la parcela");
+          if (!GF.typing) toast("Cierra la ventana para sembrar en la parcela");
           return;
         }
         const wx = pt.worldX, wy = pt.worldY;
@@ -568,7 +568,7 @@ class FarmScene extends Phaser.Scene {
            « hacer » y el derecho siempre « elegir con qué »: una vez que el jugador aprende ese
            par en la parcela, ya lo sabe para la laguna sin que nadie se lo diga. */
         if (this.pondDist(wx, wy) < 1.05 && typeof pescaAparejosAbrir === "function") {
-          if (typeof P4 !== "undefined" && P4) { toast("Terminá el lance primero"); return; }
+          if (typeof P4 !== "undefined" && P4) { toast("Termina el lance primero"); return; }
           pescaAparejosAbrir(); return;
         }
         for (const pl of this.plots) {
@@ -595,7 +595,7 @@ class FarmScene extends Phaser.Scene {
             const nom = cd ? cd.label : "algo";
             if (pl.state === "growing") {
               const falta = Math.max(0, (pl.readyAt || 0) - nowMs());
-              toast("🌱 Acá ya está creciendo " + nom + (falta ? " · listo en " + fmtDur(falta) : ""));
+              toast("🌱 Aquí ya está creciendo " + nom + (falta ? " · listo en " + fmtDur(falta) : ""));
             } else if (pl.state === "ready") {
               toast("✅ " + nom + " está listo — clic izquierdo para cosechar");
             } else if (pl.state === "locked") {
@@ -649,7 +649,7 @@ class FarmScene extends Phaser.Scene {
         if (this.pondImg && this.pondDist(wx, wy) < 1) {
           // El lance dibuja corcho, hilo y barra sobre ESTA agua. Reubicar la laguna en ese
           // instante los dejaría en el pasto viejo; el jugador termina el lance y puede moverla.
-          if (this.action && this.action.kind === "fish") { toast("Terminá el lance antes de mover la laguna"); return; }
+          if (this.action && this.action.kind === "fish") { toast("Termina el lance antes de mover la laguna"); return; }
           this.dragPond = true; return;
         }
         this.hold = { sx: pt.x, sy: pt.y, px: pt.x, py: pt.y, active: false };   // 13/8: nada agarrado → el arrastre panea también en edición
@@ -673,7 +673,7 @@ class FarmScene extends Phaser.Scene {
              jugador está clicando rápido justo cuando pasa, así que lo lee como « el juego se
              traba ». Cada caso dice lo suyo. */
           if (this.queue.includes(hit)) toast("Eso ya está en la cola");
-          else if (this.queue.length >= 7) toast("La cola está llena (7) — esperá a que avance");
+          else if (this.queue.length >= 7) toast("La cola está llena (7) — espera a que avance");
           else { this.queue.push(hit); this.markQueued(hit); toast("En cola (" + this.queue.length + ")"); }
         }
         return;
@@ -867,7 +867,7 @@ class FarmScene extends Phaser.Scene {
         if (!this.celdaLibreAdorno(col, row, a.i)) {
           a.g.setPosition(a.cx, a.by).setDepth(a.by);
           this.moverHaloFarol(a, a.cx, a.by);
-          toast(this.porQueNoEntra(col, row, -1) || "Ahí ya hay algo — elegí otra celda"); return;
+          toast(this.porQueNoEntra(col, row, -1) || "Ahí ya hay algo — elige otra celda"); return;
         }
         const d = (G.decos || [])[a.i];
         if (d) { d.col = col; d.row = row; }
@@ -882,7 +882,7 @@ class FarmScene extends Phaser.Scene {
         const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
         if (this.plotSpotBlocked(pl, col, row)) {
           if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
-          toast("Ahí ya hay algo — elegí otra celda"); return;
+          toast("Ahí ya hay algo — elige otra celda"); return;
         }
         this.moverParcela(pl, col, row);
         this.updateTutoArrow();   // la guía apunta a la tierra que acabás de reubicar
@@ -923,7 +923,7 @@ class FarmScene extends Phaser.Scene {
         this.reposicionarAviso(o);
         if (o._aviso) o._aviso.setVisible(!o.oculto);
         if (o === this.storeObj || o.type === "store") this.updateForge();
-        toast("Ahí ya hay algo — elegí otra celda");
+        toast("Ahí ya hay algo — elige otra celda");
         this.dragObj = null; return;
       }
       o.cx = leftCol * T + wCells * T / 2; o.by = baseRow * T;
@@ -1367,7 +1367,7 @@ class FarmScene extends Phaser.Scene {
 
   textoBloqueoPrompt(p, respaldo) {
     if (!p || p.ok) return respaldo;
-    if (p.bag) return "Bolsa llena — no podés " + p.bag;
+    if (p.bag) return "Bolsa llena — no puedes " + p.bag;
     return p.toast || respaldo;
   }
 
@@ -1377,7 +1377,7 @@ class FarmScene extends Phaser.Scene {
     const bolsa = d && d.bolsa === "fish" ? (G.fish || {}) : G.res;
     const nombre = (d && d.label) || RES_LABEL[id] || "carnada";
     const cantidad = d ? (bolsa[d.k] || 0) : (G.res.lombriz || 0);
-    let texto = "Pescar (" + ((d && d.n) || 1) + " " + nombre.toLowerCase() + " · tenés " + fmt(cantidad) + ")";
+    let texto = "Pescar (" + ((d && d.n) || 1) + " " + nombre.toLowerCase() + " · tienes " + fmt(cantidad) + ")";
     /* 25/9 (diseñador: « ¿dónde dice que solo se puede pescar 15 veces? ¿dónde pone el
        contador? ») — el contador vivía solo en Aparejos. Va acá, en el cartel del agua, que es
        lo que se mira antes de tirar. */
@@ -1448,7 +1448,7 @@ class FarmScene extends Phaser.Scene {
       return of ? ("Mercader Goblin — cambia " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) + " por " + of.entrega + " " + (RES_LABEL[of.da] || of.da) + " 🤝") : "Mercader Goblin 🤝";
     }
     if (o.type === "domabicho") {   // LA DOMA (22/8): el bicho cuenta su estado desde el hover
-      const nom = (typeof MONSTER_DEF !== "undefined" && G.doma && MONSTER_DEF[G.doma.bicho]) ? MONSTER_DEF[G.doma.bicho].label : "Bicho";
+      const nom = (typeof MONSTER_DEF !== "undefined" && G.doma && MONSTER_DEF[G.doma.bicho]) ? MONSTER_DEF[G.doma.bicho].label : "Criatura";
       if (typeof domaHambriento === "function" && domaHambriento()) return nom + " domado — tiene HAMBRE: clic para darle 1 carne 🍖";
       const u = G.doma && G.doma.ultimo;
       const oficio = (typeof DOMA_ROL_TXT !== "undefined" && G.doma && DOMA_ROL_TXT[DOMA_ROL[G.doma.bicho]]) || "trabaja";
@@ -1459,7 +1459,7 @@ class FarmScene extends Phaser.Scene {
       return nom + " domado — " + oficio + " mientras no estás" + parte;
     }
     if (o.type === "cofre_diario") {
-      if (!G.kitReclamado) return "¡Abrí tu kit de bienvenida!";
+      if (!G.kitReclamado) return "¡Abre tu kit de bienvenida!";
       return "Baúl de premios";
     }
     if (o.type === "barn") return "Granja";
@@ -1478,12 +1478,12 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "lonja") return "La Lonja";
     if (o.type === "boya") return "Boya de trofeos";
     if (o.type === "ofrendas") return "Altar de Ofrendas";
-    if (o.type === "cofre") return "Cofre depósito";
+    if (o.type === "cofre") return "Cofre de depósito";
     if (o.type === "dummy") {
       if (typeof dummyEntrenando === "function" && dummyEntrenando()) return "Entrenando… clic para cobrar la XP acumulada";
-      { const aid = armaEq(); if (!aid || ARM_DEF[aid].tipo === "arco") return "Dummy de práctica — equipá un arma cuerpo a cuerpo"; }
+      { const aid = armaEq(); if (!aid || ARM_DEF[aid].tipo === "arco") return "Muñeco de entrenamiento — equipa un arma cuerpo a cuerpo"; }
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
-      return dleft > 0 ? "El dummy descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
+      return dleft > 0 ? "El muñeco descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
     }
     if (o.type === "fish") {
       /* Y que se vea SIN tener que hacer clic: el rótulo del cursor dice el descanso igual que lo
@@ -1493,7 +1493,7 @@ class FarmScene extends Phaser.Scene {
       if (esp > 0) return "🌊 La laguna descansa — vuelve en " + fmtDur(esp);
       /* y que el clic derecho se sepa: una puerta que no se anuncia es una puerta que no existe.
          Es el mismo rótulo que la parcela usa para la rueda de semillas. */
-      return "Pescar (1 lombriz · tenés " + fmt(G.res.lombriz || 0) + ") · clic derecho: aparejos";
+      return "Pescar (1 lombriz · tienes " + fmt(G.res.lombriz || 0) + ") · clic derecho: aparejos";
     }
     return "";
   }
@@ -1558,21 +1558,21 @@ class FarmScene extends Phaser.Scene {
            Se pide arma EQUIPADA, no solo tenerla en el cofre: llevarla puesta es la decisión. */
         if (typeof armaEq === "function" && !armaEq()) {
           toast(Object.keys(G.weapons || {}).length
-            ? "Equipate un arma antes de entrar — está en tu inventario"
-            : "Necesitás un arma para entrar. Se craftean en la Herrería");
+            ? "Equípate un arma antes de entrar — está en tu inventario"
+            : "Necesitas un arma para entrar. Se fabrican en la Herrería");
           return;
         }
         if (typeof tutoEvent === "function") tutoEvent("portal");
         /* sin contenedor no se cruza: allá adentro no habría dónde meter el botín, y el jugador
            se enteraría al matar al primer bicho. Se dice acá, con el remedio (regla 9). */
         if (typeof contsTengo === "function" && !contsTengo("bag") && !contsTengo("backpack") && !contLlevado()) {
-          toast("Necesitás una bolsa o una mochila para entrar — se compran en la Tienda");
+          toast("Necesitas una bolsa o una mochila para entrar — se compran en la Tienda");
           return;
         }
         if (typeof refreshViaje === "function") refreshViaje();
         openOv("ov-viaje");
       };
-      askConfirm("¿Entrás vos a pelear a la Zona Negra o mandás una incursión de un clic?", entrar,
+      askConfirm("¿Entras tú a pelear a la Zona Negra o envías una incursión de un clic?", entrar,
         { title: "Zona Negra", yes: "Preparar el viaje", yesClass: "green", no: "Incursión (un clic)", noClass: "gold",
           onNo: () => { if (typeof refreshIncursion === "function") refreshIncursion(); openOv("ov-incursion"); } });
       return;
@@ -1595,10 +1595,10 @@ class FarmScene extends Phaser.Scene {
       const of = (typeof goblinOfertaHoy === "function") ? goblinOfertaHoy() : null;
       if (!of) return;
       const tengo = Math.floor(G.res[of.pide] || 0);
-      askConfirm("«Grjj… trato del día: vos me das " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) +
+      askConfirm("«Grjj… trato del día: tú me das " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) +
         " y yo te doy " + of.entrega + " " + (RES_LABEL[of.da] || of.da) + ". ¿Trato?»" +
-        (tengo < of.cant ? "  (Tenés " + tengo + " — te faltan " + (of.cant - tengo) + ".)" : "") +
-        " (Si le decís que no, se va y vuelve mañana con otro trato.)",
+        (tengo < of.cant ? "  (Tienes " + tengo + " — te faltan " + (of.cant - tengo) + ".)" : "") +
+        " (Si le dices que no, se va y vuelve mañana con otro trato.)",
         () => { if (typeof goblinAceptar === "function") goblinAceptar(); },
         { title: "Mercader Goblin 🤝", yes: "¡Trato!", yesClass: "green", no: "Hoy no", noClass: "red",
           /* 9/9 — EL « NO » AHORA HACE ALGO. Antes solo cerraba el cartel y el goblin seguía
@@ -1673,14 +1673,14 @@ class FarmScene extends Phaser.Scene {
       if(!aporte.length){confirmar();return;}
       if(typeof pedirAporteObra==='function'){pedirAporteObra(o.type,confirmar);return;}
       const detalle=aporte.map(([r,n])=>n+' '+(r==='golden'?'Golden':RES_LABEL[r]||r)).join(' · ');
-      askConfirm('Vas a aportar '+detalle+' a '+BUILD_DEF[o.type].label+'. ¿Confirmás?',confirmar,{title:'Aportar materiales',yes:'Aportar',no:'Cancelar'});
+      askConfirm('Vas a aportar '+detalle+' a '+BUILD_DEF[o.type].label+'. ¿Confirmas?',confirmar,{title:'Aportar materiales',yes:'Aportar',no:'Cancelar'});
       return;
     }
     // VETAS/PIEDRAS (12/8 noche): freno por NIVEL, sin compra — el aviso salta al intentar
     if (o.type === "rock" && typeof nodoBloqueado === "function" && nodoBloqueado(o)) {
       const req = nodoNivelReq(o);
-      toast("🔒 Para picar esta roca necesitás granja nivel " + req + " (tenés " + G.level + ")");
-      log("Esa roca se habilita a granja nivel " + req + ". Seguí subiendo de nivel para ampliarte.", "info");
+      toast("🔒 Para picar esta roca necesitas granja nivel " + req + " (tienes " + G.level + ")");
+      log("Esa roca se habilita a granja nivel " + req + ". Sigue subiendo de nivel para ampliarte.", "info");
       return;
     }
     // el tutorial "ampliá la granja" también se cumple al USAR una segunda veta habilitada
@@ -1692,8 +1692,8 @@ class FarmScene extends Phaser.Scene {
       // 16/8: escalera de nivel espejo de las rocas — el retoño N se paga recién al nivel N
       if (typeof arbolBloqueado === "function" && arbolBloqueado(o)) {
         const req = arbolNivelReq(o);
-        toast("🔒 Este retoño se habilita a granja nivel " + req + " (tenés " + G.level + ")");
-        log("Ese árbol se cultiva a granja nivel " + req + ". Seguí subiendo de nivel para ampliarte.", "info");
+        toast("🔒 Este retoño se habilita a granja nivel " + req + " (tienes " + G.level + ")");
+        log("Ese árbol se cultiva a granja nivel " + req + ". Sigue subiendo de nivel para ampliarte.", "info");
         return;
       }
       const cost = treeUnlockCost();
@@ -1736,10 +1736,10 @@ class FarmScene extends Phaser.Scene {
       if (typeof dummyEntrenando === "function" && dummyEntrenando()) { dummyCobrar(); return; }   // volviste: cobrás la XP acumulada
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       askConfirm(dleft > 0
-          ? "El dummy descansa (vuelve en " + fmtDur(dleft) + "), pero podés dejar al granjero entrenando: cobrás la XP del tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h."
-          : "¿Entrenás ahora (+" + DUMMY_XP + " XP y 4 h de descanso) o dejás al granjero entrenando mientras no estás?",
-        () => { if (dleft > 0) { toast("El dummy descansa — vuelve en " + fmtDur(dleft)); return; } this.trainDummy(o); },
-        { title: "Dummy de práctica", yes: dleft > 0 ? "Cerrar" : "Entrenar ahora", yesClass: dleft > 0 ? "ghost" : "green",
+          ? "El muñeco descansa (vuelve en " + fmtDur(dleft) + "), pero puedes dejar al granjero entrenando: cobras la XP del tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h."
+          : "¿Entrenas ahora (+" + DUMMY_XP + " XP y 4 h de descanso) o dejas al granjero entrenando mientras no estás?",
+        () => { if (dleft > 0) { toast("El muñeco descansa — vuelve en " + fmtDur(dleft)); return; } this.trainDummy(o); },
+        { title: "Muñeco de entrenamiento", yes: dleft > 0 ? "Cerrar" : "Entrenar ahora", yesClass: dleft > 0 ? "ghost" : "green",
           no: "Dejar entrenando", noClass: "gold", onNo: () => dummyIniciar() });
       return;
     }
@@ -2157,9 +2157,9 @@ class FarmScene extends Phaser.Scene {
           this.premioFx(o.cx, o.by, resSprite("madera"), "+" + gr); refreshHud();
           log(`+${gr} Madera — al árbol le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good");
           if (typeof tutoEvent === "function") tutoEvent("gather");
-          if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
+          if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Fabrica otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
         } else {
-          toast("Bolsa llena — no podés talar"); log("Bolsa llena: liberá espacio para seguir talando.", "bad");
+          toast("Bolsa llena — no puedes talar"); log("Bolsa llena: libera espacio para seguir talando.", "bad");
         }
         this.action = null; return;
       }
@@ -2188,10 +2188,10 @@ class FarmScene extends Phaser.Scene {
         this.premioFx(o.cx, o.by, resSprite("madera"), "+" + grF);
         log(`+${grF} Madera. ${toolDur("axe")}/${TOOL_DEF.axe.max}`, "good"); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
-        if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Crafteá otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
+        if (toolDur("axe") <= 0) { log("¡El hacha se rompió en pedazos! Fabrica otra en la Herrería.", "bad"); toast("¡Hacha rota!"); }
       } else {
         this.setObjTex(o, o.baseKey, o.rw || o.w);   // bolsa llena: el árbol vuelve entero (deshace los cortes intermedios)
-        toast("Bolsa llena — no podés talar"); log("Bolsa llena: liberá espacio para seguir talando.", "bad");
+        toast("Bolsa llena — no puedes talar"); log("Bolsa llena: libera espacio para seguir talando.", "bad");
       }
     } else if (a.kind === "mine" && o.type === "rock") {
       /* 22/8 (cargas, ritmo FINAL): igual que el árbol — los golpes de media rota PAGAN una
@@ -2202,7 +2202,7 @@ class FarmScene extends Phaser.Scene {
         const gr = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
         if (energiaGranjaAgregar("piedra", bonoNft("piedra", gr), 'mine')) {
           const pk = picoParaNodo(o);   // 24/8: el pico se elige solo — el más barato que sirva
-          if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
+          if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — fabrica más en la Herrería.", "bad"); toast("Sin picos — fabrica más"); destroyPick(pk); } }
           addXp("mining", xpDeNodo("rock", "piedra")); statAdd("minar", "piedra", 1); nodoSumar(o);
           const quedan = nodoGastarCarga(o, CD.rock); this.syncNodos();
           if (this.textures.exists(o.baseKey + "_half")) this.setObjTex(o, o.baseKey + "_half", o.rw || o.w);
@@ -2212,7 +2212,7 @@ class FarmScene extends Phaser.Scene {
           log(`+${gr} Piedra — a la roca le quedan ${quedan} carga${quedan === 1 ? "" : "s"}.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
           if (typeof tutoEvent === "function") tutoEvent("gather");
         } else {
-          toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad");
+          toast("Bolsa llena — no puedes picar"); log("Bolsa llena: libera espacio para seguir picando.", "bad");
         }
         this.action = null; return;
       }
@@ -2227,14 +2227,14 @@ class FarmScene extends Phaser.Scene {
       const grF = (typeof NODO_POR_CARGA === "number" ? NODO_POR_CARGA : 1);
       if (energiaGranjaAgregar("piedra", bonoNft("piedra", grF), 'mine')) {   // la ÚLTIMA carga: la roca se rompe de verdad
         const pk = picoParaNodo(o);   // picar piedra también gasta el pico (bug reportado) · 24/8: el pico se elige solo
-        if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); } }
+        if (pk) { G.picks.dur[pk] = Math.max(0, (G.picks.dur[pk] || 0) - 1); if (G.picks.dur[pk] <= 0) { log("Usaste tu último " + PICK_DEF[pk].label + " — fabrica más en la Herrería.", "bad"); toast("Sin picos — fabrica más"); destroyPick(pk); } }
         addXp("mining", xpDeNodo("rock", "piedra")); /* 16/8: XP = minutos del reloj (2 h → 120) */ statAdd("minar", "piedra", 1); nodoSumar(o);
         o.cdIni = nowMs(); o.readyAt = nowMs() + nodoCd(o, "piedra", CD.rock) * 1000 * cdMult() * (typeof tutoBoost === "function" ? tutoBoost("rock") : 1); o.halfAt = nowMs() + (o.readyAt - nowMs()) / 2; this.syncNodos(); this.setObjTex(o, "node_stone_mined", o.rw || GF.TILE);
         log(`+${grF} Piedra.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
         this.premioFx(o.cx, o.by, resSprite("piedra"), "+" + grF); refreshHud();
         if (typeof tutoEvent === "function") tutoEvent("gather");
       }
-      else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
+      else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no puedes picar"); log("Bolsa llena: libera espacio para seguir picando.", "bad"); }   // vuelve entera: los golpes se perdieron
     } else if (a.kind === "mine" && o.type === "ore") {
       /* 22/8 (cargas, ritmo final): la veta de PIEDRA va con las rocas — con cargas, cada clic
          paga. Las vetas de MINERAL siguen APARTADAS (dirección): reloj simple, tanda clásica.
@@ -2257,9 +2257,9 @@ class FarmScene extends Phaser.Scene {
           this.premioFx(o.cx, o.by, resSprite(o.ore), "+1"); refreshHud();
           log(`${odC.emoji} +${grVeta} ${odC.label} — a la veta le quedan ${quedan} carga${quedan === 1 ? "" : "s"}. Quedan ${G.picks.dur[pk2]} picos.`, "good");
           if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
-          if (pk2 && G.picks.dur[pk2] <= 0) { log("Usaste tu último " + pd2.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk2); }
+          if (pk2 && G.picks.dur[pk2] <= 0) { log("Usaste tu último " + pd2.label + " — fabrica más en la Herrería.", "bad"); toast("Sin picos — fabrica más"); destroyPick(pk2); }
         } else {
-          toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad");
+          toast("Bolsa llena — no puedes picar"); log("Bolsa llena: libera espacio para seguir picando.", "bad");
         }
         this.action = null; return;
       }
@@ -2285,8 +2285,8 @@ class FarmScene extends Phaser.Scene {
         log(`${od.emoji} +${grVeta} ${od.label}.` + (pk ? ` Quedan ${G.picks.dur[pk]} picos.` : ""), "good");
         this.premioFx(o.cx, o.by, resSprite(o.ore), "+" + grVeta); refreshHud();
         if (typeof tutoEvent === "function") { tutoEvent("gather"); tutoEvent("mineore"); }
-        if (pk && G.picks.dur[pk] <= 0) { log("Usaste tu último " + pd.label + " — crafteá más en la Herrería.", "bad"); toast("Sin picos — crafteá más"); destroyPick(pk); }
-      } else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no podés picar"); log("Bolsa llena: liberá espacio para seguir picando.", "bad"); }
+        if (pk && G.picks.dur[pk] <= 0) { log("Usaste tu último " + pd.label + " — fabrica más en la Herrería.", "bad"); toast("Sin picos — fabrica más"); destroyPick(pk); }
+      } else { this.setObjTex(o, o.baseKey, o.rw || o.w); toast("Bolsa llena — no puedes picar"); log("Bolsa llena: libera espacio para seguir picando.", "bad"); }
     } else if (a.kind === "plant") {
       const ck = a.seed || G.selSeed, cd = CROP_DEF[ck];   // la semilla que se validó al hacer clic (cambiarla a mitad de la animación no la cuela)
       if (cd && (G.seeds[ck] || 0) > 0) {
@@ -2310,9 +2310,9 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "harvest") {
       const ck = o.cropKey || "papa", cd = CROP_DEF[ck] || CROP_DEF.papa;
       const gr = Math.max(1, cd.yield || 1);   // 18/8: el bono del Granero se cobra al VENDER, no al cosechar
-      if (!roomForRes(ck,gr)) { toast('Bolsa llena — no podés cosechar'); this.action=null; return; }
+      if (!roomForRes(ck,gr)) { toast('Bolsa llena — no puedes cosechar'); this.action=null; return; }
       if (energiaGranjaAgregar(ck, gr, 'harvest')) { o.state = "dry"; o.cropKey = null; o.readyAt = 0; o.witherAt = 0; this.setPlotGlow(o, "off"); this.coinBurst(o.cx, o.by); o.spr.setVisible(false); o.emo.setVisible(false); o.timer.setVisible(false); this.syncPlots(); addXp("farming", (cd && cd.xp) || 2); if (typeof statAdd === "function") statAdd("cosechar", ck, 1); if (!G.firstCropDone) G.firstCropDone = true; if (typeof tutoEvent === "function") tutoEvent("harvest"); this.premioFx(o.cx, o.by, resSprite(ck), "+" + gr); log(`${cd.emoji} +${gr} ${cd.label}.`, "good"); refreshHud(); }
-      else { toast("Bolsa llena — no podés cosechar"); log("Bolsa llena: liberá espacio para cosechar.", "bad"); }
+      else { toast("Bolsa llena — no puedes cosechar"); log("Bolsa llena: libera espacio para cosechar.", "bad"); }
     } else if (a.kind === "fish") {
       /* el corcho se recoge y ya está: la captura la resuelve la pulseada de la v4, no esto.
          goFishing() era el lance entero de la v3 metido en el final de una acción del mundo.
@@ -3257,7 +3257,7 @@ class FarmScene extends Phaser.Scene {
     this.placing = { tipo, id };
     if (window.syncPlacingUI) syncPlacingUI(true);   // muestra el botón Cancelar de la barra de edición
     toast(tipo === "plot" ? "Clic en la celda donde va la parcela (clic derecho cancela)"
-        : tipo === "obra" ? "Clic donde querés levantar la obra (clic derecho cancela)"
+        : tipo === "obra" ? "Clic donde quieres levantar la obra (clic derecho cancela)"
         : tipo === "regalo" ? "Clic en la celda donde va " + ({ plot: "la parcela", tree: "el árbol", rock: "la roca" }[id] || "esto") + " (clic derecho cancela)"
                           : "Clic en la celda donde va el adorno (clic derecho cancela)");
   }
@@ -3298,7 +3298,7 @@ class FarmScene extends Phaser.Scene {
     const pl = this.placing; if (!pl) return;
     const hu = this.huellaColocar(col, row);
     if (!hu.libre) {
-      toast((hu.motivo || "Ahí no entra") + (hu.ancho > 1 ? " — esto ocupa " + hu.ancho + " celdas" : " — probá otra celda"));
+      toast((hu.motivo || "Ahí no entra") + (hu.ancho > 1 ? " — esto ocupa " + hu.ancho + " celdas" : " — prueba otra celda"));
       /* 18/8: y AL REGISTRO, el detalle exacto. La norma de la casa es no usar consola, así que
          cuando algo se rechaza queda escrito en el panel de Registro: qué celdas se pidieron y qué
          dice el mapa de cada una. Con eso, una captura del registro basta para saber qué pasa, en
@@ -3470,12 +3470,12 @@ class FarmScene extends Phaser.Scene {
       ((typeof BUILD_DEF !== "undefined" && BUILD_DEF[t]) ? "la " + BUILD_DEF[t].label : null));
     // 18/8: el motivo sale del MISMO mapa que la decisión. No pueden separarse porque son uno.
     if (!GF.tuyo(col, row)) return "Ese terreno todavía no es tuyo";
-    if (GF.enCerca && GF.enCerca(col, row)) return "La cerca se reserva esta franja — probá una celda más adentro";
+    if (GF.enCerca && GF.enCerca(col, row)) return "La cerca se reserva esta franja — prueba una celda más adentro";
     const oc = GF.celdaOcupada(col, row);
     if (!oc) return null;
     if (oc.tipo === "adorno" && oc.i === ignora) return null;
     if (oc.tipo === "laguna") return "Ahí está la laguna";
-    if (oc.tipo === "parcela") return "Ahí ya tenés una parcela";
+    if (oc.tipo === "parcela") return "Ahí ya tienes una parcela";
     if (oc.tipo === "adorno") return "Ahí ya hay un adorno";
     if (oc.tipo === "cofre") return "Ahí está el baúl";
     const nom = NOMBRE_OBJETO(oc.tipo) || "algo construido";
@@ -3483,7 +3483,7 @@ class FarmScene extends Phaser.Scene {
        aviso: es un fallo, y el jugador tiene que poder leerlo tal cual. */
     const esc = (this.objs || []).find(x => x.i === oc.i);
     const invisible = esc && (esc.oculto || (esc.sprite && esc.sprite.visible === false));
-    if (invisible) return "⚠ Hay " + nom + " sin dibujo acá — es un fallo, avisá";
+    if (invisible) return "⚠ Hay " + nom + " sin dibujo aquí — es un fallo, avisa";
     return "Ahí hay " + nom + (oc.ancho > 1 ? " (ocupa " + oc.ancho + " celdas)" : "");
   }
   // ¿el adorno entra en esa celda? (ignora es el índice del que se está moviendo, que no se pisa a sí mismo)
@@ -4484,9 +4484,9 @@ class FarmScene extends Phaser.Scene {
   // entrenar con el dummy: 3 espadazos, XP de Espada y cooldown de 4 horas
   trainDummy(o) {
     const aid = armaEq();
-    if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipá un arma cuerpo a cuerpo (espada, hacha o mazo)"); return; }
+    if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipa un arma cuerpo a cuerpo (espada, hacha o mazo)"); return; }
     const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
-    if (left > 0) { toast("El dummy descansa — vuelve en " + fmtDur(left)); return; }
+    if (left > 0) { toast("El muñeco descansa — vuelve en " + fmtDur(left)); return; }
     G.dummyUsedAt = nowMs();
     if (typeof tutoEvent === "function") tutoEvent("dummy");
     useWeapon(aid); useWeapon(aid);   // entrenar gasta 2 de durabilidad del arma
@@ -4507,7 +4507,7 @@ class FarmScene extends Phaser.Scene {
       else {
         const sk = armSkillKey(ARM_DEF[aid].tipo);
         addXp(sk, DUMMY_XP);
-        log("Entrenaste con el dummy: +" + DUMMY_XP + " XP de " + SKILL_NAME[sk] + ". Vuelve en 4h. " + G.weapons[aid].dur + "/" + ARM_DEF[aid].dur, "gold");
+        log("Entrenaste con el muñeco: +" + DUMMY_XP + " XP de " + SKILL_NAME[sk] + ". Vuelve en 4h. " + G.weapons[aid].dur + "/" + ARM_DEF[aid].dur, "gold");
         toast("+" + DUMMY_XP + " XP de " + SKILL_NAME[sk]);
         refreshHud(); if (typeof saveFarm === "function") saveFarm();
       }
@@ -4585,7 +4585,7 @@ class FarmScene extends Phaser.Scene {
   // colocar en la granja un cofre que está en la bolsa (clic en la bolsa — detalles jueves)
   placeChestFromBag() {
     const idx = (G.chests || []).findIndex(c => c && c.col == null);
-    if (idx < 0) { toast("No tenés cofres en la bolsa"); return; }
+    if (idx < 0) { toast("No tienes cofres en la bolsa"); return; }
     this.spawnChest(idx);
     toast("Cofre colocado — arrastralo en modo edición para moverlo");
     if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -4595,7 +4595,7 @@ class FarmScene extends Phaser.Scene {
   // recoger un cofre COLOCADO y devolverlo a la bolsa (debe estar vacío)
   pickupChest(idx) {
     const c = (G.chests || [])[idx]; if (!c || c.col == null) return;
-    if (!c.items.every(s => !s)) { toast("Vaciá el cofre antes de recogerlo"); return; }
+    if (!c.items.every(s => !s)) { toast("Vacía el cofre antes de recogerlo"); return; }
     const oi = this.objs.findIndex(o => o.type === "cofre" && o.chestIdx === idx);
     if (oi >= 0) { const o = this.objs[oi]; if (o.sprite) o.sprite.destroy(); if (o.timer) o.timer.destroy(); this.objs.splice(oi, 1); }
     c.col = null; c.row = null;
@@ -5746,7 +5746,7 @@ class FarmScene extends Phaser.Scene {
         this.plotUnlockFx(nueva);
       }
     }
-    if (GF.PLOTS.length < (G.plotsOwned || 3)) toast("No queda sitio para más parcelas — expandí la granja");
+    if (GF.PLOTS.length < (G.plotsOwned || 3)) toast("No queda sitio para más parcelas — expande la granja");
     const owned = Math.max(2, Math.min(GF.PLOTS.length, G.plotsOwned || 3));
     this.plots.forEach((pl, i) => {
       if (i < owned && pl.state === "locked") {
@@ -6225,8 +6225,8 @@ class FarmScene extends Phaser.Scene {
       const col = Math.floor(pt.worldX / GF.TILE), row = Math.floor(pt.worldY / GF.TILE);
       const hu = this.huellaColocar(col, row);
       el.textContent = hu.libre
-        ? ("Clic para colocar acá" + (hu.ancho > 1 ? " (ocupa " + hu.ancho + " celdas)" : ""))
-        : (hu.motivo || "Acá no entra");
+        ? ("Clic para colocar aquí" + (hu.ancho > 1 ? " (ocupa " + hu.ancho + " celdas)" : ""))
+        : (hu.motivo || "Aquí no entra");
       el.classList.add("show");
       return;
     }
@@ -6281,15 +6281,15 @@ class FarmScene extends Phaser.Scene {
    hace un minuto no es una puerta. */
 function viajeEntrar() {
   const sc = window.farmScene;
-  if (!sc) { toast("Volvé a la granja para entrar a la Zona"); return false; }
+  if (!sc) { toast("Vuelve a la granja para entrar a la Zona"); return false; }
   const cerrada = (typeof zonaPuertaCerrada === "function") ? zonaPuertaCerrada() : null;   // 26/9: descanso O incursión en curso
   if (cerrada) { toast(cerrada); return false; }
-  if (typeof armaEq === "function" && !armaEq()) { toast("Equipate un arma antes de entrar"); return false; }
+  if (typeof armaEq === "function" && !armaEq()) { toast("Equípate un arma antes de entrar"); return false; }
   const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
-  if (!raiz) { toast("Elegí con qué contenedor salís"); return false; }
+  if (!raiz) { toast("Elige con qué contenedor sales"); return false; }
   /* salir con el contenedor vacío se permite —es tu decisión, y hay quien caza a pelo— pero se
      dice, porque casi siempre es un olvido: sin comida no hay con qué curarse. */
-  if (!contPilas(raiz)) log("Salís con " + CONT_DEF[raiz.c].label.toLowerCase() + " vacía: sin comida no vas a poder curarte allá.", "bad");
+  if (!contPilas(raiz)) log("Sales con " + CONT_DEF[raiz.c].label.toLowerCase() + " vacía: sin comida no vas a poder curarte allá.", "bad");
   GF.zona = "pantano";   // desde la granja siempre se entra por el primer mapa (10/8)
   if (typeof zonaEntrar === "function") zonaEntrar();
   if (typeof saveFarm === "function") saveFarm();

@@ -20,7 +20,7 @@ console.log("\nLAS PIEZAS EXPLICAN QUE SE VAN A COLOCAR\n");
   ok("cada pieza real es un botón alcanzable y con acción nombrada", /data-cob="' \+ i \+ '" role="button" tabindex="0" aria-label=/.test(fn) && /Colocar " \+ v\.label \+ " en la granja/.test(fn));
   ok("el título visual también dice qué ocurrirá", /elegir dónde colocarlo/.test(fn));
   ok("sólo PC agrega cursor y realce de hover", /@media\(min-width:641px\)\{#cob-slots \[data-cob\]\{cursor:pointer\}/.test(HTML));
-  ok("la explicación inicial no presupone un gesto táctil", /Elegí una pieza para decidir dónde va/.test(HTML));
+  ok("la explicación inicial no presupone un gesto táctil", /Elige una pieza para decidir dónde va/.test(HTML));
   ok("el handler reutiliza Enter/Espacio", /activarAccionConTeclado\(c, colocar\)/.test(fn));
 }
 

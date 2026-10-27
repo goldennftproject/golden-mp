@@ -29,7 +29,7 @@ console.log("\nEL ESTADO SÓLO DESVÍA CUANDO EL NODO ESTÁ DESCANSANDO\n");
 
   ctx.G = { plots: [{ state: "dry" }], seeds: { papa: 3 }, res: { papa: 0 } };
   sub = ctx.tutoSubNodoEnEspera(paso);
-  ok("con semillas guía a plantar, no a un árbol agotado", sub && sub.target === "plot" && sub.guiaPlot === "dry" && /plantá/.test(sub.txt));
+  ok("con semillas guía a plantar, no a un árbol agotado", sub && sub.target === "plot" && sub.guiaPlot === "dry" && /planta/.test(sub.txt));
 
   ctx.G = { plots: [{ state: "dry" }], seeds: {}, res: { papa: 2 } };
   sub = ctx.tutoSubNodoEnEspera(paso);
@@ -73,15 +73,15 @@ console.log("\nEL HUD CONSERVA EL AVANCE DEL OBJETIVO\n");
   const ctx = {
     window: dom.window, document: dom.window.document, Math, Object, Array, String, $:id=>dom.window.document.getElementById(id),
     G: { tuto: { n: 0 } }, guiaActiva: () => paso,
-    tutoSub: () => ({ esperaNodo: true, txt: "Madera: plantá 2 semillas mientras vuelven los árboles", target: "plot" }),
-    tutoNeed: () => 8, tutoTiene: () => 3, tutoTxt: () => "Juntá madera", tutoHighlight() {}, placeTuto() {}, placeToast() {}
+    tutoSub: () => ({ esperaNodo: true, txt: "Madera: planta 2 semillas mientras vuelven los árboles", target: "plot" }),
+    tutoNeed: () => 8, tutoTiene: () => 3, tutoTxt: () => "Reúne madera", tutoHighlight() {}, placeTuto() {}, placeToast() {}
   };
   vm.createContext(ctx);
   vm.runInContext(UI.slice(ini, fin), ctx);
   ctx.tutoRefresh();
-  ok("el mensaje explica la salida y el contador sigue visible", dom.window.document.getElementById("tuto-txt").textContent.includes("plantá") && dom.window.document.getElementById("tuto-n").textContent.trim() === "3/8");
+  ok("el mensaje explica la salida y el contador sigue visible", dom.window.document.getElementById("tuto-txt").textContent.includes("planta") && dom.window.document.getElementById("tuto-n").textContent.trim() === "3/8");
 
-  ctx.tutoSub = () => ({ txt: "Crafteá un hacha", target: "store" });
+  ctx.tutoSub = () => ({ txt: "Fabrica un hacha", target: "store" });
   ctx.tutoRefresh();
   ok("los subobjetivos ordinarios conservan su presentación previa", dom.window.document.getElementById("tuto-n").textContent === "");
 }

@@ -432,3 +432,11 @@ Dirección autoriza: «haz todas esas pruebas y corrige lo que encuentres, empez
 - Un snapshot ordinario sólo conserva o reclama entregas aceptadas. No puede crearlas, duplicarlas ni alterar cantidades o fichas; omitir el campo conserva las pendientes anteriores.
 - Quedarse sin semillas ni Plata no debe dirigir a vender materiales al comprador de cultivos: se señalan logros cobrables, premios diarios útiles o comercio entre jugadores, cuya compra depende de terceros.
 - Las pruebas de SQL sobre cuentas QA terminan en ROLLBACK. No se reinicia ninguna cuenta, no se activa release y USDT permanece desactivado.
+
+## Textos e interfaz — 27/10/2026
+
+Dirección pide español neutro o de España sin cambiar conceptos, y ninguna pista sobre las mariposas.
+- Usar español neutro en cartas, mensajes y controles. Preservar historia y nombres de monedas, objetos, edificios y habilidades.
+- Preferir Fabricar, Equipar, Recoger y Vincular correo. Distinguir Restablecer distribución de Reiniciar progreso.
+- No mostrar explicaciones ni pistas sobre las mariposas; su funcionamiento permanece visual.
+- Una revisión lingüística no autoriza cambios de mecánicas, economía, guardado ni cuentas.

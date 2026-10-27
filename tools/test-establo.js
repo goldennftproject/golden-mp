@@ -35,7 +35,7 @@ console.log("\nSE COMPRAN CON PLATA, NO CON $GOLDEN");
      una decoración vieja: hace que el jugador crea que no puede pagar algo que sí puede. */
   const ficha = (HTML.match(/<div class="ov" id="ov-establo">([\s\S]*?)<\/div><\/div>/) || ["", ""])[1];
   ok("la ficha del Establo dice Plata, igual que el cobro real",
-    /Comprá el animal con Plata/.test(ficha) && !/Comprá el animal con \$Golden/.test(ficha));
+    /Compra el animal con Plata/.test(ficha) && !/Compra el animal con \$Golden/.test(ficha));
   ok("la confirmación repite el precio real en Plata",
     /askConfirm\("Comprar " \+ d\.label \+ " cuesta " \+ fmt\(animalPrecio\(k\)\) \+ " de plata\./.test(UI));
   ok("el tooltip de $Golden no promete animales del Establo",

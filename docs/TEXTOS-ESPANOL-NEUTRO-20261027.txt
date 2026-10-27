@@ -1,0 +1,21 @@
+TEXTOS DEL JUEGO — ESPAÑOL NEUTRO — 27/10/2026
+
+Alcance
+Revisión de mensajes, tutorial, menús, ayudas y diez cartas del abuelo.
+Se conservan historia, nombres propios, monedas, objetos y mecánicas.
+
+Criterios
+- Usar tú y español neutro: tienes, puedes, compra, planta, cosecha.
+- Fabricar, Equipar, Recoger, Habilidad y Engarzar como vocabulario de interfaz.
+- Sin VIP identifica la modalidad gratuita, sin cambiar sus restricciones.
+- Vincular correo, Crear cuenta e Iniciar sesión describen el acceso.
+- Restablecer distribución recupera las posiciones; Reiniciar progreso es la acción irreversible existente. No se ha ejecutado ninguna.
+- Sonido y Guía de objetivos muestran Activado/Desactivado.
+- No añadir pistas ni explicaciones sobre las mariposas. Mantener su comportamiento visual.
+- El objetivo de nodos agotados indica que los árboles o rocas se están regenerando; conserva progreso y destinos útiles.
+
+Verificación
+Comparación de la estructura JavaScript, claves internas, estructura HTML, atributos técnicos, CSS y scripts respecto a f0cabacdbe0d433bce1d0d9cb39ad459ccce65d9: iguales salvo textos visibles.
+Pruebas existentes adaptadas únicamente al nuevo vocabulario esperado.
+Revisión visual local del buzón y opciones con cuenta ficticia; sin operaciones sobre cuentas reales.
+No se modifican base de datos, autenticación, precios, tiempos, energía ni formato de guardado.

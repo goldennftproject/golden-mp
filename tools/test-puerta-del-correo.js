@@ -127,7 +127,7 @@ console.log("\n7 · Y AL QUE YA JUEGA SIN CORREO SE LE AVISA, NO SE LE CIERRA LA
      eran ramas que nadie podía alcanzar — y una rama muerta no es inofensiva: se lee como si
      el caso existiera y se mantiene por las dudas. Se quitaron, y esto custodia que no vuelvan
      por arrastre. */
-  ok("ya no hay aviso para la cuenta anónima (no puede existir)", !/Atá tu correo/.test(MAIN));
+  ok("ya no hay aviso para la cuenta anónima (no puede existir)", !/Vincula tu correo/.test(MAIN));
   ok("ni para la partida local sin cuenta", !/no está en la nube/.test(MAIN));
   ok("ni el cartel de « tenías una partida sin cuenta » en la puerta", !/__GF_GRANJA_HUERFANA/.test(MAIN));
   ok("en ningún sitio se bloquea la entrada por no tener correo",
@@ -163,7 +163,7 @@ console.log("\n8 · UN CORREO MAL ESCRITO NO SE MANDA AL VACÍO\n");
   ok("se comprueba antes de mandar", /function correoPlausible/.test(MAIN));
   ok("y el jugador se entera de por qué no salió", /no parece completo/.test(MAIN));
   ok("el « no hay granja con ese correo » se traduce (Supabase lo dice en inglés y en jerga)",
-    /No hay ninguna granja atada a ese correo/.test(MAIN));
+    /No hay ninguna granja vinculada a ese correo/.test(MAIN));
   ok("y el límite de correos por hora también, que es EL error que vamos a ver con el SMTP de fábrica",
     /muchos correos seguidos/.test(MAIN));
 }

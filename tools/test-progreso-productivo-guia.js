@@ -10,7 +10,7 @@ assert.ok(ctx.G.level > 1,'talar actualiza el nivel de granja en el mismo evento
 run('estadoDeCero(); G.tuto={done:true}; G.planos={}; G.obras={}; G.level=3; G.plata=20; G.res.madera=2; G.res.piedra=2;');
 ctx.dailyState=()=>({claimable:false}); ctx.cartaAbueloPendiente=()=>false;
 let guide = run('brujula()');
-assert.match(guide.txt,/Podés comprar la expansión 1/,'la brújula consulta la cartera, no G.res.plata');
+assert.match(guide.txt,/Puedes comprar la expansión 1/,'la brújula consulta la cartera, no G.res.plata');
 assert.equal(guide.target,'market');
 ctx.G.plata=0;
 guide=run('brujula()');
@@ -23,8 +23,8 @@ ctx.G.res.madera=2; ctx.G.res.piedra=0;
 assert.equal(run('brujula()').target,'rock');
 run('G.level=1;'); ctx.metaSemana=()=>null;
 guide=run('brujula()');
-assert.match(guide.txt,/talá/);
-assert.doesNotMatch(guide.txt,/pescá/,'pescar no aporta XP productiva directamente');
+assert.match(guide.txt,/tala/);
+assert.doesNotMatch(guide.txt,/pesca/,'pescar no aporta XP productiva directamente');
 console.log('OK: Tala sube la granja y la brújula reconoce plata, materiales y oficios productivos.');
 // Todos los escalones de cada especialización, con la función real de otorgar XP.
 // Es una prueba de elegibilidad y disparo, no una estimación de días de juego.

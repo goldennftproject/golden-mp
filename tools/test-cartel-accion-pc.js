@@ -68,14 +68,14 @@ console.log("\nLA TECLA SOLO APARECE CUANDO LA PUERTA DA OK");
 {
   const esc = escena();
   esc.objetivo = { type: "tree", readyAt: 0, texto: "Talar madera" };
-  puerta(() => ({ ok: false, toast: "No tenés hacha — craftéala en la Herrería" }));
+  puerta(() => ({ ok: false, toast: "No tienes hacha — craftéala en la Herrería" }));
   let txt = pinta(esc);
-  ok("un árbol sin hacha muestra el remedio", txt === "No tenés hacha — craftéala en la Herrería", txt);
+  ok("un árbol sin hacha muestra el remedio", txt === "No tienes hacha — craftéala en la Herrería", txt);
   ok("y no finge que [E] vaya a talar", !/\[E\]/.test(txt), txt);
 
   puerta(() => ({ ok: false, bag: "talar" }));
   txt = pinta(esc);
-  ok("una bolsa llena usa el mismo texto que el rechazo", txt === "Bolsa llena — no podés talar", txt);
+  ok("una bolsa llena usa el mismo texto que el rechazo", txt === "Bolsa llena — no puedes talar", txt);
   ok("y tampoco añade una tecla muerta", !/\[E\]/.test(txt), txt);
 
   puerta(() => ({ ok: true }));
@@ -136,7 +136,7 @@ console.log("\nLA COLOCACIÓN NO REENCIENDE SU CARTEL DETRÁS DE UNA VENTANA");
 
     ctx.innerWidth = 640;
     const txtMovil = pinta(esc);
-    ok("móvil conserva su guía de colocación actual", txtMovil === "Clic para colocar acá", txtMovil);
+    ok("móvil conserva su guía de colocación actual", txtMovil === "Clic para colocar aquí", txtMovil);
   } finally {
     ctx.innerWidth = ancho;
     vm.runInContext("anyOvOpen = () => false;", ctx);
@@ -173,7 +173,7 @@ console.log("\nLA PRODUCCIÓN ANIMAL TAMPOCO PROMETE UNA BOLSA LLENA");
   esc.estadoAnimalMundo = () => ({ cobrable: true, idx: 0 });
   vm.runInContext("animalPuedeRecoger = () => false;", ctx);
   const txt = pinta(esc);
-  ok("si la producción no entra, dice el motivo", txt === "Bolsa llena — no podés recoger Fibra", txt);
+  ok("si la producción no entra, dice el motivo", txt === "Bolsa llena — no puedes recoger Fibra", txt);
   ok("y no añade [E] a un cobro que rechazaría", !/\[E\]/.test(txt), txt);
 }
 
@@ -184,7 +184,7 @@ console.log("\nLA PESCA DICE EL CEBO REAL Y RESPETA SU PUERTA");
   vm.runInContext('ceboPuesto = () => "larva_luz"; lanceExtraPrecio = () => 5;', ctx);
   G.res.larva_luz = 2;
   const pesca = esc.textoPescaPC();
-  ok("anuncia la carnada seleccionada, no siempre una lombriz", /1 larva de luz · tenés 2/.test(pesca), pesca);
+  ok("anuncia la carnada seleccionada, no siempre una lombriz", /1 larva de luz · tienes 2/.test(pesca), pesca);
   ok("y hace visible el recargo cuando ya se acabó el cupo", /el próximo cuesta 5 plata/.test(pesca), pesca);
   ok("también nombra la entrada de Aparejos de escritorio", /\[R\].*aparejos/.test(pesca), pesca);
 
@@ -201,7 +201,7 @@ console.log("\nEL MODO REAL DE CLIC COMPARTE ESA INFORMACIÓN");
   const esc = escenaClick(null, true);
   puerta(() => ({ ok: true }));
   let txt = pintaClick(esc);
-  ok("la laguna bajo el cursor nombra la larva seleccionada", /1 larva de luz · tenés 2/.test(txt), txt);
+  ok("la laguna bajo el cursor nombra la larva seleccionada", /1 larva de luz · tienes 2/.test(txt), txt);
   ok("y anticipa el recargo del lance", /el próximo cuesta 5 plata/.test(txt), txt);
   ok("no inventa [E] en una granja de clic directo", !/\[E\]/.test(txt), txt);
 
@@ -212,7 +212,7 @@ console.log("\nEL MODO REAL DE CLIC COMPARTE ESA INFORMACIÓN");
   const arbol = escenaClick({ type: "tree", readyAt: 0, texto: "Talar madera" }, false);
   puerta(() => ({ ok: false, bag: "talar" }));
   txt = pintaClick(arbol);
-  ok("un árbol con bolsa llena explica el bloqueo bajo el cursor", txt === "Bolsa llena — no podés talar", txt);
+  ok("un árbol con bolsa llena explica el bloqueo bajo el cursor", txt === "Bolsa llena — no puedes talar", txt);
 }
 
 console.log("\nLA SIEMBRA DE PC NOMBRA LO QUE REALMENTE VA A PLANTAR");

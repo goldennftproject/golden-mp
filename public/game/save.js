@@ -43,7 +43,7 @@ async function visitaConsultar(accion,destino){
   if(!sb||!UID||!CARGA_OK||SOLO_LOCAL)return null;
   const uid=UID;
   try{const {data,error}=await conTope(sb.functions.invoke('guardar',{body:{cuenta:uid,visita:{accion,destino}}}),10000,'visita');
-    if(UID!==uid)return null;if(error||!data?.ok){toast('No se pudo abrir la visita; comprobá tu VIP y conexión');return null;}return data;
+    if(UID!==uid)return null;if(error||!data?.ok){toast('No se pudo abrir la visita; comprueba tu VIP y conexión');return null;}return data;
   }catch{toast('No se pudo consultar la visita');return null;}
 }
 let RECUPERANDO_GUARDADO=false;
@@ -66,7 +66,7 @@ async function recuperarGuardadoServidor(){
  finally{RECUPERANDO_GUARDADO=false;desbloquear();}
 }
 async function economiaSolicitar(detalle) {
-  if(MERCADO_EN_CURSO || !sb || !UID || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(UID)){toast('Necesitás conexión y guardado sincronizado');return;}
+  if(MERCADO_EN_CURSO || !sb || !UID || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(UID)){toast('Necesitas conexión y guardado sincronizado');return;}
   const uid=UID, desbloquear=mercadoBloquearPantalla('Confirmando la operación del objeto…');
   const confirmadas=SAVE_CONFIRMACIONES.get(uid)||0, flush=saveFarm(true);
   MERCADO_EN_CURSO=(async()=>{
@@ -86,12 +86,12 @@ async function economiaSolicitar(detalle) {
           toast(d && d.error || 'La operación no se realizó');return;
         }
       }
-      if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recargá con conexión para consultar el servidor.');return;}
+      if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recarga con conexión para consultar el servidor.');return;}
       if(!data.data||typeof data.updated_at!=='string')throw Error('Operación sin guardado confirmado');
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recogé los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
+      toast(detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
       return data;
-    }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid)toast('No se pudo completar la operación; comprobá la conexión');}
+    }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid)toast('No se pudo completar la operación; comprueba la conexión');}
   })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();});
   return MERCADO_EN_CURSO;
 }
@@ -110,7 +110,7 @@ function mercadoGlobalLimite(res, q) {
   if (MERCADO_EN_CURSO) return "Confirmando venta…";
   if (!CARGA_OK || SOLO_LOCAL || !UID || SAVE_CONFLICTOS.has(UID)) return "Requiere conexión y guardado sincronizado";
   const r = mercadoGlobalRecurso(res);
-  if (!r) return "Consultando comprador; reabrí el mercado si no hay conexión";
+  if (!r) return "Consultando comprador; vuelve a abrir el mercado si no hay conexión";
   if (q > 10000) return "Máximo 10.000 por lote";
   if (q > r.disponible) return "Demanda restante hoy: " + r.disponible;
   if (marketCur === "golden" && totalVenta(res, q) > MERCADO_CACHE.presupuestoGolden) return "Cupo personal de Golden restante: " + MERCADO_CACHE.presupuestoGolden + " de valor";
@@ -145,7 +145,7 @@ function mercadoBloquearPantalla(mensaje) {
   return () => { window.removeEventListener("keydown", bloquearTecla, true); el.remove(); prev.forEach(([e, inert]) => { e.inert = inert; }); };
 }
 function mercadoSistemaVender(item, cantidad, moneda) {
-  if(moneda!=='plata'){toast('Vendé por Plata y canjeá Golden en el Banco.');return Promise.resolve();}
+  if(moneda!=='plata'){toast('Vende por Plata y canjea Golden en el Banco.');return Promise.resolve();}
   if (MERCADO_EN_CURSO) return MERCADO_EN_CURSO;
   const limite = mercadoGlobalLimite(item, cantidad);
   if (limite) { toast(limite); mercadoGlobalRefrescar(true); return Promise.resolve(); }
@@ -179,11 +179,11 @@ function mercadoSistemaVender(item, cantidad, moneda) {
     if (incierto) {
       // Puede haberse cobrado y perdido la respuesta. Nunca subir encima a ciegas.
       SAVE_CONFLICTOS.add(uid);
-      if (UID === uid) toast("No se pudo confirmar la venta. Guardado protegido: recargá con conexión para consultar el resultado.");
+      if (UID === uid) toast("No se pudo confirmar la venta. Guardado protegido: recarga con conexión para consultar el resultado.");
       return;
     }
     if (UID !== uid) return;
-    if (error || !data || !data.ok) { toast(data && data.error || "La venta no se realizó. Revisá la cotización."); MERCADO_CACHE = null; return; }
+    if (error || !data || !data.ok) { toast(data && data.error || "La venta no se realizó. Revisa la cotización."); MERCADO_CACHE = null; return; }
     G.res[item] -= cantidad; G[moneda] = (G[moneda] || 0) + data.cobro;
     SAVE_BASES.set(uid, data.updated_at);
     // Una respuesta propia puede ser más nueva que el resto del catálogo: recotizar todo.
@@ -1208,7 +1208,7 @@ function derivarEstado(d) {
       if (existe) {
         GF.zona = z;
         window.__volverALaZona = z;   // lo recoge main.js cuando el juego está listo
-        if (typeof log === "function") log("Seguís en la Zona Negra: te dejamos donde estabas.", "info");
+        if (typeof log === "function") log("Sigues en la Zona Negra: te dejamos donde estabas.", "info");
       } else if (typeof zonaSalir === "function") {
         zonaSalir(false);
         if (typeof log === "function") log("Volviste de la Zona Negra con la partida cerrada — tu viaje se cerró solo y lo que llevabas está en la bolsa.", "info");
@@ -1224,7 +1224,7 @@ function derivarEstado(d) {
 
 const sleepMs = (ms) => new Promise(r => setTimeout(r, ms));
 async function alfaCompras(accion='estado'){
- if(!sb||!UID)throw Error('Entrá con tu cuenta para consultar las compras');
+ if(!sb||!UID)throw Error('Entra con tu cuenta para consultar las compras');
  const uid=UID,{data,error}=await conTope(sb.functions.invoke('guardar',{body:{alfa:{accion}}}),15000,'registro de compras');
  if(UID!==uid||error||!data?.ok)throw Error('No se pudo consultar el registro de compras');
  return data;
@@ -1404,13 +1404,13 @@ function motivoSinNube() {
   if (typeof navigator !== "undefined" && navigator.onLine === false)
     return { causa: "internet",
       corto: "📴 Sin internet — se guarda en este navegador",
-      largo: "📴 TU CONEXIÓN A INTERNET SE CAYÓ. Tu granja se sigue guardando en este navegador, así que podés seguir jugando. Cuando vuelva internet, recargá y se sube sola." };
+      largo: "📴 TU CONEXIÓN A INTERNET SE CAYÓ. Tu granja se sigue guardando en este navegador, así que puedes seguir jugando. Cuando vuelva internet, recarga y se sube sola." };
   if (typeof sb === "undefined" || !sb)
     return { causa: "libreria",
-      corto: "🔌 No cargó el guardado — se guarda acá",
-      largo: "🔌 NO SE PUDO CARGAR EL SISTEMA DE GUARDADO. Suele ser un bloqueador de anuncios o una red que filtra. Mientras tanto tu granja se guarda en este navegador; probá a desactivar el bloqueador para este sitio y recargar." };
+      corto: "🔌 No cargó el guardado — se guarda aquí",
+      largo: "🔌 NO SE PUDO CARGAR EL SISTEMA DE GUARDADO. Suele ser un bloqueador de anuncios o una red que filtra. Mientras tanto tu granja se guarda en este navegador; prueba a desactivar el bloqueador para este sitio y recargar." };
   return { causa: "base",
-    corto: "🛠️ Base de datos caída — se guarda acá",
+    corto: "🛠️ Base de datos caída — se guarda aquí",
     largo: "🛠️ NO SE PUEDE CONECTAR CON LA BASE DE DATOS (puede estar en mantenimiento o reiniciándose). No es problema tuyo y no hay nada que puedas hacer más que esperar. Mientras tanto tu granja se guarda EN ESTE NAVEGADOR y se sube sola cuando la base vuelva — no borres la caché ni cambies de dispositivo hasta entonces." };
 }
 var _sinNubeAvisado = 0;
@@ -1500,7 +1500,7 @@ async function saveFarmReal(force) {
             if (UID === saveUid) {
               copiaGuardar(snapshot());
               if (typeof showSaveError === "function") showSaveError();
-              log(detalle && detalle.economia ? "El servidor bloqueó una operación económica: " + (detalle.sospechas || []).join(" · ") + ". No se borró tu progreso local. Recargá para sincronizar; el respaldo se conserva aparte." : "Otra sesión guardó una versión diferente. No se sobrescribió ninguna granja. Tu progreso actual queda en el respaldo local; cerrá la otra sesión antes de volver a cargar.", "warn");
+              log(detalle && detalle.economia ? "El servidor bloqueó una operación económica: " + (detalle.sospechas || []).join(" · ") + ". No se borró tu progreso local. Recarga para sincronizar; el respaldo se conserva aparte." : "Otra sesión guardó una versión diferente. No se sobrescribió ninguna granja. Tu progreso actual queda en el respaldo local; cierra la otra sesión antes de volver a cargar.", "warn");
               toast(detalle && detalle.economia ? "Operación económica bloqueada; respaldo local conservado" : "Conflicto de guardado: progreso conservado en este navegador");
             }
             return;
@@ -1762,7 +1762,7 @@ async function cerrarSesion() {
   if (!sb) return { error: "sin conexión con la nube" };
   let tieneEmail = false;
   try { const c = await cuentaEstado(); tieneEmail = !!(c && c.modo === "email"); } catch (e) {}
-  if (!tieneEmail) return { error: "esta granja no tiene correo: si cerrás sesión no hay forma de volver a ella" };
+  if (!tieneEmail) return { error: "esta granja no tiene correo: si cierras sesión no hay forma de volver a ella" };
   try {
     if (typeof saveFarm === "function") { try { await saveFarm(true); } catch (e) {} }
     try { await sb.auth.signOut(); } catch (e) {}
@@ -1985,7 +1985,7 @@ async function mkMine() {
   } catch (e) { return []; }
 }
 async function mkPublish(row) {
-  if (!sb || !UID) { toast("Necesitás conexión para publicar"); return null; }
+  if (!sb || !UID) { toast("Necesitas conexión para publicar"); return null; }
   try {
     const { data, error } = await sb.from("market").insert(Object.assign({ seller: UID, seller_name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")) }, row)).select().single();
     if (error) { console.warn("market publish:", error.message); toast(error.message || "No se pudo publicar"); return null; }
@@ -1994,7 +1994,7 @@ async function mkPublish(row) {
 }
 // compra ATÓMICA: solo pega si la fila sigue libre (sold_to null)
 async function mkBuy(id) {
-  if (!sb || !UID) { toast("Necesitás conexión para comprar"); return null; }
+  if (!sb || !UID) { toast("Necesitas conexión para comprar"); return null; }
   try {
     const { data, error } = await sb.from("market").update({ sold_to: UID, sold_at: new Date().toISOString() })
       .eq("id", id).is("sold_to", null).select();

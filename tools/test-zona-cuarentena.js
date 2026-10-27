@@ -41,7 +41,7 @@ console.log("\nLA PUERTA ÚNICA SABE SOLA DE QUÉ LADO DEL PORTAL ESTÁS");
 {
   enLaZona([["res", "flecha", 5]]);
   ok("estamos dentro de la Zona", ctx.enZona() === true);
-  ok("acá, « lo que tengo » es el contenedor", ctx.llevoTengo("res", "flecha") === 5, "flechas a mano: " + ctx.llevoTengo("res", "flecha"));
+  ok("aquí, « lo que tengo » es el contenedor", ctx.llevoTengo("res", "flecha") === 5, "flechas a mano: " + ctx.llevoTengo("res", "flecha"));
   ok("y NO lo que quedó en la granja", Math.floor(G.res.flecha) === 94, "en la granja quedan " + G.res.flecha);
   volver();
   ok("del otro lado del portal, « lo que tengo » vuelve a ser la bolsa", ctx.llevoTengo("res", "flecha") === 94);
@@ -125,7 +125,7 @@ console.log("\nFUGA 7 · LA BARRA RÁPIDA ERA LA PUERTA DE ATRÁS (las teclas 1-
   const semAntes = G.selSeed;
   ctx.hotSelect(0);
   ok("sembrar desde la barra no funciona allá — y se dice por qué",
-    G.selSeed === semAntes && avisos.some(a => /solo ten[eé]s lo que cargaste/i.test(a)), avisos.join(" · "));
+    G.selSeed === semAntes && avisos.some(a => /solo tienes lo que cargaste/i.test(a)), avisos.join(" · "));
   avisos.length = 0;
   ctx.hotSelect(1);
   ok("equipar un pico, tampoco", avisos.some(a => /granja/i.test(a)));

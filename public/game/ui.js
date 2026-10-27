@@ -229,7 +229,7 @@ function mostrarResumenZona(r) {
   if (r.plata) filas.push("Plata: <b>+" + fmt(r.plata) + "</b>");
   if (r.golden) filas.push("$Golden: <b>+" + fmt(r.golden) + "</b>");
   if (tit) tit.textContent = r.titulo || (r.derrotado ? "Te trajeron de vuelta" : "De vuelta en la granja");
-  if (sub) sub.textContent = (r.derrotado ? "Te derrotaron: revisá la tumba y las pérdidas de equipo. " : "") +
+  if (sub) sub.textContent = (r.derrotado ? "Te derrotaron: revisa la tumba y las pérdidas de equipo. " : "") +
     "Duración: " + fmtSecs(Math.round(r.min * 60)) + "." + (r.aviso ? " " + r.aviso : "");
   body.innerHTML = "<div><b>" + r.matados + "</b> " + (r.matados === 1 ? "monstruo" : "monstruos") +
     " · <b>+" + fmt(r.xp) + "</b> XP de Combate</div>" +
@@ -240,7 +240,7 @@ function mostrarResumenZona(r) {
      el cartel más tonto del juego, así que la línea desaparece cuando el CD es cero. */
   if (cd) cd.textContent = ZONA_CD_MIN > 0
     ? "El granjero descansa " + ZONA_CD_MIN + " min antes de poder volver a entrar."
-    : "Podés volver a entrar cuando quieras.";
+    : "Puedes volver a entrar cuando quieras.";
   cuandoListo(() => openOv("ov-zonares"));
 }
 
@@ -258,7 +258,7 @@ function entrenarSync() {
   const falta = Math.max(0, DUMMY_OFF_ESPERA_MS - (nowMs() - G.dummyTrain.desde));
   el.innerHTML = falta > 0
     ? "Todavía no cuenta — arranca en <b>" + Math.ceil(falta / 1000) + " s</b>"
-    : "Entrenando hace <b>" + fmtDur(utiles) + "</b> · llevás <b>+" + fmt(xp) + " XP</b>";
+    : "Entrenando hace <b>" + fmtDur(utiles) + "</b> · llevas <b>+" + fmt(xp) + " XP</b>";
   if (!_entrEv) _entrEv = setInterval(entrenarSync, 1000);
 }
 function entrenarCerrar() {
@@ -454,8 +454,8 @@ function durArmaHtml(id) {
   const max = w.dur || 1, dur = Math.max(0, own.dur || 0), pct = Math.max(0, Math.min(1, dur / max));
   const rota = dur <= 0, poca = !rota && pct <= ARMA_DUR_AVISO;
   const cls = "cb-dur" + (rota ? " rota" : (poca ? " poca" : ""));
-  const tip = rota ? w.label + " ROTA — no pega: volvé y reparala en la Herrería"
-    : (poca ? w.label + ": te queda poca durabilidad (" + dur + "/" + max + ") — volvé antes de que se rompa"
+  const tip = rota ? w.label + " ROTA — no pega: vuelve y reparala en la Herrería"
+    : (poca ? w.label + ": te queda poca durabilidad (" + dur + "/" + max + ") — vuelve antes de que se rompa"
             : w.label + " · durabilidad " + dur + "/" + max);
   return '<div class="' + cls + '" title="' + tip + '">' +
     '<img class="cb-durIc" src="' + GF.spr(w.sprite || ARM_TIPO_DEF[w.tipo].sprite) + '" onerror="this.outerHTML=\'⚔️\'">' +
@@ -603,7 +603,7 @@ function refreshCombate() {
     '<button class="cb-def cb-eq-open" id="cb-eq-open" title="Abrir el panel de Equipo">Equipo · Defensa ' + (typeof gearDefTotal === "function" ? gearDefTotal() : 0) + '</button>' +
     '<div class="cb-modos">' +
       '<button class="cb-m' + (modo === "perseguir" ? " on" : "") + '" data-modo="perseguir" title="Vas hacia el objetivo hasta la distancia de tu arma">👣 Perseguir</button>' +
-      '<button class="cb-m' + (modo === "parado" ? " on" : "") + '" data-modo="parado" title="Atacás sin moverte — para pelear con arco">🛑 Parado</button>' +
+      '<button class="cb-m' + (modo === "parado" ? " on" : "") + '" data-modo="parado" title="Atacas sin moverte — para pelear con arco">🛑 Parado</button>' +
     '</div>';
   const abrirEquipo = () => { if (typeof openOv === "function") openOv("ov-equip"); };
   const eq = $("cb-eq"), abrir = $("cb-eq-open");
@@ -620,7 +620,7 @@ function refreshCombate() {
         toast(GEAR_DEF[puesta].label + " al contenedor");
       } else {
         const aMano = (typeof gearAMano === "function") ? gearAMano(slot) : [];
-        if (!aMano.length) { toast("No llevás nada para ese hueco"); return; }
+        if (!aMano.length) { toast("No llevas nada para ese hueco"); return; }
         if (typeof gearPonerse !== "function" || !gearPonerse(aMano[0])) { toast("No se pudo equipar"); return; }
         toast(GEAR_DEF[aMano[0]].label + " equipada");
       }
@@ -679,7 +679,7 @@ function refreshMorral() {
       (spr ? '<img src="' + GF.spr(spr) + '" onerror="this.remove()">' : '<span class="em">📦</span>') +
       '<span class="mn">' + fmt(e.n) + '</span></div>';
   }
-  h += '</div><div class="mor-pie">' + (raiz ? 'Se vacía solo al volver — y se pierde entero si te matan' : 'Volvé a la granja') + '</div>';
+  h += '</div><div class="mor-pie">' + (raiz ? 'Se vacía solo al volver — y se pierde entero si te matan' : 'Vuelve a la granja') + '</div>';
   caja.innerHTML = h;
   ubicarMuelleCombatePC();
 }
@@ -714,12 +714,12 @@ function refreshViaje() {
     const hay = tengo > 0 || puesto;
     h += '<div class="vj-cont' + (puesto ? " on" : "") + (hay ? "" : " no") + '"' + (hay ? viajeAccionAttr("vcont", c, "Elegir " + d.label) : "") + '>' +
       '<span class="em">' + d.emoji + '</span><div><b>' + d.label + (puesto ? " · puesta" : "") + '</b>' +
-      '<span class="d">' + d.huecos + ' huecos · ' + (hay ? "tenés " + (tengo + (puesto ? 1 : 0)) : "no tenés — se compra en la Tienda") + '</span></div></div>';
+      '<span class="d">' + d.huecos + ' espacios · ' + (hay ? "tienes " + (tengo + (puesto ? 1 : 0)) : "no tienes — se compra en la Tienda") + '</span></div></div>';
   });
   h += '</div>';
 
   if (!raiz) {
-    h += '<div class="info">Elegí con qué salís. Sin contenedor no se cruza el portal: allá adentro no vas a tener dónde meter el botín.</div>' +
+    h += '<div class="info">Elige con qué sales. Sin contenedor no se cruza el portal: allá adentro no vas a tener dónde meter el botín.</div>' +
       '<div class="vj-pie"><div class="vj-aviso"></div><button class="ghost sm" id="vj-cerrar">Volver</button></div>';
     caja.innerHTML = h;
     engancharViaje(caja);
@@ -735,10 +735,10 @@ function refreshViaje() {
     const v = itemView({ kind: x.kind, key: x.key }); if (!v) return;
     const nombre = viajeNombre(v, x.key);
     h += '<div class="vj-s" draggable="true"' + viajeAccionAttr("vsube", x.kind + "|" + x.key, "Pasar " + nombre + " al contenedor") +
-      ' title="' + escapeHtml(nombre + " — clic o arrastrá a la derecha") + '">' +
+      ' title="' + escapeHtml(nombre + " — clic o arrastra a la derecha") + '">' +
       itemIcon(v) + '<span class="n">' + fmt(x.n) + '</span></div>';
   });
-  h += '</div></div><div class="vj-col" data-vzona="cont"><h4>' + CONT_DEF[raiz.c].label + ' — te lo llevás (' + libres + ' libres)</h4><div class="vj-lista">';
+  h += '</div></div><div class="vj-col" data-vzona="cont"><h4>' + CONT_DEF[raiz.c].label + ' — te lo llevas (' + libres + ' libres)</h4><div class="vj-lista">';
   raiz.items.forEach((e, i) => {
     if (esCont(e)) {
       h += '<div class="vj-s bolsa"' + viajeAccionAttr("vbolsa", i, "Sacar bolsa del contenedor") +
@@ -749,7 +749,7 @@ function refreshViaje() {
     const v = vistaDeCarga(e);
     const nombre = viajeNombre(v, e.k);
     h += '<div class="vj-s" draggable="true"' + viajeAccionAttr("vbaja", e.kind + "|" + e.k, "Dejar " + nombre + " en la granja") +
-      ' title="' + escapeHtml(nombre + " — clic o arrastrá a la izquierda") + '">' +
+      ' title="' + escapeHtml(nombre + " — clic o arrastra a la izquierda") + '">' +
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
   });
   /* lo que hay dentro de las bolsas anidadas, sangrado detrás de su bolsa */
@@ -759,15 +759,15 @@ function refreshViaje() {
       const v = vistaDeCarga(e);
       const nombre = viajeNombre(v, e.k);
       h += '<div class="vj-s" draggable="true"' + viajeAccionAttr("vbaja", e.kind + "|" + e.k, "Dejar " + nombre + " en la granja") +
-        ' title="' + escapeHtml("Dentro de la bolsa · " + nombre + " — clic o arrastrá a la izquierda") + '">' +
+        ' title="' + escapeHtml("Dentro de la bolsa · " + nombre + " — clic o arrastra a la izquierda") + '">' +
         (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="n">' + fmt(e.n) + '</span></div>';
     });
   });
   for (let i = raiz.items.length; i < CONT_DEF[raiz.c].huecos; i++) h += '<div class="vj-s vacia"></div>';
   h += '</div></div></div>';
 
-  h += '<div class="vj-pie"><div class="vj-aviso">Arrastrá de una columna a la otra (o hacé clic) y decís cuántas · shift pasa todo de una. ' +
-    '<b>Si te matan allá, se pierde todo lo que lleves acá dentro</b> — el equipo puesto casi siempre se salva.</div>' +
+  h += '<div class="vj-pie"><div class="vj-aviso">Arrastra de una columna a la otra (o haz clic) y dices cuántas · shift pasa todo de una. ' +
+    '<b>Si te matan allá, se pierde todo lo que lleves aquí dentro</b> — el equipo puesto casi siempre se salva.</div>' +
     '<button class="ghost sm" id="vj-cerrar">Volver</button>' +
     '<button class="green sm" id="vj-entrar">Entrar a la Zona</button></div>';
   caja.innerHTML = h;
@@ -926,8 +926,8 @@ function engancharViaje(caja) {
     const hacer = (n) => { if (dir === "sube" ? viajeCargar(kind, key, n) : viajeBajar(kind, key, n)) rep(preferencias); };
     if (todo) { hacer(hay); return; }
     const v = itemView({ kind: kind, key: key });
-    pedirCuanto(hay, dir === "sube" ? "¿Cuántas te llevás?" : "¿Cuántas dejás en la granja?",
-      viajeNombre(v, key) + " · tenés " + hay, hacer);
+    pedirCuanto(hay, dir === "sube" ? "¿Cuántas te llevas?" : "¿Cuántas dejas en la granja?",
+      viajeNombre(v, key) + " · tienes " + hay, hacer);
   };
   caja.querySelectorAll("[data-vsube]").forEach(b => {
     const subir = (ev) => {
@@ -1112,8 +1112,8 @@ function pescaV4Abrir() {
      quedarse sin larvas no puede dejar la laguna inservible. */
   let ceb = ceboPuesto();
   if (!ceboTengo(ceb)) {
-    if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — volvés a la lombriz"); ceb = "lombriz"; pescaEstado().cebo = "lombriz"; }
-    if (!ceboTengo("lombriz")) { toast("Te faltan lombrices — cavá un montículo"); return false; }
+    if (ceb !== "lombriz") { toast("Te quedaste sin " + CEBO_V4_DEF[ceb].label + " — vuelves a la lombriz"); ceb = "lombriz"; pescaEstado().cebo = "lombriz"; }
+    if (!ceboTengo("lombriz")) { toast("Te faltan lombrices — cava un montículo"); return false; }
   }
   /* 23/9 — la caña sana y el cupo del día, ANTES de cobrar nada: si no se puede tirar, la
      lombriz se queda en la bolsa. */
@@ -1324,7 +1324,7 @@ function enfocarAparejosPc(el) {
 }
 function pescaAparejosAbrir(desdeTeclado) {
   if (!GF.PESCA_ACTIVA) { toast("La pesca está pausada; tu equipo y progreso se conservan."); return; }
-  if (hayOvPcAbierto()) { toast("Cerrá la ventana antes de abrir los aparejos"); return; }
+  if (hayOvPcAbierto()) { toast("Cierra la ventana antes de abrir los aparejos"); return; }
   const el = $("pesca4"); if (!el) return;
   pescaV4Pintar();
   el.classList.add("show");
@@ -1556,7 +1556,7 @@ function refreshLonja() {
 function lonjaPintaVender(caja) {
   const claves = pecesDeLaBolsa().filter(k => (typeof PEZ_DEF !== "undefined") && PEZ_DEF[pezDeClave(k).id]);
   if (!claves.length) {
-    caja.innerHTML = '<div class="sub">No tenés peces en la bolsa — la laguna te espera.</div>';
+    caja.innerHTML = '<div class="sub">No tienes peces en la bolsa — la laguna te espera.</div>';
     lonjaReponerFocoPc(caja, "vender", "pvend"); return;
   }
   caja.innerHTML = '<div class="sub" style="margin-bottom:6px">Cada pieza vale según su peso.</div>' + claves.map(k => {
@@ -1564,7 +1564,7 @@ function lonjaPintaVender(caja) {
     const u = pezPrecio(pc.id, pc.kg == null ? undefined : pc.kg);
     return '<div class="mkt-row"><span class="mimg">' + itemIcon(itemView({ kind: "fish", key: k })) + '</span>' +
       '<div class="minfo"><div class="mnm">' + d.label + (pc.kg ? " · " + pc.kg.toFixed(2) + " kg" : "") + '</div>' +
-      '<div class="mds">Tenés ' + n + " · " + u + ' de plata c/u</div></div>' +
+      '<div class="mds">Tienes ' + n + " · " + u + ' de plata c/u</div></div>' +
       '<button class="vbtn" data-pvend="' + k + '">Vender 1</button></div>';
   }).join("");
   caja.querySelectorAll("[data-pvend]").forEach(b => b.onclick = (ev) => {
@@ -1582,8 +1582,8 @@ function lonjaPintaVender(caja) {
 function lonjaPintaPedido(caja) {
   const act = lonjaActivos();
   if (!act.length) {
-    caja.innerHTML = '<div class="lonja-vacio">La Lonja no tiene nada para vos ahora mismo.<br>' +
-      'Conseguí una caña que llegue a más bandas y volvé en la próxima marea.</div>';
+    caja.innerHTML = '<div class="lonja-vacio">La Lonja no tiene nada para ti ahora mismo.<br>' +
+      'Consigue una caña que llegue a más bandas y vuelve en la próxima marea.</div>';
     lonjaReponerFocoPc(caja, "pedido", "lent");
     return;
   }
@@ -1643,7 +1643,7 @@ function lonjaFilaEscalon(k) {
     extra = pz.map(x => {
       const t = (typeof pezCuenta === "function") ? pezCuenta(x.id) : Math.floor((G.fish && G.fish[x.id]) || 0);   // 2/9: suma las pilas con peso
       return t >= x.n ? "listos los " + x.n + " " + (PEZ_DEF[x.id] || {}).label
-                      : "tenés " + t + " de " + x.n + " " + (PEZ_DEF[x.id] || {}).label;
+                      : "tienes " + t + " de " + x.n + " " + (PEZ_DEF[x.id] || {}).label;
     }).join(" · ");
   }
   /* 1/9: la marea de peso no entrega mercadería — paga su escalón, sin el ×2 de las ventas
@@ -1676,7 +1676,7 @@ function lonjaPintaTienda(caja) {
       '<div class="li-nm">' + d.label + '</div>' +
       '<div class="li-que">' + d.que + '</div>' +
       '<button data-lcomp="' + k + '"' + (falta ? " disabled" : "") + '>' +
-      (tengo ? "ya lo tenés" : d.esc + " Escamas" + mat) + '</button>' +
+      (tengo ? "ya lo tienes" : d.esc + " Escamas" + mat) + '</button>' +
       /* la regla 9: un botón apagado SIEMPRE dice por qué. Sin esta línea el jugador mira un
          precio que puede pagar y un botón muerto, y no hay forma de que adivine que le falta
          haber pescado un legendario. */
@@ -1706,7 +1706,7 @@ function lonjaPintaTitulos(caja) {
   const focoTitulo = tituloLonjaEnFoco(caja);
   const vig = tituloPescaVigente();
   let h = '<div class="lonja-vacio" style="text-align:left;margin-bottom:8px">Los títulos no dan ' +
-    'plata: dan una etiqueta que los demás ven. Tocá uno ganado para llevarlo.</div>';
+    'plata: dan una etiqueta que los demás ven. Pulsa uno ganado para llevarlo.</div>';
   for (const k of TITULO_PESCA_ORDER) {
     const d = TITULO_PESCA_DEF[k], g = tituloPescaGanado(k);
     const etiqueta = "Usar título de pesca " + d.label + (k === vig ? " (en uso)" : "");
@@ -1721,7 +1721,7 @@ function lonjaPintaTitulos(caja) {
   caja.querySelectorAll("[data-ltit]").forEach(b => {
     const elegir = () => {
     G.tituloPesca = b.dataset.ltit; refreshLonja();
-    toast("Ahora llevás el título de " + TITULO_PESCA_DEF[b.dataset.ltit].label);
+    toast("Ahora llevas el título de " + TITULO_PESCA_DEF[b.dataset.ltit].label);
     };
     b.onclick = elegir;
     activarAccionConTeclado(b, elegir);
@@ -1761,7 +1761,7 @@ function refreshExpandir() {
   if (!reqs || !btn) return;
   if (!ex) {
     if (tit) tit.textContent = "La granja está completa";
-    if (sub) sub.textContent = "Tenés las " + (typeof EXPANSION_MAX !== "undefined" ? EXPANSION_MAX : 16) + " expansiones.";
+    if (sub) sub.textContent = "Tienes las " + (typeof EXPANSION_MAX !== "undefined" ? EXPANSION_MAX : 16) + " expansiones.";
     reqs.innerHTML = ""; if (trae) trae.innerHTML = "";
     btn.textContent = "No queda terreno por abrir"; btn.disabled = true;
     return;
@@ -1814,7 +1814,7 @@ function refreshExpandir() {
   const puede = !faltaNivel && (typeof canAfford === "function") && canAfford(ex.costo);
   btn.disabled = !puede;
   btn.textContent = puede ? (minObra ? "Expandir · obra de " + expansionObraMinTxt(minObra) : "Expandir")
-    : faltaNivel ? "Necesitás granja nivel " + ex.nivel + " (tenés " + (G.level || 1) + ")"
+    : faltaNivel ? "Necesitas granja nivel " + ex.nivel + " (tienes " + (G.level || 1) + ")"
     : "Te falta: " + faltantes.join(" · ");
   btn.onclick = () => {
     if (!puede) return;
@@ -1876,16 +1876,16 @@ function refreshLombricario() {
     const entran = cults.filter(k => lombricarioDa(k) <= cupoLibre);
     const libre = puestas.length < bocas;
     /* la regla 9 en el propio boton: NUNCA dice solo « Echar ». Si no se puede, dice por que. */
-    if (!libre)            { b.textContent = listas ? "Recogé para liberar la fila" : "La fila está llena (" + bocas + " tanda" + (bocas > 1 ? "s" : "") + " encargada" + (bocas > 1 ? "s" : "") + ")"; b.disabled = true; if (lista) lista.style.display = "none"; }
+    if (!libre)            { b.textContent = listas ? "Recoge para liberar la fila" : "La fila está llena (" + bocas + " tanda" + (bocas > 1 ? "s" : "") + " encargada" + (bocas > 1 ? "s" : "") + ")"; b.disabled = true; if (lista) lista.style.display = "none"; }
     else if (!cults.length) { b.textContent = "No tenes cultivos que echar (piden " + LOMBRICARIO_PIDE + " de uno)"; b.disabled = true; if (lista) lista.style.display = "none"; }
     else if (cupoLibre <= 0) { b.textContent = "Cupo de hoy agotado (" + cupoTotal + " lombrices) · vuelve a las 00:00 UTC"; b.disabled = true; if (lista) lista.style.display = "none"; }
     else if (!entran.length) {
       const baratos = CROP_ORDER.filter(k => lombricarioDa(k) <= cupoLibre).map(k => CROP_DEF[k].label || k);
-      b.textContent = "Quedan " + cupoLibre + " del cupo de hoy: con lo que tenés no entra nada" + (baratos.length ? " (sí " + baratos.slice(0, 3).join(", ") + ")" : "");
+      b.textContent = "Quedan " + cupoLibre + " del cupo de hoy: con lo que tienes no entra nada" + (baratos.length ? " (sí " + baratos.slice(0, 3).join(", ") + ")" : "");
       b.disabled = true; if (lista) lista.style.display = "none";
     }
     else {
-      b.textContent = (lista && lista.style.display !== "none") ? "Cerrar la lista" : "Echar cultivos… (elegí cuál)";
+      b.textContent = (lista && lista.style.display !== "none") ? "Cerrar la lista" : "Echar cultivos… (elige cuál)";
       b.disabled = false;
     }
     b.onclick = () => {
@@ -1898,7 +1898,7 @@ function refreshLombricario() {
         const da = lombricarioDa(k), stock = Math.floor(G.res[k] || 0), entra = da <= cupoLibre;
         return '<button class="lom-cult' + (entra ? "" : " no-entra") + '" data-lom-cult="' + k + '"' + (entra ? "" : ' disabled title="No entra en el cupo de hoy"') + '>' +
           '<span class="nm">' + (CROP_DEF[k].emoji || "🌱") + ' ' + (CROP_DEF[k].label || k) + '</span>' +
-          '<span class="st">' + (entra ? "tenés " + stock : "no entra hoy · quedan " + cupoLibre) + '</span>' +
+          '<span class="st">' + (entra ? "tienes " + stock : "no entra hoy · quedan " + cupoLibre) + '</span>' +
           '<span class="da">' + LOMBRICARIO_PIDE + ' → <b>' + da + ' 🪱</b></span></button>';
       }).join("");
       lista.querySelectorAll("[data-lom-cult]").forEach(el => el.onclick = (e) => {
@@ -1930,7 +1930,7 @@ function refreshLombricario() {
       (lombricarioAbierto() ? " y hasta <b>" + (cupoTotal ? Math.min(cupoTotal, Math.floor(total - porMont)) : Math.floor(total - porMont)) + "</b> de este Lombricario (el cupo; tandas de " +
         LOMBRICARIO_HORAS + " h, una detrás de otra, según qué quemes)" : "") +
       ".<br>Alcanzan para <b>" + ent + " lances</b> o <b>" + Math.floor(total / PESCA_V4_NASA_CEBO) + " nasas</b>." +
-      (lombricarioAbierto() && bocas > 1 ? "<br><span class=\"sub\">Las " + bocas + " bocas son la FILA: dejás hasta " + bocas + " tandas encargadas (mientras entren en el cupo) y el Lombricario trabaja " + (bocas * LOMBRICARIO_HORAS) + " h sin vos.</span>" : "");
+      (lombricarioAbierto() && bocas > 1 ? "<br><span class=\"sub\">Las " + bocas + " bocas son la FILA: dejas hasta " + bocas + " tandas encargadas (mientras entren en el cupo) y el Lombricario trabaja " + (bocas * LOMBRICARIO_HORAS) + " h sin ti.</span>" : "");
   }
 }
 
@@ -2068,10 +2068,10 @@ function refreshVidaBarra() {
   const falta = Math.max(0, max - (G.hp || 0));
   const minRestantes = (porSeg > 0) ? Math.ceil(falta / porSeg / 60) : 0;
   const totalMin = (typeof GRANJA_CURA_MIN === "number") ? GRANJA_CURA_MIN : 60;
-  if (eta) eta.textContent = !falta ? "" : (enZ ? "· sin cura acá" : "· llena en " + fmtDur(minRestantes * 60000));
+  if (eta) eta.textContent = !falta ? "" : (enZ ? "· sin cura aquí" : "· llena en " + fmtDur(minRestantes * 60000));
   if (pill) pill.title = !falta
     ? "Vida al máximo · en la granja se llena sola: la barra entera tarda " + totalMin + " min"
-    : (enZ ? "En la Zona Negra la vida NO se recupera sola: comé para curarte. En la granja la barra entera tarda " + totalMin + " min."
+    : (enZ ? "En la Zona Negra la vida NO se recupera sola: come para curarte. En la granja la barra entera tarda " + totalMin + " min."
            : "Se está llenando sola: la barra entera tarda " + totalMin + " min. Comer te ahorra la espera.");
 }
 function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno dorado + "XP actual / necesaria"
@@ -2196,8 +2196,8 @@ function itemView(d) {
     return { sprite: 'armor_' + p.set + '_' + p.pieza, emoji: '🛡️', label: mkNombre('armor', d.key) + ' · durabilidad ' + armorDur(p.set, p.pieza) + '/' + ARMOR_DUR_MAX + ' · clic para equipar', dur: armorDur(p.set, p.pieza) / ARMOR_DUR_MAX * 100 };
   }
   if (d.kind === "tool") {
-    if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · 1 uso cada una · tenés " + toolCount("axe"), dur: null };
-    if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · 1 uso cada una · tenés " + toolCount("rod"), dur: null };
+    if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · 1 uso cada una · tienes " + toolCount("axe"), dur: null };
+    if (d.key === "rod") return { sprite: "fishing_rod", emoji: "🔧", label: "Caña · 1 uso cada una · tienes " + toolCount("rod"), dur: null };
     if (d.key === "sword") return { sprite: "sword", emoji: "⚔️", label: "Espada de Hierro · durabilidad " + toolDur("sword") + "/" + TOOL_DEF.sword.max, dur: Math.round(toolDur("sword") / TOOL_DEF.sword.max * 100) };
     if (d.key === "sword_wood") return { sprite: "sword_wood", emoji: "🗡️", label: "Espada de Madera · durabilidad " + toolDur("sword_wood") + "/" + TOOL_DEF.sword_wood.max, dur: Math.round(toolDur("sword_wood") / TOOL_DEF.sword_wood.max * 100) };
     if (d.key === "bow") return { sprite: "bow", emoji: "🏹", label: "Arco · durabilidad " + toolDur("bow") + "/" + TOOL_DEF.bow.max, dur: Math.round(toolDur("bow") / TOOL_DEF.bow.max * 100) };
@@ -2224,7 +2224,7 @@ function itemView(d) {
              dur: rota ? 0 : Math.round(own.dur / w.dur * 100) };
   }
 
-  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · 1 uso cada uno · tenés " + pickCount(d.key), dur: null }; }
+  if (d.kind === "pick") { const pd = PICK_DEF[d.key]; const glow = d.key === "diamond" ? "glow-cyan" : (d.key === "netherite" ? "glow-fire" : (d.key === "gold" ? "glow-gold" : "")); return { sprite: pd.sprite, emoji: "⛏️", glow, label: pd.label + " · 1 uso cada uno · tienes " + pickCount(d.key), dur: null }; }
   if (d.kind === "plano") { const b = (typeof BUILD_DEF !== "undefined") && BUILD_DEF[d.key]; return { sprite: "plano_" + d.key, emoji: "📜", glow: "glow-gold", label: "Plano: " + (b ? b.label : d.key) + " · clic para colocar la obra", dur: null }; }   // blueprints (12/8)
   /* 18/8: los regalos del baúl (parcela, árbol, roca) viven en la bolsa hasta que el jugador
      elige dónde van. Mismo patrón que el plano de un edificio. */
@@ -2245,7 +2245,7 @@ function itemView(d) {
     /* sin sprite todavía: van al final de la cola de arte (docs/ARTE-ITEMS.md). Pedir un
        "cont_bag.png" que no existe sería una imagen rota por cada repintado de la bolsa. */
     return { sprite: null, emoji: cd.emoji, glow: d.key === "backpack" ? "glow-gold" : "",
-             label: cd.label + " · " + cd.huecos + " huecos · se carga en el portal de la Zona Negra", dur: null }; }
+             label: cd.label + " · " + cd.huecos + " espacios · se carga en el portal de la Zona Negra", dur: null }; }
   if (d.kind === "res") return { sprite: resSprite(d.key), emoji: RES_EMOJI[d.key], label: RES_LABEL[d.key], dur: null };
   if (d.kind === "seed") { const cd = CROP_DEF[d.key]; return { sprite: "seed_" + d.key, emoji: cd.emoji, label: cd.label + " (semilla)", dur: null }; }
   /* 25/8 — LA CAÑA EN LA BOLSA. Se craftea en la Herrería, se gasta al pescar… y no se veía en
@@ -2296,7 +2296,7 @@ function itemView(d) {
     return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null };
   }
   if (d.kind === "dish") { const r = RECIPE_DEF[d.key]; return { sprite: r ? r.sprite : null, emoji: r ? r.emoji : "🍲", label: r ? r.label + " · clic para comer (" + dishDesc(r) + ")" : "Plato", dur: null }; }
-  if (d.kind === "chest") return { sprite: "cofre", emoji: "📦", label: "Cofre depósito · clic para colocarlo en la granja", dur: null };
+  if (d.kind === "chest") return { sprite: "cofre", emoji: "📦", label: "Cofre de depósito · clic para colocarlo en la granja", dur: null };
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
 // si el sprite existe lo muestra; si falla la carga, cae al emoji (sin romper)
@@ -2413,10 +2413,10 @@ function refreshInvZona() {
       (v ? itemIcon(v) : '<span class="em">📦</span>') + '<span class="cnt">' + fmt(e.n) + '</span></div>';
   }); });
   for (let i = pilas.length; i < cap; i++) html += '<div class="slot"></div>';
-  cont.innerHTML = html || '<div class="sub" style="grid-column:1/-1;text-align:center;padding:16px 6px">No llevás contenedor.</div>';
+  cont.innerHTML = html || '<div class="sub" style="grid-column:1/-1;text-align:center;padding:16px 6px">No llevas contenedor.</div>';
   const c2 = $("inv-cap");
   if (c2) c2.textContent = raiz
-    ? CONT_DEF[raiz.c].label + ": " + contPilas(raiz) + " cosa(s) · " + contLibres(raiz) + " hueco(s) libre(s) · lo de la granja no se ve ni se toca desde acá"
+    ? CONT_DEF[raiz.c].label + ": " + contPilas(raiz) + " cosa(s) · " + contLibres(raiz) + " hueco(s) libre(s) · lo de la granja no se ve ni se toca desde aquí"
     : "Sin contenedor";
   const ss = $("inv-selseed"); if (ss) ss.innerHTML = "";
   /* el único clic que sigue vivo: comer. Equipar, sembrar y tirar son cosas de la granja. */
@@ -2439,7 +2439,7 @@ function refreshInvZona() {
     const [kind, key] = c.dataset.czona.split("|");
     if (kind === "dish") { eatDish(key); refreshInv(); return; }
     if (kind === "arm") { if (G.weapons && G.weapons[key]) { G.gear.arma = key; toast("Equipaste " + (ARM_DEF[key] ? ARM_DEF[key].label : key)); refreshInv(); if (typeof refreshCombate === "function") refreshCombate(); } return; }
-    toast("Acá solo podés comer y cambiar de arma — el resto se hace en la granja");
+    toast("Aquí solo puedes comer y cambiar de arma — el resto se hace en la granja");
   }));
 }
 /* selectSeed repinta la Bolsa para actualizar el borde dorado. La casilla anterior deja de
@@ -2499,7 +2499,7 @@ function refreshCobertizo() {
   const items = (typeof cobertizoItems === "function") ? cobertizoItems() : [];
   if (!items.length) {
     cont.innerHTML = '<div class="sub" style="grid-column:1/-1;text-align:center;padding:18px 6px">' +
-      'El cobertizo está vacío.<br>Acá llegan las parcelas, los retoños, las rocas, los adornos, ' +
+      'El cobertizo está vacío.<br>Aquí llegan las parcelas, los retoños, las rocas, los adornos, ' +
       'los cofres y los planos que todavía no pusiste en la granja.</div>';
   } else {
     cont.innerHTML = items.map((d, i) => {
@@ -2532,18 +2532,18 @@ function refreshProduccionGranja() {
   let h = '<div class="resumen-menu"><span><b>'+produccionUsados()+'/'+produccionCapacidad()+'</b>cupos usados</span><span><b>'+Math.max(0,produccionCapacidad()-produccionUsados())+'</b>cupos libres</span><span><b>'+(G.produccion.vale||0)+'</b>vales de nodo</span></div><h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
     '<p class="sub">1 nodo activo = 1 cupo · cada expansión suma 1.</p>';
   const vipGranja = produccionVipActivo();
-  h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Free · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
+  h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Sin VIP · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
     '<button class="green sm" id="prod-vip-comprar" ' + (vipGranja || G.golden < PRODUCCION_VIP_PRECIO ? 'disabled' : '') + '>' + (vipGranja ? 'VIP activo' : 'Comprar · ' + PRODUCCION_VIP_PRECIO + ' $Golden') + '</button></div>' +
-    '<details class="ayuda-menu"><summary>Cómo funcionan los cupos y el VIP</summary><p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p><p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Free, sin borrar nada. Sin cobro externo ni canje por USDT.</p></details>';
-  if (G.produccion.vale) h += '<p class="verde">Tenés '+G.produccion.vale+' vale(s) de expansión: cada uno permite elegir gratis un árbol, una roca o una parcela. Elegir una opción consume un vale; las otras no se entregan automáticamente.</p>';
+    '<details class="ayuda-menu"><summary>Cómo funcionan los cupos y el VIP</summary><p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p><p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Sin VIP, sin borrar nada. Sin cobro externo ni canje por USDT.</p></details>';
+  if (G.produccion.vale) h += '<p class="verde">Tienes '+G.produccion.vale+' vale(s) de expansión: cada uno permite elegir gratis un árbol, una roca o una parcela. Elegir una opción consume un vale; las otras no se entregan automáticamente.</p>';
   h += '<details id="prod-elegir"><summary>'+(G.produccion.vale?'Elegir nodo gratuito · árbol, roca o parcela':'Comprar producción · elegir especialidad')+'</summary><div class="fbtns">';
   const tipos = { plot: ["Parcela", 20, 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
   for (const k in tipos) {
     const d = tipos[k], gratis = G.produccion.vale && ["plot", "tree", "rock"].includes(k);
-    const motivo=G.level<d[2]?'Requiere granja nivel '+d[2]:!libres?'Sin cupos: pausá un nodo o expandí':!gratis&&G.plata<d[1]?'Faltan '+fmtPlata(d[1]-G.plata)+' Plata':k==='plot'&&(G.plotsOwned||3)>=PLOT_MAX?'Máximo de parcelas alcanzado':k!=='plot'&&produccionEmplazamiento(k)<0?'Sin emplazamiento: liberá terreno o expandí':'';
+    const motivo=G.level<d[2]?'Requiere granja nivel '+d[2]:!libres?'Sin cupos: pausa un nodo o expande':!gratis&&G.plata<d[1]?'Faltan '+fmtPlata(d[1]-G.plata)+' Plata':k==='plot'&&(G.plotsOwned||3)>=PLOT_MAX?'Máximo de parcelas alcanzado':k!=='plot'&&produccionEmplazamiento(k)<0?'Sin emplazamiento: libera terreno o expande':'';
     h += '<div class="eleccion-nodo"><button class="green sm" data-prod-buy="' + k + '" aria-describedby="prod-motivo-'+k+'" title="'+escapeHtml(motivo||'Activar '+d[0]+' · ocupa 1 cupo')+'" ' + (motivo ? 'disabled' : '') + '>' + d[0] + ' · ' + (gratis ? 'incluido' : d[1] + ' plata') + ' · niv. ' + d[2] + '</button><small class="motivo-accion" id="prod-motivo-'+k+'">'+escapeHtml(motivo||'Ocupa 1 cupo')+'</small></div>';
   }
-  h += '</div><p class="sub">Los nuevos nodos empiezan recuperando su primera carga. Necesitan un emplazamiento disponible del tipo elegido dentro de tu terreno; después podés moverlos en edición.</p></details><details><summary>Gestionar producción activa y pausada</summary><div style="max-height:260px;overflow:auto;padding:4px">';
+  h += '</div><p class="sub">Los nuevos nodos empiezan recuperando su primera carga. Necesitan un emplazamiento disponible del tipo elegido dentro de tu terreno; después puedes moverlos en edición.</p></details><details><summary>Gestionar producción activa y pausada</summary><div style="max-height:260px;overflow:auto;padding:4px">';
   for (const o of produccionItems()) {
     const pausa = produccionPausada(o);
     h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (pausa ? ' · pausada' : ' · activa') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" ' + (pausa && !libres ? 'disabled' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
@@ -2562,10 +2562,10 @@ function refreshProduccionGranja() {
 }
 async function refreshVisitas(){
   const lista=$('visitas-lista'),vista=$('visitas-vista');if(!lista||!vista)return;
-  vista.innerHTML='';if(!vipVigente()){lista.textContent='Necesitás el VIP de 30 días para visitar y recoger semillas.';return;}
+  vista.innerHTML='';if(!vipVigente()){lista.textContent='Necesitas el VIP de 30 días para visitar y recoger semillas.';return;}
   lista.textContent='Consultando granjas…';const r=await visitaConsultar('listar');
   if(!isOpen('ov-visitas'))return;
-  if(!r){lista.textContent='Sin conexión. Podés cerrar y volver a intentar.';return;}
+  if(!r){lista.textContent='Sin conexión. Puedes cerrar y volver a intentar.';return;}
   lista.innerHTML=r.granjas.length?r.granjas.map(g=>'<button class="ghost sm" data-visitar="'+escapeHtml(g.id)+'">'+escapeHtml(g.nombre)+'</button>').join(' '):'Todavía no hay otras granjas para visitar.';
   lista.querySelectorAll('[data-visitar]').forEach(b=>b.onclick=async()=>{
     vista.textContent='Cargando resumen de la granja…';const id=b.dataset.visitar,r=await visitaConsultar('ver',id);
@@ -2586,19 +2586,19 @@ function refreshArtefactos() {
   const box=$('objetos-productores');if(!box)return;
   const t=nowMs(), online=!!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID));
   const vip=vipVigente(t),activos=Object.values(G.artefactos && G.artefactos.items || {}).filter(a=>t<a.desde+ARTEFACTO_DIAS*86400000).length;
-  let h='<div class="flujo-menu"><span><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""> Golden<br><small>Comprar objeto</small></span><b aria-hidden="true">→</b><span>🌾</span><b aria-hidden="true">→</b><span><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""> Plata<br><small>Cobrar producción</small></span></div><div class="resumen-menu"><span><b>24 h</b>entre cobros</span><span><b>1 ⚡</b>por cobro</span><span><b>180 días</b>de producción</span></div><p class="sub">Free: 1 objeto activo · VIP: sin límite</p><details class="ayuda-menu"><summary>Condiciones de producción</summary><p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Free: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservás tus compras y sus cobros; no podés ampliar la colección mientras haya uno activo.</p>'+
-    '<p class="sub">Comprá con Golden y reclamá Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. </p>'+
+  let h='<div class="flujo-menu"><span><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""> Golden<br><small>Comprar objeto</small></span><b aria-hidden="true">→</b><span>🌾</span><b aria-hidden="true">→</b><span><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""> Plata<br><small>Cobrar producción</small></span></div><div class="resumen-menu"><span><b>24 h</b>entre cobros</span><span><b>1 ⚡</b>por cobro</span><span><b>180 días</b>de producción</span></div><p class="sub">Sin VIP: 1 objeto activo · VIP: sin límite</p><details class="ayuda-menu"><summary>Condiciones de producción</summary><p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Sin VIP: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservas tus compras y sus cobros; no puedes ampliar la colección mientras haya uno activo.</p>'+
+    '<p class="sub">Compra con Golden y reclama Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. </p>'+
     '<p class="sub">El cambio de Plata a Golden se consulta en el Banco y puede variar. Depósitos y retiros USDT desactivados.</p></details><button class="ghost sm" data-panel="ov-banco">🏦 Cambiar Plata por Golden</button>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
   const copias=Object.keys(G.artefactos && G.artefactos.items || {}).filter(id=>id.includes(':') && ARTEFACTO_DEF[artefactoModelo(id)]);
   for(const [id,d] of [...Object.entries(ARTEFACTO_DEF),...copias.map(id=>[id,ARTEFACTO_DEF[artefactoModelo(id)]])]){
     const a=G.artefactos && G.artefactos.items && G.artefactos.items[id], activo=a && t<a.desde+ARTEFACTO_DIAS*86400000;
     const pendiente=artefactoPendiente(id), diaria=artefactoDiario(id).toFixed(2).replace('.',',');
-    const motivoCompra=!online?'Conectá y sincronizá el guardado':!vip&&activos>=1?'Free: ya tenés un objeto activo':!vip&&pendiente>0?'Cobrá primero la producción pendiente':G.golden<d.golden?'Faltan '+fmtGolden(d.golden-G.golden)+' Golden':'';
+    const motivoCompra=!online?'Conecta y sincroniza el guardado':!vip&&activos>=1?'Sin VIP: ya tienes un objeto activo':!vip&&pendiente>0?'Cobra primero la producción pendiente':G.golden<d.golden?'Faltan '+fmtGolden(d.golden-G.golden)+' Golden':'';
     h+='<div class="row objeto-card" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div class="objeto-datos"><strong class="objeto-nombre"><span aria-hidden="true">'+d.icon+'</span>'+d.label+(id.includes(':')?' · ejemplar adicional':'')+'</strong><br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
       (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div class="objeto-acciones">'+
       (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' Plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||!artefactoPuedeCobrar(id)||!energiaGranjaPuede('harvest')?'disabled':'')+'>'+artefactoTextoCobro(id)+'</button> ':'')+
-      (id.includes(':')?'':'<button class="ghost sm" data-artefacto-comprar="'+id+'" title="'+escapeHtml(motivoCompra||'Comprar '+d.label)+'" '+(motivoCompra?'disabled':'')+'>'+(activo&&vip?'Otro ejemplar · '+d.golden+' Golden':activo?'Ya lo tenés':'Comprar · '+d.golden+' Golden')+'</button>'+(motivoCompra?'<small class="motivo-accion">'+escapeHtml(motivoCompra)+'</small>':''))+'</div></div>';
+      (id.includes(':')?'':'<button class="ghost sm" data-artefacto-comprar="'+id+'" title="'+escapeHtml(motivoCompra||'Comprar '+d.label)+'" '+(motivoCompra?'disabled':'')+'>'+(activo&&vip?'Otro ejemplar · '+d.golden+' Golden':activo?'Ya lo tienes':'Comprar · '+d.golden+' Golden')+'</button>'+(motivoCompra?'<small class="motivo-accion">'+escapeHtml(motivoCompra)+'</small>':''))+'</div></div>';
   }
   box.innerHTML=h;
   box.querySelectorAll('[data-artefacto-comprar]').forEach(b=>b.onclick=()=>{
@@ -2611,20 +2611,20 @@ function bancoActualizarPrevia(){
   const input=$('banco-cantidad'),preview=$('banco-previa'),boton=$('banco-canjear');if(!input||!preview||!boton)return;
   const n=Number(input.value),valida=bancoCotizacionValida(),tasa=valida?BANCO_COTIZACION.tasa:0;
   const cantidad=Number.isSafeInteger(n)&&n>=1&&n<=1000000;
-  preview.textContent=valida&&cantidad ? 'Entregás '+(n*tasa).toLocaleString('es-UY')+' Plata → recibís '+n.toLocaleString('es-UY')+' Golden.'+(G.plata<n*tasa?' Te faltan '+(n*tasa-G.plata).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata.':' Saldo después: '+(G.plata-n*tasa).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata.') : valida?'Elegí una cantidad entera, de 1 a 1.000.000 Golden.':'Actualizá la tasa para calcular el cambio.';
+  preview.textContent=valida&&cantidad ? 'Entregas '+(n*tasa).toLocaleString('es-UY')+' Plata → recibes '+n.toLocaleString('es-UY')+' Golden.'+(G.plata<n*tasa?' Te faltan '+(n*tasa-G.plata).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata.':' Saldo después: '+(G.plata-n*tasa).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata.') : valida?'Elige una cantidad entera, de 1 a 1.000.000 Golden.':'Actualiza la tasa para calcular el cambio.';
   boton.textContent=valida&&cantidad?'Canjear por '+n.toLocaleString('es-UY')+' Golden':'Canjear';
   const tasaVista=$('banco-tasa');if(tasaVista)tasaVista.textContent=valida?tasa.toLocaleString('es-UY'):'—';
   boton.disabled=!(valida&&cantidad&&G.plata>=n*tasa&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&!MERCADO_EN_CURSO);
 }
 function actividadGranjaHtml(){
   const a=actividadGranjaEstado();
-  return '<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gastá energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
+  return '<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gasta energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
 }
 function actividadGranjaRefrescar(){for(const id of ['banco-actividad','vip-actividad']){const el=$(id);if(el)el.innerHTML=actividadGranjaHtml();}}
 function refreshBanco(cotizar=true){
   actividadGranjaRefrescar();
   const info=$('banco-info');if(!info)return;
-  info.textContent=bancoCotizacionValida() ? 'Tasa vigente · válida durante 60 s' : 'Sin tasa vigente · conectate y actualizá';
+  info.textContent=bancoCotizacionValida() ? 'Tasa vigente · válida durante 60 s' : 'Sin tasa vigente · conéctate y actualiza';
   info._cotizacionVigente=bancoCotizacionValida();
   const input=$('banco-cantidad'),actualizar=$('banco-actualizar'),boton=$('banco-canjear');
   if(input)input.oninput=bancoActualizarPrevia;
@@ -2644,7 +2644,7 @@ function bancoTick(){
 function abrirCompra(destino){
   const directos={inicio:'ov-tienda',vip:'ov-vip',objetos:'ov-reliquias'};
   if(directos[destino]){closeAllOv();openOv(directos[destino]);return;}
-  if(destino==='animales'){if(!G.built?.establo){toast('Construí el Establo para comprar animales.');return;}closeAllOv();openOv('ov-establo');return;}
+  if(destino==='animales'){if(!G.built?.establo){toast('Construye el Establo para comprar animales.');return;}closeAllOv();openOv('ov-establo');return;}
   const tabs={mejoras:'nft',suministros:'buy',semillas:'buy',adornos:'deco',bolsas:'buy'};
   if(!tabs[destino])return;
   closeAllOv();openOv('ov-market');
@@ -2656,11 +2656,11 @@ function refreshTienda(){
   const box=$('tienda-catalogo');if(!box)return;
   const activo=vipVigente(),cards=[
     ['vip','VIP · 30 días','Más energía y capacidad','100 de energía · +25% de cupos',activo?'VIP activo':PRODUCCION_VIP_PRECIO+' Golden','Ver VIP'],
-    ['objetos','Objetos de Granja','Tu colección produce Plata','Cobrá producción cada 24 h','Desde '+Math.min(...Object.values(ARTEFACTO_DEF).map(d=>d.golden))+' Golden','Ver objetos'],
-    ['mejoras','Mejoras permanentes','Desarrollá tu granja','God Hand · edificios · recolección','Precios por mejora','Ver mejoras'],
-    ['suministros','Packs de materiales','Construí y fabricá','Madera, piedra y minerales','Desde '+Math.min(...Object.values(PACKS_DEF).map(d=>d.golden))+' Golden','Ver packs']
+    ['objetos','Objetos de Granja','Tu colección produce Plata','Cobra producción cada 24 h','Desde '+Math.min(...Object.values(ARTEFACTO_DEF).map(d=>d.golden))+' Golden','Ver objetos'],
+    ['mejoras','Mejoras permanentes','Desarrolla tu granja','God Hand · edificios · recolección','Precios por mejora','Ver mejoras'],
+    ['suministros','Packs de materiales','Construye y fabrica','Madera, piedra y minerales','Desde '+Math.min(...Object.values(PACKS_DEF).map(d=>d.golden))+' Golden','Ver packs']
   ];
-  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="ghost sm" data-panel="ov-banco">Banco</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong><p>'+detalle+'</p><div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construí el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos y retiros USDT desactivados.</p>';
+  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="ghost sm" data-panel="ov-banco">Banco</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong><p>'+detalle+'</p><div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construye el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos y retiros USDT desactivados.</p>';
 }
 function ubicarComprasPc(){
   const nav=$('compras-accesos');if(!nav||window.innerWidth<=640)return;
@@ -2678,15 +2678,15 @@ function refreshVip() {
     ['Energía de granja','50','100'],
     ['Cocina, nodos y expansiones','Tiempo normal','10% menos de tiempo'],
     ['Capacidad productiva','Capacidad base + expansiones','25% extra (mínimo 2 cupos)'],
-    ['Fabricación','De a uno','En lotes'],
+    ['Fabricación','De uno en uno','En lotes'],
     ['Publicaciones P2P','Una por día UTC','Diez por día UTC'],
     ['Comisión P2P nueva',G.infraestructura?.mercado?'8%':'10%',G.infraestructura?.mercado?'5%':'7%'],
     ['Objetos de Granja','Un objeto activo','Sin límite; admite duplicados'],
     ['Visitas y semillas','No incluidas','Resumen de granjas; hasta 3 semillas/día']
   ];
-  box.innerHTML='<div class="vip-presentacion"><div class="vip-ilustracion"><img src="assets/ui/shop-vip-v1.webp" alt="Corona con trigo y parcelas" width="256" height="256"></div><div class="vip-propuesta"><span class="vip-etiqueta">UNA MEMBRESÍA · 30 DÍAS</span><h4>Más posibilidades para tu granja</h4><ul class="vip-beneficios"><li>⚡ <b>100 de energía</b> <small>Free: 50</small></li><li>▦ <b>+25% de cupos</b> <small>mínimo 2 extra</small></li><li>×5 <b>Fabricación en lotes</b></li></ul><div class="vip-precio"><b>'+precio+' Golden</b><small>por 30 días</small></div><button class="green" id="vip-comprar" '+(activo||G.golden<precio?'disabled':'')+'>'+(activo?'VIP activo':'Activar VIP')+'</button><p class="vip-saldo">Tu saldo: '+fmtGolden(G.golden)+' Golden'+(!activo&&G.golden<precio?' · Te faltan '+fmtGolden(precio-G.golden)+' Golden':'')+'</p></div></div><p class="sub">'+(activo?'VIP activo hasta '+escapeHtml(new Date(G.produccion.vipHasta).toLocaleString('es-UY')):'Una sola membresía para todos los beneficios. Los nodos extra se compran aparte.')+'</p>'+
-    '<details class="ayuda-menu"><summary>Comparar todas las ventajas · Free / VIP</summary><div style="overflow-x:auto;margin-top:12px"><table class="comparativa-vip" style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th scope="col">Beneficio</th><th scope="col">Free</th><th scope="col">VIP</th></tr></thead><tbody>'+filas.map(f=>'<tr>'+f.map(c=>'<td style="padding:8px 5px;border-top:1px solid #ffffff33">'+escapeHtml(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>'+
-    '<details class="ayuda-menu"><summary>Duración y condiciones</summary><p class="sub">La energía se recupera en 4 horas. El combate no cambia. Los nodos adicionales se compran aparte. Al vencer, conservás los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Free se pausa, sin borrar nada.</p></details>'+
+  box.innerHTML='<div class="vip-presentacion"><div class="vip-ilustracion"><img src="assets/ui/shop-vip-v1.webp" alt="Corona con trigo y parcelas" width="256" height="256"></div><div class="vip-propuesta"><span class="vip-etiqueta">UNA MEMBRESÍA · 30 DÍAS</span><h4>Más posibilidades para tu granja</h4><ul class="vip-beneficios"><li>⚡ <b>100 de energía</b> <small>Sin VIP: 50</small></li><li>▦ <b>+25% de cupos</b> <small>mínimo 2 extra</small></li><li>×5 <b>Fabricación en lotes</b></li></ul><div class="vip-precio"><b>'+precio+' Golden</b><small>por 30 días</small></div><button class="green" id="vip-comprar" '+(activo||G.golden<precio?'disabled':'')+'>'+(activo?'VIP activo':'Activar VIP')+'</button><p class="vip-saldo">Tu saldo: '+fmtGolden(G.golden)+' Golden'+(!activo&&G.golden<precio?' · Te faltan '+fmtGolden(precio-G.golden)+' Golden':'')+'</p></div></div><p class="sub">'+(activo?'VIP activo hasta '+escapeHtml(new Date(G.produccion.vipHasta).toLocaleString('es-UY')):'Una sola membresía para todos los beneficios. Los nodos extra se compran aparte.')+'</p>'+
+    '<details class="ayuda-menu"><summary>Comparar todas las ventajas · Sin VIP / VIP</summary><div style="overflow-x:auto;margin-top:12px"><table class="comparativa-vip" style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th scope="col">Beneficio</th><th scope="col">Sin VIP</th><th scope="col">VIP</th></tr></thead><tbody>'+filas.map(f=>'<tr>'+f.map(c=>'<td style="padding:8px 5px;border-top:1px solid #ffffff33">'+escapeHtml(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>'+
+    '<details class="ayuda-menu"><summary>Duración y condiciones</summary><p class="sub">La energía se recupera en 4 horas. El combate no cambia. Los nodos adicionales se compran aparte. Al vencer, conservas los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Sin VIP se pausa, sin borrar nada.</p></details>'+
     '<p class="sub">El pase está desactivado. Depósitos y retiros USDT desactivados: esta compra utiliza únicamente tu Golden del juego.</p><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="vip-actividad" aria-live="polite"></div></details>';
   actividadGranjaRefrescar();
   $('vip-comprar').onclick=confirmarCompraVip;
@@ -2711,7 +2711,7 @@ function syncCobertizo() {
 function cobertizoClick(d) {
   if (!d) return;
   const sc = window.farmScene;
-  if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocarlo"); return; }
+  if (!sc || !sc.iniciarColocar) { toast("Entra a la granja para colocarlo"); return; }
   closeAllOv();
   if (d.kind === "regalo") sc.iniciarColocar("regalo", d.key);
   else if (d.kind === "plano") sc.iniciarColocar("obra", d.key);
@@ -2722,7 +2722,7 @@ function cobertizoClick(d) {
 function invCellClick(i) {
   const d = G.slots[i]; if (!d) return;
   if (d.kind === "armor") { armorAlternarPieza(d.key); return; }
-  if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitás Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("Plantando: " + CROP_DEF[d.key].label); }
+  if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitas Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("Plantando: " + CROP_DEF[d.key].label); }
   else if (d.kind === "arm") {   // clic = EQUIPAR (para tirarla, la papelera). Antes se borraba de una: bug reportado
     if (!(G.weapons && G.weapons[d.key])) return;
     if (G.gear.arma === d.key) { G.gear.arma = null; toast("Guardaste " + ((ARM_DEF[d.key] || {}).label || "el arma")); }
@@ -2752,13 +2752,13 @@ function invCellClick(i) {
   // blueprints (12/8): clic en el plano → cerrar ventanas y elegir dónde levantar la obra
   else if (d.kind === "plano") {
     const sc = window.farmScene;
-    if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocar el plano"); return; }
+    if (!sc || !sc.iniciarColocar) { toast("Entra a la granja para colocar el plano"); return; }
     closeAllOv();
     sc.iniciarColocar("obra", d.key);
   }
   else if (d.kind === "regalo") {   // 18/8: parcela / árbol / roca → elegir celda
     const sc = window.farmScene;
-    if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocarlo"); return; }
+    if (!sc || !sc.iniciarColocar) { toast("Entra a la granja para colocarlo"); return; }
     if (((typeof cobertizoBolsa === "function" ? cobertizoBolsa()[d.key] : 0) || 0) <= 0) { toast("No te queda " + (typeof REGALO_NADA === "function" ? REGALO_NADA(d.key) : "ninguno")); return; }
     closeAllOv();
     sc.iniciarColocar("regalo", d.key);
@@ -2890,7 +2890,7 @@ function hotSelect(i) {
        eatDish ya pasa por la puerta única y saca del contenedor; el resto son cosas de la granja
        y allá no tienen dónde ocurrir. */
     if (typeof enZona === "function" && enZona() && d.kind !== "dish" && d.kind !== "arm") {
-      toast("Eso es de la granja — acá solo tenés lo que cargaste en el contenedor");
+      toast("Eso es de la granja — aquí solo tienes lo que cargaste en el contenedor");
       refreshHotbar(); return;
     }
     if (d.kind === "pick" && G.picks.owned[d.key]) equipPick(d.key);
@@ -2899,13 +2899,13 @@ function hotSelect(i) {
     // 13/8: clic al plano en la barra = igual que en la bolsa → elegir dónde levantar la obra
     else if (d.kind === "plano" && G.planos && G.planos[d.key]) {
       const sc = window.farmScene;
-      if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocar el plano"); return; }
+      if (!sc || !sc.iniciarColocar) { toast("Entra a la granja para colocar el plano"); return; }
       closeAllOv();
       sc.iniciarColocar("obra", d.key);
     }
     else if (d.kind === "regalo") {   // 18/8
       const sc = window.farmScene;
-      if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para colocarlo"); return; }
+      if (!sc || !sc.iniciarColocar) { toast("Entra a la granja para colocarlo"); return; }
       if (((typeof cobertizoBolsa === "function" ? cobertizoBolsa()[d.key] : 0) || 0) <= 0) { toast("No te queda " + (typeof REGALO_NADA === "function" ? REGALO_NADA(d.key) : "ninguno")); return; }
       closeAllOv();
       sc.iniciarColocar("regalo", d.key);
@@ -2930,12 +2930,12 @@ function aLaBarra(kind, key) {
   if (!Array.isArray(G.hotbar)) G.hotbar = [];
   while (G.hotbar.length < 10) G.hotbar.push(null);
   const ya = G.hotbar.findIndex(h => h && h.kind === kind && h.key === key);
-  if (ya >= 0) { toast("Ya está en la barra — apretá " + (ya === 9 ? 0 : ya + 1)); return false; }
+  if (ya >= 0) { toast("Ya está en la barra — pulsa " + (ya === 9 ? 0 : ya + 1)); return false; }
   let i = G.hotbar.indexOf(null);
   if (i < 0) i = Math.max(0, Math.min(9, G.hotSel || 0));   // sin huecos: reemplaza el seleccionado
   G.hotbar[i] = { kind: kind, key: key };
   const v = (typeof itemView === "function") ? itemView({ kind, key }) : null;
-  toast(((v && v.label) || "En la barra") + " — apretá " + (i === 9 ? 0 : i + 1));
+  toast(((v && v.label) || "En la barra") + " — pulsa " + (i === 9 ? 0 : i + 1));
   refreshHotbar(true);
   if (typeof saveFarm === "function") saveFarm();
   return true;
@@ -2972,7 +2972,7 @@ function dndDrop(src, tz, ti) {
   if (sz === "cont") {
     if (tz !== "hot") return;
     const [kind, key] = src.slice(ci + 1).split("|");
-    if (kind && key) { G.hotbar[ti] = { kind: kind, key: key }; toast("En la barra — apretá " + (ti === 9 ? 0 : ti + 1)); }
+    if (kind && key) { G.hotbar[ti] = { kind: kind, key: key }; toast("En la barra — pulsa " + (ti === 9 ? 0 : ti + 1)); }
     refreshHotbar(true);
     return;
   }
@@ -2985,7 +2985,7 @@ function dndDrop(src, tz, ti) {
     else { const d = G.slots[si]; if (d) {
       const inf = trashInfo(d);
       if (!inf) toast("Eso no se puede tirar");
-      else if (inf.n > 0) askConfirm("¿Seguro que querés tirar " + inf.n + " × " + inf.lbl + "? No se puede recuperar.", () => { trashStack(d); if (isOpen("ov-inv")) refreshInv(); else refreshHotbar(); });
+      else if (inf.n > 0) askConfirm("¿Seguro que quieres tirar " + inf.n + " × " + inf.lbl + "? No se puede recuperar.", () => { trashStack(d); if (isOpen("ov-inv")) refreshInv(); else refreshHotbar(); });
     } }
   }
   if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
@@ -3015,12 +3015,12 @@ function enlazarFondoConfirmacionPc() {
 }
 function pedirAporteObra(t,onAportar){
  const aporte=obraFalta(t).map(([r,n])=>[r,Math.min(n,r==='golden'?G.golden:Math.floor(G.res[r]||0))]).filter(([,n])=>n>0),campos=[];
- if(!aporte.length){toast('No tenés materiales disponibles para aportar');return;}
- askConfirm('Elegí cuánto aportar a '+BUILD_DEF[t].label+'. Lo que no aportes queda en tu bolsa.',()=>{
-   const cantidades={};for(const [r,max,input] of campos){const n=Number(input.value);if(!Number.isSafeInteger(n)||n<0||n>max){toast('Revisá las cantidades del aporte');return;}cantidades[r]=n;}
+ if(!aporte.length){toast('No tienes materiales disponibles para aportar');return;}
+ askConfirm('Elige cuánto aportar a '+BUILD_DEF[t].label+'. Lo que no aportes queda en tu bolsa.',()=>{
+   const cantidades={};for(const [r,max,input] of campos){const n=Number(input.value);if(!Number.isSafeInteger(n)||n<0||n>max){toast('Revisa las cantidades del aporte');return;}cantidades[r]=n;}
    const detalle=Object.entries(cantidades).filter(([,n])=>n>0).map(([r,n])=>n+' '+(r==='golden'?'Golden':RES_LABEL[r])).join(' · ');
-   if(!detalle){toast('Elegí al menos un material para aportar');return;}
-   askConfirm('Vas a aportar '+detalle+' a '+BUILD_DEF[t].label+'. ¿Confirmás?',()=>onAportar(cantidades),{title:'Confirmar aporte',yes:'Aportar',no:'Cancelar'});
+   if(!detalle){toast('Elige al menos un material para aportar');return;}
+   askConfirm('Vas a aportar '+detalle+' a '+BUILD_DEF[t].label+'. ¿Confirmas?',()=>onAportar(cantidades),{title:'Confirmar aporte',yes:'Aportar',no:'Cancelar'});
  },{title:'Elegir materiales',yes:'Revisar aporte',no:'Cancelar'});
  const msg=$('cf-msg');if(!msg)return;
  aporte.forEach(([r,max])=>{const label=document.createElement('label'),input=document.createElement('input');label.style.display='block';label.style.marginTop='8px';label.textContent=(r==='golden'?'Golden':RES_LABEL[r])+' (disponible: '+max+') ';input.type='number';input.min='0';input.max=String(max);input.step='1';input.value=String(max);input.style.width='80px';label.appendChild(input);msg.appendChild(label);campos.push([r,max,input]);});
@@ -3140,12 +3140,12 @@ function refreshEquip() {
        la GRANJA: dentro de la Zona te dejaba equiparte la espada que dejaste en casa, y no te
        dejaba equiparte la que sí habías cargado. armasAMano() responde según enZona(). */
     const opts = [null].concat(armasAMano());
-    if (opts.length === 1) { toast(enZona() ? "No llevás armas en el contenedor" : "No tenés armas — crafteálas en la Herrería"); return; }
+    if (opts.length === 1) { toast(enZona() ? "No llevas armas en el contenedor" : "No tienes armas — fabrícalas en la Herrería"); return; }
     const sig = opts[(opts.indexOf(G.gear.arma) + 1) % opts.length];
     /* dentro de la Zona cambiar de arma es un INTERCAMBIO con el contenedor, no un simple
        « ponete ésta »: la que llevabas tiene que bajar al contenedor con su ficha o se perdería. */
     if (enZona()) {
-      if (!armaCambiarLlevada(sig)) { toast("El contenedor está lleno — no hay dónde guardar la que llevás"); return; }
+      if (!armaCambiarLlevada(sig)) { toast("El contenedor está lleno — no hay dónde guardar la que llevas"); return; }
     } else G.gear.arma = sig;
     toast(G.gear.arma ? ARM_DEF[G.gear.arma].label + " equipada" : "Arma desequipada");
     /* 19/8: el tutorial señala ESTE slot para el paso "equipate la espada", así que la tercera vía
@@ -3170,14 +3170,14 @@ function refreshEquip() {
        llevás, porque se gastan de a una al disparar. Pero si el rótulo no lo dice, se lee como
        un duplicado o como un bug — así que lo dice. */
     munOn ? fl + " flechas listas · siguen en tu bolsa (se gastan al disparar) · clic para guardarlas"
-          : (fl > 0 ? "Munición · clic para usar tus " + fl + " flechas (no salen de la bolsa)" : "Munición (crafteá flechas en la Herrería)"));
+          : (fl > 0 ? "Munición · clic para usar tus " + fl + " flechas (no salen de la bolsa)" : "Munición (fabrica flechas en la Herrería)"));
   const munEl = $("eq-municion");
   if (munEl) {
     munEl.setAttribute("aria-label", munOn ? fl + " flechas equipadas. Quitar munición" :
       (fl > 0 ? "Equipar munición: " + fl + " flechas" : "Munición. No hay flechas disponibles"));
     munEl.setAttribute("aria-pressed", munOn ? "true" : "false");
     const cambiarMunicion = () => {
-    if (fl <= 0) { toast("No tenés flechas — crafteálas en la Herrería"); return; }
+    if (fl <= 0) { toast("No tienes flechas — fabrícalas en la Herrería"); return; }
     G.gear.municion = !G.gear.municion;
     toast(G.gear.municion ? "Flechas equipadas" : "Flechas desequipadas");
     refreshEquip(); if (typeof saveFarm === "function") saveFarm();
@@ -3218,7 +3218,7 @@ function refreshEquip() {
   if (box) {
     let h = '<div class="secc">Armadura de la Curtiduría</div>';
     const tengoAlguna = ARMOR_ORDER.some(s => armorPuestas(s) > 0);
-    if (!tengoAlguna) h += '<div class="info">Todavía no crafteaste ninguna pieza — se hacen en la Curtiduría con los materiales de tus animales.</div>';
+    if (!tengoAlguna) h += '<div class="info">Todavía no has fabricado ninguna pieza — se hacen en la Curtiduría con los materiales de tus animales.</div>';
     else ARMOR_ORDER.forEach(set => {
       const n = armorPuestas(set); if (!n) return;
       const sd = ARMOR_SETS[set], eq = armorEquipado(set);
@@ -3273,13 +3273,13 @@ function seedWheelCenterPc(px, py) {
   return { x: Math.round(x), y: Math.round(y) };
 }
 function showSeedWheel(px, py, plot) {
-  if (hayOvPcAbierto()) { toast("Cerrá la ventana antes de elegir semillas"); return; }
+  if (hayOvPcAbierto()) { toast("Cierra la ventana antes de elegir semillas"); return; }
   const w = $("seedwheel"); if (!w) return;
   /* 21/8: las semillas EN BOLSA pero con el cultivo aun bloqueado (llegan por el pase o cofres)
      ya no se esconden: se enseñan apagadas con su "Cultivo nivel X". Esconderlas hacia creer que
      la rueda estaba rota o que la semilla se habia perdido. */
   const opts = CROP_ORDER.filter(k => (G.seeds[k] || 0) > 0);
-  if (!opts.length) { toast("No tenés semillas — comprá en la Tienda"); return; }
+  if (!opts.length) { toast("No tienes semillas — compra en la Tienda"); return; }
   const c = w.querySelector(".swc");
   const centro = seedWheelCenterPc(px, py);
   c.style.left = centro.x + "px"; c.style.top = centro.y + "px";
@@ -3356,10 +3356,10 @@ function refreshForge() {
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
     const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ") + (pd.plata ? (Object.keys(pd.cost).length ? " · " : "") + coinIc("plata") + " " + pd.plata : "");
     const afford = canAfford(pd.cost) && (!pd.plata || G.plata >= pd.plata);
-    let btns = '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft="' + id + '">Craftear</button>'
+    let btns = '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft="' + id + '">Fabricar</button>'
       + '<button class="green sm" ' + (afford && vipVigente() ? "" : "disabled") + ' data-craft5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button>';
     if (n > 0 && !isEq) btns += '<button class="ghost sm" data-equip="' + id + '">Equipar</button>';
-    craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tenés ' + n + '</div><div class="fds">Costo por unidad: <b>' + costStr + '</b></div>'+faltaReceta(pd.cost,pd.plata)+'</div><div class="fbtns">' + btns + "</div></div>";
+    craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tienes ' + n + '</div><div class="fds">Coste por unidad: <b>' + costStr + '</b></div>'+faltaReceta(pd.cost,pd.plata)+'</div><div class="fbtns">' + btns + "</div></div>";
   });
   // herramientas consumibles (modelo SFL 31/7): el hacha se craftea barata y se rompe (sin reparación)
   // 8/9 (dirección): la caña salió de acá — era el fósil de la Pesca v2 y no la usaba nadie
@@ -3368,9 +3368,9 @@ function refreshForge() {
     const td = TOOL_DEF[id], tc = TOOL_CRAFT[id], n = toolCount(id);
     const cs = Object.keys(tc.cost).map(k => resIc(k) + " " + tc.cost[k]).join(" · ") + (tc.plata ? (Object.keys(tc.cost).length ? " · " : "") + coinIc("plata") + " " + tc.plata : "");
     const ok = canAfford(tc.cost) && G.plata >= tc.plata;
-    const btn = '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool="' + id + '">Craftear</button>'
+    const btn = '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool="' + id + '">Fabricar</button>'
       + '<button class="green sm" ' + (ok && vipVigente() ? "" : "disabled") + ' data-ctool5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button>';
-    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tenés ' + n + '</div><div class="fds">Costo por unidad: <b>' + cs + '</b></div>'+faltaReceta(tc.cost,tc.plata)+'</div><div class="fbtns">' + btn + '</div></div>';
+    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tienes ' + n + '</div><div class="fds">Coste por unidad: <b>' + cs + '</b></div>'+faltaReceta(tc.cost,tc.plata)+'</div><div class="fbtns">' + btn + '</div></div>';
   });
   /* LAS CAÑAS DE LA v4 SE ARMAN AQUÍ, y esto arregla el fallo más caro que encontré en toda la
      limpieza: la Herrería vendía las cañas de la v3, que escriben en el MISMO G.canas que las de
@@ -3390,7 +3390,7 @@ function refreshForge() {
       const falta = (typeof canaV4Falta === "function") ? canaV4Falta(id) : null;
       const sube = Math.round((d.banda.epico + d.banda.legendario) / (base.epico + base.legendario) * 10) / 10;
       const btn = tengo
-        ? '<button class="ghost sm" disabled>ya la tenés</button>'
+        ? '<button class="ghost sm" disabled>ya la tienes</button>'
         : (d.presupuesto == null
           ? '<button class="ghost sm" disabled title="Se gana en la Lonja">Lonja</button>'
           : (abierta
@@ -3401,7 +3401,7 @@ function refreshForge() {
         '<div class="finfo"><div class="fnm">' + d.label + ' <span style="color:#ffd75e">rareza ×' + sube + '</span></div>' +
         '<div class="fds">' + (d.mant ? "Coste: " + d.mant + " Plata por intento" : "sin peaje — la única") + '</div>' +
         '<div class="fds">' + (d.presupuesto == null ? "Se gana en la Lonja"
-          : "Costo: " + ((typeof canaV4Costo === "function") ? canaV4Costo(id) : "—")) + '</div>' +
+          : "Coste: " + ((typeof canaV4Costo === "function") ? canaV4Costo(id) : "—")) + '</div>' +
         /* la regla 9: si el botón está apagado, la fila dice por qué */
         (falta && !tengo && abierta && d.presupuesto != null ? '<div class="fds" style="color:#e0a06a">' + falta + '</div>' : "") +
         '</div><div class="fbtns">' + btn + '</div></div>';
@@ -3445,7 +3445,7 @@ function refreshForge() {
     }
     const ustr = Object.keys(ARMAS_UNLOCK_COST).map(k => resIc(k) + " " + ARMAS_UNLOCK_COST[k]).join(" · ") + " · " + coinIc("plata") + " " + ARMAS_UNLOCK_PLATA;
     const uok = canAfford(ARMAS_UNLOCK_COST) && G.plata >= ARMAS_UNLOCK_PLATA;
-    armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Sección de Armas cerrada</div><div class="fds">Habilitá la forja de armas pagando una única vez.</div><div class="fds">Costo: ' + ustr + '</div></div><div class="fbtns"><button class="green sm" ' + (uok ? "" : "disabled") + ' id="forge-unlock-armas">Desbloquear</button></div></div>';
+    armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("sword") + '" onerror="this.outerHTML=\'⚔️\'"></div><div class="finfo"><div class="fnm">Sección de Armas cerrada</div><div class="fds">Habilita la forja de armas pagando una única vez.</div><div class="fds">Coste: ' + ustr + '</div></div><div class="fbtns"><button class="green sm" ' + (uok ? "" : "disabled") + ' id="forge-unlock-armas">Desbloquear</button></div></div>';
     $("forge-armas").innerHTML = armas;
     const fu = $("forge-unlock-armas"); if (fu) fu.onclick = (ev) => forgeAccionConFocoPc(ev,
       ["[data-carm='espada_madera']", "#forge-unlock-armas"], () => unlockArmas());
@@ -3468,21 +3468,21 @@ function refreshForge() {
           btns = cdL > 0 ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(cdL / 1000)) + '</button>'
             : '<button class="green sm" ' + (canAfford(w.cost) && G.plata >= w.plata ? "" : "disabled") + ' data-carm="' + id + '">Forjar</button>';
         }
-        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(w.sprite || td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + (w.buffVal ? td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] : 'sin bono — en madera es un palo') + '</div><div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Costo: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
+        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(w.sprite || td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + (w.buffVal ? td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] : 'sin bono — en madera es un palo') + '</div><div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Coste: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
       });
     });
   }
   const astr = G.armasUnlocked ? Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ") : "";
-  if (G.armasUnlocked) armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tenés ' + fmt(G.res.flecha || 0) + ' · Costo: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Craftear</button><button class="green sm" ' + (canAfford(ARROW_COST) && vipVigente() ? "" : "disabled") + ' id="forge-arrows5" title="Fabricar 50 flechas requiere VIP">×5 · VIP</button></div></div>';
+  if (G.armasUnlocked) armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tienes ' + fmt(G.res.flecha || 0) + ' · Coste: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Fabricar</button><button class="green sm" ' + (canAfford(ARROW_COST) && vipVigente() ? "" : "disabled") + ' id="forge-arrows5" title="Fabricar 50 flechas requiere VIP">×5 · VIP</button></div></div>';
   // cofre depósito: 10 espacios + 1% de materiales por cofre
   G.chests = G.chests || [];
   const chn = G.chests.length, chFull = chn >= CHEST_MAX;
   const chstr = Object.keys(CHEST_COST).map(k => resIc(k) + " " + CHEST_COST[k]).join(" · ") + " · " + coinIc("plata") + " " + CHEST_PLATA;
   const chOk = !chFull && canAfford(CHEST_COST) && G.plata >= CHEST_PLATA;
-  craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tenés +' + chn + '%)</div><div class="fds">Costo por unidad: <b>' + chstr + '</b></div>'+(!chFull?faltaReceta(CHEST_COST,CHEST_PLATA):'')+'</div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Craftear") + "</button></div></div>";
+  craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("cofre") + '" onerror="this.outerHTML=\'📦\'"></div><div class="finfo"><div class="fnm">Cofre de depósito (' + chn + "/" + CHEST_MAX + ')</div><div class="fds">10 espacios de guardado en tu granja · +1% de materiales por cofre (tienes +' + chn + '%)</div><div class="fds">Coste por unidad: <b>' + chstr + '</b></div>'+(!chFull?faltaReceta(CHEST_COST,CHEST_PLATA):'')+'</div><div class="fbtns"><button class="green sm" ' + (chOk ? "" : "disabled") + ' id="forge-chest">' + (chFull ? "Máximo" : "Fabricar") + "</button></div></div>";
 
-  $("forge-craft").innerHTML = craft || '<div class="sub">Nada por craftear — ya tenés todo. </div>';
-  if (G.armasUnlocked) $("forge-armas").innerHTML = armas || '<div class="sub">Ya tenés todas las armas. Las flechas se siguen crafteando acá.</div>';
+  $("forge-craft").innerHTML = craft || '<div class="sub">Nada por fabricar — ya tienes todo. </div>';
+  if (G.armasUnlocked) $("forge-armas").innerHTML = armas || '<div class="sub">Ya tienes todas las armas. Las flechas se siguen fabricando aquí.</div>';
   $("forge-repair").innerHTML = repair;
   const card = $("ov-forge");
   card.querySelectorAll("[data-craft]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
@@ -3580,7 +3580,7 @@ function refreshHorno() {
       const falta = hornoFalta(p), tot = p.total || matCdMs(p.id) || 1;
       const esperando = (typeof hornoEsperando === "function") && hornoEsperando(p);
       const fds = fila.querySelector(".fds"), bar = fila.querySelector(".durbar i");
-      if (fds) fds.textContent = p.listo ? "¡listo! tocá « Recoger »" : esperando ? "espera su turno · empieza en " + fmtDur(hornoEmpieza(p) - nowMs()) : "al fuego · listo en " + fmtDur(falta);
+      if (fds) fds.textContent = p.listo ? "¡listo! pulsa « Recoger »" : esperando ? "espera su turno · empieza en " + fmtDur(hornoEmpieza(p) - nowMs()) : "al fuego · listo en " + fmtDur(falta);
       if (bar) bar.style.width = (esperando ? 0 : Math.max(0, Math.min(100, Math.round((1 - falta / tot) * 100)))) + "%";
     });
   } else {
@@ -3602,7 +3602,7 @@ function refreshHorno() {
          si todas dijeran « al fuego » volveríamos a la simultaneidad, esta vez solo en la
          apariencia — y eso es peor, porque el número sería falso y el reloj verdadero. */
       const esperando = (typeof hornoEsperando === "function") && hornoEsperando(p);
-      const txt = p.listo ? "¡listo! tocá « Recoger »"
+      const txt = p.listo ? "¡listo! pulsa « Recoger »"
         : esperando ? "espera su turno · empieza en " + fmtDur(hornoEmpieza(p) - nowMs())
         : "al fuego · listo en " + fmtDur(falta);
       return '<div class="forge-row eq' + (p.listo ? " hn-listo" : "") + '"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo">' +
@@ -3644,7 +3644,7 @@ function refreshHorno() {
       '" title="Llenar el horno: ' + lote + ' al fuego de una; requiere VIP">×' + lote + ' · VIP</button>';
     const porqueNo = libres <= 0 ? " · el horno está lleno" : (alcanza < 1 ? " · te faltan materiales" : "");
     html = '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div>' +
-      '<div class="fds">Tenés ' + fmt(G.res[id] || 0) + ' · Costo: ' + cs + ' · tarda ' + Math.round(matCdMs(id) / 60000) + ' min' + porqueNo + '</div>' +
+      '<div class="fds">Tienes ' + fmt(G.res[id] || 0) + ' · Coste: ' + cs + ' · tarda ' + Math.round(matCdMs(id) / 60000) + ' min' + porqueNo + '</div>' +
       '</div><div class="fbtns">' + btn + '</div></div>';
     lista += html;
   });
@@ -3713,7 +3713,7 @@ function refreshChest() {
   inv.innerHTML = stacks.map((s, i) => {
     const v = itemView({ kind: s.kind, key: s.key });
     return `<div class="slot filled" data-dp="${i}" data-ckind="${escapeHtml(s.kind)}" data-ckey="${escapeHtml(s.key)}" role="button" tabindex="0" aria-label="${escapeHtml("Guardar " + v.label + " en el cofre")}" title="${v.label} — clic para guardar">${itemIcon(v)}<span class="cnt">${fmt(s.n)}</span></div>`;
-  }).join("") || '<div class="sub">No tenés nada para guardar.</div>';
+  }).join("") || '<div class="sub">No tienes nada para guardar.</div>';
   inv.querySelectorAll("[data-dp]").forEach(el => {
     const guardar = () => { const s = stacks[+el.dataset.dp]; if (s) chestDeposit(ci, s.kind, s.key); };
     el.onclick = guardar;
@@ -3722,7 +3722,7 @@ function refreshChest() {
   enfocarCofrePc(box, inv, focoPrevio);
   // recoger el cofre y guardarlo en la bolsa (detalles jueves) — solo si está vacío
   const pu = $("cofre-pickup");
-  if (pu) { const empty = ch.items.every(s => !s); pu.disabled = !empty; pu.title = empty ? "" : "Vaciá el cofre para poder recogerlo"; pu.onclick = () => { if (window.FARM && FARM.pickupChest) FARM.pickupChest(ci); }; }
+  if (pu) { const empty = ch.items.every(s => !s); pu.disabled = !empty; pu.title = empty ? "" : "Vacía el cofre para poder recogerlo"; pu.onclick = () => { if (window.FARM && FARM.pickupChest) FARM.pickupChest(ci); }; }
 }
 
 /* ---- cocina (en la Granja) ---- */
@@ -3792,7 +3792,7 @@ function refreshCookingV2() {
     const espera = (typeof cookEsperando === "function") && cookEsperando(c);
     const pct = espera ? 0 : Math.max(0, Math.min(100, Math.round((1 - left / (c.total || 1)) * 100)));
     h += '<div class="ck-olla llena' + (espera ? " enfila" : "") + (c.listo ? " listo" : "") + '" title="' + (r.label || "") +
-      (c.listo ? " · listo, tocá Recoger" : espera ? " · en la fila, empieza cuando termine el anterior" : " · al fuego") + '">' + ckIcono(r, "t") +
+      (c.listo ? " · listo, pulsa Recoger" : espera ? " · en la fila, empieza cuando termine el anterior" : " · al fuego") + '">' + ckIcono(r, "t") +
       (espera ? '<span class="turno">' + i + '</span>' : "") +
       '<span class="t" data-ck-reloj="' + i + '">' + (c.listo ? "¡listo!" : fmtCorto(Math.ceil(left / 1000))) + '</span>' +
       '<span class="b"><i data-ck-barra="' + i + '" style="width:' + (c.listo ? 100 : pct) + '%"></i></span>' +
@@ -3854,7 +3854,7 @@ function refreshCookingV2() {
 
   /* --- el detalle: solo el plato señalado, en columnas de número --- */
   const r = RECIPE_DEF[_ckSel];
-  if (!r) { det.innerHTML = '<div class="ck-vacio">Elegí una receta</div>'; return; }
+  if (!r) { det.innerHTML = '<div class="ck-vacio">Elige una receta</div>'; return; }
   const locked = r.lvl && lvl < r.lvl;
   const own = Math.floor((G.dishes && G.dishes[_ckSel]) || 0);
   const vPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
@@ -3874,7 +3874,7 @@ function refreshCookingV2() {
   /* La cifra de plata sugería un precio o recompensa que no existe: la venta libre de platos
      está cerrada. Este renglón ocupa el mismo lugar, pero dice qué puede hacer de verdad. */
   if (!(typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE)) d += '<div class="ck-fila ck-uso" title="Los platos no se venden en la Cocina"><span>🍽 Uso</span><b>Comer o Tablón</b></div>';
-  d += '<div class="ck-fila"><span>🎒 tenés</span><b>' + fmt(own) + '</b></div>';
+  d += '<div class="ck-fila"><span>🎒 tienes</span><b>' + fmt(own) + '</b></div>';
   const efecto = (typeof dishDesc === "function") ? dishDesc(r) : "";
   if (efecto) d += '<div class="ck-efecto">' + efecto + '</div>';
   d += '<div class="acc">';
@@ -3911,7 +3911,7 @@ function guiaDestinoActual(){
 function mostrarObjetivo(){
   const st=guiaDestinoActual();if(!st)return;
   const sc=window.farmScene;
-  if(GF.editMode||sc?.placing){toast('Terminá de colocar o salí de edición para mostrar el destino');return;}
+  if(GF.editMode||sc?.placing){toast('Termina de colocar o sal de edición para mostrar el destino');return;}
   if(GF.scene&&GF.scene!=='farm'){openOv('ov-mapa');return;}
   if(st.panel){
     openOv(st.panel);
@@ -3922,7 +3922,7 @@ function mostrarObjetivo(){
     tutoHighlight();return;
   }
   document.querySelectorAll('.ov.show').forEach(el=>closeOv(el.id));
-  if(!sc?.mostrarDestinoGuia?.())toast('El destino no está disponible ahora; seguí el objetivo cuando se recupere');
+  if(!sc?.mostrarDestinoGuia?.())toast('El destino no está disponible ahora; sigue el objetivo cuando se recupere');
 }
 function tutoRefresh() {
   const el = document.getElementById("tuto"); if (!el) return;
@@ -3939,7 +3939,7 @@ function tutoRefresh() {
   el.classList.remove("hidden");
   // 14/8 (reversión del capataz): cartel + flechitas, como antes
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
-  const texto=sub?sub.txt:(st.brujula?st.txt:tutoTxt(st)),breve={kit:'Abrí el baúl de bienvenida',buyseed:'Mercado → Comprá 3 semillas de papa',craftarm:'Herrería → Forjá una Espada de Madera'};
+  const texto=sub?sub.txt:(st.brujula?st.txt:tutoTxt(st)),breve={kit:'Abre el baúl de bienvenida',buyseed:'Mercado → Compra 3 semillas de papa',craftarm:'Herrería → Forja una Espada de Madera'};
  const cartel=document.getElementById('tuto-txt');cartel.title=texto+(st.beneficio?' · '+st.beneficio:'');cartel.textContent=!sub&&!st.brujula&&breve[st.id]?breve[st.id]:texto;
   const destino=guiaDestinoActual(),mostrar=$('tuto-ir');if(mostrar){mostrar.hidden=window.innerWidth<=640||!destino||!(destino.target||destino.panel);mostrar.onclick=mostrarObjetivo;mostrar.setAttribute('aria-label','Mostrar destino: '+texto);}
   const titulo=el.querySelector('.k');if(titulo)titulo.textContent=st.brujula?'Siguiente':'Objetivo';
@@ -4136,7 +4136,7 @@ function refreshMisiones() {
   const box = $("mis-list"); if (!box) return;
   const p = passInit();
   const hechas = p.daily.mis.filter(m => m.ok).length;
-  let h = '<div class="info">Llevás <b>' + hechas + ' de ' + p.daily.mis.length + '</b> hoy · cada una da ' +
+  let h = '<div class="info">Llevas <b>' + hechas + ' de ' + p.daily.mis.length + '</b> hoy · cada una da ' +
     PASS_STAR_DAILY + ' estrellas, y las tres juntas suman <b>+' + PASS_STAR_BONUS + '</b> de bonus' +
     (p.daily.bonus ? ' <span class="oro">(bonus ya cobrado)</span>' : '') + '</div>';
   h += misionesHtml(p.daily.mis, PASS_STAR_DAILY);
@@ -4172,8 +4172,8 @@ function refreshLogros() {
   const box = $("logros-list"); if (!box || typeof logroLista !== "function") return;
   const filas = logroLista();
   const pend = logroPendientes();
-  let h = '<div class="info">' + (pend ? 'Tenés <b>' + pend + '</b> premio' + (pend === 1 ? '' : 's') + ' para cobrar.' :
-    'Sin premios pendientes: seguí avanzando hacia las metas.') + '</div><details class="ayuda-menu"><summary>Reglas y registro de los logros</summary><p class="sub">25 metas acumulativas · 16.400 Plata en total · cada premio se cobra una sola vez en el servidor. Plantar no es cosechar; madera y piedra cuentan unidades recolectadas. Visitas VIP: una por granja y día UTC, independientemente del cupo de semillas.</p><p class="sub">Progreso confirmado al guardar. Se conservan las siembras históricas registradas; la recolección por unidades y las visitas cuentan desde esta actualización. Cobros del sistema anterior conservados: '+Object.values(G.logros||{}).filter(Boolean).length+'.</p></details>';
+  let h = '<div class="info">' + (pend ? 'Tienes <b>' + pend + '</b> premio' + (pend === 1 ? '' : 's') + ' para cobrar.' :
+    'Sin premios pendientes: sigue avanzando hacia las metas.') + '</div><details class="ayuda-menu"><summary>Reglas y registro de los logros</summary><p class="sub">25 metas acumulativas · 16.400 Plata en total · cada premio se cobra una sola vez en el servidor. Plantar no es cosechar; madera y piedra cuentan unidades recolectadas. Visitas VIP: una por granja y día UTC, independientemente del cupo de semillas.</p><p class="sub">Progreso confirmado al guardar. Se conservan las siembras históricas registradas; la recolección por unidades y las visitas cuentan desde esta actualización. Cobros del sistema anterior conservados: '+Object.values(G.logros||{}).filter(Boolean).length+'.</p></details>';
   filas.forEach(f => {
     // el tier que se muestra: el primero sin cobrar (o el último, si está todo cobrado)
     const t = f.tiers.find(x => !x.cobrado) || f.tiers[f.tiers.length - 1];
@@ -4270,7 +4270,7 @@ function pintarClan() {
   if (!_clanCache) { box.innerHTML = '<div class="fds">Cargando…</div>'; return; }
   const { c, r } = _clanCache;
   if (!c) {
-    box.innerHTML = '<div class="info">Todavía no estás en ningún clan. Podés fundar uno o entrar con el código de un amigo.</div>' +
+    box.innerHTML = '<div class="info">Todavía no estás en ningún clan. Puedes fundar uno o entrar con el código de un amigo.</div>' +
       '<div class="forge-row"><div class="finfo"><div class="fnm">Fundar un clan</div>' +
       '<div class="fds"><input id="clan-nom" placeholder="Nombre del clan" maxlength="24" style="width:100%"></div></div>' +
       '<div class="fbtns"><button class="green sm" id="clan-crear">Fundar</button></div></div>' +
@@ -4279,7 +4279,7 @@ function pintarClan() {
       '<div class="fbtns"><button class="green sm" id="clan-unirse">Entrar</button></div></div>';
     const bc = $("clan-crear"); if (bc) bc.onclick = async () => {
       const n = ($("clan-nom") || {}).value || "";
-      if (n.trim().length < 3) { toast("Poné un nombre de al menos 3 letras"); return; }
+      if (n.trim().length < 3) { toast("Pon un nombre de al menos 3 letras"); return; }
       const res = await clanCrear(n.trim());
       if (res.error) { toast("No se pudo: " + res.error); return; }
       toast("¡Clan fundado! Código: " + (res.ok && res.ok.codigo));
@@ -4322,10 +4322,10 @@ function pintarClan() {
     h += '<div class="secc">Quién pegó</div>';
     const tot = (r.dmg || []).reduce((s, d) => s + Number(d.dmg || 0), 0) || 1;
     h += (r.dmg || []).map(d => '<div class="forge-row' + (d.user_id === UID ? ' eq' : '') + '"><div class="finfo">' +
-      '<div class="fnm">' + d.nombre + (d.user_id === UID ? ' <span class="tag">vos</span>' : '') + '</div>' +
+      '<div class="fnm">' + d.nombre + (d.user_id === UID ? ' <span class="tag">tú</span>' : '') + '</div>' +
       '<div class="fds">' + fmt(Math.round(d.dmg)) + ' de daño · ' + (d.dmg / tot * 100).toFixed(1) + '% del botín' +
       (d.cobrado ? ' · ya cobró' : '') + '</div></div></div>').join("") ||
-      '<div class="fds">Nadie le pegó todavía. Entrá a la Guarida.</div>';
+      '<div class="fds">Nadie le pegó todavía. Entra a la Guarida.</div>';
   }
   h += '<div class="forge-row"><div class="finfo"><div class="fds">Salir del clan te saca del asalto en curso.</div></div>' +
     '<div class="fbtns"><button class="sm" id="clan-salir">Salir del clan</button></div></div>';
@@ -4342,7 +4342,7 @@ function pintarClan() {
     _clanT = 0; refreshClan();
   };
   const cs = $("clan-salir"); if (cs) cs.onclick = async () => {
-    askConfirm("¿Seguro que querés salir del clan?", async () => {
+    askConfirm("¿Seguro que quieres salir del clan?", async () => {
       await clanSalir(); toast("Saliste del clan"); _clanT = 0; refreshClan();
     }, { title: "Salir del clan", yes: "Salir", yesClass: "red", no: "Quedarme" });
   };
@@ -4448,7 +4448,7 @@ function refreshMapa() {
   let h = zonas.map(z => {
     const estoy = z.id === aca;
     return '<div class="forge-row' + (estoy ? ' eq' : '') + '"><div class="finfo">' +
-      '<div class="fnm">' + z.nom + (estoy ? ' <span class="tag">estás acá</span>' : '') + '</div>' +
+      '<div class="fnm">' + z.nom + (estoy ? ' <span class="tag">estás aquí</span>' : '') + '</div>' +
       '<div class="fds">' + z.ds + '</div></div><div class="fbtns">' +
       (estoy ? '' : '<button class="green sm" data-ir="' + z.id + '">Ir</button>') +
       '</div></div>';
@@ -4456,16 +4456,16 @@ function refreshMapa() {
   // ---- los mapas de la Zona Negra (10/8) ----
   h += '<div class="secc">Zona Negra</div>';
   h += '<div class="info">Se entra por el portal de la granja, y de un mapa al siguiente se pasa por el teleport del fondo. ' +
-    (espera > 0 ? 'El granjero descansa — podés volver en <b>' + fmtDur(espera) + '</b>.' : 'Cada mapa pide más nivel de Combate.') + '</div>';
+    (espera > 0 ? 'El granjero descansa — puedes volver en <b>' + fmtDur(espera) + '</b>.' : 'Cada mapa pide más nivel de Combate.') + '</div>';
   const vistas = G.zonasVistas || ["pantano"];
   h += ZONA_ORDER.map(k => {
     const z = ZONA_DEF[k], estoy = (aca === "forest" && GF.zona === k);
     const puede = zonaPuedeEntrar(k), visto = vistas.indexOf(k) >= 0;
     return '<div class="forge-row' + (estoy ? ' eq' : (puede ? '' : ' locked')) + '"><div class="finfo">' +
-      '<div class="fnm">' + z.label + (estoy ? ' <span class="tag">estás acá</span>' : '') +
+      '<div class="fnm">' + z.label + (estoy ? ' <span class="tag">estás aquí</span>' : '') +
         (z.clan ? ' <span class="tag">de clan</span>' : '') + '</div>' +
       '<div class="fds">' + z.ds + '</div>' +
-      '<div class="fds">' + (puede ? (visto ? "Ya estuviste acá." : "Nunca entraste.") : "Pide Combate nivel " + z.lvl + ".") + '</div>' +
+      '<div class="fds">' + (puede ? (visto ? "Ya estuviste aquí." : "Nunca entraste.") : "Pide Combate nivel " + z.lvl + ".") + '</div>' +
       '</div><div class="fbtns"></div></div>';
   }).join("");
   box.innerHTML = h;
@@ -4473,7 +4473,7 @@ function refreshMapa() {
 }
 function irAZona(id) {
   closeOv("ov-mapa");
-  if (id === "forest") { toast("Entrá por el portal de la granja"); return; }
+  if (id === "forest") { toast("Entra por el portal de la granja"); return; }
   const actual = (window.GF && GF.scene) || "farm";
   if (id === actual) return;
   // Fixes.docx 14/8 #5: usar la escena DONDE ESTÁS (antes agarraba farmScene aunque
@@ -4507,7 +4507,7 @@ function refreshPass() {
   }
   if (pendientes.length) h += '<div class="info"><button class="green sm" id="pass-claimall">🎁 RECLAMAR TODO (' + pendientes.length + ')</button></div>';
   // los 30 niveles
-  h += '<div class="secc">Recompensas (Free / VIP)</div>';
+  h += '<div class="secc">Recompensas (Sin VIP / VIP)</div>';
   for (let nv = 1; nv <= 30; nv++) {
     const rf = PASS_FREE[nv - 1], rv = PASS_VIP[nv - 1];
     const alc = nv <= lvl, hito = PASS_HITOS[nv] || "";
@@ -4515,7 +4515,7 @@ function refreshPass() {
     const bv = p.claimV[nv] ? '<button class="ghost sm" disabled>Reclamado</button>' : (alc && p.vip ? '<button class="green sm" data-pvip="' + nv + '">Reclamar VIP</button>' : '');
     h += '<div class="forge-row' + (alc ? '' : ' locked') + '"><div class="finfo">' +
       '<div class="fnm">Nivel ' + nv + (hito ? ' <span style="color:#7a5606">' + hito + '</span>' : '') + '</div>' +
-      '<div class="fds free">FREE: ' + passRewardStr(rf) + '</div>' +
+      '<div class="fds free">SIN VIP: ' + passRewardStr(rf) + '</div>' +
       '<div class="fds vip">VIP: ' + passRewardStr(rv) + (p.vip ? '' : ' (requiere VIP activo)') + '</div>' +
       '</div><div class="fbtns">' + bf + bv + '</div></div>';
   }
@@ -4541,7 +4541,7 @@ function refreshGodHand() {
     const d = s && CROP_DEF[s.key];
     h += '<div class="forge-row"><div class="fic">' + (d ? '<img src="' + GF.spr("crop_" + s.key) + '" onerror="this.outerHTML=\'' + d.emoji + '\'">' : '') + '</div>' +
       '<div class="finfo"><div class="fnm">Espacio ' + (i + 1) + (d ? ' · ' + d.label + ' <span class="tag">' + s.n + '/' + GODHAND_CAP_SLOT + '</span>' : ' <span class="tag">vacío</span>') + '</div>' +
-      '<div class="fds">' + (d ? 'Ciclo de ' + d.label + ': siembra, cosecha y resiembra solo.' : 'Elegí qué semilla cargar.') + '</div></div>' +
+      '<div class="fds">' + (d ? 'Ciclo de ' + d.label + ': siembra, cosecha y resiembra solo.' : 'Elige qué semilla cargar.') + '</div></div>' +
       '<div class="fbtns">' +
         (d && s.n >= GODHAND_CAP_SLOT ? '' : '<select data-ghsel="' + i + '">' +
           (d ? '<option value="' + s.key + '">' + CROP_DEF[s.key].label + '</option>'
@@ -4554,7 +4554,7 @@ function refreshGodHand() {
   box.innerHTML = h;
   box.querySelectorAll("[data-ghload]").forEach(b => b.onclick = () => {
     const i = Number(b.dataset.ghload), sel = box.querySelector('[data-ghsel="' + i + '"]');
-    const key = sel && sel.value; if (!key) { toast("Elegí una semilla"); return; }
+    const key = sel && sel.value; if (!key) { toast("Elige una semilla"); return; }
     godHandCargar(i, key);
   });
   box.querySelectorAll("[data-ghout]").forEach(b => b.onclick = () => godHandVaciar(Number(b.dataset.ghout)));
@@ -4573,9 +4573,9 @@ function refreshCurtiduria() {
     const sano = (typeof armorSetSano === "function") ? armorSetSano(set) : completo;
     const defTotal = ARMOR_SLOTS.reduce((a, pz) => a + sd.piezas[pz].def, 0);
     h += '<div class="secc">' + sd.label + ' <span class="fds">(' + sd.tipo + ' · ' + n + '/5 piezas · ' + defTotal + ' de defensa el set)</span></div>';
-    h += '<div class="info"><div>Material: <b>' + RES_LABEL[sd.mat] + '</b> (tenés ' + (G.res[sd.mat] || 0) + ') · del ' + ANIMAL_DEF[sd.animal].label + '</div>' +
+    h += '<div class="info"><div>Material: <b>' + RES_LABEL[sd.mat] + '</b> (tienes ' + (G.res[sd.mat] || 0) + ') · del ' + ANIMAL_DEF[sd.animal].label + '</div>' +
       '<div class="oro">Bono del set completo: ' + sd.bono.txt +
-        (sano ? ' — ACTIVO' : (completo ? ' — <b>apagado: repará las piezas gastadas</b>' : '')) + '</div></div>';
+        (sano ? ' — ACTIVO' : (completo ? ' — <b>apagado: repara las piezas gastadas</b>' : '')) + '</div></div>';
     ARMOR_SLOTS.forEach(pz => {
       const p = sd.piezas[pz], tiene = armorTiene(set, pz);
       const costo = p.mat + " " + RES_LABEL[sd.mat] + (p.hierro ? " · " + p.hierro + " Hierro" : "") + " · " + p.plata + " plata";
@@ -4594,11 +4594,11 @@ function refreshCurtiduria() {
         '<div class="fds">' + (tiene
           ? ("Estado: " + dur + "/" + ARMOR_DUR_MAX + (dur <= 0 ? " — no da defensa hasta repararla" : "") +
              (rep ? " · reparar: " + rep.mat + " " + RES_LABEL[sd.mat] + (rep.hierro ? " · " + rep.hierro + " Hierro" : "") + " · " + rep.plata + " plata" : ""))
-          : ("Costo: " + costo)) + '</div></div>' +
+          : ("Coste: " + costo)) + '</div></div>' +
         '<div class="fbtns">' + (tiene
           ? (rep ? '<button class="green sm" ' + (puedeRep ? "" : "disabled") + ' data-rarmor="' + set + ':' + pz + '">Reparar</button>'
                  : '<button class="ghost sm" disabled>Entera</button>')
-          : '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-carmor="' + set + ':' + pz + '">Craftear</button>') + '</div></div>';
+          : '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-carmor="' + set + ':' + pz + '">Fabricar</button>') + '</div></div>';
     });
     if (n) h += '<div class="fbtns" style="margin-top:4px">' + (eq ? '<button class="ghost sm" disabled>Puesta</button>'
       : '<button class="green sm" data-eqset="' + set + '">Ponerse esta armadura</button>') + '</div>';
@@ -4628,9 +4628,9 @@ function refreshEstablo() {
     const hayHambrientos = typeof establoHayHambrientos === "function" && establoHayHambrientos();
     bAli.onclick = () => { if (typeof establoAlimentarTodo === "function") establoAlimentarTodo(); };
     bAli.disabled = !puedeAlimTodo;
-    bAli.title = !animalesTotal() ? "No tenés animales"
+    bAli.title = !animalesTotal() ? "No tienes animales"
       : puedeAlimTodo ? "Alimenta a los animales con hambre mientras haya raciones completas"
-      : hayHambrientos ? "No tenés una ración completa para ningún animal con hambre"
+      : hayHambrientos ? "No tienes una ración completa para ningún animal con hambre"
       : "Todos los animales ya comieron este ciclo";
   }
   if (bRec) {
@@ -4640,10 +4640,10 @@ function refreshEstablo() {
     bRec.disabled = !puedeRecogerAlgo;
     bRec.title = !hayListo ? "Nada listo para recoger todavía"
       : puedeRecogerAlgo ? "Recoge todo lo que esté listo y entre en la bolsa"
-      : "Bolsa llena — liberá un espacio para recoger la producción";
+      : "Bolsa llena — libera un espacio para recoger la producción";
   }
   if (cupoEl) cupoEl.textContent = "Lugares: " + animalesTotal() + "/" + establoCupo() + " (cada nivel de Ganadería suma uno, hasta " + ESTABLO_CUPO_MAX + ").";
-  let h = '<div class="info">La ganadería produce materiales para fabricar, no plata automática. Sus materiales no se venden al comprador del sistema. Producí según lo que necesites y reservá plata para semillas y expansiones.</div>';
+  let h = '<div class="info">La ganadería produce materiales para fabricar, no plata automática. Sus materiales no se venden al comprador del sistema. Produce según lo que necesites y reserva plata para semillas y expansiones.</div>';
   ANIMAL_ORDER.forEach(k => {
     const d = ANIMAL_DEF[k], a = animalDe(k), abierto = animalUnlocked(k);
     /* 14/9 — LA RACIÓN SE DICE EN LA FILA. Con « Come Zanahoria » alcanzaba mientras todos
@@ -4658,7 +4658,7 @@ function refreshEstablo() {
         '<div class="fds">Come ' + come + ' · produce ' + RES_LABEL[d.mat] + ' (' + animalPorCiclo(k) + ' cada ' + fmtSecs(d.cicloH * 3600) + ')</div>' +
         '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div>' +
         /* 18/8: el establo dice en la cara qué te falta. Si es nivel, no es un botón gris mudo. */
-        (abierto ? '' : '<div class="fds" style="color:#8a5a1a">🔒 Ganadería nivel ' + animalNivelReq(k) + ' (tenés ' + nivelOficio("ganaderia") + ')</div>') + '</div>' +
+        (abierto ? '' : '<div class="fds" style="color:#8a5a1a">🔒 Ganadería nivel ' + animalNivelReq(k) + ' (tienes ' + nivelOficio("ganaderia") + ')</div>') + '</div>' +
         '<div class="fbtns"><button class="green sm" ' + (abierto && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (!abierto ? 'Nivel ' + animalNivelReq(k) : lleno ? 'Establo lleno' : 'Comprar · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';
       return;
     }
@@ -4702,7 +4702,7 @@ function refreshEstablo() {
         '<div class="fbtns">' +
           '<button class="green sm" ' + (tieneComida && !comio ? "" : "disabled") + ' data-feed1="' + k + '" data-idx="' + i + '">' + (comio ? 'Ya comió' : 'Alimentar') + '</button>' +
           '<button class="green sm" ' + (puedeRecogerI ? "" : "disabled") + ' data-take1="' + k + '" data-idx="' + i + '" title="' +
-            (!listoI ? 'Todavía no produjo' : !puedeRecogerI ? 'Bolsa llena — liberá un espacio para recoger' : 'Recoger producción') + '">' +
+            (!listoI ? 'Todavía no produjo' : !puedeRecogerI ? 'Bolsa llena — libera un espacio para recoger' : 'Recoger producción') + '">' +
             (!listoI ? 'Aún no listo' : !puedeRecogerI ? 'Bolsa llena' : 'Recoger') + '</button>' +
         '</div></div>';
     }
@@ -4734,16 +4734,16 @@ function refreshAltar() {
   // ---- Eje 1: MEJORA +1..+15 ----
   h += '<div class="secc">Mejorar arma (+1 a +15)</div>';
   h += '<div class="info"><div>Cada intento gasta Runas de Poder + plata. Polvo de Suerte: +10 pts de éxito. De +6 a +10 fallar baja −1; de +11 a +15 fallar puede ROMPER el arma salvo que uses Runa de Protección.</div>';
-  h += '<div>Tenés: ' + (G.res.runa_poder || 0) + ' Runa de Poder · ' + (G.res.polvo_suerte || 0) + ' Polvo de Suerte · ' + (G.res.runa_proteccion || 0) + ' Runa de Protección · ' + (G.res.esencia_runica || 0) + ' Esencia rúnica</div>';
+  h += '<div>Tienes: ' + (G.res.runa_poder || 0) + ' Runa de Poder · ' + (G.res.polvo_suerte || 0) + ' Polvo de Suerte · ' + (G.res.runa_proteccion || 0) + ' Runa de Protección · ' + (G.res.esencia_runica || 0) + ' Esencia rúnica</div>';
   h += '</div>';
-  if (!owned.length) h += '<div class="info">No tenés armas: forjá una en la Herrería.</div>';
+  if (!owned.length) h += '<div class="info">No tienes armas: forja una en la Herrería.</div>';
   owned.forEach(id => {
     const w = ARM_DEF[id]; if (!w) return;
     const plus = armPlus(id), next = plus + 1;
     if (next > 15) { h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + w.label + ' +15</div><div class="fds">Tope de tope: +215% de daño. Aura de leyenda.</div></div></div>'; return; }
     const u = UPG[next];
     h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + w.label + (plus ? " +" + plus : "") + ' → +' + next + '</div>' +
-      '<div class="fds">Éxito: <b>' + u.ex + '%</b> (con polvo ' + u.exP + '%) · +' + u.dmg + '% daño acum. · Cuesta ' + u.rp + ' Runa de Poder + ' + u.plata + ' plata' + (next >= 6 ? (next >= 11 ? ' · al fallar: −1 y RIESGO DE ROTURA' : ' · al fallar: baja −1') : ' · al fallar solo perdés materiales') + '</div>' +
+      '<div class="fds">Éxito: <b>' + u.ex + '%</b> (con polvo ' + u.exP + '%) · +' + u.dmg + '% daño acum. · Cuesta ' + u.rp + ' Runa de Poder + ' + u.plata + ' plata' + (next >= 6 ? (next >= 11 ? ' · al fallar: −1 y RIESGO DE ROTURA' : ' · al fallar: baja −1') : ' · al fallar solo pierdes materiales') + '</div>' +
       '<div class="fds"><label><input type="checkbox" data-polvo="' + id + '"> usar Polvo de Suerte</label> &nbsp; <label><input type="checkbox" data-prot="' + id + '"' + (next >= 11 ? ' checked' : '') + '> usar Runa de Protección</label></div>' +
       '<div class="fds">Ranuras de runa: ' + [1, 2, 3].map(sl => { const abre = sl === 1 ? 3 : sl === 2 ? 7 : 12; const sk = armSockets(id)[sl]; return sl <= socketsOpen(plus) ? (sk ? runaLabel(sk.t, sk.r) : "vacía") : "cerrada (+" + abre + ")"; }).join(" · ") + '</div>' +
       // El Altar era el ÚNICO panel donde ningún botón se deshabilitaba: salían todos verdes y
@@ -4755,7 +4755,7 @@ function refreshAltar() {
   const eq = armaEq();
   if (eq && socketsOpen(armPlus(eq)) > 0) {
     h += '<div class="secc">Runas de ' + ARM_DEF[eq].label + (armPlus(eq) ? " +" + armPlus(eq) : "") + ' (equipada)</div>';
-    h += '<div class="info">Socketear una runa sobre otra DESTRUYE la anterior.</div>';
+    h += '<div class="info">Engarzar una runa sobre otra DESTRUYE la anterior.</div>';
     for (let sl = 1; sl <= 3; sl++) {
       const open = sl <= socketsOpen(armPlus(eq));
       const cur = armSockets(eq)[sl];
@@ -4766,23 +4766,23 @@ function refreshAltar() {
     }
   }
   // ---- Eje 2: crafteo de materiales ----
-  h += '<div class="secc">Craftear materiales</div>';
+  h += '<div class="secc">Fabricar materiales</div>';
   for (const id in ALTAR_CRAFT) {
     const c = ALTAR_CRAFT[id];
     const costo = Object.keys(c.cost).map(k => c.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + (c.plata ? " + " + c.plata + " plata" : "") + (c.golden ? " + " + c.golden + " $Golden" : "");
     const okC = canAfford(c.cost) && (!c.plata || G.plata >= c.plata) && (!c.golden || G.golden >= c.golden);
-    h += '<div class="forge-row' + (okC ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tenés ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" ' + (okC ? "" : "disabled") + ' data-caltar="' + id + '">Craftear</button><button class="green sm" ' + (okC && vipVigente() ? "" : "disabled") + ' data-caltar5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button></div></div>';
+    h += '<div class="forge-row' + (okC ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RES_LABEL[id] + ' <span class="fds">(tienes ' + (G.res[id] || 0) + ')</span></div><div class="fds">' + costo + '</div></div><div class="fbtns"><button class="green sm" ' + (okC ? "" : "disabled") + ' data-caltar="' + id + '">Fabricar</button><button class="green sm" ' + (okC && vipVigente() ? "" : "disabled") + ' data-caltar5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button></div></div>';
   }
   // runas de atributo I
-  h += '<div class="secc">Craftear runas de atributo (rareza I)</div>';
+  h += '<div class="secc">Fabricar runas de atributo (rareza I)</div>';
   h += '<div class="info">Cuestan ' + Object.keys(RUNA_CRAFT.cost).map(k => RUNA_CRAFT.cost[k] + " " + (RES_LABEL[k] || k)).join(" + ") + ' + ' + RUNA_CRAFT.plata + ' plata.</div>';
   const okR = canAfford(RUNA_CRAFT.cost) && G.plata >= RUNA_CRAFT.plata;
   RUNA_ORDER.forEach(t => {
-    h += '<div class="forge-row' + (okR ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tenés ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" ' + (okR ? "" : "disabled") + ' data-cruna="' + t + '">Craftear I</button><button class="green sm" ' + (okR && vipVigente() ? "" : "disabled") + ' data-cruna5="' + t + '" title="Fabricar cinco requiere VIP">×5 · VIP</button></div></div>';
+    h += '<div class="forge-row' + (okR ? '' : ' locked') + '"><div class="finfo"><div class="fnm">' + RUNA_TIPOS[t].label + ' I <span class="fds">(tienes ' + (G.res[runaKey(t, 1)] || 0) + ')</span></div><div class="fds">' + RUNA_TIPOS[t].buff + ': +' + RUNA_TIPOS[t].vals[0] + RUNA_TIPOS[t].uni + ' → +' + RUNA_TIPOS[t].vals[4] + RUNA_TIPOS[t].uni + ' en rareza V</div></div><div class="fbtns"><button class="green sm" ' + (okR ? "" : "disabled") + ' data-cruna="' + t + '">Fabricar I</button><button class="green sm" ' + (okR && vipVigente() ? "" : "disabled") + ' data-cruna5="' + t + '" title="Fabricar cinco requiere VIP">×5 · VIP</button></div></div>';
   });
   // ---- Fusión ----
   let fus = "";
-  RUNA_ORDER.forEach(t => { for (let r = 1; r <= 4; r++) { const n = G.res[runaKey(t, r)] || 0; if (n >= 3) fus += '<div class="forge-row"><div class="finfo"><div class="fnm">3× ' + runaLabel(t, r) + ' → 1× ' + runaLabel(t, r + 1) + '</div><div class="fds">' + (FUSE_GOLD[r] ? "Cuesta " + FUSE_GOLD[r] + " $Golden" : "Gratis") + ' · tenés ' + n + '</div></div><div class="fbtns"><button class="green sm" ' + ((!FUSE_GOLD[r] || G.golden >= FUSE_GOLD[r]) ? "" : "disabled") + ' data-fuse="' + t + ':' + r + '">Fusionar</button></div></div>'; } });
+  RUNA_ORDER.forEach(t => { for (let r = 1; r <= 4; r++) { const n = G.res[runaKey(t, r)] || 0; if (n >= 3) fus += '<div class="forge-row"><div class="finfo"><div class="fnm">3× ' + runaLabel(t, r) + ' → 1× ' + runaLabel(t, r + 1) + '</div><div class="fds">' + (FUSE_GOLD[r] ? "Cuesta " + FUSE_GOLD[r] + " $Golden" : "Gratis") + ' · tienes ' + n + '</div></div><div class="fbtns"><button class="green sm" ' + ((!FUSE_GOLD[r] || G.golden >= FUSE_GOLD[r]) ? "" : "disabled") + ' data-fuse="' + t + ':' + r + '">Fusionar</button></div></div>'; } });
   if (fus) h += '<div class="secc">Fusionar runas (3 iguales → 1 de rareza superior)</div>' + fus;
   box.innerHTML = h;
   box.querySelectorAll("[data-upg]").forEach(b => b.onclick = () => {
@@ -4850,7 +4850,7 @@ function refreshDeco() {
     // 20/8 (dirección + diseñador): las parcelas llegan con las expansiones Y se compran con
     // plata, cada una un 10% más cara que la anterior. El botón de $Golden se fue: vuelve
     // cuando tenga sentido vender en $Golden.
-    '<div class="fds">' + (tope ? "Ya tenés las " + PLOT_MAX + "." : "Cada expansión trae una parcela — y si querés más, acá se compran con plata. Cada una sale un 10% más que la anterior." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas van a tu zona de edición: las ponés vos donde quieras." : "")) + '</div></div>' +
+    '<div class="fds">' + (tope ? "Ya tienes las " + PLOT_MAX + "." : "Cada expansión trae una parcela — y si quieres más, aquí se compran con plata. Cada una sale un 10% más que la anterior." + ((G.plotsOwned || 2) >= 12 ? " Las nuevas van a tu zona de edición: las pones tú donde quieras." : "")) + '</div></div>' +
     '<div class="fbtns">' +
       (tope ? '<button class="ghost sm" disabled>Completo</button>' :
         '<button class="green sm" ' + (G.plata >= plotUnlockCost() ? "" : "disabled") + ' data-plot="plata">' + fmt(plotUnlockCost()) + ' plata</button>') +
@@ -4861,7 +4861,7 @@ function refreshDeco() {
   // Discord del diseñador (10/8): compraba vallas y flores y no sabía a dónde iban.
   // Ahora la bolsa se ve acá mismo y hay un botón que te lleva directo a ponerlos.
   const enBolsa = DECO_ORDER.reduce((a, id) => a + decoTengo(id), 0);
-  h += '<div class="info">Los adornos no dan ninguna ventaja: son para que la granja se vea linda. Al comprarlos van a tu <b>bolsa</b> y los colocás desde el modo edición. En bolsa: <b>' + enBolsa + '</b> · Puestos: <b>' + decoPuestos() + '/' + DECO_MAX + '</b>' +
+  h += '<div class="info">Los adornos no dan ninguna ventaja: son para que la granja se vea linda. Al comprarlos van a tu <b>bolsa</b> y los colocas desde el modo edición. En bolsa: <b>' + enBolsa + '</b> · Puestos: <b>' + decoPuestos() + '/' + DECO_MAX + '</b>' +
     (enBolsa ? ' <button class="green sm" id="deco-editar">✏️ Ponerlos ahora</button>' : '') + '</div>';
   DECO_ORDER.forEach(id => {
     const d = DECO_DEF[id], tengo = decoTengo(id);
@@ -4888,14 +4888,14 @@ function infraCosteOpcional(id){const d=INFRA_OPCIONALES[id];return fmt(d.plata)
 function infraOpcionalHtml(id){
  const god=id==='godhand',d=INFRA_OPCIONALES[id],hecha=!!G.infraestructura?.[id],posee=!god||tengoGodHand();
  const puede=!hecha&&posee&&(G.plata||0)>=d.plata&&Object.entries(d.res).every(([k,q])=>(G.res[k]||0)>=q);
- return '<div class="secc">'+(god?'GOD HAND · EFICIENCIA':'MERCADO · MENOR COMISIÓN')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(god?'10% menos Plata por trabajo':'Comisión Free 8% · VIP 5%')+'</div><div class="fds">'+(god?'Conserva los 300 espacios de semillas y hasta 24 h de trabajo. Requiere God Hand.':'Sólo publicaciones nuevas. Las anteriores conservan su comisión. No aumenta el cupo.')+'</div>'+(!hecha?'<div class="fds">Compra única: '+infraCosteOpcional(id)+'</div>':'')+'</div><div class="fbtns"><button class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Mejorada':posee?'Mejorar':'Requiere God Hand')+'</button></div></div>';
+ return '<div class="secc">'+(god?'GOD HAND · EFICIENCIA':'MERCADO · MENOR COMISIÓN')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(god?'10% menos Plata por trabajo':'Comisión Sin VIP 8% · VIP 5%')+'</div><div class="fds">'+(god?'Conserva los 300 espacios de semillas y hasta 24 h de trabajo. Requiere God Hand.':'Sólo publicaciones nuevas. Las anteriores conservan su comisión. No aumenta el cupo.')+'</div>'+(!hecha?'<div class="fds">Compra única: '+infraCosteOpcional(id)+'</div>':'')+'</div><div class="fbtns"><button class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Mejorada':posee?'Mejorar':'Requiere God Hand')+'</button></div></div>';
 }
 function infraHtml(id){
  const tienda=id==='tienda',n=infraNivel(),d=INFRA_GRANJA[n],hecha=tienda?!!G.infraestructura?.tienda:!d;
  const coste=tienda?'10 Golden':d?Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · '):'';
  const puede=!hecha&&(tienda?(G.golden||0)>=INFRA_TIENDA_GOLDEN:G.level>=d.nivel&&Object.entries(d.coste).every(([k,q])=>(G.res[k]||0)>=q));
  const motivo=hecha?'':tienda?((G.golden||0)<INFRA_TIENDA_GOLDEN?'Faltan '+fmtGolden(INFRA_TIENDA_GOLDEN-(G.golden||0))+' Golden':''):G.level<d.nivel?'Requiere granja nivel '+d.nivel:Object.entries(d.coste).filter(([k,q])=>(G.res[k]||0)<q).map(([k,q])=>'Faltan '+(q-(G.res[k]||0))+' '+RES_LABEL[k]).join(' · ');
- return '<div class="secc">'+(tienda?'TIENDITA · MERCADO P2P':'MEJORAR LA GRANJA')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(tienda?'🏪 +1 publicación por día UTC':'🏡 Nivel de mejora '+n+'/3 · +'+infraBono()+'% XP')+'</div><div class="fds">'+(tienda?'Permanente. Free: 2/día · VIP: 11/día. Cancelar no devuelve cupo.':d?'Siguiente: +'+d.bono+'% XP productiva total · requiere granja nivel '+d.nivel+'. Sólo XP futura de cultivar, talar y minar.':'Bono máximo: +5% de XP productiva futura.')+'</div>'+(!hecha?'<div class="fds">Coste: '+coste+'</div>':'')+(motivo?'<div class="falta-receta">'+escapeHtml(motivo)+'</div>':'')+'</div><div class="fbtns"><button title="'+escapeHtml(motivo||'Mejora disponible')+'" class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Completada':tienda?'Comprar':'Mejorar')+'</button></div></div>';
+ return '<div class="secc">'+(tienda?'TIENDITA · MERCADO P2P':'MEJORAR LA GRANJA')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(tienda?'🏪 +1 publicación por día UTC':'🏡 Nivel de mejora '+n+'/3 · +'+infraBono()+'% XP')+'</div><div class="fds">'+(tienda?'Permanente. Sin VIP: 2/día · VIP: 11/día. Cancelar no devuelve cupo.':d?'Siguiente: +'+d.bono+'% XP productiva total · requiere granja nivel '+d.nivel+'. Sólo XP futura de cultivar, talar y minar.':'Bono máximo: +5% de XP productiva futura.')+'</div>'+(!hecha?'<div class="fds">Coste: '+coste+'</div>':'')+(motivo?'<div class="falta-receta">'+escapeHtml(motivo)+'</div>':'')+'</div><div class="fbtns"><button title="'+escapeHtml(motivo||'Mejora disponible')+'" class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Completada':tienda?'Comprar':'Mejorar')+'</button></div></div>';
 }
 function infraEnlazar(box){
  box.querySelectorAll('[data-infra]').forEach(b=>b.onclick=()=>{
@@ -4911,7 +4911,7 @@ function refreshNft() {
   h += infraHtml('tienda')+infraOpcionalHtml('mercado');
   h += '<div class="secc">GOD HAND</div>';
   h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr("godhand") + '" onerror="this.remove()"></div><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
-    '<div class="fds">Automatización de cultivos: cargale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
+    '<div class="fds">Automatización de cultivos: cárgale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
     '<div class="fds">Cobra Plata por hora trabajada ('+godHandCostoHoras(1)+' la primera, +10% cada una, hasta 24 h). Se compra una vez y queda para siempre.</div>' +
     (tengoGodHand() ? '<div class="fds"><b>Semillas cargadas: ' + godHandTotal() + '/300.</b> Trabaja sola la próxima vez que vuelvas con parcelas vacías.</div>' : '') + '</div>' +
     '<div class="fbtns">' + (tengoGodHand() ? '<button class="gold sm" id="gh-admin">✋ Cargar semillas</button>' :
@@ -4979,23 +4979,23 @@ function refreshMarket() {
     : (() => { const plata = totalVenta(res, q), golden = Math.floor(plata / GOLDEN_EN_PLATA); return { plata, golden, resto: plata - golden * GOLDEN_EN_PLATA }; })();
   const textoVenta = (res, owned, q) => {
     if (cur === "plata") return "Lote: " + fmt(totalVenta(res, q)) + " plata · siguiente unidad ≈ " + fmtDec(marketUnit(res));
-    if (q <= 0) return owned > 0 ? "Elegí una cantidad" : "Sin stock";
+    if (q <= 0) return owned > 0 ? "Elige una cantidad" : "Sin stock";
     const d = detalleGolden(res, q);
     if (d.golden < 1) return "Lote: " + fmt(d.plata) + " de valor · faltan " + fmt(Math.max(0, GOLDEN_EN_PLATA - d.plata)) + " para 1 $Golden";
-    return "Lote: " + fmt(d.plata) + " de valor → cobrás " + fmt(d.golden) + " $Golden" +
+    return "Lote: " + fmt(d.plata) + " de valor → cobras " + fmt(d.golden) + " $Golden" +
       (d.resto ? " · " + fmt(d.resto) + " sin convertir" : "");
   };
   const estadoVender = (res, owned, q) => {
     const cupoActual = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalRecurso(res) : null;
     if (owned>0 && cupoActual && cupoActual.disponible<=0) return { disabled:true,label:"Cupo agotado",title:"Tu cupo de esta familia se renueva al cambiar el día UTC" };
-    if (owned <= 0 || q <= 0) return { disabled: true, label: "Sin stock", title: "No tenés " + RES_LABEL[res] + " para vender" };
+    if (owned <= 0 || q <= 0) return { disabled: true, label: "Sin stock", title: "No tienes " + RES_LABEL[res] + " para vender" };
     const limite = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalLimite(res, q) : "";
-    if (limite) return { disabled: true, label: /Confirmando/.test(limite) ? "Confirmando…" : /sincronizado/.test(limite) ? "Sin sincronizar" : /Consultando/.test(limite) ? "Cotizando…" : "Venta bloqueada", title: limite.replace("reabrí el mercado si no hay conexión", "reintentando automáticamente mientras el mercado esté abierto") };
+    if (limite) return { disabled: true, label: /Confirmando/.test(limite) ? "Confirmando…" : /sincronizado/.test(limite) ? "Sin sincronizar" : /Consultando/.test(limite) ? "Cotizando…" : "Venta bloqueada", title: limite.replace("vuelve a abrir el mercado si no hay conexión", "reintentando automáticamente mientras el mercado esté abierto") };
     const detalle = cur === "golden" ? detalleGolden(res, q) : null;
     if (cur === "golden" && detalle.golden < 1) {
       const min = minGolden(res), faltan = Math.max(0, min - owned);
       return { disabled: true, label: faltan ? "Faltan " + fmt(faltan) : "Mín. " + fmt(min),
-        title: "Para cobrar 1 $Golden necesitás " + fmt(min) + " " + RES_LABEL[res] };
+        title: "Para cobrar 1 $Golden necesitas " + fmt(min) + " " + RES_LABEL[res] };
     }
     if (cur === "golden") return { disabled: false, label: "Cobrar " + fmt(detalle.golden) + " $Golden",
       title: detalle.resto ? "Quedan " + fmt(detalle.resto) + " de valor sin convertir; no se guardan fracciones." : "" };
@@ -5012,7 +5012,7 @@ function refreshMarket() {
   $("mkt-list").innerHTML = SELLABLE.map(res => {
     const cupo = typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? mercadoGlobalRecurso(res) : null;
     const owned = G.res[res] || 0, q = Math.min(10000, cupo ? cupo.disponible : 10000, Math.max(0, owned), +cantidades[res] > 0 ? Math.floor(+cantidades[res]) : Infinity), estado = estadoVender(res, owned, q);
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds" id="mv-${res}">Tenés ${fmt(owned)} · ${textoVenta(res, owned, q)}</div></div><input id="mq-${res}" aria-label="Cantidad de ${RES_LABEL[res]} para vender" title="Cantidad a vender" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: resSprite(res), emoji: RES_EMOJI[res] })}</span><div class="minfo"><div class="mnm">${RES_LABEL[res]}</div><div class="mds" id="mv-${res}">Tienes ${fmt(owned)} · ${textoVenta(res, owned, q)}</div></div><input id="mq-${res}" aria-label="Cantidad de ${RES_LABEL[res]} para vender" title="Cantidad a vender" type="number" min="${owned > 0 ? 1 : 0}" max="${owned}" value="${q}" ${owned > 0 ? "" : "disabled"}><button class="vbtn" id="vb-${res}" ${estado.disabled ? "disabled" : ""} title="${estado.title}">${estado.label}</button></div>`;
   }).join("");
   SELLABLE.forEach(res => {
     const btn = $("vb-" + res), inp = $("mq-" + res), meta = $("mv-" + res), owned = G.res[res] || 0;
@@ -5023,7 +5023,7 @@ function refreshMarket() {
       const q = Math.max(0, Math.min(maximo, Math.floor(+(inp && inp.value) || 0)));
       const estado = estadoVender(res, owned, q);
       btn.disabled = estado.disabled; btn.textContent = !estado.disabled && cur === "plata" ? "Vender · "+fmt(totalVenta(res,q))+" Plata" : estado.label; btn.title = estado.title;
-      if (meta) meta.textContent = "Tenés " + fmt(owned) + " · " + textoVenta(res, owned, q) + disponibilidad(res) + (estado.disabled && estado.title ? " · " + estado.title : "");
+      if (meta) meta.textContent = "Tienes " + fmt(owned) + " · " + textoVenta(res, owned, q) + disponibilidad(res) + (estado.disabled && estado.title ? " · " + estado.title : "");
     };
     if (inp) { inp.max = maximo; inp.min = maximo>0?1:0; inp.disabled = maximo<=0; inp.oninput = sync; inp.onchange = () => { inp.value = Math.max(0, Math.min(maximo, Math.floor(+inp.value || 0))); sync(); }; }
     if (btn) btn.onclick = (ev) => { marketGuardarVentaFocoPc(ev, res); sellItem(res); };
@@ -5031,8 +5031,8 @@ function refreshMarket() {
     sync();
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
-  if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completá este encargo cobrando en Plata" : "Cobrá en $Golden a partir de 1 $Golden completo"; }
-  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata; otras cuentas no consumen tu cupo." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Vendés cultivos por Plata. Precios variables y cupos personales por familia; otros jugadores no consumen tu cupo. Para obtener Golden, usá el Banco." : "Vendés por Plata. El precio se recupera gradualmente; el cambio a Golden se hace en el Banco."); nota.classList.add("show"); }
+  if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completa este encargo cobrando en Plata" : "Cobra en $Golden a partir de 1 $Golden completo"; }
+  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata; otras cuentas no consumen tu cupo." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Vendes cultivos por Plata. Precios variables y cupos personales por familia; otros jugadores no consumen tu cupo. Para obtener Golden, usa el Banco." : "Vendes por Plata. El precio se recupera gradualmente; el cambio a Golden se hace en el Banco."); nota.classList.add("show"); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   marketReponerVentaFocoPc($("mkt-list"));
@@ -5074,7 +5074,7 @@ function baulRegalosHtml() {
   return F.filter(f => (q[f.k] || 0) > 0).map(f =>
     '<div class="baul-item" data-regalo="' + f.k + '" role="button" tabindex="0" aria-label="' +
     escapeHtml("Reclamar " + f.nom + ": va al Cobertizo para elegir dónde colocarlo") + '" title="' +
-    escapeHtml(f.nom + " al Cobertizo — después elegís dónde colocarlo") + '">' +
+    escapeHtml(f.nom + " al Cobertizo — después eliges dónde colocarlo") + '">' +
     '<img src="' + GF.spr(f.spr) + '" alt="" draggable="false" onerror="this.outerHTML=\'<span class=&quot;em&quot;>' + f.em + '</span>\'">' +
     '<span class="cant">×' + q[f.k] + '</span></div>').join("");
 }
@@ -5130,7 +5130,7 @@ function refreshBaul() {
     items.querySelectorAll("[data-regalo]").forEach(el => {
       activarAccionConTeclado(el, () => reclamarRegaloBaul(el, true));
     });
-    nota.textContent = "Elegí cada premio para mandarlo al Cobertizo; desde ahí decidís dónde colocarlo.";
+    nota.textContent = "Elige cada premio para mandarlo al Cobertizo; desde ahí decides dónde colocarlo.";
     return;
   }
   if (G.kitReclamado) {   // nada esperando: baúl cerrado, en paz
@@ -5150,7 +5150,7 @@ function refreshBaul() {
   img.setAttribute("aria-label", "Abrir y reclamar el kit de bienvenida");
   img.title = "Abrir y reclamar el kit de bienvenida";
   sub.textContent = "Tu kit de bienvenida";
-  nota.textContent = "Tocá el baúl y es todo tuyo.";
+  nota.textContent = "Pulsa el baúl y es todo tuyo.";
   const K = (typeof KIT_INICIAL !== "undefined") ? KIT_INICIAL : { axe: 35, pico: 20 };
   const item = (spr, n) => '<div class="baul-item"><img src="' + GF.spr(spr) + '" draggable="false"><span class="cant">×' + n + '</span></div>';
   items.innerHTML = item("axe", K.axe) + item("pick_stone", K.pico);   // 8/9: sin cañas — la de la v2 se jubiló
@@ -5227,7 +5227,7 @@ function refreshPaquete() {
   };
   pintarRacha(0);
   if (!st || !st.claimable) {   // ya abrió el de hoy: paquete abierto y a esperar
-    dia.textContent = cobrados >= 7 ? "¡Semana completa!" : "Volvé mañana";
+    dia.textContent = cobrados >= 7 ? "¡Semana completa!" : "Vuelve mañana";
     img.src = "assets/farm/paquete_dia_abierto.png?v=1";
     img.classList.remove("paq-latido"); img.classList.remove("paq-shake"); img.onclick = null; img.onpointerdown = null; img.style.transform = "";
     desactivarPaqueteDiario(img);
@@ -5244,7 +5244,7 @@ function refreshPaquete() {
   img.setAttribute("role", "button"); img.setAttribute("tabindex", "0");
   img.setAttribute("aria-label", "Abrir y reclamar el paquete del día");
   img.title = "Abrir y reclamar el paquete del día";
-  nota.textContent = "¿Qué habrá hoy? Elegí el paquete para abrirlo…";
+  nota.textContent = "¿Qué habrá hoy? Elige el paquete para abrirlo…";
   btn.style.visibility = "hidden";   // 15/8: sin botón de abrir — se abre TOCANDO el paquete
   // (20/8: se esconde con visibility, no con display — el botón reserva su fila y la tarjeta
   //  mide lo mismo antes y después de abrir; era el salto de tamaño que reportó dirección)
@@ -5360,7 +5360,7 @@ function refreshPedidos() {
     return;
   }
   // VISTA: las notas del día
-  if (sub) sub.textContent = (e.dobles || 0) > 0 ? "Los vales se canjean acá mismo." : "El primer pedido del día paga 🎟 doble.";
+  if (sub) sub.textContent = (e.dobles || 0) > 0 ? "Los vales se canjean aquí mismo." : "El primer pedido del día paga 🎟 doble.";
   const rots = [-2.2, 1.6, -1.1];
   // 18/8: los tres escalones en una sola lista. El semanal y el mensual van al final, con su
   // propio color, porque son la parte que de verdad drena stock: piden un día y tres días de
@@ -5385,10 +5385,10 @@ function refreshPedidos() {
          ya existía para esto y la nota no lo usaba. Vale para todo: peces, cultivos, platos. */
       (tutorial ? '<div class="pide"><span class="pd-nom"><b>Entrega de prueba</b> · sin materiales</span></div>'
         : '<div class="pide">' + pdIcono(p) + '<b>× ' + p.n + '</b> <span class="pd-nom">' + pedidoLabel(p) + '</span>' +
-          (!p.hecho && !ok ? '<span class="falta">(tenés ' + stock + ')</span>' : "") + '</div>') +
+          (!p.hecho && !ok ? '<span class="falta">(tienes ' + stock + ')</span>' : "") + '</div>') +
       (p.hecho ? '<div class="sello">✓ ENTREGADO</div>'
-        : tutorial ? '<div class="toca">tocá la nota para entregar</div>'
-          : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + p.vales + (ok ? '<div class="toca">tocá la nota para entregar</div>' : "") + '</div>') +
+        : tutorial ? '<div class="toca">pulsa la nota para entregar</div>'
+          : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + p.vales + (ok ? '<div class="toca">pulsa la nota para entregar</div>' : "") + '</div>') +
       '</div>';
   }).join("") +
   '<div style="text-align:center;margin-top:6px"><button class="ghost sm" data-pd-vista="canje">🎟 Canjear vales</button></div>';
@@ -5634,13 +5634,13 @@ function refreshSeedShop() {
   const futurosAbiertos=!!box.querySelector('#semillas-futuras')?.open;
   const sb = seedBuysToday();
   // 15/8 (dirección): el cupo de siempre manda también durante el tutorial (el kit cubre los insumos)
-  const cupoTxt = 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja) · las semillas se abren con la skill de Cultivo';
+  const cupoTxt = 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja) · las semillas se abren con la habilidad de Cultivo';
   box.innerHTML = '<div id="packs-shop"></div><div class="shophead">' + cupoTxt + '</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
     const controls = unlocked
       ? `<input id="sq-${k}" aria-label="Cantidad de semillas de ${cd.label}" title="Cantidad a comprar" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
-      : `<button class="ghost sm" disabled data-cultivo-bloqueado="${k}" title="Se abre con la skill de Cultivo">Cultivo nv ${cd.lvl}</button>`;
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${fmtSecs(cd.grow)} · tenés ${fmt(G.seeds[k] || 0)}</div><div class="mds compra-total" id="st-${k}" aria-live="polite">Total: ${cd.seedCost} Plata</div></div>${controls}</div>`;
+      : `<button class="ghost sm" disabled data-cultivo-bloqueado="${k}" title="Se abre con la habilidad de Cultivo">Cultivo nv ${cd.lvl}</button>`;
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${fmtSecs(cd.grow)} · tienes ${fmt(G.seeds[k] || 0)}</div><div class="mds compra-total" id="st-${k}" aria-live="polite">Total: ${cd.seedCost} Plata</div></div>${controls}</div>`;
   }).join("")
   /* 31/8 (today.docx: « quitar que la tienda venda lombrices — solo se obtienen en el mapa o en
      el lombricero ») — la fila de venta se fue. Si volviera, la lombriz dejaría de ser el reloj
@@ -5648,7 +5648,7 @@ function refreshSeedShop() {
      La fila queda como CARTEL que dice a dónde ir, porque quitar el producto sin decir el camino
      dejaría al jugador nuevo sin saber de dónde sale la carnada (regla 9). */
   + (GF.PESCA_ACTIVA?'<div class="shophead">Carnada</div>'
-  + `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "res_lombriz", emoji: "" })}</span><div class="minfo"><div class="mnm">Lombriz</div><div class="mds">No se vende: cavá los montículos de tierra o echá cultivos al Lombricario (junto a la laguna) · tenés ${fmt(G.res.lombriz || 0)}</div></div></div>`:'')
+  + `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "res_lombriz", emoji: "" })}</span><div class="minfo"><div class="mnm">Lombriz</div><div class="mds">No se vende: cava los montículos de tierra o echa cultivos al Lombricario (junto a la laguna) · tienes ${fmt(G.res.lombriz || 0)}</div></div></div>`:'')
   // 🆘 KIT DE EMERGENCIA (14/8, diseñador): 5 diarias de cada uno con $Golden, por si te atascás
   + (function () {
     if (typeof emergBuysToday !== "function") return "";
@@ -5673,8 +5673,8 @@ function refreshSeedShop() {
       + CONT_ORDER.map(c => {
         const d = CONT_DEF[c], tengo = contsTengo(c), aff = (G.plata || 0) >= d.plata;
         return `<div class="mkt-row"><span class="mimg"><span class="em">${d.emoji}</span></span>` +
-          `<div class="minfo"><div class="mnm">${d.label} <span class="seedlv">${d.huecos} huecos</span></div>` +
-          `<div class="mds">${d.ds} · tenés ${tengo}</div></div>` +
+          `<div class="minfo"><div class="mnm">${d.label} <span class="seedlv">${d.huecos} espacios</span></div>` +
+          `<div class="mds">${d.ds} · tienes ${tengo}</div></div>` +
           `<button class="green sm" data-cont="${c}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${d.plata}</button></div>`;
       }).join("")+'</details>';
   })();
@@ -5717,7 +5717,7 @@ function refreshBarn() {
     const pct = Math.max(0, Math.min(100, Math.round((xp - desde) / Math.max(1, need - desde) * 100)));
     h += '<div class="durbar" style="margin:6px 0"><i style="width:' + pct + '%"></i></div>@INFO@';
     // los datos sueltos van en un recuadro claro, no escritos sobre la madera
-    let info = '<div><b>XP productiva:</b> ' + fmt(xp) + ' / ' + fmt(need) + '</div><div>🌱 Cultivar · 🪓 Talar · ⛏ Minar</div><details class="ayuda-menu"><summary>Ruta alternativa por oficio</summary><div>Minería o Tala como oficio principal, nivel ' + farmEspecialidadReq(sig) + ' (tenés Minería ' + nivelOficio('mining') + ' / Tala ' + nivelOficio('tala') + '), permite avanzar sin tareas mixtas.</div></details>';
+    let info = '<div><b>XP productiva:</b> ' + fmt(xp) + ' / ' + fmt(need) + '</div><div>🌱 Cultivar · 🪓 Talar · ⛏ Minar</div><details class="ayuda-menu"><summary>Ruta alternativa por oficio</summary><div>Minería o Tala como oficio principal, nivel ' + farmEspecialidadReq(sig) + ' (tienes Minería ' + nivelOficio('mining') + ' / Tala ' + nivelOficio('tala') + '), permite avanzar sin tareas mixtas.</div></details>';
     const tareas = farmEspecialidadCumple(sig) ? [] : tareasDelNivel(sig);
     if (tareas.length) {
       h += '<div class="secc">Tareas para el nivel ' + sig + '</div>';
@@ -5741,12 +5741,12 @@ function refreshBarn() {
 
 function informeAlfa(){
  const conectado=typeof UID!=='undefined'&&!!UID,guardado=typeof alfaResumenGuardados==='function'?alfaResumenGuardados():{};
- return ['GOLDEN ALFA - INFORME TÉCNICO',new Date().toISOString(),'Build cliente: '+(typeof GF_BUILD!=='undefined'?GF_BUILD:'sin dato'),'Versión servidor: '+String(window.__gfServerVersion||'sin dato').slice(0,40),'Internet: '+(typeof navigator==='undefined'||navigator.onLine!==false),'Cuenta conectada: '+conectado,'Carga validada: '+(typeof CARGA_OK!=='undefined'&&CARGA_OK),'Modo local: '+(typeof SOLO_LOCAL!=='undefined'&&SOLO_LOCAL),'Conflicto de guardado: '+(conectado&&SAVE_CONFLICTOS.has(UID)),'Errores recientes detectados: '+(Array.isArray(window.__gfErr)?window.__gfErr.length:0),'Guardados de esta sesión: '+JSON.stringify(guardado),'','Añadí qué estabas haciendo, qué esperabas y qué ocurrió.','Este informe no incluye correo, claves, identificador de cuenta ni inventario.'].join('\n');
+ return ['GOLDEN ALFA - INFORME TÉCNICO',new Date().toISOString(),'Build cliente: '+(typeof GF_BUILD!=='undefined'?GF_BUILD:'sin dato'),'Versión servidor: '+String(window.__gfServerVersion||'sin dato').slice(0,40),'Internet: '+(typeof navigator==='undefined'||navigator.onLine!==false),'Cuenta conectada: '+conectado,'Carga validada: '+(typeof CARGA_OK!=='undefined'&&CARGA_OK),'Modo local: '+(typeof SOLO_LOCAL!=='undefined'&&SOLO_LOCAL),'Conflicto de guardado: '+(conectado&&SAVE_CONFLICTOS.has(UID)),'Errores recientes detectados: '+(Array.isArray(window.__gfErr)?window.__gfErr.length:0),'Guardados de esta sesión: '+JSON.stringify(guardado),'','Añade qué estabas haciendo, qué esperabas y qué ocurrió.','Este informe no incluye correo, claves, identificador de cuenta ni inventario.'].join('\n');
 }
 async function copiarInformeAlfa(){
  const texto=informeAlfa(),campo=$('cfg-alfa-informe');if(campo){campo.value=texto;campo.hidden=false;}
- try{await navigator.clipboard.writeText(texto);toast('Informe técnico copiado; podés pegarlo con tu reporte');}
- catch(e){if(campo){campo.focus();campo.select();}toast('Seleccioná y copiá el informe mostrado');}
+ try{await navigator.clipboard.writeText(texto);toast('Informe técnico copiado; puedes pegarlo con tu reporte');}
+ catch(e){if(campo){campo.focus();campo.select();}toast('Selecciona y copia el informe mostrado');}
 }
 /* ---- configuración ---- */
 function refreshConfig() {
@@ -5755,7 +5755,7 @@ function refreshConfig() {
     const box=$('cfg-alfa-compras-lista');compras.disabled=true;box.textContent='Consultando el registro del servidor…';
     const nombres={vip:'VIP: 30 días desde el lanzamiento',godhand:'God Hand','infra.tienda':'Tiendita','infra.granja':'Mejora de granja','infra.godhand':'Eficiencia de God Hand','infra.mercado':'Mejora del mercado'};
     try{const r=await alfaCompras();box.textContent=r.compras.length?r.compras.map(e=>{const [tipo,id]=e.sku.split('.');return (nombres[e.sku]||(tipo==='objeto'?ARTEFACTO_DEF[id]?.label:tipo==='adorno'?DECO_DEF[id]?.label:tipo==='pasiva'||tipo==='mejora'?NFT_DEF[id]?.label:null)||'Mejora')+(tipo==='mejora'?' mejorada':'')+(e.units>1?(tipo==='infra'?' · nivel ':' ×')+e.units:'');}).join(' · '):'Todavía no hay compras permanentes conservadas en esta cuenta.';}
-    catch(e){box.textContent='No se pudo comprobar el registro. Reintentá con conexión; tus compras no se borraron.';}finally{compras.disabled=false;}
+    catch(e){box.textContent='No se pudo comprobar el registro. Vuelve a intentarlo con conexión; tus compras no se borraron.';}finally{compras.disabled=false;}
   };
   /* 22/8 — LA CUENTA: estado real (anónima / vinculada) y los dos gestos: guardar la granja
      de este navegador atándola a un email, o entrar con un email ya vinculado. Enlace mágico,
@@ -5768,26 +5768,26 @@ function refreshConfig() {
     if (!st) return;
     if (c.modo === "email") {
       st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · cuenta guardada en " + c.email;
-      if (nota) nota.textContent = "Tu granja te sigue a cualquier dispositivo: entrá con ese email.";
+      if (nota) nota.textContent = "Tu granja te sigue a cualquier dispositivo: entra con ese email.";
       if (bS) { bS.disabled = false; bS.title = "Salir de esta cuenta en este navegador"; }
     } else if (c.modo === "pendiente") {
       /* 19/9 — el correo está puesto pero NO confirmado: hasta que no se toca el enlace, la
          cuenta sigue siendo anónima. Es el estado en que quedó dirección. Se dice cuál es el
          correo y se ofrece reenviar el enlace, que es lo único que destraba esto. */
       st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · correo " + c.email + " PENDIENTE de confirmar";
-      if (nota) nota.textContent = "Tocá el enlace que te mandamos a ese correo (mirá también el no deseado). Si no llegó, reenvialo.";
+      if (nota) nota.textContent = "Pulsa el enlace que te mandamos a ese correo (mira también el no deseado). Si no llegó, reenvialo.";
       if (fila) fila.style.display = "";
       if (inp) inp.value = c.email;
-      if (bA) bA.textContent = "Reenviar el enlace";
-      if (bS) { bS.disabled = true; bS.title = "Primero confirmá el correo: sin él no podrías volver a esta granja"; }
+      if (bA) bA.textContent = "Reenviar enlace";
+      if (bS) { bS.disabled = true; bS.title = "Primero confirma el correo: sin él no podrías volver a esta granja"; }
     } else if (c.modo === "anonima") {
       /* una cuenta de antes del 18/9 que nunca ató nada. Desde ese día no nacen más, pero las
          que existen necesitan una salida: acá se le ata el correo (es lo que hacía « Guardar mi
          cuenta », que se quitó por creer que ya no tenía a quién servir). */
       st.textContent = "Jugando como: " + (window.NICK || "Granjero") + " · esta cuenta todavía no tiene correo.";
-      if (nota) nota.textContent = "Atá tu correo y tu granja te sigue a cualquier dispositivo.";
+      if (nota) nota.textContent = "Vincula tu correo y tu granja te sigue a cualquier dispositivo.";
       if (fila) fila.style.display = "";
-      if (bA) bA.textContent = "Atar mi correo";
+      if (bA) bA.textContent = "Vincular correo";
       if (bS) { bS.disabled = true; bS.title = "Sin correo no habría forma de volver a esta granja"; }
     } else {
       /* 18/9 — « no se pudo averiguar » NO es « no hay cuenta ». El texto de antes decía « sin
@@ -5795,18 +5795,18 @@ function refreshConfig() {
          jugando y guardando, la nube está ahí. Lo único cierto es que este panel no pudo leer
          la cuenta en este momento, y eso se arregla solo volviendo a abrirlo. */
       st.textContent = "No se pudo leer tu cuenta en este momento.";
-      if (nota) nota.textContent = "Tu partida sigue guardándose normal. Cerrá y abrí Configuración para reintentar.";
+      if (nota) nota.textContent = "Tu partida sigue guardándose normal. Cierra y abre Configuración para reintentar.";
       if (bS) { bS.disabled = true; bS.title = "Primero hay que poder leer la cuenta"; }
     }
   });
   /* 19/9 — atar (o reenviar). updateUser con el mismo correo vuelve a mandar el enlace. */
   if (bA) bA.onclick = async () => {
     const v = inp && String(inp.value || "").trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) { toast("Escribí un correo válido"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) { toast("Escribe un correo válido"); return; }
     bA.disabled = true;
     const r = await (typeof vincularEmail === "function" ? vincularEmail(v) : { error: "no disponible" });
     bA.disabled = false;
-    if (r && r.ok) { toast("📬 Revisá " + v + " y tocá el enlace"); log("Te mandamos un correo a " + v + ": tocá el enlace y tu granja queda atada a esa cuenta. Si no aparece, mirá el no deseado.", "gold"); }
+    if (r && r.ok) { toast("📬 Revisa " + v + " y pulsa el enlace"); log("Te mandamos un correo a " + v + ": pulsa el enlace y tu granja queda vinculada a esa cuenta. Si no aparece, mira el no deseado.", "gold"); }
     else toast("No se pudo: " + ((r && r.error) || "error"));
   };
   /* 18/9 — CERRAR SESIÓN. El texto del aviso dice las dos cosas que el jugador necesita saber
@@ -5817,8 +5817,8 @@ function refreshConfig() {
     if (bS.disabled) return;
     let email = "";
     try { const c = await cuentaEstado(); email = (c && c.email) || ""; } catch (e) {}
-    askConfirm("Se va a guardar tu granja y después salís de la cuenta en este navegador." +
-      (email ? " Para volver, entrás con " + email + " y el enlace del correo." : "") +
+    askConfirm("Se va a guardar tu granja y después sales de la cuenta en este navegador." +
+      (email ? " Para volver, entras con " + email + " y el enlace del correo." : "") +
       " Tu granja no se borra.",
       async () => {
         bS.disabled = true;
@@ -5889,7 +5889,7 @@ function renderLb() {
     return { n: p.name || "—", plata, exp, top, me: !!isMe };
   });
   // si todavía no estoy guardado en la tabla, me agrego con mis valores actuales
-  if (meId && !rows.some(r => r.me)) rows.push({ n: window.NICK || "Vos", plata: Math.floor(G.plata), exp: +avgSkillLevel().toFixed(2), top: topSkillMio(), me: true });
+  if (meId && !rows.some(r => r.me)) rows.push({ n: window.NICK || "Tú", plata: Math.floor(G.plata), exp: +avgSkillLevel().toFixed(2), top: topSkillMio(), me: true });
   const val = r => (col === "plata" ? r.plata : (col === "skill" ? (r.top ? r.top.lvl : 0) : r.exp));
   rows.sort((a, b) => val(b) - val(a));
   $("lb-list").innerHTML = rows.slice(0, 20).map((r, i) => lbRowHtml({ n: r.n, v: (col === "skill" && r.top ? r.top.nombre + " " + r.top.lvl : val(r)), me: r.me }, i, col)).join("");
@@ -5971,7 +5971,7 @@ function showSaving() {
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
 }
 function showSaveError(motivo) {
-  if(!guardadoManualEnCurso)estadoGuardar('error',typeof motivo==='string'?'Guardado '+motivo.toLowerCase()+'. Revisá la conexión.':'Guardado rechazado. Revisá el registro.');
+  if(!guardadoManualEnCurso)estadoGuardar('error',typeof motivo==='string'?'Guardado '+motivo.toLowerCase()+'. Revisa la conexión.':'Guardado rechazado. Revisa el registro.');
   const el = $("saveind"); if (!el) return;
   el.className = "show"; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = typeof motivo==='string'?motivo:"Rechazado"; clearTimeout(el._t);
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
@@ -6398,9 +6398,9 @@ async function guardarAhora(){
   if(guardadoManualEnCurso)return;
   const uid=UID;
   const disponible=()=>UID===uid&&uid&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(uid);
-  const fallo=()=>estadoGuardar('error','No se pudo confirmar. Revisá la conexión y volvé a intentar.');
+  const fallo=()=>estadoGuardar('error','No se pudo confirmar. Revisa la conexión y vuelve a intentar.');
   if(uid&&CARGA_OK&&!SOLO_LOCAL&&SAVE_CONFLICTOS.has(uid)){
-    fallo();askConfirm('Hay un conflicto de guardado. Cerrá otras sesiones del juego. Se conservará un respaldo local y continuarás desde la última versión aceptada por el servidor. Los cambios locales pendientes no se fusionan. ¿Recuperar sin recargar la página?',async()=>{
+    fallo();askConfirm('Hay un conflicto de guardado. Cierra otras sesiones del juego. Se conservará un respaldo local y continuarás desde la última versión aceptada por el servidor. Los cambios locales pendientes no se fusionan. ¿Recuperar sin recargar la página?',async()=>{
       if(guardadoManualEnCurso)return;guardadoManualEnCurso=true;estadoGuardar('saving','Consultando el guardado del servidor…');
       try{const ok=await recuperarGuardadoServidor();if(UID===uid)ok?estadoGuardar('ok','Versión del servidor recuperada'):fallo();}finally{guardadoManualEnCurso=false;}
     },{title:'Recuperar guardado',yes:'Cargar versión del servidor',no:'Cancelar'});return;
@@ -6538,13 +6538,13 @@ function initUI() {
     // 13/8: salir de edición con algo "en la mano" lo suelta (queda en la bolsa)
     if (!on) { const sc = window.farmScene; if (sc && sc.placing) { sc.placing = null; if (sc.editHl) sc.editHl.setVisible(false); sc.placingAuto = false; } if (window.syncPlacingUI) syncPlacingUI(false); }
     GF.editMode = on;
-    const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "Terminar edición" : "Modo edición";
+    const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "Finalizar edición" : "Modo edición";
     const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
     if (typeof placeEditbarPc === "function") placeEditbarPc();
     if (typeof syncRegistroPrompt === "function") syncRegistroPrompt();
     if (window.FARM && FARM.gridG) FARM.gridG.setVisible(on);   // el cuadriculado solo se ve editando
     if (on) {
-      closeAllOv(); syncEditDeco(); toast("Arrastrá los objetos a otra celda");
+      closeAllOv(); syncEditDeco(); toast("Arrastra los objetos a otra celda");
       /* 19/8: el modo edición es el paso final del tutorial. Se marca que el jugador lo vio —una
          sola vez, y queda guardado— para que el paso se cierre sin pedirle que mueva nada: la
          lección es que el modo EXISTE, no obligarlo a reordenar la granja. */
@@ -6554,34 +6554,34 @@ function initUI() {
     }
     else toast("Edición terminada");
   };
-  const doFarmReset = () => { G.layout = {}; G.layoutPlots = {}; G.layoutPond = null; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Granja restaurada"); };
+  const doFarmReset = () => { G.layout = {}; G.layoutPlots = {}; G.layoutPond = null; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Distribución de la granja restablecida"); };
   const ce = $("cfg-edit"); if (ce) ce.onclick = () => setEditMode(!GF.editMode);
   // sonidos on/off (Configuración)
   // 14/8: la guía de objetivos es OPCIONAL — este interruptor esconde cartel y flechas;
   // los objetivos siguen avanzando y premiando en silencio, y se puede volver a prender
   window.guiaOn = () => localStorage.getItem("guiaOff") !== "1";
   { const gb = $("cfg-guia");
-    const gLabel = () => { if (gb) gb.textContent = "Guía de objetivos: " + (guiaOn() ? "Sí" : "No"); };
+    const gLabel = () => { if (gb) gb.textContent = "Guía de objetivos: " + (guiaOn() ? "Activada" : "Desactivada"); };
     if (gb) { gLabel(); gb.onclick = () => {
       localStorage.setItem("guiaOff", guiaOn() ? "1" : "0"); gLabel();
       if (typeof tutoRefresh === "function") tutoRefresh();
       if (window.farmScene && window.farmScene.updateTutoArrow) { try { window.farmScene.updateTutoArrow(); } catch (e) {} }
-      toast(guiaOn() ? "Guía de objetivos activada" : "Guía apagada — jugá como quieras (los objetivos premian igual)");
+      toast(guiaOn() ? "Guía de objetivos activada" : "Guía apagada — juega como quieras (los objetivos premian igual)");
     }; } }
   const sndBtn = $("cfg-sound");
-  const sndLabel = () => { if (sndBtn) sndBtn.textContent = (window.sfxIsOn && sfxIsOn()) ? "Sonidos: Sí" : "Sonidos: No"; };
+  const sndLabel = () => { if (sndBtn) sndBtn.textContent = (window.sfxIsOn && sfxIsOn()) ? "Sonido: Activado" : "Sonido: Desactivado"; };
   if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
   /* 24/9 (dirección): reiniciar la cuenta entera. Dos confirmaciones, porque no hay vuelta. */
   const rc = $("cfg-reiniciar"); if (rc) rc.onclick = () => {
-    askConfirm("Vas a BORRAR toda tu granja: nivel, plata, $Golden, terreno, edificios, objetos y NFTs de recolección. Tu correo se mantiene y volvés a empezar como un jugador nuevo. No se puede deshacer. ¿Seguir?",
+    askConfirm("Vas a BORRAR toda tu granja: nivel, plata, $Golden, terreno, edificios, objetos y NFTs de recolección. Tu correo se mantiene y vuelves a empezar como un jugador nuevo. No se puede deshacer. ¿Seguir?",
       () => askConfirm("Última vez: ¿reiniciar tu cuenta de cero?", async () => {
         rc.disabled = true; rc.textContent = "Reiniciando…";
         const r = await resetearCuenta();
-        if (r && r.ok) { toast("Cuenta reiniciada — elegí tu apodo nuevo"); setTimeout(() => location.reload(), 700); }
-        else { rc.disabled = false; rc.textContent = "Reiniciar mi cuenta"; toast("No se pudo reiniciar: " + ((r && r.error) || "sin respuesta")); }
-      }, { title: "Reiniciar cuenta", yes: "Sí, borrar todo", yesClass: "red", no: "Cancelar", noClass: "ghost" }),
-      { title: "Reiniciar cuenta", yes: "Seguir", yesClass: "red", no: "Cancelar", noClass: "ghost" });
+        if (r && r.ok) { toast("Cuenta reiniciada — elige tu apodo nuevo"); setTimeout(() => location.reload(), 700); }
+        else { rc.disabled = false; rc.textContent = "Reiniciar progreso"; toast("No se pudo reiniciar: " + ((r && r.error) || "sin respuesta")); }
+      }, { title: "Reiniciar progreso", yes: "Sí, borrar todo", yesClass: "red", no: "Cancelar", noClass: "ghost" }),
+      { title: "Reiniciar progreso", yes: "Seguir", yesClass: "red", no: "Cancelar", noClass: "ghost" });
   };
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
   // 13/8: botón Cancelar del modo colocar — visible solo mientras hay algo "en la mano"
@@ -6741,14 +6741,14 @@ function ofrendaRankHtml() {
       'vista <b>ofrenda_rank</b> en Supabase (está el SQL en <b>sql/ranking_ofrendas.sql</b>).</div>';
   }
   const rows = _ofrRank.rows || [];
-  if (!rows.length) return '<div class="fds">Todavía no hay ofrendas de nadie. Podés ser el primero.</div>';
+  if (!rows.length) return '<div class="fds">Todavía no hay ofrendas de nadie. Puedes ser el primero.</div>';
   const total = rows.reduce((s, r) => s + (r.ofrenda_pts || 0), 0) || 1;
   const yo = (typeof UID !== "undefined") ? rows.findIndex(r => r.user_id === UID) : -1;
   let h = rows.slice(0, 10).map((r, i) => {
     const mio = (typeof UID !== "undefined" && r.user_id === UID);
     const parte = ((r.ofrenda_pts || 0) / total * 100).toFixed(1);
     return '<div class="forge-row' + (mio ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' +
-      (i + 1) + '. ' + (r.name || "Granjero") + (mio ? ' <span class="tag">vos</span>' : '') + '</div>' +
+      (i + 1) + '. ' + (r.name || "Granjero") + (mio ? ' <span class="tag">tú</span>' : '') + '</div>' +
       '<div class="fds">' + fmt(r.ofrenda_pts || 0) + ' puntos · ' + parte + '% del pozo</div></div></div>';
   }).join("");
   if (yo >= 10) h += '<div class="fds">Tu posición: <b>' + (yo + 1) + '</b> de ' + rows.length + '</div>';
@@ -6773,7 +6773,7 @@ function refreshOfrendas() {
     const nombre = (CROP_DEF[k] && CROP_DEF[k].label) || RES_LABEL[k] || k;
     h += '<div class="forge-row"><div class="fic">' + resIc(k) + '</div><div class="finfo">' +
       '<div class="fnm">' + nombre + ' <span class="tag">' + pts + ' pts c/u</span></div>' +
-      '<div class="fds">Tenés ' + fmt(tengo) + (tengo ? ' · entregar todo daría ' + fmt(tengo * pts) + ' puntos' : '') + '</div></div>' +
+      '<div class="fds">Tienes ' + fmt(tengo) + (tengo ? ' · entregar todo daría ' + fmt(tengo * pts) + ' puntos' : '') + '</div></div>' +
       '<div class="fbtns">' +
         '<input id="ofq-' + k + '" type="number" min="1" max="' + Math.max(1, tengo) + '" value="' + (tengo > 0 ? Math.min(tengo, 10) : 1) + '" style="width:64px">' +
         '<button class="green sm" ' + (tengo > 0 ? "" : "disabled") + ' data-ofr="' + k + '">Ofrendar</button>' +
@@ -6793,7 +6793,7 @@ function refreshIncursion() {
   const vip=vipVigente();
   const inc = incActiva(), cupo = incCupoHoy(), poder = incPoder();
   const sinCupo = !!(INC_CUPO_DIA && cupo.n >= INC_CUPO_DIA);   // el cupo también bloquea el botón (10/8)
-  let h = '<p class="sub">Zona Negra a pie: Free y VIP. Excursiones de un clic: sólo VIP. Una excursión iniciada se conserva aunque venza el VIP.</p><div class="info">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitás un arma equipada') +
+  let h = '<p class="sub">Zona Negra a pie: Sin VIP y VIP. Excursiones de un clic: sólo VIP. Una excursión iniciada se conserva aunque venza el VIP.</p><div class="info">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitas un arma equipada') +
     ' · incursiones de hoy: ' + cupo.n + '/' + (INC_CUPO_DIA || "sin tope") + '</div>';
   if (inc) {
     const z = INCURSIONES[inc.zona], left = incFalta(), pct = Math.round((1 - left / (inc.total || 1)) * 100);
@@ -6812,7 +6812,7 @@ function refreshIncursion() {
       '<div class="fnm">' + z.label + ' <span class="tag">' + fmtSecs(z.min * 60) + '</span>' +
         (nivelReq > 1 ? ' <span class="tag">Combate ' + nivelReq + '</span>' : '') + '</div>' +
       '<div class="fds">' + est + '</div>' +
-      '<div class="fds">' + (!nivelOk ? '<b style="color:#b03a2e">Pide Combate ' + nivelReq + '</b> (tenés ' + ((typeof combatInfo === "function") ? combatInfo().lvl : 1) + ') — el mismo nivel que entrar a pie · ' : '') +
+      '<div class="fds">' + (!nivelOk ? '<b style="color:#b03a2e">Pide Combate ' + nivelReq + '</b> (tienes ' + ((typeof combatInfo === "function") ? combatInfo().lvl : 1) + ') — el mismo nivel que entrar a pie · ' : '') +
         'Poder recomendado: ' + z.poderRec +
         (listo ? ' — <b style="color:#3f6b2a">estás listo</b>'
                : (flojo ? ' — <b style="color:#b03a2e">te van a superar</b>'
@@ -6856,12 +6856,12 @@ async function refreshP2P() {
   // entregas pendientes (compras/retiros que no entraron en la bolsa): nunca se pierden
   if (typeof mkPendCount === "function" && mkPendCount() > 0) {
     h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">Entregas pendientes (' + mkPendCount() + ')</div>' +
-      '<div class="fds">Compras o retiros por recoger. Liberá espacio si hace falta y reclamalos.</div></div>' +
+      '<div class="fds">Compras o retiros por recoger. Libera espacio si hace falta y reclamalos.</div></div>' +
       '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
   }
   if (p2pTab === "vender") {
     h += '<div class="info">Comisión para nuevas publicaciones: '+marketFee()+'%. Tu límite: '+infraCupoP2P()+' publicaciones por día UTC. La tiendita en Mercado → Mejoras agrega una publicación permanente.</div>';
-    h += '<div class="fds">Elegí qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
+    h += '<div class="fds">Elige qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
     const ops = [];
     CROP_ORDER.forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });
     ["madera","piedra","bronce","hierro","oro","diamante","netherita","fibra","pelaje","cuero","colmillo","esencia_runica"].forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });
@@ -6870,11 +6870,11 @@ async function refreshP2P() {
     FISH_ORDER.forEach(k => { if (((G.fish || {})[k] || 0) > 0) ops.push(["fish", k, G.fish[k]]); });
     Object.keys(G.weapons || {}).forEach(k => ops.push(["arm", k, 1]));
     Object.keys(G.armor || {}).forEach(k => { if (G.armor[k] && armorPieza(k)) ops.push(["armor", k, 1]); });
-    if (!ops.length) h += '<div class="fds">No tenés nada para publicar todavía.</div>';
+    if (!ops.length) h += '<div class="fds">No tienes nada para publicar todavía.</div>';
     ops.forEach(([kind, key, max], i) => {
       const sug = Math.max(1, Math.round((typeof priceOf === "function" ? priceOf(key) : 10) || 10));
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + mkNombre(kind, key) + ' <span class="tag">' + MARKET_KINDS[kind] + '</span></div>' +
-        '<div class="fds">Tenés ' + fmt(max) + (kind === "arm" ? " · se publica con su durabilidad y sus runas" : kind === "armor" ? " · durabilidad " + armorDur(armorPieza(key).set, armorPieza(key).pieza) + "/" + ARMOR_DUR_MAX + " (se conserva al vender)" : "") + '</div></div>' +
+        '<div class="fds">Tienes ' + fmt(max) + (kind === "arm" ? " · se publica con su durabilidad y sus runas" : kind === "armor" ? " · durabilidad " + armorDur(armorPieza(key).set, armorPieza(key).pieza) + "/" + ARMOR_DUR_MAX + " (se conserva al vender)" : "") + '</div></div>' +
         '<div class="fbtns">' +
           (kind === "arm" || kind === "armor" ? '' : '<input id="p2q-' + i + '" type="number" min="1" max="' + max + '" value="1" style="width:56px">') +
           '<input id="p2p-' + i + '" type="number" min="1" value="' + sug + '" style="width:70px" title="Precio en plata">' +
@@ -6890,8 +6890,8 @@ async function refreshP2P() {
         '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + marketFee(r) + '% de comisión)</div></div>' +
         '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';
     });
-    h += '<div class="secc">Publicaciones activas: ' + activas.length + (' · '+(vipVigente()?'VIP':'Free')+': '+infraCupoP2P()+' publicaciones por día UTC') + '</div>';
-    if (!activas.length) h += '<div class="fds">No tenés nada publicado.</div>';
+    h += '<div class="secc">Publicaciones activas: ' + activas.length + (' · '+(vipVigente()?'VIP':'Sin VIP')+': '+infraCupoP2P()+' publicaciones por día UTC') + '</div>';
+    if (!activas.length) h += '<div class="fds">No tienes nada publicado.</div>';
     activas.forEach(r => {
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +
         '<div class="fds">Precio: ' + fmt(r.price) + ' de plata</div></div>' +
@@ -6901,11 +6901,11 @@ async function refreshP2P() {
     /* En escritorio, la regla compartida de .forge-list lleva este estado a la misma placa
        crema que una publicación real. Conservamos la clase base para no rediseñar móvil antes
        de su pasada específica. */
-    if (!filas.length) h += '<div class="fds">No hay publicaciones ahora mismo. Volvé en un rato o publicá algo vos.</div>';
+    if (!filas.length) h += '<div class="fds">No hay publicaciones ahora mismo. Vuelve en un rato o publica algo tú.</div>';
     filas.forEach(r => {
       const mio = r.seller === (typeof UID === "string" ? UID : "");
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + ' <span class="tag">' + (MARKET_KINDS[r.kind] || r.kind) + '</span></div>' +
-        '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (vos)" : "") +
+        '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (tú)" : "") +
         (r.kind === "armor" ? ' · Durabilidad: ' + (r.payload && Number.isFinite(r.payload.dur) ? r.payload.dur + '/' + ARMOR_DUR_MAX : 'sin dato válido') : '') + '</div></div>' +
         '<div class="fbtns"><button class="green sm" ' + (mio || G.plata < r.price ? "disabled" : "") + ' data-buy="' + r.id + '">Comprar · ' + fmt(r.price) + '</button></div></div>';
     });
@@ -6962,7 +6962,7 @@ function refreshCosmeticos() {
     (masc.length > 1
       ? masc.map(k => '<button class="sm ' + ((c.mascota || "ninguna") === k ? "green" : "ghost") + '" data-cost="mascota:' + k + '">' +
           (k === "ninguna" ? "Ninguna" : COS_MASCOTAS[k].label) + '</button>').join(" ") + ' <span class="fds">Pasea por tu granja.</span>'
-      : 'Todavía no tenés ninguna — la gallina "Pinta" sale del cofre de login.') + '</div></div></div>';
+      : 'Todavía no tienes ninguna — la gallina "Pinta" sale del cofre de login.') + '</div></div></div>';
   // SKINS (10/8): sombrero del cofre, camino de pétalos y granja legendaria de nivel 50
   const skinBtns = (campo, on) => '<button class="sm ' + (on ? "green" : "ghost") + '" data-cost="' + campo + ':1">Puesto</button> ' +
     '<button class="sm ' + (!on ? "green" : "ghost") + '" data-cost="' + campo + ':0">Guardado</button>';
@@ -7034,7 +7034,7 @@ function enfocarOpcionEleccionPc(caja) {
   try { opcion.focus({ preventScroll: true }); } catch (e) { opcion.focus(); }
 }
 function mostrarEleccion(titulo, opciones, alElegir, alCancelar, avisoCancelar) {
-  if (hayOvPcAbierto()) { toast("Cerrá la ventana antes de elegir"); return; }
+  if (hayOvPcAbierto()) { toast("Cierra la ventana antes de elegir"); return; }
   const w = $("seedwheel"); if (!w) { if (alElegir) alElegir(opciones[0].k); return; }
   const c = w.querySelector(".swc"); if (!c) return;
   const px = window.innerWidth / 2, py = window.innerHeight / 2;
@@ -7075,7 +7075,7 @@ function syncEditDeco() {
   const sel = $("edit-deco"), lbl = $("edit-decons"); if (!sel) return;
   const hay = DECO_ORDER.filter(id => decoTengo(id) > 0);
   sel.innerHTML = hay.length ? hay.map(id => '<option value="' + id + '">' + DECO_DEF[id].label + ' (' + decoTengo(id) + ')</option>').join("")
-                             : '<option value="">— no tenés adornos —</option>';
+                             : '<option value="">— no tienes adornos —</option>';
   sel.disabled = !hay.length;
   const bp = $("edit-poner"); if (bp) bp.disabled = !hay.length;
   // fix #17 (11/8): el botón de parcelas pendientes de colocar
@@ -7091,6 +7091,6 @@ function syncEditDeco() {
 function ponerAdornoElegido() {
   const sel = $("edit-deco"); if (!sel || !sel.value) return;
   const sc = window.farmScene;
-  if (!sc || !sc.iniciarColocar) { toast("Entrá a la granja para poner adornos"); return; }
+  if (!sc || !sc.iniciarColocar) { toast("Entra a la granja para poner adornos"); return; }
   sc.iniciarColocar("deco", sel.value);
 }

@@ -51,7 +51,7 @@ console.log("\n2 · EL AVISO SE ENCIENDE EN EL UMBRAL, NO ANTES\n");
   G.weapons.espada_bronce.dur = enUmbral;
   const h = g('durArmaHtml("espada_bronce")');
   ok("en el umbral sí, y en rojo", /cb-dur poca/.test(h), enUmbral + "/" + max);
-  ok("y el rótulo dice qué hacer, no solo que pasa algo", /volvé antes de que se rompa/.test(h));
+  ok("y el rótulo dice qué hacer, no solo que pasa algo", /vuelve antes de que se rompa/.test(h));
   G.weapons.espada_bronce.dur = 0;
   const r = g('durArmaHtml("espada_bronce")');
   ok("el arma ROTA se distingue de la gastada", /cb-dur rota/.test(r) && !/poca/.test(r));

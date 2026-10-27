@@ -46,7 +46,7 @@ console.log("\nLA CAPTURA DEL DISEÑADOR: calabaza puesta (12 de 15), cebolla y 
   ok("quedan 3 del cupo", s.libre === 3, "quedan " + s.libre);
   ok("el pie dice el cupo de hoy y cuánto queda", /Cupo de hoy: 12 de 15/.test(s.pie) && /quedan 3/.test(s.pie), s.pie.slice(0, 60));
   ok("el pie ya no promete « 3 tandas » como rinde", !/3 tandas de 8 h/.test(s.pie));
-  ok("el botón explica que nada de lo que tenés entra y nombra lo que sí", /no entra nada/.test(s.boton) && /papa|ciruela|cereza/i.test(s.boton) && s.off, s.boton);
+  ok("el botón explica que nada de lo que tienes entra y nombra lo que sí", /no entra nada/.test(s.boton) && /papa|ciruela|cereza/i.test(s.boton) && s.off, s.boton);
 }
 
 console.log("\nCON UN CULTIVO BARATO EN EL GRANERO, LA LISTA DISTINGUE\n");
@@ -55,7 +55,7 @@ console.log("\nCON UN CULTIVO BARATO EN EL GRANERO, LA LISTA DISTINGUE\n");
   ok("el botón se puede usar", !s.off, s.boton);
   const ceb = s.filas.find(f => f.k === "cebolla"), cir = s.filas.find(f => f.k === "ciruela");
   ok("la cebolla se ve pero apagada, con el motivo", ceb && ceb.off && /no entra hoy/.test(ceb.st), JSON.stringify(ceb));
-  ok("la ciruela entra y sigue diciendo el stock", cir && !cir.off && /tenés 6/.test(cir.st), JSON.stringify(cir));
+  ok("la ciruela entra y sigue diciendo el stock", cir && !cir.off && /tienes 6/.test(cir.st), JSON.stringify(cir));
 }
 
 console.log("\nCUPO AGOTADO\n");

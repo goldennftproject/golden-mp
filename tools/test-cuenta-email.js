@@ -124,7 +124,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
       doc.getElementById("cfg-email").value === "golden@granja.com" && /Reenviar/.test(doc.getElementById("cfg-atar").textContent));
     doc.getElementById("cfg-atar").onclick(); await espera(); await espera();
     ok("reenviar vuelve a pedir el vínculo con ese correo (updateUser)", !!llamadas.updateUser && llamadas.updateUser.email === "golden@granja.com", JSON.stringify(llamadas.updateUser));
-    ok("y le dice que revise el correo", ctx.avisos.some(a => /Revisá|tocá el enlace/.test(a)));
+    ok("y le dice que revise el correo", ctx.avisos.some(a => /Revisa|pulsa el enlace/.test(a)));
   }
 
   console.log("\n2e · Y UNA CUENTA DE ANTES DEL 18/9, SIN CORREO, TIENE SALIDA\n");
@@ -132,7 +132,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
     const { ctx, doc, llamadas } = armar({ id: "uid-test", email: null });
     ctx.refreshConfig(); await espera(); await espera();
     ok("el panel dice que no tiene correo (sin disfrazarlo de avería)", /todavía no tiene correo/.test(doc.getElementById("cfg-auth-status").textContent));
-    ok("y ofrece atarlo", doc.getElementById("cfg-atar-fila").style.display !== "none" && /Atar/.test(doc.getElementById("cfg-atar").textContent));
+    ok("y ofrece atarlo", doc.getElementById("cfg-atar-fila").style.display !== "none" && /Vincular/.test(doc.getElementById("cfg-atar").textContent));
     doc.getElementById("cfg-email").value = "nuevo@granja.com";
     doc.getElementById("cfg-atar").onclick(); await espera(); await espera();
     ok("atar llama a updateUser con el correo escrito", !!llamadas.updateUser && llamadas.updateUser.email === "nuevo@granja.com");
