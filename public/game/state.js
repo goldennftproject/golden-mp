@@ -1098,12 +1098,12 @@ function tutoSub() {
   if (st.res === "madera" && typeof toolCount === "function") {
     if (!(G.built && G.built.store)) return tutoSubNodoEnEspera(st);   // fase pre-Herrería: con las hachas de arranque alcanza
     const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
-    const hachas = Math.max(0, falta - toolCount("axe"));
+    const hachas = Math.ceil(Math.max(0, falta - toolCount("axe")));
     if (hachas > 0) {
       const costo = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
       const plataNec = hachas * costo;
-      if (G.plata >= plataNec) return { txt: "Crafteá tus " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " de UNA (" + plataNec + " de plata" + (hachas >= 5 ? ", usá el botón ×5" : "") + ")",
-        target: "store", panel: "ov-forge", ui: hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool"] };
+      if (G.plata >= plataNec) return { txt: "Fabricá " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataNec + " Plata" + (vipVigente() && hachas >= 5 ? ", botón ×5" : ", de a una") + ")",
+        target: "store", panel: "ov-forge", ui: vipVigente() && hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool"] };
       return tutoSubPlata("Te faltan " + hachas + " hachas (" + plataNec + " de plata): ", plataNec);
     }
     return tutoSubNodoEnEspera(st);   // hachas alcanzan para toda la meta: a talar, salvo que todos los árboles estén en descanso
@@ -1116,20 +1116,20 @@ function tutoSub() {
   if (st.res === "piedra") {
     if (!(G.built && G.built.store)) return tutoSubNodoEnEspera(st);   // fase pre-Herrería: el pico de arranque alcanza
     const falta = Math.max(0, tutoNeed(st) - tutoTiene(st));
-    const eq = (G.picks && G.picks.eq) || null;
+    const eq = picoParaNodo({type:'rock'});
     const usos = eq ? Math.floor((G.picks.dur && G.picks.dur[eq]) || 0) : 0;
-    const picos = Math.max(0, falta - usos);   // picos de piedra a craftear (1 uso cada uno)
+    const picos = Math.ceil(Math.max(0, falta - usos));   // picos de piedra a craftear (1 uso cada uno)
     if (picos <= 0) return tutoSubNodoEnEspera(st); // el pico aguanta toda la meta: a picar, salvo roca en enfriamiento
-    const pd = (typeof PICK_DEF !== "undefined" && PICK_DEF.stone) || { cost: { madera: 3 }, plata: 10 };
-    const plataNec = picos * (pd.plata || 10);
-    const madNecT = picos * ((pd.cost && pd.cost.madera) || 3);
+    const pd = PICK_DEF.stone;
+    const plataNec = picos * pd.plata;
+    const madNecT = picos * ((pd.cost && pd.cost.madera) || 0);
     let reservada = 0;
     if (st.dep && typeof obraDe === "function" && obraDe(st.dep) && typeof obraFalta === "function") {
       const f = obraFalta(st.dep).find(x => x[0] === "madera"); if (f) reservada = f[1];
     }
     const libre = Math.max(0, Math.floor(G.res.madera || 0) - reservada);
-    if (libre >= madNecT && G.plata >= plataNec) return { txt: "Crafteá " + picos + " Pico" + (picos > 1 ? "s" : "") + " de Piedra (" + madNecT + " madera + " + plataNec + " de plata" + (picos >= 5 ? ", botón ×5" : "") + ")",
-      target: "store", panel: "ov-forge", ui: picos >= 5 ? "[data-craft5='stone']" : "[data-craft='stone']", permite: ["craftpick", "mine", "chop", "crafttool"] };
+    if (libre >= madNecT && G.plata >= plataNec) return { txt: "Fabricá " + picos + " pico" + (picos > 1 ? "s" : "") + " (" + (madNecT ? madNecT + " madera + " : "") + plataNec + " Plata" + (vipVigente() && picos >= 5 ? ", botón ×5" : ", de a uno") + ")",
+      target: "store", panel: "ov-forge", ui: vipVigente() && picos >= 5 ? "[data-craft5='stone']" : "[data-craft='stone']", permite: ["craftpick", "mine", "chop", "crafttool"] };
     if (G.plata < plataNec) return tutoSubPlata("Para " + picos + " picos (" + plataNec + " de plata): ", plataNec);
     // plata alcanza pero falta madera LIBRE: talar (con hachas o su plan)
     const madFalta = madNecT - libre;
@@ -1137,8 +1137,8 @@ function tutoSub() {
     if (hachas > 0) {
       const costoHacha = (TOOL_CRAFT && TOOL_CRAFT.axe && TOOL_CRAFT.axe.plata) || 10;
       const plataHachas = hachas * costoHacha;
-      if (G.plata >= plataNec + plataHachas) return { txt: "Para los picos falta madera: crafteá " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataHachas + " de plata" + (hachas >= 5 ? ", botón ×5" : "") + ")",
-        target: "store", panel: "ov-forge", ui: hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool", "chop", "craftpick", "mine"] };
+      if (G.plata >= plataNec + plataHachas) return { txt: "Para los picos falta madera: crafteá " + hachas + " hacha" + (hachas > 1 ? "s" : "") + " (" + plataHachas + " de plata" + (vipVigente() && hachas >= 5 ? ", botón ×5" : "") + ")",
+        target: "store", panel: "ov-forge", ui: vipVigente() && hachas >= 5 ? "[data-ctool5='axe']" : "[data-ctool='axe']", permite: ["crafttool", "chop", "craftpick", "mine"] };
       return tutoSubPlata("Para los picos y sus hachas (" + (plataNec + plataHachas) + " de plata): ", plataNec + plataHachas);
     }
     return { txt: "Talá " + madFalta + " árbol" + (madFalta > 1 ? "es" : "") + " — madera para los picos (lo de la obra no se toca)",
@@ -2830,6 +2830,14 @@ function produccionAlternar(clave) {
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }
+function produccionEmplazamiento(tipo) {
+  return GF.WORLD_OBJECTS.findIndex((o,idx)=>{
+    if(!(tipo==='tree'||tipo==='rock'?o.type===tipo:o.type==='ore'&&o.ore===tipo)||!(o.exp==null||o.exp<(G.expansiones||0))||produccionNodoPoseido(idx))return false;
+    const lp=G.layout&&G.layout[idx],col=lp?Math.floor(lp.cx/GF.TILE-(o.wCells||1)/2):o.leftCol,row=(lp?Math.round(lp.by/GF.TILE):o.baseRow)-1;
+    for(let c=col;c<col+(o.wCells||1);c++)if(!GF.tuyo(c,row)||GF.enCerca(c,row)||GF.celdaOcupada(c,row))return false;
+    return true;
+  });
+}
 function produccionComprar(tipo) {
   if (!G.produccion || !produccionHayCupo()) { toast("No queda capacidad. Pausá otra producción o expandí."); return false; }
   let nuevaClave, confirmacion;
@@ -2845,14 +2853,7 @@ function produccionComprar(tipo) {
   } else {
     const def = { tree: { precio: 30, nivel: 1 }, rock: { precio: 30, nivel: 1 }, bronce: { precio: 180, nivel: 3 }, hierro: { precio: 300, nivel: 6 }, oro: { precio: 500, nivel: 9 }, diamante: { precio: 900, nivel: 13 }, netherita: { precio: 1400, nivel: 17 } }[tipo];
     if (!def || G.level < def.nivel) { toast("Ese nodo todavía no está disponible."); return false; }
-    const i = GF.WORLD_OBJECTS.findIndex((o, idx) => {
-      if (!(tipo === "tree" || tipo === "rock" ? o.type === tipo : o.type === "ore" && o.ore === tipo) || !(o.exp == null || o.exp < (G.expansiones || 0)) || produccionNodoPoseido(idx)) return false;
-      const lp = G.layout && G.layout[idx];
-      const col = lp ? Math.floor(lp.cx / GF.TILE - (o.wCells || 1) / 2) : o.leftCol;
-      const row = (lp ? Math.round(lp.by / GF.TILE) : o.baseRow) - 1;
-      for (let c=col;c<col+(o.wCells||1);c++) if (!GF.tuyo(c,row) || GF.enCerca(c,row) || GF.celdaOcupada(c,row)) return false;
-      return true;
-    });
+    const i = produccionEmplazamiento(tipo);
     if (i < 0) { toast("No quedan emplazamientos de este tipo en tu terreno. Expandí para abrir más."); return false; }
     const base = GF.WORLD_OBJECTS[i], lp = G.layout && G.layout[i];
     const col = lp ? Math.floor(lp.cx / GF.TILE - (base.wCells || 1) / 2) : base.leftCol;
@@ -3328,7 +3329,7 @@ const TUTO_STEPS = [
      seguido, y la estamina ya la regula sola (120 bichos al día, unos 30 minutos, el 1,7% de la
      economía). O sea que el que quiere jugar tiene dónde, y el que quiere estar tranquilo no
      pierde nada por no ir. Solo faltaba que alguien se lo dijera. */
-  { id: "portal",   n: 1, txt: "Cruzá el portal del norte con la espada equipada",       target: "portal" },
+  { id: "portal",   n: 1, txt: "Entrá al portal de la Zona Negra con la espada equipada", target: "portal" },
   /* 19/8: el paso pide la CARNE, no un número de muertes. Así el botín deja de ser un adorno —
      es lo que cierra el tutorial— y de paso el jugador aprende que en la Zona el botín es azaroso:
      la rata la suelta el 18% de las veces, el murciélago el 24%. De media son cuatro o cinco
@@ -3705,8 +3706,10 @@ function brujula() {
     /* 1 · ganado y sin cobrar */
     for (const t in (G.planos || {})) {
       if (!BUILD_DEF[t] || (G.built && G.built[t]) || (G.obras && G.obras[t])) continue;
-      return B({ txt: "Tenés el plano de " + BUILD_DEF[t].label + " esperando: colocalo (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: ".slot.k-plano" });
+      return B({ txt: "Tenés el plano de " + BUILD_DEF[t].label + " esperando: colocalo (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: '[data-plano="'+t+'"]' });
     }
+    if((G.produccion?.vale||0)>0)
+      return B({txt:'Tenés '+G.produccion.vale+' vale(s): elegí tu próximo nodo en el Cobertizo',panel:'ov-cobertizo',ui:'#prod-elegir>summary',beneficio:'Elegí parcela, árbol o roca para especializar tu granja'});
     if (typeof dailyState === "function" && dailyState().claimable)
       return B({ txt: "Te llegó el paquete del día: abrí el buzón", target: "buzon" });
     if (typeof cartaAbueloPendiente === "function" && cartaAbueloPendiente())
@@ -3729,12 +3732,12 @@ function brujula() {
         const tengo = k => k === "plata" ? (G.plata || 0) : (res[k] || 0);
         const faltantes = Object.keys(costo).filter(k => tengo(k) < costo[k]);
         const falta = faltantes.map(k => (costo[k] - tengo(k)) + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[k]) || k).toLowerCase());
-        const objetivo = faltantes.includes("madera") ? "tree" : faltantes.includes("piedra") ? "rock" : "market";
+        const objetivo = faltantes.includes("madera") ? "tree" : faltantes.includes("piedra") ? "rock" : faltantes.some(k=>['bronce','hierro','oro','diamante','netherita'].includes(k)) ? 'ore' : "market";
         return B({ txt: falta.length
           ? "Juntá " + falta.join(" y ") + " para la expansión " + e.n
           : "Podés comprar la expansión " + e.n + " (Mercado → Adornos)",
           target: objetivo,
-          panel: objetivo === "market" ? "ov-market" : null });
+          panel: objetivo === "market" ? "ov-market" : null, ui: !falta.length?'#exp-comprar':null, beneficio:'Más terreno + 1 cupo + 1 nodo a elección' });
       }
     }
     /* 4 · la meta de la semana */
@@ -3746,7 +3749,7 @@ function brujula() {
     const sig = (G.level || 1) + 1;
     if (typeof FARM_NIVEL_MAX !== "undefined" && sig <= FARM_NIVEL_MAX && typeof farmUnlockTxt === "function") {
       const trae = String(farmUnlockTxt(sig) || "").split(" + ")[0];   // lo primero es lo que importa; el bono va siempre
-      return B({ txt: "Granja " + sig + " trae " + trae + " — cosechá, talá y picá para subir" });
+      return B({ txt: "Granja " + sig + " trae " + trae + " — cosechá, talá y picá para subir", panel:'ov-barn',beneficio:trae });
     }
   } catch (e) { console.warn("brújula:", e && e.message); }
   return null;
@@ -11956,9 +11959,10 @@ function kitReclamar() {
      cruza el portal, así que el juego no puede permitirse que la primera muerte te deje a pie. */
   if (typeof contsSumar === "function") contsSumar("bag", KIT_INICIAL.bag || 1);
   if (KIT_INICIAL.cana) { G.canas = G.canas || {}; G.canas[KIT_INICIAL.cana] = 1; }
-  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas, " + KIT_INICIAL.pico + " picos, una caña de junco y una bolsa de caza.", "gold");
-  toast("¡Tu kit de bienvenida! 🪓⛏🎣");
-  if (window.celebrate) celebrate({ title: "¡KIT DE BIENVENIDA!", sub: "Hachas, picos y cañas para arrancar", big: false, reward: "Ya podés talar, picar y pescar" });
+  const pesca=typeof GF!=='undefined'&&GF.PESCA_ACTIVA;
+  log("Kit de bienvenida: " + KIT_INICIAL.axe + " hachas, " + KIT_INICIAL.pico + " picos"+(pesca?", una caña de junco":"")+" y una bolsa de caza.", "gold");
+  toast("¡Tu kit de bienvenida! 🪓⛏"+(pesca?'🎣':''));
+  if (window.celebrate) celebrate({ title: "¡KIT DE BIENVENIDA!", sub: "Hachas, picos y bolsa para arrancar", big: false, reward: "Tus herramientas están en el Inventario" });
   if (typeof tutoEvent === "function") tutoEvent("kit");
   tutoCerrarPanelTrasPaso("ov-baul", "buyseed");
   ensureHotbarDefaults();   // 18/8: los accesos aparecen AHORA, con las herramientas ya en la mano

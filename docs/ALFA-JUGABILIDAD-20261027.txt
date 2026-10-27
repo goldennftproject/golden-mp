@@ -1,0 +1,31 @@
+GOLDEN — ORIENTACIÓN Y JUGABILIDAD PARA LA ALFA
+27/10/2026
+
+1. RECORRIDO INICIAL
+El objetivo tiene un botón Mostrar. Abre el menú y la pestaña correctos o señala el destino en la granja. No compra ni hace acciones automáticamente.
+La guía reconoce Free/VIP, usa las recetas actuales y señala el plano exacto que corresponde colocar.
+El kit no anuncia pesca mientras está desactivada.
+
+2. ORIENTARSE EN LA GRANJA
+Los edificios muestran nombres breves en PC: Granero, Mercado, Herrería, Cocina, Horno, Baúl y Pedidos.
+El menú incluye acceso directo al Mercado de cultivos, separado del mercado entre jugadores.
+
+3. MERCADO MÁS LEGIBLE
+Los cultivos disponibles quedan visibles. Los futuros se agrupan en Cultivos por desbloquear. Emergencias y bolsas de exploración tienen sus propias secciones desplegables.
+Al pasar del Banco al Mercado se cierra el panel de origen, evitando dejarlo debajo y confundir el recorrido.
+
+4. SABER QUÉ HACER DESPUÉS
+La brújula recuerda los planos y los nodos gratuitos de expansión pendientes. Señala la expansión en su pestaña correcta y permite consultar el siguiente nivel de granja.
+La especialización sigue siendo elegida por el jugador: no se añaden compras ni objetivos obligatorios.
+
+5. ENTENDER LOS BLOQUEOS
+La selección de producción muestra si falta nivel, Plata, capacidad o un emplazamiento. También se muestran faltantes de mejoras, objetos y VIP.
+Se reutiliza la comprobación real de emplazamiento para evitar botones que parecen disponibles y luego fallan.
+
+ALCANCE
+No se modifican precios, recompensas, energía, tiempos ni guardados. USDT sigue desactivado. No se añade contenido de móvil, plaza ni nuevos tipos de madera.
+No hay assets ni bibliotecas adicionales. El código comprimido de arranque ronda 362 KB; el presupuesto explícito se ajusta de 360 a 368 KB para estas mejoras.
+
+VALIDACIÓN
+Se añaden pruebas del primer ciclo completo de cultivo, orientación contextual y señales del mundo. La prueba del ciclo usa las acciones reales del juego con reloj simulado; la comprobación visual utiliza el mismo cliente en una sesión local aislada y no demuestra por sí sola persistencia en Supabase.
+La diversión, comprensión espontánea y prioridades reales de los jugadores se valorarán durante la alfa.

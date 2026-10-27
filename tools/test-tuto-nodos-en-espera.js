@@ -65,13 +65,13 @@ console.log("\nLA ESCENA DISTINGUE ENFRIAMIENTO DE UN GESTO A MEDIAS\n");
 
 console.log("\nEL HUD CONSERVA EL AVANCE DEL OBJETIVO\n");
 {
-  const ini = UI.indexOf("function tutoRefresh()");
+  const ini = UI.indexOf("function guiaDestinoActual()");
   const fin = UI.indexOf("// 13/8 (audio): la guía DENTRO", ini);
   if (ini < 0 || fin < 0) throw new Error("No encontré el HUD del tutorial");
   const dom = new JSDOM('<!doctype html><div id="tuto" class="hidden"><b id="tuto-txt"></b><span id="tuto-n"></span></div>');
   const paso = { id: "wood_st", res: "madera", target: "tree" };
   const ctx = {
-    window: dom.window, document: dom.window.document, Math, Object, Array, String,
+    window: dom.window, document: dom.window.document, Math, Object, Array, String, $:id=>dom.window.document.getElementById(id),
     G: { tuto: { n: 0 } }, guiaActiva: () => paso,
     tutoSub: () => ({ esperaNodo: true, txt: "Madera: plantá 2 semillas mientras vuelven los árboles", target: "plot" }),
     tutoNeed: () => 8, tutoTiene: () => 3, tutoTxt: () => "Juntá madera", tutoHighlight() {}, placeTuto() {}, placeToast() {}

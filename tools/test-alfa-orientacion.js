@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),vm=require('vm'),{JSDOM}=require('jsdom');
+const root=path.resolve(__dirname,'..'),doc=new JSDOM(fs.readFileSync(root+'/public/index.html','utf8')).window.document;
+doc.defaultView.HTMLElement.prototype.scrollIntoView=function(){};
+const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.js':''});
+(async()=>{
+ await c.SAVE_READY;c.document=doc;c.innerWidth=1360;const refreshSeedShop=c.refreshSeedShop;for(const k of ['refreshHud','refreshInv','refreshHotbar','refreshSeedShop','syncSlots','saveFarm','celebrate','log','toast'])c[k]=()=>{};
+ c.isOpen=id=>doc.getElementById(id)?.classList.contains('show');
+ const step=id=>{c.G.tuto={step:vm.runInContext('tutoIdx('+JSON.stringify(id)+')',c),done:false,n:0,v:15};};
+ c.estadoDeCero();c.G.built.store=true;c.G.tools.axe=0;c.G.plata=1000;step('wood');
+ let d=c.tutoSub();assert.equal(d.ui,"[data-ctool='axe']");assert.ok(!d.txt.includes('×5'));
+ c.G.produccion.vipHasta=Date.now()+86400000;d=c.tutoSub();assert.equal(d.ui,"[data-ctool5='axe']");
+ c.G.produccion.vipHasta=0;c.G.picks={owned:{gold:true},dur:{gold:30},eq:'gold'};c.G.res.madera=0;step('stone');
+ d=c.tutoSub();assert.equal(d.ui,"[data-craft='stone']");assert.ok(!d.txt.includes('madera'),'no exige madera que la receta ya no cobra');
+ c.G.planos={horno:1,store:1};step('place_store');c.refreshCobertizo();d=c.guiaDestinoActual();assert.equal(d.ui,'[data-plano="store"]');assert.ok(doc.querySelector(d.ui));
+ c.G.tuto.done=true;c.G.planos={};c.G.produccion.vale=1;d=c.brujula();assert.equal(d.ui,'#prod-elegir>summary');assert.ok(d.beneficio.includes('especializar'));
+ let opened=null,selected=false,bought=false;c.openOv=id=>{opened=id;};c.expansionComprar=()=>{bought=true;};
+ const market=doc.getElementById('ov-market');market.querySelector('[data-shop="deco"]').onclick=()=>{selected=true;};market.querySelector('#shop-deco').innerHTML='<button id="exp-comprar">Comprar</button>';doc.getElementById('exp-comprar').onclick=()=>{bought=true;};
+ c.guiaActiva=()=>({id:'brujula',brujula:true,panel:'ov-market',ui:'#exp-comprar',txt:'Expandí'});c.mostrarObjetivo();assert.equal(opened,'ov-market');assert.equal(selected,true);assert.equal(bought,false,'mostrar nunca compra');
+ c.G.level=1;c.G.plata=0;c.G.produccion.vale=0;c.refreshProduccionGranja();assert.match(doc.getElementById('prod-motivo-hierro').textContent,/nivel 6/);assert.equal(doc.querySelector('[data-prod-buy="hierro"]').disabled,true);
+ refreshSeedShop();assert.equal(doc.getElementById('sq-papa').closest('details'),null);assert.ok(doc.querySelectorAll('#semillas-futuras [data-cultivo-bloqueado]').length>0);assert.ok(!doc.getElementById('seed-shop').textContent.includes('Carnada'));doc.getElementById('semillas-futuras').open=true;refreshSeedShop();assert.equal(doc.getElementById('semillas-futuras').open,true);
+ const src=fs.readFileSync(root+'/public/game/ui.js','utf8'),start=src.indexOf('document.addEventListener("click", (ev) => {',src.indexOf('function initUI()')),end=src.indexOf('document.querySelectorAll(".gmi[data-panel]")',start);assert.ok(start>0&&end>start);vm.runInContext(src.slice(start,end),c);
+ let closed=null;c.closeOv=id=>{closed=id;doc.getElementById(id).classList.remove('show');};doc.getElementById('ov-banco').classList.add('show');doc.querySelector('#ov-banco [data-panel="ov-market"]').click();assert.equal(closed,'ov-banco');assert.equal(opened,'ov-market','un salto no deja el Banco tapando la granja');
+ c.G.level=20;c.G.plata=10000;c.produccionHayCupo=()=>true;c.GF.tuyo=()=>false;c.refreshProduccionGranja();assert.match(doc.getElementById('prod-motivo-tree').textContent,/emplazamiento/);assert.equal(doc.querySelector('[data-prod-buy="tree"]').disabled,true);
+ console.log('OK: ayuda Free/VIP viable, receta actual, plano exacto, vale tras tutorial, destino/pestaña sin compra y bloqueos visibles.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

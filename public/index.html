@@ -404,6 +404,8 @@
   /* EL CAPATAZ (14/8): burbuja de diálogo — la voz del juego */
 
   #tuto .k{color:#ffe9ac;font-weight:800;font-size:12px}
+  #tuto-ir{pointer-events:auto;flex-shrink:0;font-size:11px;padding:4px 7px;cursor:pointer}
+  .motivo-accion{display:block;font-size:11px;line-height:1.35;margin:4px 0;color:#ffe9ac;max-width:220px}.eleccion-nodo{display:flex;flex-direction:column;align-items:flex-start;flex:1 1 190px;padding:5px}
   #tuto b{color:#fff}
   #tuto .check{color:#8fd14f;font-size:16px;animation:tcheck .5s cubic-bezier(.34,1.56,.64,1)}
   /* (13/8: el resaltado .tutohl por recuadro se reemplazó por la flecha #tuto-flecha-ui) */
@@ -1452,7 +1454,7 @@
 
   <!-- HUD -->
   <div id="celeb" class="hidden"></div>
-  <div id="tuto" class="hidden"><span class="k">Objetivo</span><b id="tuto-txt"></b><span id="tuto-n"></span></div>
+  <div id="tuto" class="hidden"><span class="k">Objetivo</span><b id="tuto-txt"></b><span id="tuto-n"></span><button id="tuto-ir" class="ghost sm" type="button" hidden>Mostrar</button></div>
 
 
   <div class="hudbar" id="hudbar">
@@ -2101,6 +2103,7 @@
       <button class="gmi" title="Consultar la colección de peces." data-panel="ov-album"><span class="ic" aria-hidden="true">📖</span> Álbum <b class="key" id="gm-alb"></b></button>
       <button class="gmi" title="Consultar el pase de batalla." data-panel="ov-pass"><span class="ic" aria-hidden="true">⭐</span> Pase de Batalla</button>
       <div class="menu-seccion">Economía</div>
+      <button class="gmi" title="Comprar semillas y vender tus cultivos por Plata." data-panel="ov-market"><span class="ic" aria-hidden="true">🌱</span> Mercado de cultivos</button>
       <button class="gmi" title="Comprar objetos que producen Plata y cobrar su producción." data-panel="ov-reliquias"><span class="ic" aria-hidden="true">🌾</span> Objetos de Granja</button>
       <button class="gmi" title="Canjear Plata por Golden." data-panel="ov-banco"><span class="ic" aria-hidden="true">🏦</span> Banco</button>
       <button class="gmi" title="Comprar y vender con otros jugadores." data-panel="ov-p2p"><span class="ic" aria-hidden="true">🤝</span> Mercado de jugadores</button>

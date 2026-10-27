@@ -394,3 +394,14 @@ Antes de tocar un reloj, una curva, una recompensa o una puerta: leerlo. Antes d
 al diseñador: leerlo. Si una ley nueva se dicta en Discord o por voz, **se escribe acá el mismo
 día**, con la cita textual — no parafraseada, porque la mitad del valor de una ley está en cómo
 la dijo quien la dictó.
+
+### Orientación para la alfa · 27/10/2026
+
+El usuario autorizó completar los cinco puntos de revisión de jugabilidad: «Bien, todos esos puntos son válidos, así que avanza como puedas con cada uno hasta finalizar y que quede una mejor versión de la que es para la alfa».
+
+- El objetivo ofrece «Mostrar»: abre el panel y pestaña pertinentes o señala el destino en el terreno. Nunca compra, construye ni desplaza al personaje por el jugador. Respeta edición, colocación y gestos de cámara.
+- La guía debe proponer acciones realizables para Free o VIP y usar las recetas vigentes; los planos se identifican por su tipo exacto.
+- Los edificios tienen nombres breves en PC. El Mercado mantiene a mano los cultivos disponibles y agrupa los futuros, suministros de emergencia y bolsas en secciones desplegables.
+- Después del tutorial, la brújula recuerda planos, nodos de expansión pendientes y la siguiente mejora, con destino concreto. Elegir la especialidad sigue siendo decisión del jugador.
+- Los bloqueos de producción, mejoras y compras muestran su causa real. El emplazamiento se comprueba con la misma función que utiliza la compra.
+- Esta revisión no cambia costes, recompensas, energía, tiempos ni formato de guardado. Pesca, móvil, nuevas maderas y USDT conservan sus condiciones previas.

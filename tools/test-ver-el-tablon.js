@@ -24,9 +24,11 @@ const abiertos = [];
 /* se extrae SOLO el bloque de la delegación y se corre contra este DOM, con un openOv de mentira */
 const ini = UI.indexOf('document.addEventListener("click", (ev) => {'), fin = UI.indexOf("});", ini) + 3;
 const bloque = UI.slice(ini, fin);
-new Function("document", "openOv", bloque)(document, (id) => abiertos.push(id));
+const cerrados = [];
+new Function("document", "openOv", "closeOv", bloque)(document, (id) => abiertos.push(id), (id) => cerrados.push(id));
 document.querySelector('[data-panel="ov-pedidos"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
 ok("el clic en « Ver el tablón » abre ov-pedidos", abiertos.join() === "ov-pedidos", abiertos.join() || "(nada)");
+ok("cierra el panel de origen al navegar", cerrados.join() === "ov-objetivos");
 abiertos.length = 0;
 document.querySelector(".gmi").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
 ok("los del menú NO pasan por acá (tienen su propio cableado y el pliegue del menú)", abiertos.length === 0);

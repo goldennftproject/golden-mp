@@ -65,7 +65,8 @@ console.log("  " + FILES.length + " archivos  ·  " + Math.round(crudo / 1024) +
   // 26/10: +2 KB para tiendita y mejoras materiales de granja con confirmación.
   // 27/10: +2 KB para eficiencia God Hand, comisión mejorada y aportes parciales confirmados.
   // Alfa: +2 KB para informe local y medición de guardados, sin nuevas solicitudes periódicas.
-  const TOPE_KB = 360;
+  // 27/10: orientación, señalización y motivos de bloqueo suman unos pocos KB gzip; sin nuevos assets ni librerías.
+  const TOPE_KB = 368;
   ok("lo que viaja no pasa del tope", comprimido / 1024 < TOPE_KB,
     Math.round(comprimido / 1024) + " KB de " + TOPE_KB + " KB");
   ok("y comprimir sigue valiendo la pena (≥ 2,5×)", pelado / comprimido >= 2.5,

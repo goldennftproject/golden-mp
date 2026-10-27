@@ -2646,7 +2646,7 @@ class FarmScene extends Phaser.Scene {
   tickCamaraGuia(t) {
     const p = this._tutoCamPending;
     if (!p || t < p.notBefore) return;
-    const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+    const st = p.manual && typeof guiaActiva==='function' ? guiaActiva() : ((typeof tutoActivo === "function") ? tutoActivo() : null);
     if (!st || !GF.CAM_PAN || this._tutoCamManualKey === p.key) { this._tutoCamPending = null; return; }
     // Un panel, edición o un arrastre ya iniciado tienen prioridad. Al cerrar el panel el
     // pendiente se resuelve solo, sin necesitar otro cambio de paso del tutorial.
@@ -2694,6 +2694,32 @@ class FarmScene extends Phaser.Scene {
   // TINTE DE LA VETA (9/8): el color va sobre la roca ENTERA, no solo sobre las pepitas.
   // Es lo único que se lee a 38 px. Convive con el gris de "bloqueado / sin construir",
   // que siempre gana. Hay que llamarlo cada vez que algo hace clearTint() sobre el nodo.
+  mostrarDestinoGuia() {
+    this.updateTutoArrow();const g=this.guiaTarget;if(!g)return false;
+    this.cancelarCamaraGuia(true);
+    this._tutoCamManualKey=null;this._tutoCamDoneKey=null;
+    const st=typeof guiaActiva==='function'?guiaActiva():null;
+    this._tutoCamPending={...g,key:(st?.id||'tuto')+':'+Math.round(g.x)+':'+Math.round(g.y)+':'+Math.round(g.bottomY),manual:true,notBefore:nowMs()};
+    if(this._guiaMarca)this._guiaMarca.destroy();
+    const alto=Math.max(GF.TILE,g.bottomY-g.y),marca=this.add.rectangle(g.x,g.y+alto/2,GF.TILE*2,alto,0,0).setStrokeStyle(3,0xffdf7e).setDepth(99980);
+    this._guiaMarca=marca;this.tweens.add({targets:marca,alpha:.25,duration:380,yoyo:true,repeat:2,onComplete:()=>{marca.destroy();if(this._guiaMarca===marca)this._guiaMarca=null;}});
+    return true;
+  }
+
+  rotulosEdificios() {
+    if(typeof window!=='undefined'&&window.innerWidth<=640){for(const o of this.objs||[])o._rotulo?.setVisible(false);return;}
+    const nombres={barn:'Granero',market:'Mercado',store:'Herrería',horno:'Horno',cocina:'Cocina',cofre_diario:G.kitReclamado?'Baúl':'Baúl · kit',tablon_pedidos:'Pedidos'};
+    for(const o of this.objs||[]){
+      if(!nombres[o.type]||!o.sprite)continue;
+      const visible=!o.oculto&&o.sprite.visible!==false&&!GF.editMode;
+      if(!visible){o._rotulo?.setVisible(false);continue;}
+      const obra=BUILD_DEF[o.type]&&!G.built?.[o.type],texto=(obra?'🔨 ':'')+nombres[o.type];
+      if(!o._rotulo)o._rotulo=this.add.text(0,0,texto,{fontFamily:'system-ui',fontSize:'11px',fontStyle:'bold',color:'#fff1c9',backgroundColor:'#342414cc',padding:{x:4,y:2}}).setOrigin(.5,0).setDepth(99970);
+      if(o._rotuloTexto!==texto){o._rotulo.setText(texto);o._rotuloTexto=texto;}
+      o._rotulo.setPosition(o.sprite.x,o.sprite.y+3).setVisible(true);
+    }
+  }
+
   acabadosEdificios() {
     for(const o of this.objs||[]){
       if(o.type!=='barn'&&o.type!=='market')continue;
@@ -5777,6 +5803,7 @@ class FarmScene extends Phaser.Scene {
   updateReal(time, deltaMs) {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
     this.acabadosEdificios();
+    this.rotulosEdificios();
     this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
     /* Las teclas de Phaser siguen bajadas mientras se escribe en un campo HTML. No se apaga el
