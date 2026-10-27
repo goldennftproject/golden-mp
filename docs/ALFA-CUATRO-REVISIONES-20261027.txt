@@ -1,0 +1,28 @@
+CIERRE DE LAS CUATRO REVISIONES PREALFA — 27/10/2026
+
+Resultado
+304 pruebas automáticas superadas con las fuentes estables durante la ejecución. Veintiuna comprobaciones de geometría de paneles en Chrome: siete paneles en 1024x600, 1920x1080 y 1280x480, todos con marco y cierre visibles y sin desbordamiento horizontal.
+
+1. Recorrido inicial
+En una cuenta ficticia con servidor local en memoria se abre el baúl, se reclaman las herramientas, se compran tres semillas y se plantan tres papas desde la interfaz real. Se recarga la página después del guardado: conserva kit, gasto de semillas, experiencia, tutorial y fechas de cultivo. Las tres papas maduran y se cosechan; el objetivo pasa a vender.
+La continuación económica se comprueba mediante test-alfa-primer-ciclo y test-alfa-progreso-continuo: venta, Herrería, Horno, Cocina, espada, aportes parciales, siete días simulados, expansión y nodo elegido, con guardados aceptados por el handler real ejecutado localmente. Los relojes se adelantan en esta simulación; no equivale a medir quince minutos de un jugador ni la diversión.
+El adaptador visual inicial no implementa el comprador compartido; su estado Cotizando no se contabiliza como fallo de producción ni como una venta confirmada desde el navegador. Las ventas compartidas tienen sus pruebas de cliente/handler independientes, incluidas en la suite.
+
+2. Situaciones de bloqueo
+Se verifican ayudas sin semillas o Plata, falta de herramientas/materiales, energía, cupos productivos, terreno y bolsa llena. Se corrige una ayuda que pedía cosechar para ganar Plata pero señalaba parcelas vacías; ahora distingue cosecha lista y cultivo creciendo.
+Cocina anticipa la falta de espacio o energía en el botón. Al recuperar energía vuelve a habilitarse con la ventana abierta, mediante actualización local de interfaz y sin escrituras periódicas. No cambian el coste ni las condiciones reales de cocinar.
+
+3. Interfaz y navegación
+Banco, VIP, Cobertizo, Equipo, Configuración, Mercado y Cocina se miden en las tres resoluciones indicadas. Se inspeccionan visualmente casos representativos, incluidos Cocina sin energía a 1280x480 y Banco/VIP a 1024x600.
+Mostrar selecciona la receta objetivo antes de señalar Cocinar, sin preparar el plato. Después de cambiar de pestaña vuelve a localizar el control nuevo para desplazar y enfocar el elemento conectado al documento.
+A petición del diseñador, el sistema se llama Comercio entre jugadores. La mejora se titula +1 anuncio de venta al día, explica su permanencia y conserva precio de 10 Golden y cupos: 2 sin VIP / 11 con VIP al poseer la mejora. Mis anuncios identifica las publicaciones del jugador.
+
+4. Regreso y guardado
+La cuenta ficticia conserva cultivo, herramientas y progreso tras recarga. Dos lecturas separadas durante inactividad muestran la misma versión del guardado y los mismos vencimientos: los relojes no necesitan escrituras repetidas para avanzar.
+La suite comprueba red colgada, reconexión, respuesta perdida/tardía, recibos repetidos, ACK incompleto, cambio de cuenta, aportes parciales y persistencia de nodos/expansiones. No se modifican guardado, F5 ni autenticación en esta entrega.
+
+Correcciones protegidas
+Se añade test-alfa-bloqueos-visuales.js con ocho casos de guía, energía, bolsa, receta, reactivación, foco y claridad de comercio. El arnés aislado de teclado de Cocina recibe las dos dependencias de consulta nuevas, conservando sus aserciones.
+
+Alcance de aceptación
+Revisión del juego en PC y comprobaciones locales completadas. Las partidas reales, la diversión y la capacidad concurrente de Render/Supabase Free siguen siendo mediciones de la alfa abierta; estas pruebas no garantizan concurrencia de producción. No se han reiniciado cuentas ni datos reales y USDT sigue desactivado.

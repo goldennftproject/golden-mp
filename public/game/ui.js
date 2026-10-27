@@ -2696,7 +2696,7 @@ function refreshVip() {
     ['Cocina, nodos y expansiones','Tiempo normal','10% menos de tiempo'],
     ['Capacidad productiva','Capacidad base + expansiones','25% extra (mínimo 2 cupos)'],
     ['Fabricación','De uno en uno','En lotes'],
-    ['Publicaciones P2P','Una por día UTC','Diez por día UTC'],
+    ['Anuncios de venta','Uno por día UTC','Diez por día UTC'],
     ['Comisión P2P nueva',G.infraestructura?.mercado?'8%':'10%',G.infraestructura?.mercado?'5%':'7%'],
     ['Objetos de Granja','Un objeto activo','Sin límite; admite duplicados'],
     ['Visitas y semillas','No incluidas','Resumen de granjas; hasta 3 semillas/día']
@@ -3900,8 +3900,12 @@ function refreshCookingV2() {
   /* 26/8 — el botón NOMBRA lo que falta. Decía « Faltan ingredientes »: cierto, inútil, y por la
      regla 9 casi peor que callarse, porque contesta sin informar. Suren se quedó clavado en el
      paso del Estofado —la flecha se lo señalaba y el botón no le decía que le faltaba una papa. */
-  else d += '<button class="green sm" ' + (canCook(_ckSel) ? "" : "disabled") + ' data-ckcook="' + _ckSel + '" data-cook="' + _ckSel + '">' +
-    (canCook(_ckSel) ? "Cocinar" : ((typeof cookFaltaTxt === "function" && cookFaltaTxt(_ckSel)) || "Faltan ingredientes")) + '</button>';
+  else {
+    const motivo = !canCook(_ckSel) ? ((typeof cookFaltaTxt === "function" && cookFaltaTxt(_ckSel)) || "Faltan ingredientes")
+      : !roomForDish(_ckSel) ? "Bolsa llena · libera espacio"
+      : !energiaGranjaPuede('cook') ? "Sin energía · se recupera sola" : "";
+    d += '<button class="green sm" ' + (motivo ? 'disabled' : '') + ' data-ckcook="' + _ckSel + '" data-cook="' + _ckSel + '">' + (motivo || "Cocinar") + '</button>';
+  }
   if (typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE) {
     if (own > 0 && r.plata) d += '<button class="sm" data-cksell="' + _ckSel + '">Vender · ' + fmt(vPlata) + '</button>';
     if (own > 0 && r.goldenP && lvl >= 8) d += '<button class="sm" data-cksellg="' + _ckSel + '">Vender · ' + r.goldenP + ' $G</button>';
@@ -3912,7 +3916,7 @@ function refreshCookingV2() {
   det.querySelectorAll("[data-cksell]").forEach(b => b.onclick = () => sellDish(b.dataset.cksell, false));
   det.querySelectorAll("[data-cksellg]").forEach(b => b.onclick = () => sellDish(b.dataset.cksellg, true));
   /* el reloj de las ollas se mueve solo mientras la ventana esté abierta */
-  if (lista.length && !window._ckTick) window._ckTick = setTimeout(() => { window._ckTick = null; if (isOpen("ov-cocina")) refreshCooking(); }, 1000);
+  if ((lista.length || !locked && canCook(_ckSel) && !energiaGranjaPuede('cook')) && !window._ckTick) window._ckTick = setTimeout(() => { window._ckTick = null; if (isOpen("ov-cocina")) refreshCooking(); }, 1000);
 }
 
 
@@ -3932,10 +3936,12 @@ function mostrarObjetivo(){
   if(GF.scene&&GF.scene!=='farm'){openOv('ov-mapa');return;}
   if(st.panel){
     openOv(st.panel);
+    if(st.panel==='ov-cocina'&&st.receta&&st.ui?.startsWith('[data-cook=')&&typeof ckElegir==='function')ckElegir(st.receta);
     const cont=$(st.panel),el=st.ui&&cont?.querySelector(st.ui),pane=el?.closest('.shoppane'),forge=el?.closest('[id^="forge-pane-"]');
     if(pane)cont.querySelector('.shoptab[data-shop="'+pane.id.replace('shop-','')+'"]')?.click();
     if(forge)cont.querySelector('.forgetab[data-forge="'+forge.id.replace('forge-pane-','')+'"]')?.click();
-    if(el){for(let p=el.parentElement;p&&p!==cont;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;if(el.tagName==='SUMMARY'&&!el.parentElement.open)el.click();el.scrollIntoView({block:'nearest'});if(!el.disabled)el.focus({preventScroll:true});}
+    const accion=st.ui&&cont?.querySelector(st.ui);
+    if(accion){for(let p=accion.parentElement;p&&p!==cont;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;if(accion.tagName==='SUMMARY'&&!accion.parentElement.open)accion.click();accion.scrollIntoView({block:'nearest'});if(!accion.disabled)accion.focus({preventScroll:true});}
     tutoHighlight();return;
   }
   document.querySelectorAll('.ov.show').forEach(el=>closeOv(el.id));
@@ -4912,14 +4918,14 @@ function infraHtml(id){
  const coste=tienda?'10 Golden':d?Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · '):'';
  const puede=!hecha&&(tienda?(G.golden||0)>=INFRA_TIENDA_GOLDEN:G.level>=d.nivel&&Object.entries(d.coste).every(([k,q])=>(G.res[k]||0)>=q));
  const motivo=hecha?'':tienda?((G.golden||0)<INFRA_TIENDA_GOLDEN?'Faltan '+fmtGolden(INFRA_TIENDA_GOLDEN-(G.golden||0))+' Golden':''):G.level<d.nivel?'Requiere granja nivel '+d.nivel:Object.entries(d.coste).filter(([k,q])=>(G.res[k]||0)<q).map(([k,q])=>'Faltan '+(q-(G.res[k]||0))+' '+RES_LABEL[k]).join(' · ');
- return '<div class="secc">'+(tienda?'TIENDITA · MERCADO P2P':'MEJORAR LA GRANJA')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(tienda?'🏪 +1 publicación por día UTC':'🏡 Nivel de mejora '+n+'/3 · +'+infraBono()+'% XP')+'</div><div class="fds">'+(tienda?'Permanente. Sin VIP: 2/día · VIP: 11/día. Cancelar no devuelve cupo.':d?'Siguiente: +'+d.bono+'% XP productiva total · requiere granja nivel '+d.nivel+'. Sólo XP futura de cultivar, talar y minar.':'Bono máximo: +5% de XP productiva futura.')+'</div>'+(!hecha?'<div class="fds">Coste: '+coste+'</div>':'')+(motivo?'<div class="falta-receta">'+escapeHtml(motivo)+'</div>':'')+'</div><div class="fbtns"><button title="'+escapeHtml(motivo||'Mejora disponible')+'" class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Completada':tienda?'Comprar':'Mejorar')+'</button></div></div>';
+ return '<div class="secc">'+(tienda?'TIENDITA · COMERCIO ENTRE JUGADORES':'MEJORAR LA GRANJA')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(tienda?'🏪 +1 anuncio de venta al día':'🏡 Nivel de mejora '+n+'/3 · +'+infraBono()+'% XP')+'</div><div class="fds">'+(tienda?'Permanente · Comercio entre jugadores. Sin VIP: 2 anuncios/día · VIP: 11 anuncios/día. Cancelar no devuelve cupo.':d?'Siguiente: +'+d.bono+'% XP productiva total · requiere granja nivel '+d.nivel+'. Sólo XP futura de cultivar, talar y minar.':'Bono máximo: +5% de XP productiva futura.')+'</div>'+(!hecha?'<div class="fds">Coste: '+coste+'</div>':'')+(motivo?'<div class="falta-receta">'+escapeHtml(motivo)+'</div>':'')+'</div><div class="fbtns"><button title="'+escapeHtml(motivo||'Mejora disponible')+'" class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Completada':tienda?'Comprar':'Mejorar')+'</button></div></div>';
 }
 function infraEnlazar(box){
  box.querySelectorAll('[data-infra]').forEach(b=>b.onclick=()=>{
  const id=b.dataset.infra;
  if(id==='godhand'||id==='mercado'){askConfirm((id==='godhand'?'Reducir un 10% la tarifa de God Hand':'Reducir 2 puntos la comisión de nuevas publicaciones P2P')+' por '+infraCosteOpcional(id)+'. Compra única, sin energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Mejorar',yesClass:'gold',no:'Cancelar'});return;}
  const d=INFRA_GRANJA[infraNivel()],coste=id==='tienda'?'10 Golden':Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · ');
- askConfirm((id==='tienda'?'Comprar +1 publicación diaria permanente':'Mejorar granja a +'+d.bono+'% de XP productiva futura')+' por '+coste+'. No consume energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Confirmar',yesClass:'gold',no:'Cancelar'});
+ askConfirm((id==='tienda'?'Comprar +1 anuncio de venta al día, permanente':'Mejorar granja a +'+d.bono+'% de XP productiva futura')+' por '+coste+'. No consume energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Confirmar',yesClass:'gold',no:'Cancelar'});
  });
 }
 function refreshNft() {
@@ -6877,7 +6883,7 @@ async function refreshP2P() {
       '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
   }
   if (p2pTab === "vender") {
-    h += '<div class="info">Comisión para nuevas publicaciones: '+marketFee()+'%. Tu límite: '+infraCupoP2P()+' publicaciones por día UTC. La tiendita en Mercado → Mejoras agrega una publicación permanente.</div>';
+    h += '<div class="info">Comisión para nuevos anuncios: '+marketFee()+'%. Tu límite: '+infraCupoP2P()+' anuncios al día (reinicio a las 00:00 UTC). La tiendita en Mercado → Mejoras añade un anuncio de venta diario de forma permanente.</div>';
     h += '<div class="fds">Elige qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
     const ops = [];
     CROP_ORDER.forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });
@@ -6907,7 +6913,7 @@ async function refreshP2P() {
         '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + marketFee(r) + '% de comisión)</div></div>' +
         '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';
     });
-    h += '<div class="secc">Publicaciones activas: ' + activas.length + (' · '+(vipVigente()?'VIP':'Sin VIP')+': '+infraCupoP2P()+' publicaciones por día UTC') + '</div>';
+    h += '<div class="secc">Anuncios activos: ' + activas.length + (' · '+(vipVigente()?'VIP':'Sin VIP')+': '+infraCupoP2P()+' anuncios por día UTC') + '</div>';
     if (!activas.length) h += '<div class="fds">No tienes nada publicado.</div>';
     activas.forEach(r => {
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +

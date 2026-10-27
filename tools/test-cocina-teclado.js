@@ -30,7 +30,7 @@ function cocinaDom() {
     cookLevel: () => 1, cookList: () => [], cookSlots: () => 0, nowMs: () => 0, edif2: () => false,
     fmt: n => String(n), fmtSecs: n => String(n) + " s", fmtCorto: n => String(n), cookEsperando: () => false,
     dishPrice: () => 0, cookPot: () => 1, cocinaFactor: () => 1, dishDesc: () => "", cookFree: () => 1,
-    canCook: () => true, cookFaltaTxt: () => "", isOpen: () => false, cocinaRecoger() {}, cook() {}, sellDish() {},
+    canCook: () => true, roomForDish: () => true, energiaGranjaPuede: () => true, cookFaltaTxt: () => "", isOpen: () => false, cocinaRecoger() {}, cook() {}, sellDish() {},
     setTimeout: () => 0, escapeHtml,
   };
   vm.createContext(ctx);

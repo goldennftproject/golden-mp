@@ -995,11 +995,11 @@ function tutoSubPlata(prefijo, meta) {
   }
   const plots = Array.isArray(G.plots) ? G.plots : [];
   const listos = plots.filter(p => p && p.state === "ready").length;
-  if (listos) return { plata: true, meta: meta || 0, txt: prefijo + "cosecha tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
+  if (listos) return { plata: true, meta: meta || 0, guiaPlot: "ready", txt: prefijo + "cosecha tus " + listos + " cultivo" + (listos > 1 ? "s" : "") + " listo" + (listos > 1 ? "s" : ""),
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   // Fixes.docx 14/8 #3: comprar más semillas sigue permitido en estos eslabones — antes,
   // al comprar UNA el sub saltaba a "plantá" y bloqueaba el resto de la tanda (de a 1, feo)
-  if (plots.some(p => p && p.state === "growing")) return { plata: true, meta: meta || 0, txt: prefijo + "tus cultivos están creciendo — cosechalos apenas estén",
+  if (plots.some(p => p && p.state === "growing")) return { plata: true, meta: meta || 0, guiaPlot: "growing", txt: prefijo + "tus cultivos están creciendo — recógelos cuando estén listos",
     target: "plot", permite: ["plant", "harvest", "sell", "buyseed", "plotunlock"] };
   const semillas = Object.keys(G.seeds || {}).reduce((a, k) => a + Math.floor(G.seeds[k] || 0), 0);
   if (semillas) return { plata: true, meta: meta || 0, txt: prefijo + "planta tus " + semillas + " semilla" + (semillas > 1 ? "s" : ""),
@@ -1031,7 +1031,7 @@ function tutoSubPlata(prefijo, meta) {
   const diario=typeof dailyState==='function'?dailyState():null;
   if(diario?.claimable&&[2,7].includes(diario.day))return {plata:true,meta:meta||0,txt:prefijo+'reclama '+(diario.day===7?'Plata':'semillas')+' en Premio diario',panel:'ov-paquete'};
   const materiales=Object.keys(G.res||{}).some(k=>!CROP_DEF[k]&&(G.res[k]||0)>=1);
-  return { plata: true, meta: meta || 0, txt: prefijo + (materiales?'ofrece materiales en el Mercado de jugadores; la venta depende de otro jugador':'sin semillas ni Plata: revisa las metas con recompensa en Logros'),
+  return { plata: true, meta: meta || 0, txt: prefijo + (materiales?'ofrece materiales en el Comercio entre jugadores; la venta depende de otro jugador':'sin semillas ni Plata: revisa las metas con recompensa en Logros'),
     panel: materiales?'ov-p2p':'ov-logros', permite: ["plant", "harvest", "sell", "buyseed", "plotunlock", "chop", "mine"] };
 }
 /* ============ QUÉ HACER MIENTRAS SE ESPERA (19/8, dirección) =======================
@@ -4268,8 +4268,8 @@ function mkPoner(kind, key, n, payload) {
 function mkPendAdd(kind, key, n, payload) {
   G.mkPend = G.mkPend || [];
   G.mkPend.push({ kind, item: key, qty: n, payload: payload || null });
-  toast("Sin lugar — quedó pendiente en el Mercado de jugadores");
-  log("No entró en la bolsa: " + n + " × " + mkNombre(kind, key) + ". Haz lugar y reclamalo desde el Mercado de jugadores.", "bad");
+  toast("Sin lugar — quedó pendiente en el Comercio entre jugadores");
+  log("No entró en la bolsa: " + n + " × " + mkNombre(kind, key) + ". Haz lugar y reclamalo desde el Comercio entre jugadores.", "bad");
 }
 function mkPendCount() { return (G.mkPend || []).length; }
 function mkPendCobrar() {
@@ -4277,7 +4277,7 @@ function mkPendCobrar() {
   const quedan = []; let dados = 0;
   for (const p of G.mkPend) { if (mkPoner(p.kind, p.item, p.qty, p.payload)) dados++; else quedan.push(p); }
   G.mkPend = quedan;
-  if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s) del Mercado de jugadores.", "good"); toast("+" + dados + " entrega(s)"); }
+  if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s) del Comercio entre jugadores.", "good"); toast("+" + dados + " entrega(s)"); }
   else toast("Sigue sin entrar — libera espacio en la bolsa");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshP2P === "function" && isOpen("ov-p2p")) refreshP2P();
