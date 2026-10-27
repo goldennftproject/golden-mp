@@ -175,8 +175,9 @@ app.use(express.static(path.join(__dirname, "..", "public"), {
 const httpServer = http.createServer(app);
 const gameServer = new Server({ server: httpServer });
 
-// Registra la sala de la zona compartida
-gameServer.define("world", WorldRoom);
+// Plaza fuera de esta versión. Reactivar junto a GF.PLAZA_HABILITADA en el cliente.
+const PLAZA_HABILITADA = false;
+if (PLAZA_HABILITADA) gameServer.define("world", WorldRoom);
 
 gameServer.listen(PORT,process.env.HOST||undefined).then(() => {
   console.log("========================================");

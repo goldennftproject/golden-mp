@@ -3,6 +3,7 @@ class PlazaScene extends Phaser.Scene {
   constructor() { super("plaza"); }
 
   create() {
+    if (!GF.PLAZA_HABILITADA) { this.scene.start("farm"); return; }
     const W = 1280, H = 800, T = GF.TILE;
     this.pW = W; this.pH = H;
     // Fixes.docx 14/8 #5: la plaza no se anunciaba — el Mapa seguía diciendo "estás en tu granja"

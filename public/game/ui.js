@@ -177,6 +177,7 @@ function cerrarCuerpoPanelPc() {
 
 // FUNDIDO A NEGRO al cambiar de escena (granja <-> Zona Negra <-> plaza). Antes era un corte seco.
 function irAEscena(sc, destino) {
+  if (destino === "plaza" && !GF.PLAZA_HABILITADA) return;
   /* 8/9: cruzar el portal cambia QUÉ mide el flujo (la bolsa de la granja o el contenedor), así
      que la foto vieja no se puede restar contra la nueva: la resta de dos universos distintos
      escupiría el inventario entero en chips. Se olvida y se vuelve a tomar del otro lado — el
@@ -4466,7 +4467,7 @@ function refreshMapa() {
   const espera = (typeof zonaCdLeft === "function") ? zonaCdLeft() : 0;
   const zonas = [
     { id: "farm",   nom: "Tu granja",   ds: "Cultivos, animales, edificios y la laguna.", ir: true },
-    { id: "plaza",  nom: "La plaza",    ds: "El hub con los demás jugadores. Chat y encuentro.", ir: true },
+    ...(GF.PLAZA_HABILITADA ? [{ id: "plaza", nom: "La plaza", ds: "El hub con los demás jugadores. Chat y encuentro.", ir: true }] : []),
   ];
   let h = zonas.map(z => {
     const estoy = z.id === aca;
@@ -4495,6 +4496,7 @@ function refreshMapa() {
   box.querySelectorAll("[data-ir]").forEach(b => b.onclick = () => irAZona(b.dataset.ir));
 }
 function irAZona(id) {
+  if (id === "plaza" && !GF.PLAZA_HABILITADA) return;
   closeOv("ov-mapa");
   if (id === "forest") { toast("Entra por el portal de la granja"); return; }
   const actual = (window.GF && GF.scene) || "farm";
