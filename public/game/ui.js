@@ -5672,7 +5672,7 @@ function refreshConfig() {
   const compras=$('cfg-alfa-compras');if(compras)compras.onclick=async()=>{
     const box=$('cfg-alfa-compras-lista');compras.disabled=true;box.textContent='Consultando el registro del servidor…';
     const nombres={vip:'VIP: 30 días desde el lanzamiento',godhand:'God Hand','infra.tienda':'Tiendita','infra.granja':'Mejora de granja','infra.godhand':'Eficiencia de God Hand','infra.mercado':'Mejora del mercado'};
-    try{const r=await alfaCompras();box.textContent=r.compras.length?r.compras.map(e=>{const [tipo,id]=e.sku.split('.');return nombres[e.sku]||((tipo==='objeto'?ARTEFACTO_DEF[id]?.label:tipo==='adorno'?DECO_DEF[id]?.label:tipo==='pasiva'||tipo==='mejora'?NFT_DEF[id]?.label:null)||'Mejora')+(tipo==='mejora'?' mejorada':'')+(e.units>1?(tipo==='infra'?' · nivel ':' ×')+e.units:'');}).join(' · '):'Todavía no hay compras permanentes conservadas en esta cuenta.';}
+    try{const r=await alfaCompras();box.textContent=r.compras.length?r.compras.map(e=>{const [tipo,id]=e.sku.split('.');return (nombres[e.sku]||(tipo==='objeto'?ARTEFACTO_DEF[id]?.label:tipo==='adorno'?DECO_DEF[id]?.label:tipo==='pasiva'||tipo==='mejora'?NFT_DEF[id]?.label:null)||'Mejora')+(tipo==='mejora'?' mejorada':'')+(e.units>1?(tipo==='infra'?' · nivel ':' ×')+e.units:'');}).join(' · '):'Todavía no hay compras permanentes conservadas en esta cuenta.';}
     catch(e){box.textContent='No se pudo comprobar el registro. Reintentá con conexión; tus compras no se borraron.';}finally{compras.disabled=false;}
   };
   /* 22/8 — LA CUENTA: estado real (anónima / vinculada) y los dos gestos: guardar la granja
