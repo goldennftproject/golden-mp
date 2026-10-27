@@ -39,6 +39,25 @@ async function visitaConsultar(accion,destino){
     if(UID!==uid)return null;if(error||!data?.ok){toast('No se pudo abrir la visita; comprobá tu VIP y conexión');return null;}return data;
   }catch{toast('No se pudo consultar la visita');return null;}
 }
+let RECUPERANDO_GUARDADO=false;
+async function recuperarGuardadoServidor(){
+ const uid=UID;if(RECUPERANDO_GUARDADO||!sb||!uid||!CARGA_OK||SOLO_LOCAL||!SAVE_CONFLICTOS.has(uid))return false;
+ RECUPERANDO_GUARDADO=true;const desbloquear=mercadoBloquearPantalla('Recuperando el guardado del servidor…');
+ try{
+   if(MERCADO_EN_CURSO)await MERCADO_EN_CURSO;if(SAVE_EN_CURSO)await SAVE_EN_CURSO;
+   if(UID!==uid)return false;
+   // Si el respaldo no cabe, no sustituir la partida actual.
+   localStorage.setItem('gf-conflicto-respaldo-'+SB_REF+'-'+uid+'-'+Date.now(),JSON.stringify({cuenta:uid,data:snapshot(),base:SAVE_BASES.get(uid),pendiente:localStorage.getItem('gf-venta-pendiente-'+SB_REF+'-'+uid)}));
+   const {data,error}=await conTope(sb.from('farms').select('data,updated_at').eq('user_id',uid).maybeSingle(),15000,'recuperar guardado');
+   if(UID!==uid||error||!data?.data||typeof data.data!=='object'||!data.updated_at)return false;
+   CARGA_OK=false;
+   try{hydrate(data.data);}finally{CARGA_OK=true;}
+   SAVE_BASES.set(uid,data.updated_at);mercadoLimpiarPendiente(uid);SAVE_CONFLICTOS.delete(uid);SAVE_OTRA=false;copiaGuardar(snapshot());lastSavedKey=snapKey();
+   refreshHud();syncSlots();if(window.FARM?.scene?.isActive?.()&&typeof reiniciarGranjaSuave==='function')reiniciarGranjaSuave();
+   toast('Guardado del servidor recuperado. El respaldo del conflicto se conserva en este navegador.');return true;
+ }catch(e){toast('No se pudo recuperar; se conserva la partida y el bloqueo de seguridad.');return false;}
+ finally{RECUPERANDO_GUARDADO=false;desbloquear();}
+}
 async function economiaSolicitar(detalle) {
   if(MERCADO_EN_CURSO || !sb || !UID || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(UID)){toast('Necesitás conexión y guardado sincronizado');return;}
   const uid=UID, desbloquear=mercadoBloquearPantalla('Confirmando la operación del objeto…');
@@ -65,7 +84,7 @@ async function economiaSolicitar(detalle) {
       toast(detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recogé los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata');
       return data;
     }catch(e){toast('No se pudo completar la operación; comprobá la conexión');}
-  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();});
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();});
   return MERCADO_EN_CURSO;
 }
 function mercadoGlobalRecurso(res) {

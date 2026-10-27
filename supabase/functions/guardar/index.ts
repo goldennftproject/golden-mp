@@ -130,11 +130,22 @@ const INFRA_GRANJA = [
  {nivel:10,bono:3,coste:{madera:150,piedra:150,hierro:5}},
  {nivel:15,bono:5,coste:{madera:300,piedra:300,hierro:10}}
 ];
+const INFRA_OPCIONALES = {
+ godhand:{plata:50000,res:{}},
+ mercado:{plata:50000,res:{madera:100,piedra:100,hierro:5}}
+};
 const INFRA_TIENDA_GOLDEN = 10;
 function infraOperacion(prev,id,op){
  const data=JSON.parse(JSON.stringify(prev)),b=data.infraestructura||{v:1,tienda:false,granja:0,ops:[]};
  if(b.ops.some(x=>x.op===op))return {data,repetido:true};
- if(id==='tienda'){
+ if(id==='godhand'||id==='mercado'){
+   if(b[id])return {error:'Esta mejora ya está comprada'};
+   if(id==='godhand'&&!data.godHand)return {error:'Primero necesitás tener God Hand'};
+   const d=INFRA_OPCIONALES[id];
+   if(!Number.isFinite(data.plata)||data.plata<d.plata)return {error:'Necesitás '+d.plata+' Plata'};
+   for(const [k,q] of Object.entries(d.res))if(num(data.res?.[k])<q)return {error:'Faltan materiales: '+k};
+   data.plata-=d.plata;for(const [k,q] of Object.entries(d.res))data.res[k]-=q;b[id]=true;
+ }else if(id==='tienda'){
    if(b.tienda)return {error:'La tiendita ya está comprada'};
    if(!Number.isFinite(data.golden)||data.golden<INFRA_TIENDA_GOLDEN)return {error:'Necesitás 10 Golden'};
    data.golden-=INFRA_TIENDA_GOLDEN;b.tienda=true;

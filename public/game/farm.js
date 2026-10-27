@@ -322,6 +322,7 @@ class FarmScene extends Phaser.Scene {
         readyAt: (svn && svn.readyAt) || 0, halfAt: (svn && svn.halfAt) || 0, cdIni: (svn && svn.cdIni) || 0,
         lockIdx, locked, oculto };
     });
+    this.acabadosEdificios();
     this.objs.forEach(o => this.tintarNodo(o));   // cada veta con el color de su mineral (9/8)
     // 18/8: y la textura QUE LE TOCA POR SU ENFRIAMIENTO. Sin esto el sprite nace entero aunque el
     // nodo esté a medio regenerar, que es el fallo que se veía al volver de la Zona Negra o tras
@@ -1654,8 +1655,8 @@ class FarmScene extends Phaser.Scene {
     if (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type])) {
       if (o.oculto) return;
       const faltantes=obraFalta(o.type),aporte=faltantes.map(([r,n])=>[r,Math.min(n,r==='golden'?G.golden:Math.floor(G.res[r]||0))]).filter(([,n])=>n>0);
-      const confirmar=()=>{
-      const completo = (typeof obraDepositar === "function") && obraDepositar(o.type);
+      const confirmar=(cantidades)=>{
+      const completo = (typeof obraDepositar === "function") && obraDepositar(o.type,cantidades);
       this.letreroObra(o);   // el cartel refleja lo depositado
       if (completo) {
         obraConstruir(o.type);
@@ -1670,6 +1671,7 @@ class FarmScene extends Phaser.Scene {
       }
       };
       if(!aporte.length){confirmar();return;}
+      if(typeof pedirAporteObra==='function'){pedirAporteObra(o.type,confirmar);return;}
       const detalle=aporte.map(([r,n])=>n+' '+(r==='golden'?'Golden':RES_LABEL[r]||r)).join(' · ');
       askConfirm('Vas a aportar '+detalle+' a '+BUILD_DEF[o.type].label+'. ¿Confirmás?',confirmar,{title:'Aportar materiales',yes:'Aportar',no:'Cancelar'});
       return;
@@ -2692,6 +2694,25 @@ class FarmScene extends Phaser.Scene {
   // TINTE DE LA VETA (9/8): el color va sobre la roca ENTERA, no solo sobre las pepitas.
   // Es lo único que se lee a 38 px. Convive con el gris de "bloqueado / sin construir",
   // que siempre gana. Hay que llamarlo cada vez que algo hace clearTint() sobre el nodo.
+  acabadosEdificios() {
+    for(const o of this.objs||[]){
+      if(o.type!=='barn'&&o.type!=='market')continue;
+      const s=o.sprite;if(!s)continue;
+      const n=o.type==='barn'?(G.infraestructura?.granja||0):(G.infraestructura?.tienda?1:0)+(G.infraestructura?.mercado?2:0);
+      const visible=n>0&&!o.oculto&&s.visible!==false&&(!BUILD_DEF[o.type]||!!G.built?.[o.type]);
+      if(!visible){if(o.acabado)o.acabado.setVisible(false);continue;}
+      const w=s.displayWidth||o.rw,h=s.displayHeight||w,g=o.acabado||(o.acabado=this.add.graphics()),firma=n+':'+w+':'+h;
+      g.setVisible(true).setPosition(s.x,s.y).setDepth(s.depth+0.01).setAlpha(s.alpha);
+      if(o.acabadoFirma===firma)continue;o.acabadoFirma=firma;g.clear();
+      const rect=(color,x,y,ancho,alto)=>{g.fillStyle(color,1);g.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.round(ancho)),Math.max(1,Math.round(alto)));};
+      // Acabados dentro de la silueta: no crean celdas ocupadas ni zonas interactivas.
+      rect(0x50331e,-w*.34,-h*.43,w*.68,4);
+      for(const lado of [-1,1]){rect(0x50331e,lado*w*.32-2,-h*.43,4,h*.33);rect(0xbb8745,lado*w*.32-1,-h*.40,2,h*.27);}
+      if(n>=2){for(let fila=0;fila<2;fila++)for(let i=0;i<6;i++)rect((i+fila)%2?0x777b70:0x9b9e8d,-w*.34+i*w*.112,-h*.09+fila*4,w*.108,3);}
+      if(n>=3){for(const lado of [-1,1]){const x=lado*w*.25;rect(0x53351f,x-1,-h*.53,2,h*.30);rect(0xe1b75e,x-5,-h*.51,11,3);rect(0x376e57,x-4,-h*.48,9,h*.17);rect(0x68a16b,x-3,-h*.47,2,h*.13);rect(0xe1b75e,x-4,-h*.31,9,2);}}
+    }
+  }
+
   tintarNodo(o) {
     const s = o && o.sprite; if (!s || !s.setTint) return;
     if (o.locked || (typeof BUILD_DEF !== "undefined" && BUILD_DEF[o.type] && !(G.built && G.built[o.type]))) {
@@ -5742,6 +5763,7 @@ class FarmScene extends Phaser.Scene {
 
   updateReal(time, deltaMs) {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
+    this.acabadosEdificios();
     this._frameT = time;   // marca del frame: la usa la caché de hitsSprite (10/8)
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero;
     /* Las teclas de Phaser siguen bajadas mientras se escribe en un campo HTML. No se apaga el

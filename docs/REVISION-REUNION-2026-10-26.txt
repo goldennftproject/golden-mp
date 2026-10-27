@@ -73,3 +73,11 @@ CIERRE FUNCIONAL — CONTINUACIÓN APROBADA
 - Tiendita y mejoras de granja implementadas: parámetros iniciales y alcance en LEYES.md, compras servidor y cupo P2P servidor. Validación y despliegue se comprueban al entregar.
 - Evento: documento EVENTO-ALPHA-REGLAS.txt preparado. No activado: faltan fecha, presupuesto real y decisión de métrica justa con cuentas preexistentes. No reset automático.
 - No quedan tareas de este bloque convertidas silenciosamente en cobros reales. Skins por nivel y tipos de madera fueron diferidos por Sachi; balance por demanda necesita observación de jugadores.
+
+CONTINUACIÓN GOD HAND / MERCADO / CONSTRUCCIÓN
+- Implementadas mejora única God Hand de eficiencia (50.000 Plata, -10% tarifa) y mercado (50.000 Plata + 100 madera + 100 piedra + 5 hierro, -2 puntos de comisión sólo en altas nuevas). Parámetros iniciales en LEYES.md; validación remota por recibo y CAS.
+- Aportes parciales por material con revisión y confirmación; inventario revalidado antes de gastar.
+- Acabados visuales progresivos en granero y mercado, vinculados a mejoras; conservan su silueta y ocupación. No son nuevas skins comprables.
+- Recuperación explícita de conflicto desde el disquete: respaldo local separado y lectura autoritativa sin escribir ni fusionar; sin F5. El caso exacto del vídeo continúa sin causa demostrada.
+- Maderas nuevas fuera de esta versión por dirección. USDT desactivado.
+- Pendientes que requieren evidencia o decisión: comportamiento real/balance de misiones por demanda; fecha, clasificación justa y presupuesto del evento; depósitos/retiros/colaboraciones externas no activados. No hay reset de jugadores.

@@ -2630,7 +2630,7 @@ function refreshVip() {
     ['Capacidad productiva','Capacidad base + expansiones','25% extra (mínimo 2 cupos)'],
     ['Fabricación','De a uno','En lotes'],
     ['Publicaciones P2P','Una por día UTC','Diez por día UTC'],
-    ['Comisión P2P nueva','10%','7%'],
+    ['Comisión P2P nueva',G.infraestructura?.mercado?'8%':'10%',G.infraestructura?.mercado?'5%':'7%'],
     ['Objetos de Granja','Un objeto activo','Sin límite; admite duplicados'],
     ['Visitas y semillas','No incluidas','Resumen de granjas; hasta 3 semillas/día']
   ];
@@ -2965,6 +2965,18 @@ function enlazarFondoConfirmacionPc() {
     ev.stopPropagation();
     cerrarConfirmacionLocal();
   });
+}
+function pedirAporteObra(t,onAportar){
+ const aporte=obraFalta(t).map(([r,n])=>[r,Math.min(n,r==='golden'?G.golden:Math.floor(G.res[r]||0))]).filter(([,n])=>n>0),campos=[];
+ if(!aporte.length){toast('No tenés materiales disponibles para aportar');return;}
+ askConfirm('Elegí cuánto aportar a '+BUILD_DEF[t].label+'. Lo que no aportes queda en tu bolsa.',()=>{
+   const cantidades={};for(const [r,max,input] of campos){const n=Number(input.value);if(!Number.isSafeInteger(n)||n<0||n>max){toast('Revisá las cantidades del aporte');return;}cantidades[r]=n;}
+   const detalle=Object.entries(cantidades).filter(([,n])=>n>0).map(([r,n])=>n+' '+(r==='golden'?'Golden':RES_LABEL[r])).join(' · ');
+   if(!detalle){toast('Elegí al menos un material para aportar');return;}
+   askConfirm('Vas a aportar '+detalle+' a '+BUILD_DEF[t].label+'. ¿Confirmás?',()=>onAportar(cantidades),{title:'Confirmar aporte',yes:'Aportar',no:'Cancelar'});
+ },{title:'Elegir materiales',yes:'Revisar aporte',no:'Cancelar'});
+ const msg=$('cf-msg');if(!msg)return;
+ aporte.forEach(([r,max])=>{const label=document.createElement('label'),input=document.createElement('input');label.style.display='block';label.style.marginTop='8px';label.textContent=(r==='golden'?'Golden':RES_LABEL[r])+' (disponible: '+max+') ';input.type='number';input.min='0';input.max=String(max);input.step='1';input.value=String(max);input.style.width='80px';label.appendChild(input);msg.appendChild(label);campos.push([r,max,input]);});
 }
 // cartel de confirmación (papelera, desbloqueo de parcelas, etc.)
 // opts: { title, yes, no, yesClass, noClass } — por defecto el estilo de la papelera
@@ -4446,7 +4458,7 @@ function refreshGodHand() {
   if (!tengoGodHand()) { box.innerHTML = '<div class="info">Todavía no la compraste — está en la Tienda, sección GOD HAND.</div>'; return; }
   const inv = godHandInv();
   let h = '<div class="info">Semillas cargadas: <b>' + godHandTotal() + '/' + (GODHAND_SLOTS * GODHAND_CAP_SLOT) + '</b> · ' +
-    'Tarifa: <b>' + GODHAND_PLATA_HORA + ' plata</b> la 1ª hora, +10% cada una (24 h = ' + fmt(godHandCostoHoras(GODHAND_MAX_H)) + ')</div>';
+    'Tarifa: <b>' + godHandCostoHoras(1) + ' plata</b> la 1ª hora'+(G.infraestructura?.godhand?' (eficiencia mejorada)':'')+', +10% cada una (24 h = ' + fmt(godHandCostoHoras(GODHAND_MAX_H)) + ')</div>';
   inv.forEach((s, i) => {
     const d = s && CROP_DEF[s.key];
     h += '<div class="forge-row"><div class="fic">' + (d ? '<img src="' + GF.spr("crop_" + s.key) + '" onerror="this.outerHTML=\'' + d.emoji + '\'">' : '') + '</div>' +
@@ -4794,6 +4806,12 @@ function refreshDeco() {
 
 // Fixes.docx 14/8 #6: pestaña NFTs propia — el GOD HAND (y los NFTs que vengan) separados
 // de los adornos, que son cosmética pura. Así el que compra sabe QUÉ clase de cosa compra.
+function infraCosteOpcional(id){const d=INFRA_OPCIONALES[id];return fmt(d.plata)+' Plata'+Object.entries(d.res).map(([k,q])=>' · '+q+' '+RES_LABEL[k]).join('');}
+function infraOpcionalHtml(id){
+ const god=id==='godhand',d=INFRA_OPCIONALES[id],hecha=!!G.infraestructura?.[id],posee=!god||tengoGodHand();
+ const puede=!hecha&&posee&&(G.plata||0)>=d.plata&&Object.entries(d.res).every(([k,q])=>(G.res[k]||0)>=q);
+ return '<div class="secc">'+(god?'GOD HAND · EFICIENCIA':'MERCADO · MENOR COMISIÓN')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(god?'10% menos Plata por trabajo':'Comisión Free 8% · VIP 5%')+'</div><div class="fds">'+(god?'Conserva los 300 espacios de semillas y hasta 24 h de trabajo. Requiere God Hand.':'Sólo publicaciones nuevas. Las anteriores conservan su comisión. No aumenta el cupo.')+'</div>'+(!hecha?'<div class="fds">Compra única: '+infraCosteOpcional(id)+'</div>':'')+'</div><div class="fbtns"><button class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Mejorada':posee?'Mejorar':'Requiere God Hand')+'</button></div></div>';
+}
 function infraHtml(id){
  const tienda=id==='tienda',n=infraNivel(),d=INFRA_GRANJA[n],hecha=tienda?!!G.infraestructura?.tienda:!d;
  const coste=tienda?'10 Golden':d?Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · '):'';
@@ -4802,21 +4820,24 @@ function infraHtml(id){
 }
 function infraEnlazar(box){
  box.querySelectorAll('[data-infra]').forEach(b=>b.onclick=()=>{
- const id=b.dataset.infra,d=INFRA_GRANJA[infraNivel()],coste=id==='tienda'?'10 Golden':Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · ');
+ const id=b.dataset.infra;
+ if(id==='godhand'||id==='mercado'){askConfirm((id==='godhand'?'Reducir un 10% la tarifa de God Hand':'Reducir 2 puntos la comisión de nuevas publicaciones P2P')+' por '+infraCosteOpcional(id)+'. Compra única, sin energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Mejorar',yesClass:'gold',no:'Cancelar'});return;}
+ const d=INFRA_GRANJA[infraNivel()],coste=id==='tienda'?'10 Golden':Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · ');
  askConfirm((id==='tienda'?'Comprar +1 publicación diaria permanente':'Mejorar granja a +'+d.bono+'% de XP productiva futura')+' por '+coste+'. No consume energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Confirmar',yesClass:'gold',no:'Cancelar'});
  });
 }
 function refreshNft() {
   const box = $("nft-shop"); if (!box) return;
   let h = '<div class="info">Mejoras internas del juego, sin tokenización. Las pasivas de recolección se suman a tus herramientas normales.</div>';
-  h += infraHtml('tienda');
+  h += infraHtml('tienda')+infraOpcionalHtml('mercado');
   h += '<div class="secc">GOD HAND</div>';
   h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr("godhand") + '" onerror="this.remove()"></div><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
     '<div class="fds">Automatización de cultivos: cargale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
-    '<div class="fds">Cobra en plata por hora trabajada (100 la primera, +10% cada una, hasta 24 h). Se compra una vez y queda para siempre.</div>' +
+    '<div class="fds">Cobra Plata por hora trabajada ('+godHandCostoHoras(1)+' la primera, +10% cada una, hasta 24 h). Se compra una vez y queda para siempre.</div>' +
     (tengoGodHand() ? '<div class="fds"><b>Semillas cargadas: ' + godHandTotal() + '/300.</b> Trabaja sola la próxima vez que vuelvas con parcelas vacías.</div>' : '') + '</div>' +
     '<div class="fbtns">' + (tengoGodHand() ? '<button class="gold sm" id="gh-admin">✋ Cargar semillas</button>' :
       '<button class="green sm" ' + (G.golden >= GODHAND_GOLDEN ? "" : "disabled") + ' id="buy-godhand">' + GODHAND_GOLDEN + ' $G</button>') + '</div></div>';
+  h += infraOpcionalHtml('godhand');
   /* 21/9 (dirección): los tres NFT de recolección — +0,1 por golpe que paga. El de la piedra no se
      vende: es el del Pase VIP (nivel 26), y acá se dice dónde está en vez de esconderlo. */
   h += '<div class="secc">PASIVAS DE RECOLECCIÓN</div>';
@@ -6266,6 +6287,12 @@ async function guardarAhora(){
   const uid=UID;
   const disponible=()=>UID===uid&&uid&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(uid);
   const fallo=()=>estadoGuardar('error','No se pudo confirmar. Revisá la conexión y volvé a intentar.');
+  if(uid&&CARGA_OK&&!SOLO_LOCAL&&SAVE_CONFLICTOS.has(uid)){
+    fallo();askConfirm('Hay un conflicto de guardado. Cerrá otras sesiones del juego. Se conservará un respaldo local y continuarás desde la última versión aceptada por el servidor. Los cambios locales pendientes no se fusionan. ¿Recuperar sin recargar la página?',async()=>{
+      if(guardadoManualEnCurso)return;guardadoManualEnCurso=true;estadoGuardar('saving','Consultando el guardado del servidor…');
+      try{const ok=await recuperarGuardadoServidor();if(UID===uid)ok?estadoGuardar('ok','Versión del servidor recuperada'):fallo();}finally{guardadoManualEnCurso=false;}
+    },{title:'Recuperar guardado',yes:'Cargar versión del servidor',no:'Cancelar'});return;
+  }
   if(!disponible()){fallo();return;}
   guardadoManualEnCurso=true;estadoGuardar('saving','Esperando confirmación del servidor…');
   try{
@@ -6719,7 +6746,7 @@ async function refreshP2P() {
       '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
   }
   if (p2pTab === "vender") {
-    h += '<div class="info">Tu límite: '+infraCupoP2P()+' publicaciones por día UTC. La tiendita en Mercado → Mejoras agrega una publicación permanente.</div>';
+    h += '<div class="info">Comisión para nuevas publicaciones: '+marketFee()+'%. Tu límite: '+infraCupoP2P()+' publicaciones por día UTC. La tiendita en Mercado → Mejoras agrega una publicación permanente.</div>';
     h += '<div class="fds">Elegí qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
     const ops = [];
     CROP_ORDER.forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });

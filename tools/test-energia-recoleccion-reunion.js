@@ -11,11 +11,12 @@ esc.action={kind:'chop',o:arbol};esc.finishAction();assert.equal(G.res.madera||0
 G.energiaGranja={v:1,actual:1,at:FakeDate.now()};arbol.readyAt=0;arbol.golpes=0;
 esc.action={kind:'chop',o:arbol};esc.finishAction();assert.equal(ctx.nodoCargas(arbol,CD.tree),3);assert.equal(G.energiaGranja.actual,0);
 const quedan=ctx.nodoCargas(arbol,CD.tree);esc.action={kind:'chop',o:arbol};esc.finishAction();assert.equal(ctx.nodoCargas(arbol,CD.tree),quedan,'sin energía conserva cargas');
+ctx.document.body.innerHTML='<div id="cf-msg"></div>';
 let confirmacion;ctx.askConfirm=(texto,fn)=>{confirmacion={texto,fn};};
 G.tuto={done:false};G.built.store=false;G.obras={store:{col:1,row:1}};G.obraDep={};G.res.madera=2;G.res.piedra=2;
 const obra={type:'store',cx:42,by:42};esc.letreroObra=()=>{};
 const bolsa=JSON.stringify(G.res);esc.interactWith(obra);assert.ok(confirmacion);assert.equal(JSON.stringify(G.res),bolsa,'abrir o cancelar confirmación no consume');
-confirmacion.fn();assert.notEqual(JSON.stringify(G.res),bolsa,'confirmar aporta materiales');
+confirmacion.fn();assert.equal(JSON.stringify(G.res),bolsa,'revisar cantidades todavía no consume');confirmacion.fn();assert.notEqual(JSON.stringify(G.res),bolsa,'confirmar aporta materiales');
 const t=FakeDate.now();G.artefactos={items:{cobre:{desde:t,cobrado:t,moneda:'plata-v2',resto:0}}};
 assert.match(ctx.artefactoTextoCobro('cobre',t),/Disponible en 1 d/);assert.match(ctx.artefactoTextoCobro('cobre',t+3600000),/23 h/);assert.match(ctx.artefactoTextoCobro('cobre',t+86400000),/Cobrar/);
 console.log('OK: energía sólo al recoger, cargas conservadas, construcción confirmada y cuenta atrás real.');

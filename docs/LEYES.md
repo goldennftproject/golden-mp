@@ -1,5 +1,13 @@
 # Las leyes de Golden Farm
 
+## God Hand, mercado y cierre de pendientes — 26/10/2026
+
+Dirección autoriza resolver los pendientes, excluye nuevas maderas de esta versión y mantiene USDT desactivado. Parámetros iniciales ajustables: God Hand recibe una mejora única de eficiencia por 50.000 Plata, requiere poseerla y reduce un 10% el total de su tarifa de trabajo, redondeado una vez. No reduce prestaciones anteriores, capacidad, producción ni energía. Mercado: mejora única por 50.000 Plata, 100 madera, 100 piedra y 5 hierro; reduce dos puntos la comisión de nuevas publicaciones (Free 8%, VIP 5%). Las filas anteriores conservan fee_pct y los cupos no cambian. Ambas compras usan libro protegido, recibo y CAS. La restricción de tasas admite 5/7/8/10; el trigger sigue fijando la tasa.
+
+Construcción admite cantidades parciales por material con revisión y confirmación; valores enteros no negativos, stock y faltantes se validan antes de cualquier débito. Se conserva el modo anterior para llamadas internas sin cantidades. Acabados gráficos progresivos del granero y mercado según sus mejoras, sin nuevas celdas, colisiones ni recursos.
+
+Ante conflicto, el disquete ofrece recuperar la versión aceptada del servidor sin F5, con confirmación y respaldo local separado obligatorio. La recuperación sólo lee: no mezcla cambios ni escribe en el servidor. Fallos de lectura, almacenamiento local o cambio de cuenta conservan el bloqueo y el estado local. Los demás guardados y F5 no cambian. La auditoría previa encontró 644 registros de guardado sin sospechas económicas y HTTP 1144×200, 4×401 y 9×409 en 24 h; no prueba la causa individual del vídeo ni ausencia de errores.
+
 ## Cierre funcional de la reunión — 26/10/2026
 
 Dirección solicita terminar los pendientes. Tiendita: compra única inicial de 10 Golden, +1 publicación P2P/día UTC permanente; Free 2, VIP 11. Cancelar no devuelve cupo y las comisiones existentes siguen 10%/7%. Granja: tres mejoras secuenciales requieren niveles 5/10/15 y cuestan respectivamente madera/piedra/hierro 50/50/2, 150/150/5 y 300/300/10; bonos totales de XP productiva futura 2%/3%/5%, no acumulativos entre sí. Son parámetros iniciales de implementación, no cifras cerradas en el audio. No cambian tiempos, XP de oficio, capacidades ni recompensas ya adquiridas. Sólo cultivar/talar/minar; saldo de XP extra separado, persistido, limitado por servidor y consumido al prestigiar. Compras y débitos autoritativos con recibo/CAS. La propuesta del evento se prepara sin activarlo ni anunciar premios. Apariencia de edificios y tipos de madera siguen diferidos explícitamente en el audio; ajustes de demanda requieren datos reales.

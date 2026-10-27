@@ -1214,17 +1214,21 @@ function obraFalta(t) {
   if (b.golden) { const f = b.golden - (dep.golden || 0); if (f > 0) out.push(["golden", f, b.golden, dep.golden || 0]); }
   return out;
 }
-function obraDepositar(t) {   // devuelve true si con este depósito quedó COMPLETA
+function obraDepositar(t, cantidades) {   // devuelve true si con este depósito quedó COMPLETA
   const b = BUILD_DEF[t]; if (!b || !obraDe(t)) return false;
   // 14/8: durante el tutorial manda el PASO, no el nivel — misma regla que la entrega del
   // plano (planosSync): con el embudo estricto no hay forma de subir de nivel para destrabar
   const tutoOn = G.tuto && !G.tuto.done;
   if (!tutoOn && b.lvl && G.level < b.lvl) { toast(b.label + " pide granja nivel " + b.lvl); return false; }
+  if(cantidades!==undefined){
+    const limites=Object.fromEntries(obraFalta(t).map(([r,n])=>[r,Math.min(n,r==='golden'?G.golden:Math.floor(G.res[r]||0))]));
+    if(!cantidades||typeof cantidades!=='object'||Object.entries(cantidades).some(([r,n])=>!Object.prototype.hasOwnProperty.call(limites,r)||!Number.isSafeInteger(n)||n<0||n>limites[r])){toast('El aporte cambió o no es válido; revisá las cantidades');return false;}
+  }
   G.obraDep = G.obraDep || {}; const dep = G.obraDep[t] = G.obraDep[t] || {};
   const puso = [];
   for (const [r, falta] of obraFalta(t)) {
     const tengo = r === "golden" ? G.golden : Math.floor(G.res[r] || 0);
-    const n = Math.min(falta, tengo);
+    const n = cantidades===undefined?Math.min(falta,tengo):(cantidades[r]||0);
     if (n <= 0) continue;
     if (r === "golden") G.golden -= n; else G.res[r] -= n;
     dep[r] = (dep[r] || 0) + n;
@@ -4209,7 +4213,7 @@ function colorNombre() { return COS_COLORES[cosElegido().color] || COS_COLORES.b
 // Publicás algo tuyo con un precio; otro jugador lo compra y vos cobrás cuando volvés al mercado.
 // Comisión que se QUEMA (sumidero sano): sale del precio que cobra el vendedor.
 var MARKET_FEE = 10;            // Publicaciones nuevas Free; el servidor captura 7% para VIP.
-function marketFee(fila) { return fila ? (fila.fee_pct == null ? 5 : fila.fee_pct) : vipVigente() ? 7 : 10; }
+function marketFee(fila) { return fila ? (fila.fee_pct == null ? 5 : fila.fee_pct) : (vipVigente() ? 7 : 10)-(G.infraestructura?.mercado?2:0); }
 var MARKET_MAX_PUB = 10;        // publicaciones activas por jugador
 const MARKET_KINDS = { res: "Recurso", seed: "Semilla", dish: "Plato", fish: "Pez", arm: "Arma", armor: "Armadura" };
 function mkTengo(kind, key) {
@@ -4665,6 +4669,10 @@ const INFRA_GRANJA = [
  {nivel:10,bono:3,coste:{madera:150,piedra:150,hierro:5}},
  {nivel:15,bono:5,coste:{madera:300,piedra:300,hierro:10}}
 ];
+const INFRA_OPCIONALES = {
+ godhand:{plata:50000,res:{}},
+ mercado:{plata:50000,res:{madera:100,piedra:100,hierro:5}}
+};
 const INFRA_TIENDA_GOLDEN = 10;
 function infraNivel() { return G.infraestructura?.granja || 0; }
 function infraBono() { return INFRA_GRANJA[infraNivel()-1]?.bono || 0; }
@@ -4734,7 +4742,7 @@ var GODHAND_SUBA_HORA = 1.10;                            // cada hora sale 10% m
 var GODHAND_MAX_H = 24;                                  // tope de trabajo por ausencia
 function godHandInv() { if (!Array.isArray(G.ghInv) || G.ghInv.length !== GODHAND_SLOTS) G.ghInv = Array.from({ length: GODHAND_SLOTS }, () => null); return G.ghInv; }
 function godHandTotal() { return godHandInv().reduce((a, s) => a + (s ? s.n : 0), 0); }
-function godHandCostoHoras(h) { let c = 0, p = GODHAND_PLATA_HORA; for (let i = 0; i < h; i++) { c += Math.round(p); p *= GODHAND_SUBA_HORA; } return c; }
+function godHandCostoHoras(h) { let c = 0, p = GODHAND_PLATA_HORA; for (let i = 0; i < h; i++) { c += Math.round(p); p *= GODHAND_SUBA_HORA; } return G.infraestructura?.godhand ? Math.round(c*0.9) : c; }
 function godHandCargar(slot, key) {   // pasa semillas de tu bolsa al puño (hasta llenar el espacio)
   const inv = godHandInv(); if (slot < 0 || slot >= GODHAND_SLOTS || !CROP_DEF[key]) return;
   const s = inv[slot];
