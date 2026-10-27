@@ -594,6 +594,10 @@
   .cambio-numero{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}.cambio-numero b{font-size:22px}.cambio-numero small{flex-basis:100%;text-align:center}
   .cambio-previa{padding:9px;background:rgba(241,229,196,.9);color:#49301f;border-radius:6px;line-height:1.5}
   .banco-elegir{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}.banco-elegir>div{display:flex;align-items:center;gap:7px}.banco-elegir input{width:110px;padding:8px;font:inherit;text-align:right}
+  #ov-banco .card{display:flex;flex-direction:column}#ov-banco h3{flex-shrink:0}
+  .banco-cuerpo{overflow-y:auto;min-height:0;padding-right:5px}.banco-acciones{flex-shrink:0;padding-top:9px;margin-top:6px;border-top:1px solid #684321}
+  #ov-banco .divisas-usos{margin:6px 0}#ov-banco .divisa-uso{padding:7px}#ov-banco .divisa-uso small{margin:4px 0;font-size:11px}
+  #ov-banco .cambio-tasa{padding:7px;margin:7px 0}#ov-banco .cambio-previa{padding:7px;font-size:12px}#ov-banco .banco-elegir input{padding:5px}
   .gmi:hover{filter:brightness(1.15)}
   .gmi span.ic{font-size:15px;width:20px;text-align:center}
   .gmi b.key{margin-left:auto;font-size:11px;background:#161f12;border:1px solid #4a5a3a;color:#cbbf9f;border-radius:6px;padding:1px 6px}
@@ -1682,9 +1686,10 @@
     <h3>🌾 Objetos de Granja · producción de Plata</h3>
     <div id="objetos-productores"></div>
   </div></div>
-  <div class="ov" id="ov-banco"><div class="card" style="width:min(580px,94vw);max-height:calc(100dvh - 32px);overflow-y:auto;overflow-x:hidden">
+  <div class="ov" id="ov-banco"><div class="card" style="width:min(580px,94vw);max-height:calc(100dvh - 32px);overflow:hidden">
     <button class="close" data-close="ov-banco">×</button>
     <h3>🏦 Banco · cambio interno</h3>
+    <div class="banco-cuerpo">
     <div class="divisas-usos">
       <section class="divisa-uso"><strong><img src="assets/farm/coin_plata.png?a=4" alt="">Plata</strong><small>Semillas · fabricación · obras</small><div class="row"><button class="ghost sm" data-panel="ov-market">Mercado</button><button class="ghost sm" data-panel="ov-forge">Herrería</button></div></section>
       <section class="divisa-uso"><strong><img src="assets/farm/coin_esencia.png?a=4" alt="">Golden</strong><small>VIP · objetos · mejoras</small><div class="row"><button class="ghost sm" data-panel="ov-vip">VIP</button><button class="ghost sm" data-panel="ov-reliquias">Objetos</button></div></section>
@@ -1695,9 +1700,10 @@
 
     <div class="banco-elegir"><label for="banco-cantidad">Quiero recibir</label><div><input id="banco-cantidad" type="number" min="1" max="1000000" step="1" value="1"><span>Golden</span></div></div>
     <p id="banco-previa" class="cambio-previa" aria-live="polite"></p>
-    <div class="row"><button id="banco-canjear" class="green" disabled>Canjear</button><button id="banco-actualizar" class="ghost">Actualizar tasa</button></div>
     <p class="sub">USDT · depósitos y retiros desactivados</p>
     <details class="ayuda-menu"><summary>Tasa y condiciones</summary><p class="sub">Sólo Plata → Golden, en unidades enteras. La cotización dura 60 segundos y puede cambiar. Son monedas internas de prueba: no hay paridad garantizada con dólares ni derecho de cobro en USDT.</p></details><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="banco-actividad" aria-live="polite"></div></details>
+    </div>
+    <div class="row banco-acciones"><button id="banco-canjear" class="green" disabled>Canjear</button><button id="banco-actualizar" class="ghost">Actualizar tasa</button></div>
   </div></div>
   <div class="ov" id="ov-skills"><div class="card" style="width:min(500px,94%)">
     <button class="close" data-close="ov-skills">×</button>

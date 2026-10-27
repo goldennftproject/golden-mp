@@ -13,4 +13,5 @@ vm.runInContext('BANCO_COTIZACION.recibido=Date.now()-60001',c);c.isOpen=()=>tru
 const hud=[...doc.querySelectorAll('.divisa-hud')];assert.equal(hud.length,2);for(const b of hud){assert.equal(b.tagName,'BUTTON');assert.equal(b.dataset.panel,'ov-banco');assert.ok(b.getAttribute('aria-label'));}
 assert.equal(doc.querySelectorAll('#ov-banco .divisa-uso').length,2);for(const b of doc.querySelectorAll('#ov-banco [data-panel]'))assert.ok(doc.getElementById(b.dataset.panel));
 assert.equal(doc.querySelector('#banco-canjear').closest('details'),null);assert.ok(doc.querySelector('#banco-actividad').closest('details'));
+assert.equal(button.closest('.banco-cuerpo'),null,'acción principal fuera del contenido desplazable');assert.ok(button.closest('.banco-acciones'));
 console.log('OK: Plata y Golden identificables, accesos nativos, tasa numérica, coste/resultado/faltante y bloqueos de cantidad y tasa vencida.');
