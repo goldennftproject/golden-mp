@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Visita visual y bono único de recolección — 27/10/2026
+
+Dirección pide entrar visualmente en otra granja y recoger la semilla desde allí. Se usa una vista aislada con la proyección pública del guardado: nunca se sustituye G por los datos del dueño. Sólo la operación de semilla del visitante escribe mediante el servidor; se mantienen VIP, límite diario, recibos, CAS y logros. No se habilitan acciones de cultivo, edición ni inventario sobre la granja ajena. La visita no es multijugador en vivo. Dirección también pide que el bono de recolección no se apile: un nuevo consumo renueva su duración sin sumar potencia ni tiempo, y los duplicados históricos no suman porcentajes. Ver VISITAS-VISUALES-Y-BONO-20261027.txt.
+
 ## Compras visuales y disquete sin leyendas flotantes — 27/10/2026
 
 Dirección pide accesos visibles y discretos al VIP y a las compras, con ilustraciones y beneficios breves. En PC se añade un acceso fijo a Tienda/VIP/Objetos/Mejoras/Packs; la tienda organiza las compras sin ejecutarlas al navegar. Las rutas abren las pestañas existentes, y Animales conserva el requisito de Establo. El VIP mantiene precio, duración, beneficios, confirmación y servicio autoritativo; no hay otra membresía ni nuevos cobros. Se usan cuatro ilustraciones WebP de 256 px con transparencia, sin cambiar el atlas del mundo. En combate los accesos se compactan en una fila.

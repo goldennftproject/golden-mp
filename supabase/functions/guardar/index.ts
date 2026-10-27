@@ -304,7 +304,23 @@ function diarioOperacion(prev,ahora,op){
 }
 function visitaVista(row){
   const d=row.data||{};
+  // Proyección pública acotada: nunca entregar el guardado, monedas, inventario o recibos.
+  const coord=v=>Number.isFinite(v)?Math.max(-8192,Math.min(8192,v)):0;
+  const posiciones=(value,keys)=>Object.fromEntries(Object.entries(value&&typeof value==='object'?value:{}).filter(([k,v])=>/^\d{1,3}$/.test(k)&&v&&typeof v==='object').slice(0,256).map(([k,v])=>[k,Object.fromEntries(keys.map(p=>[p,coord(v[p])]))]));
+  const edificios=['store','horno','cocina','altar','establo','curtiduria','ofrendas'];
+  const mapa={espacioV:[1,2,3,4].includes(d.espacioV)?d.espacioV:3,
+    layout:posiciones(d.layout,['cx','by']),layoutPlots:posiciones(d.layoutPlots,['col','row']),
+    plotsOwned:Math.max(0,Math.min(60,num(d.plotsOwned)||3)),
+    built:Object.fromEntries(edificios.map(k=>[k,!!d.built?.[k]])),
+    obras:Object.fromEntries(edificios.filter(k=>d.obras?.[k]).map(k=>[k,{col:coord(d.obras[k].col),row:coord(d.obras[k].row)}])),
+    treesOpen:(Array.isArray(d.treesOpen)?d.treesOpen:[0]).filter(Number.isSafeInteger).slice(0,128),
+    rocksOpen:(Array.isArray(d.rocksOpen)?d.rocksOpen:[0]).filter(Number.isSafeInteger).slice(0,128),
+    nodos:Object.keys(d.produccion?.nodos||{}).filter(k=>/^\d{1,3}$/.test(k)&&d.produccion.nodos[k]).slice(0,256),
+    produccionVersion:!!d.produccion,granero:Math.max(0,Math.min(3,num(d.infraestructura?.granja))),
+    animales:Object.fromEntries(['alpaca','conejo','toro','jabali'].map(k=>[k,Math.min(100,Array.isArray(d.animals?.[k])?d.animals[k].length:d.animals?.[k]?1:0)])),
+    decos:(Array.isArray(d.decos)?d.decos:[]).slice(0,200).filter(v=>v&&['valla','flores','farol','banco','espantapajaros','fuente','estatua','arbolito','espantapajaros_oro','farolito'].includes(v.id)).map(v=>({id:v.id,col:coord(v.col),row:coord(v.row)}))};
   return {id:row.user_id,nombre:String(row.name||'Granjero').slice(0,40),nivel:num(d.level),expansiones:num(d.expansiones),
+    mapa,
     parcelas:(Array.isArray(d.plots)?d.plots:[]).slice(0,256).map(p=>({estado:['empty','growing','ready','withered'].includes(p?.state)?p.state:'empty',cultivo:String(p?.cropKey||'').slice(0,32)}))};
 }
 function visitaOperacion(prev,destino,uid,ahora,op){

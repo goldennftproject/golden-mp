@@ -1,0 +1,26 @@
+VISITAS VISUALES Y BONO DE RECOLECCIÓN
+
+Visitas VIP abre un mapa de la granja seleccionada en una vista independiente.
+La configuración del terreno se ejecuta en un iframe sandbox sin acceso a la
+partida, cookies, almacenamiento o funciones del documento principal.
+El servidor entrega únicamente la proyección visual de la granja guardada.
+No entrega saldos, inventarios, correos, recibos ni credenciales del dueño.
+La posición de los objetos y las expansiones proceden de esa granja.
+Los animales se representan en posiciones de visita; no son movimiento en vivo.
+Los adornos usan símbolos en esta vista; no sustituye el render completo de Phaser.
+
+La semilla se recoge dentro de la visita; vuelve al inventario del visitante.
+Se conservan VIP, máximo tres granjas/día UTC, una semilla por destino/día,
+recibos, CAS y registro de logros. No se descuentan semillas al propietario.
+El destino lo fija la ventana principal; se ignoran mensajes de otras ventanas.
+No se carga ni se guarda el estado de la granja ajena como partida propia.
+
+Bono farm: un solo efecto. Consumir otro renueva desde el momento del consumo;
+no suma ni el porcentaje ni las duraciones. Los duplicados antiguos calculan
+solo el porcentaje más alto activo. El HUD no muestra multiplicador x8.
+No cambian los demás tipos de bonos ni el enfriamiento al comer.
+
+Pruebas: test-visita-visual, test-logros, test-buff-recoleccion-unico,
+test-buffs-apilados, test-portero-reglas, test-guardado-atomico,
+test-carga-una-pasada. Revisión local en Chrome con datos sintéticos.
+La semilla y la vista de prueba no escriben datos reales de jugadores.

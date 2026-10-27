@@ -243,9 +243,13 @@ function cdMult() { const t = Date.now(); let m = 1; for (const b of G.buffs) if
    así para que ninguna auditoría futura lo marque en rojo creyendo que es un fallo. */
 function ventaMult() { const t = Date.now(); let m = 1 + 0.015 * ((G.level || 1) - 1) + (G.prestige || 0) * 0.015; let mejor = 1; for (const b of G.buffs) if (b.type === "yield" && b.until > t) mejor = Math.max(mejor, b.mult); return m * mejor; }
 function yieldMult() { return 1; }   // legado: la cantidad cosechada ya no se multiplica
-function addBuff(type, label, mult, durSec) { G.buffs.push({ type, label, mult, until: Date.now() + durSec * 1000 }); }
+function addBuff(type, label, mult, durSec) {
+  // Recolección: un único efecto; otro consumo renueva su duración, no suma potencia ni tiempo.
+  if (type === "farm") G.buffs = G.buffs.filter(b => b.type !== "farm");
+  G.buffs.push({ type, label, mult, until: Date.now() + durSec * 1000 });
+}
 // buffs de comida (doc maestro 2/8): suma de valores activos por tipo
-function buffTotal(type) { const t = Date.now(); let s = 0; for (const b of G.buffs) if (b.type === type && b.until > t) s += b.mult; return s; }
+function buffTotal(type) { const t = Date.now(); let s = 0; for (const b of G.buffs) if (b.type === type && b.until > t) s = type === "farm" ? Math.max(s, b.mult) : s + b.mult; return s; }
 function dmgMult() { return 1 + (buffTotal("dmg") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("dmgPct") : 0)) / 100; }
 function dmgTakenMult() { return Math.max(0.2, 1 - (buffTotal("def") + buffTotal("feast") + (typeof armorBonoVal === "function" ? armorBonoVal("defPct") : 0)) / 100); }
 /* 16/9 (diseñador): « que suba a medida que suba de nivel ». La recta va del nivel 1 al techo de

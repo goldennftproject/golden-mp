@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const code=fs.readFileSync('public/game/state.js','utf8');let now=100000;
+const ctx={G:{buffs:[]},Date:{now:()=>now},Math};vm.createContext(ctx);
+vm.runInContext(code.slice(code.indexOf('function addBuff('),code.indexOf('function dmgMult(')),ctx);
+for(let i=0;i<10;i++)ctx.addBuff('farm','+5%',5,60);
+assert.equal(ctx.G.buffs.length,1);assert.equal(ctx.buffTotal('farm'),5);assert.equal(ctx.G.buffs[0].until,160000);
+now+=10000;ctx.addBuff('farm','+5%',5,60);assert.equal(ctx.G.buffs[0].until,170000,'renueva, no suma 60s al vencimiento anterior');
+ctx.G.buffs=Array.from({length:8},()=>({type:'farm',mult:5,until:200000}));assert.equal(ctx.buffTotal('farm'),5,'guardados antiguos tampoco multiplican');
+now=200001;assert.equal(ctx.buffTotal('farm'),0,'vence normalmente');
+console.log('OK: diez consumos, duración renovada, duplicados históricos y vencimiento.');

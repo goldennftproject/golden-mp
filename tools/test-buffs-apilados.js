@@ -70,7 +70,7 @@ console.log("\nLOS ADITIVOS SIGUEN COMO ESTABAN (con sus topes de siempre)");
 {
   G.buffs = [];
   for (let i = 0; i < 30; i++) ctx.addBuff("farm", "x", 5, 60);
-  ok("30 buffs de velocidad de cultivo chocan con el tope 0,4", ctx.farmSpeedMult() === 0.4,
+  ok("30 consumos mantienen un solo bono de recolección de 5%", ctx.farmSpeedMult() === 0.95 && G.buffs.filter(b=>b.type==='farm').length===1,
     "×" + ctx.farmSpeedMult() + " — el clavo de siempre");
   G.buffs = [];
   for (let i = 0; i < 30; i++) ctx.addBuff("def", "x", 10, 60);

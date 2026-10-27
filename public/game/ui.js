@@ -2168,7 +2168,9 @@ function bindFarmPill() {
 function refreshBuffsPill() {
   const pill = document.getElementById("buffpill"); if (!pill) return;
   const t = Date.now();
-  const vivos = (G.buffs || []).filter(b => b.until > t && b.label);
+  const activos = (G.buffs || []).filter(b => b.until > t && b.label);
+  const mejorFarm = activos.filter(b => b.type === "farm").sort((a,b) => b.mult-a.mult || b.until-a.until)[0];
+  const vivos = activos.filter(b => b.type !== "farm" || b === mejorFarm);
   if (!vivos.length) { pill.style.display = "none"; pill._firma = ""; return; }
   pill.style.display = "";
   /* agrupar por etiqueta: el mismo plato dos veces es un chip con ×2 */
@@ -2567,18 +2569,20 @@ function refreshProduccionGranja() {
     else { const s = cont.querySelector("summary"); if (s) s.focus({ preventScroll: true }); }
   }
 }
+var VISITAS_PEDIDO = 0;
 async function refreshVisitas(){
+  const pedido = ++VISITAS_PEDIDO;
   const lista=$('visitas-lista'),vista=$('visitas-vista');if(!lista||!vista)return;
   vista.innerHTML='';if(!vipVigente()){lista.textContent='Necesitas el VIP de 30 días para visitar y recoger semillas.';return;}
   lista.textContent='Consultando granjas…';const r=await visitaConsultar('listar');
-  if(!isOpen('ov-visitas'))return;
+  if(!isOpen('ov-visitas') || pedido !== VISITAS_PEDIDO)return;
   if(!r){lista.textContent='Sin conexión. Puedes cerrar y volver a intentar.';return;}
   lista.innerHTML=r.granjas.length?r.granjas.map(g=>'<button class="ghost sm" data-visitar="'+escapeHtml(g.id)+'">'+escapeHtml(g.nombre)+'</button>').join(' '):'Todavía no hay otras granjas para visitar.';
   lista.querySelectorAll('[data-visitar]').forEach(b=>b.onclick=async()=>{
-    vista.textContent='Cargando resumen de la granja…';const id=b.dataset.visitar,r=await visitaConsultar('ver',id);
-    if(!isOpen('ov-visitas')||!r)return;const g=r.granja;
-    vista.innerHTML='<h3>'+escapeHtml(g.nombre)+'</h3><p>Nivel '+g.nivel+' · '+g.expansiones+' expansiones</p><p class="sub">Resumen de parcelas (no es el mapa de colocación):</p><div style="display:flex;flex-wrap:wrap;gap:5px">'+g.parcelas.map(p=>'<span class="tag" title="'+escapeHtml(p.cultivo||'Parcela vacía')+'">'+({empty:'🟫',growing:'🌱',ready:'🌾',withered:'🍂'}[p.estado]||'🟫')+' '+escapeHtml(p.cultivo)+'</span>').join('')+'</div><button class="green sm" id="visita-semilla">Recoger semilla de visita</button>';
-    const btn=$('visita-semilla');btn.onclick=async()=>{btn.disabled=true;await economiaSolicitar({visita:{accion:'semillas',destino:id}});if(btn.isConnected)btn.disabled=false;};
+    const viaje = ++VISITAS_PEDIDO;
+    vista.textContent='Viajando a la granja…';const id=b.dataset.visitar,r=await visitaConsultar('ver',id);
+    if(!isOpen('ov-visitas')||!r||viaje!==VISITAS_PEDIDO)return;const g=r.granja;
+    visitaAbrir(g);
   });
 }
 function artefactoTextoCobro(id,t=nowMs()) {
