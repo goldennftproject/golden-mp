@@ -16,7 +16,7 @@ const G = {
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
   weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamFullAt: 0, stamLastAt: 0, stamRec: null, // regeneración continua con reloj persistente
-  stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, logrosV2:null, logrosAcciones:{}, chestCap: 0, edif2: {}, cosmeticos: [],
+  stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, logrosV2:null, logrosAcciones:{}, infraestructura:null, farmXpEdificios:0, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
   armor: {}, armorDur: {}, armorEq: null,   // Curtiduría: piezas crafteadas, su durabilidad y el set equipado
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
@@ -1770,6 +1770,8 @@ function addXp(sk, amt) {
   if (sk === "cooking") return addCookXp(amt);   // la cocina tiene SU tabla 1-10 (doc maestro 2/8)
   const before = skillInfo(G.skills[sk], sk).lvl;
   G.skills[sk] += amt;
+  const pesoInfra={farming:1,tala:1.5,mining:2}[sk]||0;
+  if(pesoInfra && amt>0)G.farmXpEdificios=Math.round(((G.farmXpEdificios||0)+amt*pesoInfra*infraBono()/100)*1e6)/1e6;
   const after = skillInfo(G.skills[sk], sk).lvl;
   if (after > before) {
     log(`${SKILL_NAME[sk]} subió a nivel ${after}.`, "good");
@@ -2642,7 +2644,7 @@ function xpGranjaOficios(d){
  const parte=(k,antes,despues)=>{const xp=Math.max(0,Number(s[k])||0);if(!a)return xp*antes;const corte=Math.max(0,Number(a[k])||0);return Math.min(xp,corte)*antes+Math.max(0,xp-corte)*despues;};
  return parte('tala',15,1.5)+parte('mining',20,2);
 }
-function farmXpProductiva() { return Math.max(0,(G.skills.farming || 0) + xpGranjaOficios(G) - (G.farmXpBase || 0)); }
+function farmXpProductiva() { return Math.max(0,(G.skills.farming || 0) + xpGranjaOficios(G) + (G.farmXpEdificios || 0) - (G.farmXpBase || 0)); }
 function farmEspecialidadCumple(nv) {
   const mina = 20*(G.skills.mining || 0), tala = 15*(G.skills.tala || 0), cultivo = G.skills.farming || 0;
   const req = farmEspecialidadReq(nv);
@@ -3011,6 +3013,7 @@ function prestige() {
   if (G.level < FARM_NIVEL_MAX) { toast("Llegá a nivel " + FARM_NIVEL_MAX); return; }
   G.prestige++; G.level = 1;
   G.skills.farming = 0;            // si no se resetea, el próximo addXp volvía a nivel 10 de golpe
+  G.farmXpEdificios = 0;
   G.farmXpBase = xpGranjaOficios(G); // no se pierden oficios ni se reutiliza XP de la vuelta anterior
   G.stats = {}; G.statsBase = {};  // las tareas de nivel arrancan de cero otra vez
   for (const k in G.res) G.res[k] = 0;
@@ -4657,6 +4660,16 @@ var NFT_DEL_PASE = "cincel_cantera";
 function tengoNft(k) { return !!(G.nfts && G.nfts[k]); }
 function nftDeRes(res) { for (const k in NFT_DEF) if (NFT_DEF[k].res === res) return k; return null; }
 /* lo que cobra un golpe que paga: la unidad de siempre más el bono si tenés el NFT del material */
+const INFRA_GRANJA = [
+ {nivel:5,bono:2,coste:{madera:50,piedra:50,hierro:2}},
+ {nivel:10,bono:3,coste:{madera:150,piedra:150,hierro:5}},
+ {nivel:15,bono:5,coste:{madera:300,piedra:300,hierro:10}}
+];
+const INFRA_TIENDA_GOLDEN = 10;
+function infraNivel() { return G.infraestructura?.granja || 0; }
+function infraBono() { return INFRA_GRANJA[infraNivel()-1]?.bono || 0; }
+function infraCupoP2P() { return (vipVigente()?10:1)+(G.infraestructura?.tienda?1:0); }
+function infraSolicitar(id) { return economiaSolicitar({infra:{id}}); }
 var PASIVA_MEJORA_PLATA = 50000;
 function pasivaMejorada(k) { return G.mejorasPasivas?.niveles?.[k] === 2; }
 function pasivaBono(k) { return tengoNft(k) ? (pasivaMejorada(k) ? 0.15 : NFT_BONO) : 0; }

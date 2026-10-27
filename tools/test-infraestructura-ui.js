@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),{createRequire}=require('node:module');
+const root=require('node:path').resolve(__dirname,'..'),req=createRequire(root+'/package.json'),{ctx:c}=req('./tools/arrancar-el-juego.contexto').arrancar(root,{'game/main.js':''});
+c.document=new(req('jsdom').JSDOM)(fs.readFileSync(root+'/public/index.html','utf8')).window.document;
+c.G.level=15;c.G.golden=10;c.G.res={madera:50,piedra:50,hierro:2};c.G.infraestructura=null;
+let confirmation,called;c.askConfirm=(s,f)=>confirmation={s,f};c.economiaSolicitar=d=>called=d;
+c.refreshBarn();let b=c.document.querySelector('#barn-body [data-infra=granja]');assert.ok(b&&!b.disabled);b.click();assert.match(confirmation.s,/50 Madera/);assert.match(confirmation.s,/2 Hierro/);assert.equal(called,undefined);confirmation.f();assert.equal(called.infra.id,'granja');
+c.G.res.hierro=1;c.refreshBarn();assert.ok(c.document.querySelector('#barn-body [data-infra=granja]').disabled);
+c.G.infraestructura={granja:3,tienda:true};c.refreshBarn();assert.match(c.document.getElementById('barn-body').textContent,/\+5%/);assert.ok(c.document.querySelector('#barn-body [data-infra=granja]').disabled);
+c.G.infraestructura=null;c.refreshNft();b=c.document.querySelector('#nft-shop [data-infra=tienda]');assert.ok(!b.disabled);b.click();assert.match(confirmation.s,/10 Golden/);confirmation.f();assert.equal(called.infra.id,'tienda');c.G.golden=9;c.refreshNft();assert.ok(c.document.querySelector('#nft-shop [data-infra=tienda]').disabled);
+console.log('OK: DOM real, costes visibles, confirmaciones previas, callbacks, faltantes y mejoras completadas.');

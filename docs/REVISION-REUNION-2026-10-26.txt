@@ -67,3 +67,9 @@ ACTUALIZACIÓN DE CONTINUIDAD
 - Cajas aprobadas después del vídeo: 1 Golden, máximo 3/día UTC; tabla visible y sorteo servidor, publicadas. Sustituye su estado anterior de propuesta.
 - Pasivas: mejora única 50.000 Plata por modelo, +0,10 a +0,15 unidades por recolección; implementación en validación.
 - Siguen pendientes de definición la compra de +1 publicación/día, bonos de edificios y evento. No se han activado retiros, depósitos ni premios USDT.
+
+CIERRE FUNCIONAL — CONTINUACIÓN APROBADA
+- Pasivas ya publicadas: mejora única de 50.000 Plata, bono +0,10 → +0,15; 277 regresiones pasaron.
+- Tiendita y mejoras de granja implementadas: parámetros iniciales y alcance en LEYES.md, compras servidor y cupo P2P servidor. Validación y despliegue se comprueban al entregar.
+- Evento: documento EVENTO-ALPHA-REGLAS.txt preparado. No activado: faltan fecha, presupuesto real y decisión de métrica justa con cuentas preexistentes. No reset automático.
+- No quedan tareas de este bloque convertidas silenciosamente en cobros reales. Skins por nivel y tipos de madera fueron diferidos por Sachi; balance por demanda necesita observación de jugadores.

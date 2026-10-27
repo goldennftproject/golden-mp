@@ -62,7 +62,8 @@ console.log("  " + FILES.length + " archivos  ·  " + Math.round(crudo / 1024) +
   // 26/10: +1 KB para faltantes, totales de compra y ayuda contextual en los cinco paneles.
   // 26/10: +1 KB para confirmación de obra y cuenta atrás de cobros.
   // 26/10: +1 KB para tabla de cajas, cuota y confirmación explícita.
-  const TOPE_KB = 354;
+  // 26/10: +2 KB para tiendita y mejoras materiales de granja con confirmación.
+  const TOPE_KB = 356;
   ok("lo que viaja no pasa del tope", comprimido / 1024 < TOPE_KB,
     Math.round(comprimido / 1024) + " KB de " + TOPE_KB + " KB");
   ok("y comprimir sigue valiendo la pena (≥ 2,5×)", pelado / comprimido >= 2.5,

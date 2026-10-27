@@ -1,0 +1,30 @@
+GOLDEN FARM — PROPUESTA DE EVENTO DE ALPHA
+Estado: preparado para revisión. No anunciado, no activado y sin pagos habilitados.
+
+OBJETIVO Y ACCESO
+La alpha permanece abierta para probar diversión, fallos, trampas y capacidad de la infraestructura Free. El evento no condiciona el acceso al juego. Participación gratuita; comprar VIP, Golden u objetos no es requisito.
+
+DURACIÓN
+Ventana propuesta de nueve días completos. Antes de anunciar: fijar inicio y cierre en UTC y mostrar su equivalencia local. No hay fechas confirmadas. Una indisponibilidad general prolongada permite extender la ventana, dejando constancia pública del ajuste.
+
+CLASIFICACIÓN PROPUESTA EN LA CHARLA
+Nivel de granja, y después XP productiva absoluta, nunca el porcentaje de una barra. Si ambos coinciden, empate compartido: se suma la bolsa de los puestos implicados y se divide en partes iguales. No se favorece a quien inició sesión primero.
+La consulta se hace sobre el último guardado confirmado por el servidor antes del cierre. No se aceptan capturas ni datos del navegador como prueba de puntuación.
+
+CONDICIÓN DE JUSTICIA ANTES DE ACTIVAR
+Las cuentas actuales tienen distinto progreso y ventajas compradas. La clasificación absoluta sólo es comparable con un comienzo equivalente. No se resetea ninguna cuenta para resolverlo. Antes del anuncio se debe elegir entre una competición separada desde cero o, preferentemente para preservar el juego actual, medir XP ganada durante el evento con un corte inicial del servidor. Esa elección debe figurar en las reglas públicas; no se mezclan métricas ni se cambian a mitad del evento.
+El VIP y los objetos pueden acelerar la progresión. Si se mantienen, debe indicarse expresamente. La prueba abierta de infraestructura puede ejecutarse sin competición monetaria.
+
+PREMIOS ORIENTATIVOS, SIN COMPROMISO NI DESEMBOLSO
+La conversación propuso 50 USDT en siete puestos: 15, 10, 5, 5, 5, 5, 5. La suma es 50. No se acredita Golden para simular estos premios. No hay contrato de pago ni reserva verificada. Confirmar presupuesto real, responsables, elegibilidad y mecanismo de entrega antes de publicar premios. Depósitos y retiros de USDT siguen desactivados.
+
+REVISIÓN DE RESULTADOS
+Una cuenta participante por persona; excluir automatización no autorizada, explotación de fallos y coordinación de cuentas para inflar puntuación. Conservar recibos y guardados relevantes. Los reportes se revisan antes de invalidar una cuenta; los errores del juego no justifican una exclusión automática.
+Publicar resultados provisionales por alias, dar 48 horas para reclamaciones y después cerrar resultados. No publicar correos, UUID privados ni detalles de seguridad explotables. No prometer remuneración por reportar bugs: evaluar cada caso aparte.
+
+MEDICIÓN TÉCNICA DURANTE LA ALPHA
+Registrar sesiones activas simultáneas, latencia y errores de guardado, errores de mercado, consumo de base/egreso/funciones y abandono del tutorial. Comparar p50/p95 y fallos con los límites reales del plan vigente. Aumentar participación por etapas observables, sin códigos obligatorios. Pausar sólo ante pérdida de progreso o degradación sostenida.
+No se puede deducir una capacidad máxima de jugadores a partir de simulaciones locales ni de cuentas registradas: requiere carga concurrente real.
+
+ANTES DE ANUNCIAR
+Cerrar fechas, métrica justa, tratamiento de ventajas compradas, presupuesto y responsables. Capturar baseline y preparar ranking en servidor según la métrica elegida. Ensayar el cierre sin pagos. Comunicar reglas definitivas y conservarlas durante todo el evento.

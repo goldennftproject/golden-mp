@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Cierre funcional de la reunión — 26/10/2026
+
+Dirección solicita terminar los pendientes. Tiendita: compra única inicial de 10 Golden, +1 publicación P2P/día UTC permanente; Free 2, VIP 11. Cancelar no devuelve cupo y las comisiones existentes siguen 10%/7%. Granja: tres mejoras secuenciales requieren niveles 5/10/15 y cuestan respectivamente madera/piedra/hierro 50/50/2, 150/150/5 y 300/300/10; bonos totales de XP productiva futura 2%/3%/5%, no acumulativos entre sí. Son parámetros iniciales de implementación, no cifras cerradas en el audio. No cambian tiempos, XP de oficio, capacidades ni recompensas ya adquiridas. Sólo cultivar/talar/minar; saldo de XP extra separado, persistido, limitado por servidor y consumido al prestigiar. Compras y débitos autoritativos con recibo/CAS. La propuesta del evento se prepara sin activarlo ni anunciar premios. Apariencia de edificios y tipos de madera siguen diferidos explícitamente en el audio; ajustes de demanda requieren datos reales.
+
 ## Mejora de pasivas por Plata — 26/10/2026
 
 Continuación aprobada de la reunión de Sachi: cada pasiva de madera, piedra e hierro admite una mejora única de 50.000 Plata. El bono aditivo pasa de +0,10 a +0,15 unidades por recolección efectiva; no multiplica toda la producción. Conserva propiedad, herramientas, precios de adquisición y ruta del Pase. Compra validada por servidor con recibo, CAS y libro protegido; cantidades y logros conservan centésimas. No consume energía adicional ni modifica USDT.

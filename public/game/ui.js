@@ -4794,9 +4794,22 @@ function refreshDeco() {
 
 // Fixes.docx 14/8 #6: pestaña NFTs propia — el GOD HAND (y los NFTs que vengan) separados
 // de los adornos, que son cosmética pura. Así el que compra sabe QUÉ clase de cosa compra.
+function infraHtml(id){
+ const tienda=id==='tienda',n=infraNivel(),d=INFRA_GRANJA[n],hecha=tienda?!!G.infraestructura?.tienda:!d;
+ const coste=tienda?'10 Golden':d?Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · '):'';
+ const puede=!hecha&&(tienda?(G.golden||0)>=INFRA_TIENDA_GOLDEN:G.level>=d.nivel&&Object.entries(d.coste).every(([k,q])=>(G.res[k]||0)>=q));
+ return '<div class="secc">'+(tienda?'TIENDITA · MERCADO P2P':'MEJORAR LA GRANJA')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(tienda?'🏪 +1 publicación por día UTC':'🏡 Nivel de mejora '+n+'/3 · +'+infraBono()+'% XP')+'</div><div class="fds">'+(tienda?'Permanente. Free: 2/día · VIP: 11/día. Cancelar no devuelve cupo.':d?'Siguiente: +'+d.bono+'% XP productiva total · requiere granja nivel '+d.nivel+'. Sólo XP futura de cultivar, talar y minar.':'Bono máximo: +5% de XP productiva futura.')+'</div>'+(!hecha?'<div class="fds">Coste: '+coste+'</div>':'')+'</div><div class="fbtns"><button class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Completada':tienda?'Comprar':'Mejorar')+'</button></div></div>';
+}
+function infraEnlazar(box){
+ box.querySelectorAll('[data-infra]').forEach(b=>b.onclick=()=>{
+ const id=b.dataset.infra,d=INFRA_GRANJA[infraNivel()],coste=id==='tienda'?'10 Golden':Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · ');
+ askConfirm((id==='tienda'?'Comprar +1 publicación diaria permanente':'Mejorar granja a +'+d.bono+'% de XP productiva futura')+' por '+coste+'. No consume energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Confirmar',yesClass:'gold',no:'Cancelar'});
+ });
+}
 function refreshNft() {
   const box = $("nft-shop"); if (!box) return;
   let h = '<div class="info">Mejoras internas del juego, sin tokenización. Las pasivas de recolección se suman a tus herramientas normales.</div>';
+  h += infraHtml('tienda');
   h += '<div class="secc">GOD HAND</div>';
   h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr("godhand") + '" onerror="this.remove()"></div><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
     '<div class="fds">Automatización de cultivos: cargale hasta 300 semillas (6 espacios) y mientras no estás hace TODO el ciclo en tus parcelas vacías — siembra, cosecha y resiembra — y te entrega lo producido al volver.</div>' +
@@ -4818,6 +4831,7 @@ function refreshNft() {
         '<button class="green sm" data-nft="' + k + '" ' + ((G.golden || 0) >= precio ? "" : "disabled") + '>' + precio + ' $G</button>') + '</div></div>';
   }
   box.innerHTML = h;
+  infraEnlazar(box);
   box.querySelectorAll("[data-nft]").forEach(b => { b.onclick = () => { if (typeof comprarNft === "function") comprarNft(b.dataset.nft); refreshNft(); }; });
   box.querySelectorAll('[data-pasiva]').forEach(b => { b.onclick=()=>askConfirm('Mejorar '+NFT_DEF[b.dataset.pasiva].label+' por 50.000 Plata: el bono pasa de +0,10 a +0,15 unidades por recolección efectiva. Compra única, sin energía.',()=>mejorarPasiva(b.dataset.pasiva),{title:'Mejorar pasiva',yes:'Mejorar',yesClass:'gold',no:'Cancelar'}); });
   box.querySelectorAll("[data-nft-pase]").forEach(b => { b.onclick = () => openOv("ov-pass"); });
@@ -5617,7 +5631,8 @@ function refreshBarn() {
   }
   h += '<div class="info"><div>Parcelas: <b>' + (G.plotsOwned || 2) + '</b> · Cofres: <b>+' + (G.chestCap || 0) + '</b> de capacidad</div>' +
     ((G.cosmeticos || []).length ? '<div>Cosméticos ganados: <b>' + G.cosmeticos.length + '</b></div>' : '') + '</div>';
-  if (box) box.innerHTML = h;
+  h += infraHtml('granja');
+  if (box) {box.innerHTML = h;infraEnlazar(box);}
 }
 
 
@@ -6704,6 +6719,7 @@ async function refreshP2P() {
       '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
   }
   if (p2pTab === "vender") {
+    h += '<div class="info">Tu límite: '+infraCupoP2P()+' publicaciones por día UTC. La tiendita en Mercado → Mejoras agrega una publicación permanente.</div>';
     h += '<div class="fds">Elegí qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
     const ops = [];
     CROP_ORDER.forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });
@@ -6733,7 +6749,7 @@ async function refreshP2P() {
         '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + marketFee(r) + '% de comisión)</div></div>' +
         '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';
     });
-    h += '<div class="secc">Publicaciones activas: ' + activas.length + (vipVigente() ? ' · VIP: diez publicaciones por día UTC' : ' · Free: una publicación por día UTC') + '</div>';
+    h += '<div class="secc">Publicaciones activas: ' + activas.length + (' · '+(vipVigente()?'VIP':'Free')+': '+infraCupoP2P()+' publicaciones por día UTC') + '</div>';
     if (!activas.length) h += '<div class="fds">No tenés nada publicado.</div>';
     activas.forEach(r => {
       h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +
