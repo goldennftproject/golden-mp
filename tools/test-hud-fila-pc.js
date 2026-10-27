@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),{JSDOM}=require('jsdom');
+const html=fs.readFileSync('public/index.html','utf8'),ui=fs.readFileSync('public/game/ui.js','utf8');
+const dom=new JSDOM(html,{runScripts:'outside-only'}),w=dom.window;
+w.$=id=>w.document.getElementById(id);
+w.eval(ui.slice(ui.indexOf('function ordenarHudPc()'),ui.indexOf('function refreshHud()')));
+const energy=w.$('energia-granja-pill'),stam=w.$('stampill'),buff=w.$('buffpill'),flot=w.$('hud-flot'),menu=w.$('menu-btn');
+w.innerWidth=1366;w.ordenarHudPc();assert.equal(energy.parentElement,menu.parentElement);assert.equal(stam.parentElement,menu.parentElement);assert.equal(buff.parentElement,flot);
+w.ordenarHudPc();assert.equal(w.document.querySelectorAll('#energia-granja-pill').length,1);
+w.innerWidth=600;w.ordenarHudPc();assert.equal(energy.parentElement,flot);assert.equal(stam.parentElement,flot);assert.equal(w.$('energia-granja-pill'),energy);
+assert.equal(w.$('loading').querySelectorAll('img.gf-logo').length,1);assert.equal(w.$('loading').firstElementChild.textContent.trim(),'');
+console.log('OK: fila PC, efectos separados, mismos controles, restauración móvil y logo único en precarga.');

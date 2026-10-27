@@ -1,5 +1,11 @@
 # Las leyes de Golden Farm
 
+## HUD de PC en una fila y logo Alpha — 27/10/2026
+
+Dirección pide reunir la energía con los demás datos superiores. En PC se mantienen nivel de granja, energía, Plata, Golden, vida, combate y menú en una fila; la estamina visible se integra también, con su cuenta atrás en el tooltip. Los efectos temporales conservan una repisa separada que sigue siendo medible por el menú y las guías. Se reutilizan los mismos controles y callbacks, restaurando la ubicación previa fuera de PC. Los anchos compactos reducen barras accesorias, conservan nombres y valores y permiten desplazamiento horizontal si la ventana es muy estrecha. No cambian mecánicas ni guardado.
+
+Dirección pide un logo ilustrado con etiqueta Alpha en la esquina superior izquierda y sustituir el título textual de la pantalla verde de precarga. Se añade golden-farm-alpha-v1.png con transparencia y se conserva el original generado. La pantalla de carga mantiene su progreso y mensajes.
+
 ## Visita visual y bono único de recolección — 27/10/2026
 
 Dirección pide entrar visualmente en otra granja y recoger la semilla desde allí. Se usa una vista aislada con la proyección pública del guardado: nunca se sustituye G por los datos del dueño. Sólo la operación de semilla del visitante escribe mediante el servidor; se mantienen VIP, límite diario, recibos, CAS y logros. No se habilitan acciones de cultivo, edición ni inventario sobre la granja ajena. La visita no es multijugador en vivo. Dirección también pide que el bono de recolección no se apile: un nuevo consumo renueva su duración sin sumar potencia ni tiempo, y los duplicados históricos no suman porcentajes. Ver VISITAS-VISUALES-Y-BONO-20261027.txt.

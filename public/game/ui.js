@@ -1979,7 +1979,20 @@ function pescaV4Nasas() {
 }
 
 
+function ordenarHudPc() {
+  const flot = $("hud-flot"), menu = $("menu-btn"), energia = $("energia-granja-pill"), stam = $("stampill");
+  if (!flot || !menu || !energia || !stam) return;
+  const pc = window.innerWidth > 640;
+  if (pc) {
+    if (energia.parentElement !== menu.parentElement) menu.parentElement.insertBefore(energia, menu);
+    if (stam.parentElement !== menu.parentElement) menu.parentElement.insertBefore(stam, menu);
+  } else {
+    if (stam.parentElement !== flot) flot.insertBefore(stam, flot.firstChild);
+    if (energia.parentElement !== flot) flot.insertBefore(energia, stam);
+  }
+}
 function refreshHud() {
+  ordenarHudPc();
   if(typeof ubicarComprasPc==='function')ubicarComprasPc();
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/'+energiaGranjaMax());
   const ef=$('energia-granja-fill');if(ef)ef.style.width=Math.max(0,Math.min(100,energia/energiaGranjaMax()*100))+'%';
@@ -2037,7 +2050,8 @@ function refreshStam() {
   /* el reloj VISIBLE, no solo en el tooltip (los vídeos de referencia: « Stamina 42:00 »).
      En el móvil no hay hover, así que un dato que solo vive en el title no existe. */
   const falta = (v < mx && typeof stamFullEn === "function") ? stamFullEn() : 0;
-  setTxt("s-stam", v + "/" + mx + (falta > 0 ? " · ⏱" + fmtDur(falta) : ""));
+  const hudPC = typeof window.matchMedia === "function" && window.matchMedia("(min-width:641px)").matches;
+  setTxt("s-stam", v + "/" + mx + (!hudPC && falta > 0 ? " · ⏱" + fmtDur(falta) : ""));
   const f = document.getElementById("stam-fill"); if (f) f.style.width = Math.round(v / mx * 100) + "%";
   /* 24/8: la barra dice CUÁNDO se llena entera (recarga de 4 h, reloj real) — sin eso, una
      recarga que no se ve avanzar parece rota. */
