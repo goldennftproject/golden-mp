@@ -59,7 +59,7 @@ Al corregir: conservar una referencia del commit previo y ejecutar las regresion
 No hay monitor automático programado ni mensajes externos enviados.
 
 PENDIENTES QUE REQUIEREN DECISIÓN O PRUEBA HUMANA
-Fecha de convocatoria y responsables; entrega de correo en otros proveedores; medición de capacidad real y diversión; términos de cualquier evento; autorización para la copia local cifrada antes del futuro reinicio. El documento EVENTO-ALPHA-REGLAS.txt sigue siendo preparación sin activar premios. El futuro reset y la activación de release no se ejecutan durante esta preparación.
+Fecha de convocatoria y responsables; entrega de correo en otros proveedores; medición de capacidad real y diversión; términos de cualquier evento. La copia local cifrada fue autorizada y verificada el 27/10; actualizarla antes de cualquier reinicio futuro. El documento EVENTO-ALPHA-REGLAS.txt sigue siendo preparación sin activar premios. El futuro reset y la activación de release no se ejecutan durante esta preparación.
 
 REFERENCIAS OFICIALES CONSULTADAS
 https://supabase.com/docs/guides/auth/auth-smtp
