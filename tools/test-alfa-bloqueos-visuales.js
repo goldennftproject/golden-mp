@@ -16,7 +16,7 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.
  check('Cocinar anticipa que falta espacio',()=>{const b=doc.querySelector('[data-ckcook="papa_asada"]');assert.equal(b.disabled,true);assert.match(b.textContent,/Bolsa llena|espacio/)});c.roomForDish=room;
  c.openOv=id=>{doc.getElementById(id).classList.add('show');c.refreshCooking()};c.guiaActiva=()=>({id:'estofado',panel:'ov-cocina',ui:'[data-cook="estofado"]',receta:'estofado'});c.tutoSub=()=>null;c._ckSel='papa_asada';
  c.mostrarObjetivo();check('Mostrar selecciona la receta y no prepara el plato',()=>{assert.equal(c._ckSel,'estofado');assert.equal(c.G.cooking.length,0);assert.ok(doc.querySelector('#ck-detalle [data-ckcook="estofado"]'));});
- 
+
  // El aviso de energía se actualiza sin cerrar la Cocina ni crear guardados periódicos.
  let timer=null;c.setTimeout=fn=>{timer=fn;return 17};c._ckTick=null;c._ckSel='papa_asada';c.G.energiaGranja={v:1,actual:0,at:clock};c.refreshCooking();
  check('Cocina vuelve a habilitarse al recuperar energía',()=>{assert.equal(typeof timer,'function');clock+=300000;timer();assert.equal(doc.querySelector('[data-ckcook="papa_asada"]').disabled,false);assert.equal(c._ckTick,null);});
@@ -25,7 +25,7 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.
  const anterior=pane.firstElementChild;let compras=0;doc.querySelector('[data-shop="deco"]').onclick=()=>{pane.innerHTML='<button id="qa-accion">Elegir</button>';pane.firstElementChild.onclick=()=>compras++};
  c.openOv=()=>{};c.guiaActiva=()=>({id:'qa',panel:'ov-market',ui:'#qa-accion'});c.tutoHighlight=()=>{};c.mostrarObjetivo();
  check('Mostrar enfoca el control reconstruido sin pulsarlo',()=>{assert.equal(anterior.isConnected,false);assert.equal(doc.activeElement,doc.getElementById('qa-accion'));assert.equal(compras,0)});
- 
+
  check('Comercio y mejora de anuncios explican su uso y conservan sus cupos',()=>{
   assert.equal(doc.querySelector('#ov-p2p h3').textContent,'Comercio entre jugadores');
   c.estadoDeCero();c.G.golden=10;assert.match(c.infraHtml('tienda'),/\+1 anuncio de venta al día/);assert.match(c.infraHtml('tienda'),/10 Golden/);
