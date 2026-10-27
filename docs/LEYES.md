@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Conflicto falso tras operaciones económicas — 27/10/2026
+
+Dirección pide encontrar y corregir el bloqueo de guardado. Se reproduce en producción: reclamar el premio diario entrega el bono pero el guardado siguiente responde 409 con una sola pestaña. La operación devolvía updated_at reconstruido como ISO terminado en Z; PostgreSQL lo devuelve con +00:00. La comparación exacta de versiones lo confundía con otra sesión. Se devuelve ahora el updated_at leído del resultado de la escritura, igual que el guardado normal, conservando CAS, recibos, autenticación, saldos y progreso. La prueba imita la representación de timestamptz de PostgreSQL y verifica guardado posterior y rechazo de una versión realmente antigua. No se normalizan ni relajan versiones desde el cliente y no se cambian F5 ni autoguardado. No se afirma que esta causa explique todos los fallos históricos de conexión o guardado.
+
+
 ## Preparación técnica de alfa — 26/10/2026
 
 Dirección pide preparar la alfa abierta para medir infraestructura Free, conservando progreso y USDT desactivado. Se preparan salud HTTP, agregados acotados en logs de Render y copia local de diagnóstico solicitada por el jugador. Sin datos personales ni telemetría periódica en Supabase. SSE cuenta ventanas, no personas. Se valida el coste Golden al adquirir God Hand/pasivas, conservando compras previas. Pruebas de carga sólo contra un proceso local aislado; no equivalen a capacidad de producción. Acceso externo pendiente: dirección confirma SMTP integrado y elige conservar entrada por correo/enlace. No se cambia a invitado ni se contrata un proveedor; la entrega general a correos externos sigue sin resolver. No se cambia Auth, no se envían correos, no se anuncian eventos, no se reparten fondos y no se resetean cuentas.

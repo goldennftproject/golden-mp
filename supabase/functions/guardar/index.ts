@@ -693,7 +693,8 @@ Deno.serve(async (req) => {
       const {data:hecho,error:fallo}=await admin.from('farms').update({data:r.data,updated_at:fecha}).eq('user_id',uid).eq('updated_at',row.updated_at).select('updated_at').maybeSingle();
       if(fallo)return json({error:'No se pudo confirmar la operación'},503);
       if(!hecho)return json({error:'Otra sesión guardó primero',conflicto:true},409);
-      return json({ok:true,data:r.data,updated_at:fecha,cobro:r.cobro,premio:r.premio,granja:granjaVisitada});
+      // La versión debe ser la devuelta por PostgreSQL, no otra representación ISO del mismo instante.
+      return json({ok:true,data:r.data,updated_at:hecho.updated_at,cobro:r.cobro,premio:r.premio,granja:granjaVisitada});
     }
 
     /* REINICIAR LA CUENTA (24/9, dirección: « debe literal borrar la cuenta y crearla como si

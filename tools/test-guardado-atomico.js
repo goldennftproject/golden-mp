@@ -15,7 +15,7 @@ function servidor(inicial, opciones={}) {
       if(opciones.sinAck && Object.hasOwn(valor,"mercado_ack"))return{error:{code:"42703",message:"mercado_ack missing"},data:null};
       if(modo==="insert"&&fila)return{error:{code:"23505",message:"duplicate"},data:null};
       if(modo==="update"&&(!fila||fila.updated_at!==filtros.updated_at))return{error:null,data:null};
-      writes++;fila=structuredClone(valor);return{error:null,data:{updated_at:fila.updated_at}};
+      writes++;fila=structuredClone(valor);if(opciones.postgresTime)fila.updated_at=new Date(fila.updated_at).toISOString().replace(/Z$/,'+00:00');return{error:null,data:{updated_at:fila.updated_at}};
     }};return q;
   }};
   const ctx={Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>"unused"},serve:f=>{handle=f;}}};
@@ -61,6 +61,15 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   for(const opciones of [{readError:true},{marketError:true}]) {s=servidor(inicial,opciones);r=await s.call({base,data:inicial.data});assert.equal(r.status,503);assert.equal(s.writes(),0);}
   s=servidor(inicial,{sinAck:true});r=await s.call({base,data:inicial.data});assert.equal(r.status,200);assert.equal(s.writes(),1);
   s=servidor(inicial);r=await s.call({data:inicial.data},false);assert.equal(r.status,401);assert.equal(s.writes(),0);
+  // PostgreSQL devuelve timestamptz con +00:00; la operación debe devolver ESA versión.
+  const pg=servidor({...inicial,data:{...inicial.data,golden:100}},{postgresTime:true});
+  const pgCompra=await pg.call({base,op,artefacto:{accion:'comprar',id:'cobre'}});
+  assert.equal(pgCompra.status,200);const pgAck=await pgCompra.json();
+  assert.equal(pgAck.updated_at,pg.row().updated_at,'el ACK conserva exactamente la versión de PostgreSQL');
+  const pgGuardar=await pg.call({base:pgAck.updated_at,op:'normal-despues-compra',data:pgAck.data});
+  assert.equal(pgGuardar.status,200,'guardar después de una compra no inventa otra sesión');
+  const pgConflicto=await pg.call({base:pgAck.updated_at,op:'sesion-realmente-vieja',data:pgAck.data});
+  assert.equal(pgConflicto.status,409,'una versión realmente antigua sigue bloqueada');
   // Cliente real: cola de escrituras, paquetes inmutables y base de la última respuesta.
   const ctx=real.ctx,run=c=>vm.runInContext(c,ctx);let invocaciones=[],soltar;
   ctx.qaSb={functions:{invoke:async(nombre,{body})=>{
