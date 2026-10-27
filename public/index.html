@@ -1514,6 +1514,34 @@
     .compras-iconos button{min-height:64px;padding:3px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:#674626!important;border:1px solid #bd9656!important;border-image:none!important;border-radius:7px!important;box-shadow:0 2px 0 #352716!important;transition:background .15s}
     .compras-iconos button:hover{background:#855e30!important}.compras-iconos img{width:40px;height:40px;object-fit:contain;image-rendering:pixelated}.compras-iconos span{font-size:11px;color:#fff0cc;text-shadow:0 1px #25190f;font-weight:800}.compras-iconos .tienda-vip-activo{border-color:#aed783!important;background:#355329!important}
   }
+
+/* Lectura visual de PC: experiencia, divisas y resultado de acciones. */
+@media(min-width:641px){
+ #lvl-fill{background:linear-gradient(#80c9f0,#3586c3)}#energia-granja-fill{background:linear-gradient(#ffe68a,#df9f24)}
+ #lvl-tipo{font-size:10px;opacity:.9}#lvlpill[data-progreso="tareas"] #lvl-tipo{color:#ffe38b}
+ .divisa-hud:has(#s-plata){box-shadow:inset 0 -3px #b7cbd2}.divisa-hud:has(#s-golden){box-shadow:inset 0 -3px #eac45e}
+ .menu-opcion{display:block;flex:1;min-width:0}.menu-opcion small{display:block;font-size:10px;opacity:.85;line-height:1.3;font-weight:400;margin-top:2px}
+ .guia-destino{outline:3px solid #c1ffb6!important;outline-offset:3px;box-shadow:0 0 0 6px #28593888!important;animation:guia-control 1.4s ease-in-out infinite}
+}
+@keyframes guia-control{50%{outline-offset:5px}}
+.banco-visual{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:center;gap:7px;margin:8px 0}
+.banco-visual:empty{display:none}.banco-visual .cambio-lado{min-width:0;text-align:center;padding:10px 5px;background:#efe4c5;border:2px solid #9bafb6;border-radius:8px;color:#302310}
+.banco-visual .cambio-lado:last-child{border-color:#c89f3a;background:#ffedb9}.cambio-lado img{width:26px;height:26px;image-rendering:pixelated;vertical-align:middle}
+.cambio-lado strong,.cambio-lado small{display:block;overflow-wrap:anywhere}.cambio-lado strong{font-size:18px;margin:4px 0}.cambio-lado small{font-size:11px}
+.banco-visual:not(:empty)+.cambio-previa{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.cambio-saldo{grid-column:1/-1;text-align:center;font-size:12px;padding:3px}
+.banco-visual[data-insuficiente="true"] .cambio-lado:first-child{border-color:#b74b3a}.banco-visual[data-insuficiente="true"] strong{color:#8c3027}
+.tienda-chips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0}.tienda-chips span,.compra-estado{font-size:11px;padding:4px 6px;border:1px solid #a68347;border-radius:5px;background:#efe2ba;color:#38260f}
+.compra-estado{display:inline-block;margin:4px 0;background:#dce8c0;border-color:#658445}.objeto-card .objeto-nombre>span{display:inline-flex;width:48px;height:48px;align-items:center;justify-content:center;font-size:32px;background:#ead9a9;border:2px solid #a88a4e;border-radius:9px;margin-right:8px;vertical-align:middle}
+#toast[data-resultado="success"]{border-color:#80c484;background-color:#23472d;color:#efffea}#toast[data-resultado="warning"]{border-color:#e5b575;background-color:#583222;color:#fff1d9}
+#toast[data-resultado="success"]::before{content:'✓ ';font-weight:900}#toast[data-resultado="warning"]::before{content:'! ';font-weight:900}
+#toast[data-resultado="success"][data-accion="fabricar"]::before{content:'⚒ '}
+#toast[data-resultado="success"][data-accion="premio"]::before{content:'🎁 '}
+#toast[data-resultado="success"][data-accion="compra"]::before{content:'🛍 '}
+#toast[data-resultado="success"][data-accion="canje"]::before{content:'⇄ '}
+#toast[data-resultado="success"][data-accion="mejora"]::before{content:'↑ '}
+@media(prefers-reduced-motion:reduce){.guia-destino{animation:none!important}}
+
 </style>
 </head>
 <body>
@@ -1535,7 +1563,7 @@
            único nivel del juego sin barra a la vista: la ventana de la Granja la tiene desde
            siempre, pero había que saber que existía para ir a buscarla. Clic: abre esa ventana,
            que es donde viven las tareas. -->
-      <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja · Nv.</span><b id="s-level">1</b><span class="k" id="s-level-max" hidden>/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k" id="lvl-txt"></span></div>
+      <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja · Nv.</span><b id="s-level">1</b><span class="k" id="s-level-max" hidden>/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k hud-xp-label" id="lvl-tipo">XP</span><span class="k" id="lvl-txt"></span></div>
       <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <button class="pill divisa-hud" data-panel="ov-banco" title="Plata: semillas, fabricación y obras. Clic para ver el Banco." aria-label="Plata: saldo y usos en el Banco"><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""><span class="k">Plata</span><b id="s-plata">0</b></button>
       <button class="pill divisa-hud" data-panel="ov-banco" title="Golden: VIP, Objetos de Granja y mejoras. Clic para ver el Banco." aria-label="Golden: saldo y usos en el Banco"><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""><span class="k">Golden</span><b id="s-golden">0</b></button>
@@ -1597,7 +1625,7 @@
   <div class="ov" id="ov-barn"><div class="card" style="width:min(560px,94%)">
     <button class="close" data-close="ov-barn" aria-label="Cerrar ventana">×</button>
     <h3>Granja</h3>
-    <div class="sub">Del nivel 1 al 10 subes solo cosechando. Del 11 al 25 hace falta la XP y cumplir las tareas del nivel.</div>
+    <details class="ayuda-menu"><summary>Cómo subir de nivel</summary><p class="sub">Del nivel 1 al 10 subes solo cosechando. Del 11 al 25 hace falta la XP y cumplir las tareas del nivel.</p></details>
     <div class="forge-list" id="barn-body" style="max-height:60vh"></div>
   </div></div>
 
@@ -1633,7 +1661,7 @@
 
   <div class="ov" id="ov-market"><div class="card" style="width:min(520px,94%)">
     <button class="close" data-close="ov-market" aria-label="Cerrar ventana">×</button>
-    <h3>Mercado</h3>
+    <h3>🌱 Mercado</h3>
     <div class="shoptabs">
       <button class="shoptab active" data-shop="buy">Comprar</button>
       <button class="shoptab" data-shop="deco">Adornos</button>
@@ -1707,7 +1735,7 @@
 
   <div class="ov" id="ov-forge"><div class="card" style="width:min(580px,94%)">
     <button class="close" data-close="ov-forge" aria-label="Cerrar ventana">×</button>
-    <h3>Herrería</h3>
+    <h3>⚒ Herrería</h3>
     <div class="shoptabs">
       <button class="shoptab forgetab active" data-forge="craft">Fabricar</button>
       <button class="shoptab forgetab" data-forge="armas">Armas</button>
@@ -1722,7 +1750,7 @@
       <div class="forge-list" id="forge-armas"></div>
     </div>
     <div id="forge-pane-repair" style="display:none">
-      <div class="sub">Solo las armas se reparan. Herramientas y picos se rompen y se fabrican de nuevo.</div>
+      <div class="flujo-menu"><span>⚔ Arma gastada</span><b aria-hidden="true">→</b><span>⚒ Reparar</span></div><details class="ayuda-menu"><summary>Qué se puede reparar</summary><p class="sub">Solo las armas se reparan. Herramientas y picos se rompen y se fabrican de nuevo.</p></details>
       <div class="forge-list" id="forge-repair"></div>
     </div>
   </div></div>
@@ -1783,7 +1811,7 @@
     <div id="banco-info" aria-live="polite"></div>
 
     <div class="banco-elegir"><label for="banco-cantidad">Quiero recibir</label><div><input id="banco-cantidad" type="number" min="1" max="1000000" step="1" value="1"><span>Golden</span></div></div>
-    <p id="banco-previa" class="cambio-previa" aria-live="polite"></p>
+    <div id="banco-visual" class="banco-visual" aria-hidden="true"></div><p id="banco-previa" class="cambio-previa" aria-live="polite"></p>
     <p class="sub">USDT · depósitos y retiros desactivados</p>
     <details class="ayuda-menu"><summary>Tasa y condiciones</summary><p class="sub">Sólo Plata → Golden, en unidades enteras. La cotización dura 60 segundos y puede cambiar. Son monedas internas de prueba: no hay paridad garantizada con dólares ni derecho de cobro en USDT.</p></details><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="banco-actividad" aria-live="polite"></div></details>
     </div>
@@ -2173,12 +2201,12 @@
     <div class="gmitems" role="navigation" aria-label="Menús del juego">
       <div class="menu-seccion">Mi granja</div>
       <button class="gmi" title="Objetos, semillas y materiales que llevas." data-panel="ov-inv"><span class="ic" aria-hidden="true">🎒</span> Inventario <b class="key">I</b></button>
-      <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="ic" aria-hidden="true">🏚</span> Cobertizo <b class="key" id="gm-cob"></b></button>
-      <button class="gmi" title="Elegir armas, armaduras y herramientas." data-panel="ov-equip"><span class="ic" aria-hidden="true">⚔️</span> Equipo <b class="key">P</b></button>
+      <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="menu-opcion"><span class="ic" aria-hidden="true">🏚</span> Cobertizo <b class="key" id="gm-cob"></b><small>Colocar · capacidad</small></span></button>
+      <button class="gmi" title="Elegir armas, armaduras y herramientas." data-panel="ov-equip"><span class="menu-opcion"><span class="ic" aria-hidden="true">⚔️</span> Equipo <b class="key">P</b><small>Armas · herramientas</small></span></button>
       <button class="gmi" title="Niveles de cultivo, tala, minería y combate." data-panel="ov-skills"><span class="ic" aria-hidden="true">📊</span> Habilidades <b class="key">X</b></button>
       <button class="gmi" title="Elegir a qué zona viajar." data-panel="ov-mapa"><span class="ic" aria-hidden="true">🗺️</span> Mapa <b class="key">N</b></button>
       <div class="menu-seccion">Objetivos y premios</div>
-      <button class="gmi" title="Ver qué te falta para avanzar." data-panel="ov-objetivos"><span class="ic" aria-hidden="true">🎯</span> Progreso <b class="key" id="gm-cam"></b></button>
+      <button class="gmi" title="Ver qué te falta para avanzar." data-panel="ov-objetivos"><span class="menu-opcion"><span class="ic" aria-hidden="true">🎯</span> Progreso <b class="key" id="gm-cam"></b><small>Tu siguiente paso</small></span></button>
       <button class="gmi" title="Ver y reclamar la recompensa diaria." data-panel="ov-paquete"><span class="ic" aria-hidden="true">🎁</span> Premio diario <b class="key">G</b></button>
       <button class="gmi" title="Seguir metas y reclamar sus premios." data-panel="ov-logros"><span class="ic" aria-hidden="true">🏆</span> Logros <b class="key" id="gm-log"></b></button>
       <button class="gmi destacada" title="Consultar las tareas de hoy." data-panel="ov-misiones"><span class="ic" aria-hidden="true">📜</span> Misiones de hoy <b class="key" id="gm-mis">0/3</b></button>
@@ -2188,7 +2216,7 @@
       <button class="gmi" title="Comprar semillas y vender tus cultivos por Plata." data-panel="ov-market"><span class="ic" aria-hidden="true">🌱</span> Mercado de cultivos</button>
       <button class="gmi" title="Comprar objetos que producen Plata y cobrar su producción." data-panel="ov-reliquias"><span class="ic" aria-hidden="true">🌾</span> Objetos de Granja</button>
       <button class="gmi" title="Canjear Plata por Golden." data-panel="ov-banco"><span class="ic" aria-hidden="true">🏦</span> Banco</button>
-      <button class="gmi" title="Comprar y vender con otros jugadores." data-panel="ov-p2p"><span class="ic" aria-hidden="true">🤝</span> Mercado de jugadores</button>
+      <button class="gmi" title="Comprar y vender con otros jugadores." data-panel="ov-p2p"><span class="menu-opcion"><span class="ic" aria-hidden="true">🤝</span> Mercado de jugadores<small>Comprar · vender</small></span></button>
       <button class="gmi" title="Ver ventajas y comprar o renovar VIP." data-panel="ov-vip"><span class="ic" aria-hidden="true">👑</span> VIP</button>
       <div class="menu-seccion">Comunidad</div>
       <button class="gmi" title="Visitar granjas con VIP activo." data-panel="ov-visitas"><span class="ic" aria-hidden="true">🌱</span> Visitas VIP</button>

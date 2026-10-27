@@ -1,0 +1,30 @@
+SIETE MEJORAS DE INTUICIÓN Y PRESENTACIÓN — PC — 27/10/2026
+
+1. HUD
+La experiencia de granja se identifica con XP y color azul. La energía usa ámbar; la vida conserva rojo. Si falta una tarea o Tala, la barra pasa a indicar Pendiente, y el máximo no muestra una etiqueta XP vacía de sentido.
+
+2. Mostrar
+El botón distingue Mostrar parcelas, Ver cultivos, Mostrar acción, Mostrar destino y Abrir menú. Conserva las marcas sobre parcelas elegibles y siluetas reales, navegación y foco de la receta. Las marcas se retiran al cambiar el tipo de parcela/recurso/destino o abrir una interfaz que toma el control, además de los límites previos de ocho segundos, edición y avance.
+
+3. Edificios
+Los avisos anteriores de exclamación se especializan: carta con cantidad para Buzón, visto con cantidad para producción recogible, herramientas para una obra colocada pendiente y flecha para subir el nivel de granja. Se incluyen los productos animales listos. Se leen las mismas funciones y datos del juego, sin nuevos contadores. No hay aviso cuando no existe tarea. Se conservan ancla, movimiento y ocultación de edición; más edificios tienen nombre breve.
+
+4. Compras
+Las cuatro tarjetas ilustradas muestran beneficios con iconos. VIP activo, colección existente y nivel de mejora se identifican a partir de la propiedad real. Los Objetos de Granja tienen iconos mayores y una marca de colección. Navegar no compra ni cobra; todos los requisitos y confirmaciones se conservan.
+
+5. Monedas y Banco
+Plata y Golden mantienen sus iconos y se distinguen por color. El Banco presenta tarjetas Entregas → Recibes y saldo restante o faltante. Los importes visuales desaparecen si la cantidad o la cotización no son válidas. El resumen completo sigue disponible para lectores de pantalla sin repetirlo visualmente.
+
+6. Menús
+Cobertizo, Equipo, Progreso y Mercado de jugadores incluyen una pista breve de uso. Las explicaciones de progresión y de reparación quedan desplegables; las acciones principales siguen accesibles. Herrería y Mercado reciben icono de cabecera. No cambian las rutas.
+
+7. Respuesta a acciones
+Éxito y bloqueo se distinguen con símbolo y color. Fabricar, comprar, recibir premio, mejorar y canjear tienen símbolos propios. Los éxitos económicos aparecen después de la confirmación autoritativa existente. Los avisos siguen siendo texto seguro y se colocan sin tapar la guía.
+
+Límites
+No se cambian costes, producción, energía, progresión, guardado, cuentas ni economía. USDT continúa desactivado. No se añaden pistas sobre las mariposas. La comprobación visual se realiza con datos ficticios en un origen local aislado, sin comprar en cuentas reales.
+
+Pruebas
+La comparación sintáctica de state.js y save.js confirma que su lógica es idéntica a ef7e0b2 salvo llamadas de feedback. Se añade test-intuitivo-visual-pc.js con cotización/caducidad/cantidad, propiedad/VIP vencido, estados de edificios, menús, texto seguro y retirada de marcas. La comprobación de posición de los avisos conserva sus aserciones y admite los nuevos argumentos opcionales de toast.
+
+Resultado: 303 pruebas superadas en la suite completa; después de reforzar las flechas de parcelas se repiten 11 pruebas específicas, todas correctas. Revisión visual local del Banco en 1280x720 y 1024x600, catálogo ilustrado, tres parcelas elegibles señaladas y fabricación real de un pico con datos ficticios.

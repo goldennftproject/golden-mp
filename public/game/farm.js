@@ -2738,7 +2738,7 @@ class FarmScene extends Phaser.Scene {
   tickDestinoGuia() {
     if(!this._guiaHasta)return;
     const actual=typeof guiaDestinoActual==='function'?guiaDestinoActual():this._guiaPaso;
-    if(nowMs()>this._guiaHasta||GF.editMode||!actual||actual.id!==this._guiaPaso?.id||actual.target!==this._guiaPaso?.target){this.limpiarDestinoGuia();return;}
+    if(nowMs()>this._guiaHasta||GF.editMode||GF.uiOpen||!actual||['id','target','guiaPlot','res','panel','ui'].some(k=>actual[k]!==this._guiaPaso?.[k])){this.limpiarDestinoGuia();return;}
     const objetivos=this.objetivosDestinoGuia(this._guiaPaso),prev=this._guiaMarcas||[];
     for(const m of prev)if(!objetivos.includes(m.o))for(const f of m.fx)f.destroy();
     this._guiaMarcas=objetivos.map(o=>{
@@ -2746,6 +2746,7 @@ class FarmScene extends Phaser.Scene {
       const fx=[],sp=o.sprite;
       if(this._guiaPaso.target==='plot'){
         fx.push(this.add.rectangle(o.cx,o.by,GF.TILE-6,GF.TILE-6,0x8de694,.22).setStrokeStyle(3,0xafffb0).setDepth(99979));
+        if(this.add.text)fx.push(this.add.text(o.cx,o.by-GF.TILE*.42,'↓',{fontFamily:'system-ui',fontSize:'25px',fontStyle:'bold',color:'#c1ffb6',stroke:'#173e24',strokeThickness:4}).setOrigin(.5,1).setDepth(99980));
       }else if(sp?.texture){
         // Copias de la silueta: nunca se cambia el tinte, tamaño ni interacción del objeto real.
         for(const [dx,dy] of [[-3,0],[3,0],[0,-3],[0,3]])fx.push(this.add.image(sp.x+dx,sp.y+dy,sp.texture.key,sp.frame.name).setOrigin(sp.originX,sp.originY).setScale(sp.scaleX,sp.scaleY).setFlipX(sp.flipX).setFlipY(sp.flipY).setTintFill(0xafffb0).setAlpha(.6).setDepth(sp.depth-.01));
@@ -2756,7 +2757,7 @@ class FarmScene extends Phaser.Scene {
 
   rotulosEdificios() {
     if(typeof window!=='undefined'&&window.innerWidth<=640){for(const o of this.objs||[])o._rotulo?.setVisible(false);return;}
-    const nombres={barn:'Granero',market:'Mercado',store:'Herrería',horno:'Horno',cocina:'Cocina',cofre_diario:G.kitReclamado?'Baúl':'Baúl · kit',tablon_pedidos:'Pedidos'};
+    const nombres={barn:'Granero',market:'Mercado',store:'Herrería',horno:'Horno',cocina:'Cocina',buzon:'Buzón',establo:'Establo',curtiduria:'Curtiduría',lombricario:'Lombricario',altar:'Altar',cofre_diario:G.kitReclamado?'Baúl':'Baúl · kit',tablon_pedidos:'Pedidos'};
     for(const o of this.objs||[]){
       if(!nombres[o.type]||!o.sprite)continue;
       const visible=!o.oculto&&o.sprite.visible!==false&&!GF.editMode;
@@ -4758,6 +4759,18 @@ class FarmScene extends Phaser.Scene {
     o._avisoTween = this.tweens.add({ targets: a, y: y - 6, duration: 520,
       yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
+  indicadorEdificio(o) {
+    const tipo=o?.type,n=tipo&&typeof pendienteDe==='function'?pendienteDe(tipo):0;
+    if(n)return {n,texto:tipo==='buzon'?'✉ '+n:'✓ '+n,color:tipo==='buzon'?'#a9d9ff':'#baffb0'};
+    if(typeof G==='undefined')return null;
+    if(tipo==='establo'&&G.built?.establo&&typeof animalListos==='function'&&typeof ANIMAL_ORDER!=='undefined'){
+      const listos=ANIMAL_ORDER.reduce((n,k)=>n+animalListos(k),0);
+      if(listos)return {n:listos,texto:'✓ '+listos,color:'#baffb0'};
+    }
+    if(tipo&&G.obras?.[tipo]&&!G.built?.[tipo])return {n:1,texto:'⚒',color:'#ffd75e'};
+    if(tipo==='barn'&&typeof farmPuedeSubir==='function'&&farmPuedeSubir())return {n:1,texto:'↑',color:'#a9d9ff'};
+    return null;
+  }
   avisosDibujar() {
     if (typeof pendienteDe !== "function") return;
     const firma = this.objs.map(o => {
@@ -4766,12 +4779,14 @@ class FarmScene extends Phaser.Scene {
       const x = s && Number.isFinite(s.x) ? s.x : o.cx;
       const y = s && Number.isFinite(s.y) ? s.y : o.by;
       const alto = (s && s.displayHeight) || 60;
-      return [pendienteDe(o.type), o.oculto ? 1 : 0, x, y, alto].join("/");
+      const estado=typeof this.indicadorEdificio==='function'?this.indicadorEdificio(o):null;
+      return [estado?.texto||pendienteDe(o.type), o.oculto ? 1 : 0, typeof GF!=='undefined'&&GF.editMode?1:0, x, y, alto].join("/");
     }).join(",");
     if (this._avisoFirma === firma) return;
     this._avisoFirma = firma;
     for (const o of this.objs) {
-      const n = (o && o.type) ? pendienteDe(o.type) : 0;
+      const estado=typeof this.indicadorEdificio==='function'?this.indicadorEdificio(o):null;
+      const n = estado?.n || ((o && o.type) ? pendienteDe(o.type) : 0);
       if (!n) {
         if (o._avisoTween && typeof o._avisoTween.stop === "function") o._avisoTween.stop();
         o._avisoTween = null; o._avisoBaseX = o._avisoBaseY = null;
@@ -4784,10 +4799,12 @@ class FarmScene extends Phaser.Scene {
             color: "#ffd75e", stroke: "#3a2408", strokeThickness: 5 })
           .setOrigin(0.5, 1).setDepth(99991);
       }
+      o._aviso.setText?.(estado?.texto||'!');
+      o._aviso.setColor?.(estado?.color||'#ffd75e');
       this.reposicionarAviso(o);
       /* Si el reloj de un edificio termina justo mientras lo llevás en la mano, el repaso de
          cada segundo no puede volver a prender su ! en la celda transitoria. */
-      o._aviso.setVisible(!o.oculto && this.dragObj !== o);
+      o._aviso.setVisible(!o.oculto && o.sprite?.visible!==false && !(typeof GF!=='undefined'&&GF.editMode) && this.dragObj !== o);
     }
   }
 

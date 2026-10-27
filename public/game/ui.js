@@ -19,9 +19,12 @@ function placeToast() {
   const top = Math.max(4, Math.min(window.innerHeight - tr.height - 4, Math.round(gr.bottom + 8)));
   t.style.top = top + "px";
 }
-function toast(m) {
+function toast(m, resultado = "", accion = "") {
   const t = $("toast"); if (!t) return;
-  t.textContent = m; t.classList.add("show"); placeToast();
+  t.textContent = m;
+  const estado = resultado || (/^(Te falt|Necesitas|No puedes|No se pudo|Sin |Bolsa llena|Contenedor lleno|Máximo|Requiere|Resultado sin confirmar)/i.test(String(m)) ? "warning" : /^\+\d/.test(String(m)) ? "success" : "info");
+  t.dataset.resultado = estado; t.dataset.accion = accion; t.setAttribute("role", "status");
+  t.classList.add("show"); placeToast();
   clearTimeout(toastT); toastT = setTimeout(() => { t.classList.remove("show"); placeToast(); }, 1400);
 }
 function log(m, k = "") { const b = $("log"); if (!b) return; const d = document.createElement("div"); d.className = "l" + (k ? " " + k : ""); d.textContent = m; b.appendChild(d); while (b.children.length > 30) b.removeChild(b.firstChild); b.scrollTop = b.scrollHeight; }
@@ -2096,9 +2099,11 @@ function refreshFarmBar() {
         pill = document.getElementById("lvlpill");
   if (!f || typeof FARM_XP_LVLS === "undefined") return;
   const sig = G.level + 1;
+  const tipo = document.getElementById("lvl-tipo");if(tipo)tipo.textContent="XP";
   if (sig > FARM_NIVEL_MAX) {
     f.style.width = "100%"; f.classList.remove("tareas");
     if (t) t.textContent = "MAX";
+    if(tipo)tipo.textContent="";if(pill?.dataset)pill.dataset.progreso="max";
     if (pill) pill.title = "Nivel máximo de granja";
     return;
   }
@@ -2114,6 +2119,7 @@ function refreshFarmBar() {
   const soloTala = pctXp >= 100 && hechas >= tareas.length && faltaTala;
   f.style.width = pctXp.toFixed(1) + "%";
   f.classList.toggle("tareas", soloTareas || soloTala);
+  if(tipo)tipo.textContent=soloTareas||soloTala?"Pendiente":"XP";if(pill)pill.dataset.progreso=soloTareas||soloTala?"tareas":"xp";
   if (t) t.textContent = soloTala ? "Tala " + skillInfo(G.skills.tala || 0, "tala").lvl + "/" + farmTalaReq(sig)
     : soloTareas ? "tareas " + hechas + "/" + tareas.length
     : fmt(Math.max(0, xp - desde)) + "/" + fmt(hasta - desde);
@@ -2596,7 +2602,7 @@ function refreshArtefactos() {
     const pendiente=artefactoPendiente(id), diaria=artefactoDiario(id).toFixed(2).replace('.',',');
     const motivoCompra=!online?'Conecta y sincroniza el guardado':!vip&&activos>=1?'Sin VIP: ya tienes un objeto activo':!vip&&pendiente>0?'Cobra primero la producción pendiente':G.golden<d.golden?'Faltan '+fmtGolden(d.golden-G.golden)+' Golden':'';
     h+='<div class="row objeto-card" style="justify-content:space-between;flex-wrap:wrap;border-top:1px solid #ffffff22;padding:10px 0"><div class="objeto-datos"><strong class="objeto-nombre"><span aria-hidden="true">'+d.icon+'</span>'+d.label+(id.includes(':')?' · ejemplar adicional':'')+'</strong><br><small>'+diaria+' Plata/día · Coste: '+d.golden+' Golden</small>'+
-      (a?'<br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div class="objeto-acciones">'+
+      (a?'<br><span class="compra-estado">✓ En tu colección</span><br><small>'+(activo?'Activo hasta '+new Date(a.desde+ARTEFACTO_DIAS*86400000).toLocaleDateString('es-UY'):'Vida útil terminada')+'</small>':'')+'</div><div class="objeto-acciones">'+
       (a?'<span data-artefacto-pendiente="'+id+'">'+fmtPlata(pendiente)+' Plata</span> <button class="green sm" data-artefacto-cobrar="'+id+'" '+(!online||!artefactoPuedeCobrar(id)||!energiaGranjaPuede('harvest')?'disabled':'')+'>'+artefactoTextoCobro(id)+'</button> ':'')+
       (id.includes(':')?'':'<button class="ghost sm" data-artefacto-comprar="'+id+'" title="'+escapeHtml(motivoCompra||'Comprar '+d.label)+'" '+(motivoCompra?'disabled':'')+'>'+(activo&&vip?'Otro ejemplar · '+d.golden+' Golden':activo?'Ya lo tienes':'Comprar · '+d.golden+' Golden')+'</button>'+(motivoCompra?'<small class="motivo-accion">'+escapeHtml(motivoCompra)+'</small>':''))+'</div></div>';
   }
@@ -2613,6 +2619,7 @@ function bancoActualizarPrevia(){
   const cantidad=Number.isSafeInteger(n)&&n>=1&&n<=1000000;
   preview.textContent=valida&&cantidad ? 'Entregas '+(n*tasa).toLocaleString('es-UY')+' Plata → recibes '+n.toLocaleString('es-UY')+' Golden.'+(G.plata<n*tasa?' Te faltan '+(n*tasa-G.plata).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata.':' Saldo después: '+(G.plata-n*tasa).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata.') : valida?'Elige una cantidad entera, de 1 a 1.000.000 Golden.':'Actualiza la tasa para calcular el cambio.';
   boton.textContent=valida&&cantidad?'Canjear por '+n.toLocaleString('es-UY')+' Golden':'Canjear';
+  const visual=$('banco-visual');if(visual){visual.dataset.insuficiente=String(valida&&cantidad&&G.plata<n*tasa);visual.innerHTML=valida&&cantidad?'<div class="cambio-lado"><small>ENTREGAS</small><img src="assets/farm/coin_plata.png?a=4" alt=""><strong>'+(n*tasa).toLocaleString('es-UY')+'</strong><small>Plata</small></div><b>→</b><div class="cambio-lado"><small>RECIBES</small><img src="assets/farm/coin_esencia.png?a=4" alt=""><strong>'+n.toLocaleString('es-UY')+'</strong><small>Golden</small></div><small class="cambio-saldo">'+(G.plata<n*tasa?'Faltan '+(n*tasa-G.plata).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata':'Saldo después: '+(G.plata-n*tasa).toLocaleString('es-UY',{maximumFractionDigits:2})+' Plata')+'</small>':'';}
   const tasaVista=$('banco-tasa');if(tasaVista)tasaVista.textContent=valida?tasa.toLocaleString('es-UY'):'—';
   boton.disabled=!(valida&&cantidad&&G.plata>=n*tasa&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&!MERCADO_EN_CURSO);
 }
@@ -2652,6 +2659,16 @@ function abrirCompra(destino){
   const objetivo=destino==='suministros'?document.querySelector('#packs-shop>details'):destino==='bolsas'?document.querySelector('#semillas-bolsas'):null;
   if(objetivo){objetivo.open=true;objetivo.scrollIntoView({block:'start',behavior:'auto'});objetivo.querySelector('summary')?.focus({preventScroll:true});}
 }
+function tiendaVentajasVisuales(id){
+ const ventajas={vip:['⚡ 100 energía','▦ +25% cupos','×5 fabricación'],objetos:['🪙 Produce Plata','◷ Cobro cada 24 h'],mejoras:['↑ Permanentes','⚒ Elige tu mejora'],suministros:['📦 Materiales','⚒ Construir y fabricar']};
+ return '<div class="tienda-chips">'+(ventajas[id]||[]).map(v=>'<span>'+v+'</span>').join('')+'</div>';
+}
+function tiendaPropiedadVisual(id){
+ if(id==='vip'&&vipVigente())return '<span class="compra-estado">✓ VIP activo</span>';
+ if(id==='objetos'){const n=Object.keys(G.artefactos?.items||{}).length;if(n)return '<span class="compra-estado">✓ '+n+' en tu colección</span>';}
+ if(id==='mejoras'&&infraNivel()>0)return '<span class="compra-estado">✓ Granja mejorada · '+infraNivel()+'/3</span>';
+ return '';
+}
 function refreshTienda(){
   const box=$('tienda-catalogo');if(!box)return;
   const activo=vipVigente(),cards=[
@@ -2660,7 +2677,7 @@ function refreshTienda(){
     ['mejoras','Mejoras permanentes','Desarrolla tu granja','God Hand · edificios · recolección','Precios por mejora','Ver mejoras'],
     ['suministros','Packs de materiales','Construye y fabrica','Madera, piedra y minerales','Desde '+Math.min(...Object.values(PACKS_DEF).map(d=>d.golden))+' Golden','Ver packs']
   ];
-  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="ghost sm" data-panel="ov-banco">Banco</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong><p>'+detalle+'</p><div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construye el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos y retiros USDT desactivados.</p>';
+  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="ghost sm" data-panel="ov-banco">Banco</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong>'+tiendaVentajasVisuales(id)+tiendaPropiedadVisual(id)+(id==='vip'||id==='objetos'?'':'<p>'+detalle+'</p>')+'<div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construye el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos y retiros USDT desactivados.</p>';
 }
 function ubicarComprasPc(){
   const nav=$('compras-accesos');if(!nav||window.innerWidth<=640)return;
@@ -3941,7 +3958,7 @@ function tutoRefresh() {
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
   const texto=sub?sub.txt:(st.brujula?st.txt:tutoTxt(st)),breve={kit:'Abre el baúl de bienvenida',buyseed:'Mercado → Compra 3 semillas de papa',craftarm:'Herrería → Forja una Espada de Madera'};
  const cartel=document.getElementById('tuto-txt');cartel.title=texto+(st.beneficio?' · '+st.beneficio:'');cartel.textContent=!sub&&!st.brujula&&breve[st.id]?breve[st.id]:texto;
-  const destino=guiaDestinoActual(),mostrar=$('tuto-ir');if(mostrar){mostrar.hidden=window.innerWidth<=640||!destino||!(destino.target||destino.panel);mostrar.onclick=mostrarObjetivo;mostrar.setAttribute('aria-label','Mostrar destino: '+texto);}
+  const destino=guiaDestinoActual(),mostrar=$('tuto-ir');if(mostrar){mostrar.hidden=window.innerWidth<=640||!destino||!(destino.target||destino.panel);mostrar.onclick=mostrarObjetivo;mostrar.textContent=destino?.target==='plot'?(destino.guiaPlot==='growing'?'Ver cultivos':'Mostrar parcelas'):destino?.ui?'Mostrar acción':destino?.target?'Mostrar destino':'Abrir menú';mostrar.setAttribute('aria-label','Mostrar destino: '+texto);}
   const titulo=el.querySelector('.k');if(titulo)titulo.textContent=st.brujula?'Siguiente':'Objetivo';
   const need = st.brujula ? 0 : tutoNeed(st);
   /* El desvío por nodos agotados no reemplaza el objetivo: conserva el contador para que se vea

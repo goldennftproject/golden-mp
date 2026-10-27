@@ -5,7 +5,7 @@ const fs = require("fs"), vm = require("vm");
 const src = fs.readFileSync("public/game/ui.js", "utf8");
 const html = fs.readFileSync("public/index.html", "utf8");
 const ini = src.indexOf("function placeToast() {");
-const fin = src.indexOf("function toast(m)", ini);
+const fin = src.indexOf("function toast(", ini);
 if (ini < 0 || fin < 0) throw new Error("No se encontró placeToast");
 
 function nodo(rect, clases) {

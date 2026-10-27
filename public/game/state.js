@@ -3214,7 +3214,7 @@ function craftPick(id) {
   if (first || !G.picks.eq) G.picks.eq = id;
   addXp("crafting", 10 + pd.tier * 4);
   if (typeof tutoEvent === "function") { tutoEvent("crafttool"); tutoEvent("craftpick"); }
-  log("Has fabricado " + pd.label + ((pd.dur || 1) > 1 ? " ×" + pd.dur : "") + " (tienes " + G.picks.dur[id] + ").", "gold"); toast("+" + (pd.dur || 1) + " " + pd.label);
+  log("Has fabricado " + pd.label + ((pd.dur || 1) > 1 ? " ×" + pd.dur : "") + " (tienes " + G.picks.dur[id] + ").", "gold"); toast("+" + (pd.dur || 1) + " " + pd.label, "success", "fabricar");
   forgeWork(); refreshForge(); refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
 }
 // modelo SFL (31/7): los picos NO se reparan — se rompen y se craftean de nuevo
@@ -5802,7 +5802,7 @@ function craftArmor(set, pieza) {
   const completo = armorSetCompleto(set);
   log("Has fabricado " + ARMOR_SLOT_LABEL[pieza] + " de " + sd.label + " (+" + p.def + " de defensa)." + (completo ? " ¡SET COMPLETO: " + sd.bono.txt + "!" : ""), "gold");
   if (completo && window.celebrate) celebrate({ title: "¡SET COMPLETO!", sub: sd.label, big: true, reward: sd.bono.txt });
-  else toast(ARMOR_SLOT_LABEL[pieza] + " lista");
+  else toast(ARMOR_SLOT_LABEL[pieza] + " lista", "success", "fabricar");
   applyCombatHp();
   refreshHud(); if (typeof refreshCurtiduria === "function" && isOpen("ov-curtiduria")) refreshCurtiduria();
   if (isOpen("ov-equip")) refreshEquip();
@@ -6759,7 +6759,7 @@ function craftWeapon(id) {
   G.armCd = G.armCd || {}; G.armCd[id] = nowMs() + w.cd * 1000;
   if (!G.gear.arma) G.gear.arma = id;
   addXp("crafting", 10 + w.ri * 4);
-  log("Forjaste " + w.label + ".", "gold"); toast("¡" + w.label + "!"); forgeWork();
+  log("Forjaste " + w.label + ".", "gold"); toast("¡" + w.label + "!", "success", "fabricar"); forgeWork();
   if (typeof tutoEvent === "function") tutoEvent("craftarm");
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv(); refreshHud();
 }
@@ -7451,7 +7451,7 @@ function craftChest() {
   G.chests.push({ col: null, row: null, items: Array(CHEST_SLOTS + (G.chestCap || 0)).fill(null) });   // capacidad base + la ganada por niveles de granja
   addXp("crafting", 8);
   log("Has fabricado un cofre depósito — está en tu bolsa. Colócalo con un clic desde la bolsa.", "gold");
-  toast("Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")"); forgeWork();
+  toast("Cofre en la bolsa (" + G.chests.length + "/" + CHEST_MAX + ")", "success", "fabricar"); forgeWork();
   if (typeof tutoEvent === "function") tutoEvent("chest");
   refreshForge(); refreshHud();
   if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
@@ -7733,7 +7733,7 @@ function craftTool(id, lote) {
     let hechas = 0;
     while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata && energiaGranjaPuede('craft')) { energiaGranjaPagar('craft'); payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
     if (!hechas) { toast("Te faltan materiales o plata"); return; }
-    addXp("crafting", 5 * hechas); log("Has fabricado " + hechas + " × " + td.label + " (tienes " + G.tools[id] + ").", "good"); toast("+" + hechas + " " + td.label);
+    addXp("crafting", 5 * hechas); log("Has fabricado " + hechas + " × " + td.label + " (tienes " + G.tools[id] + ").", "good"); toast("+" + hechas + " " + td.label, "success", "fabricar");
   if (typeof tutoEvent === "function") tutoEvent("crafttool");
     forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
     return;
@@ -7744,7 +7744,7 @@ function craftTool(id, lote) {
   if (!energiaGranjaPagar('craft')) return;
   payCost(tc.cost); G.plata -= tc.plata;
   G.tools[id] = toolCount(id) + 1;
-  addXp("crafting", 5); log("Has fabricado " + td.label + " (tienes " + G.tools[id] + ").", "good"); toast("+1 " + td.label);
+  addXp("crafting", 5); log("Has fabricado " + td.label + " (tienes " + G.tools[id] + ").", "good"); toast("+1 " + td.label, "success", "fabricar");
   forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
 }
 function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolLost(id)) { toast("No tienes esa herramienta — la tiraste"); return; } if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }

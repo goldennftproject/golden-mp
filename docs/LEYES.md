@@ -440,3 +440,7 @@ Dirección pide español neutro o de España sin cambiar conceptos, y ninguna pi
 - Preferir Fabricar, Equipar, Recoger y Vincular correo. Distinguir Restablecer distribución de Reiniciar progreso.
 - No mostrar explicaciones ni pistas sobre las mariposas; su funcionamiento permanece visual.
 - Una revisión lingüística no autoriza cambios de mecánicas, economía, guardado ni cuentas.
+
+## Siete mejoras de intuición y presentación — 27/10/2026
+
+Dirección autoriza completar HUD, Mostrar, estados de edificios, compras, monedas, menús y feedback visual. XP de granja y energía se distinguen; Mostrar precisa el destino y retira marcas al cambiar su contexto. Los avisos de edificios se derivan de los datos existentes y diferencian cartas, producción, obra y subida de nivel. Las tarjetas ilustradas muestran ventajas y propiedad; Banco representa Entregas → Recibes conservando cotización, validaciones y confirmación. Ayudas secundarias desplegables, rutas conservadas y feedback por tipo de acción, sin anunciar un éxito antes de confirmarse. No cambian economía, energía, progresión ni guardado; USDT permanece desactivado y no se añaden pistas sobre mariposas. Ver INTUITIVO-VISUAL-PC-20261027.txt.
