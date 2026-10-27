@@ -7,7 +7,7 @@ Preparación técnica implementada. Suite local: 289/289 pruebas aprobadas; carg
 ACCESO ANTES DE INVITAR
 - El registro está habilitado en Supabase; el cliente actual requiere correo (GF.SOLO_EMAIL=1).
 - Dirección confirma que se usa el SMTP integrado. No sirve como entrada general a una alfa abierta: sólo envía a correos del equipo autorizado y tiene un límite de dos mensajes por hora, según la documentación oficial.
-- Decisión pendiente: SMTP de plan gratuito, invitados ligados al navegador o prueba limitada al equipo actual. No se cambia automáticamente el método de acceso ni se debilita la confirmación de correo.
+- Dirección elige conservar acceso por correo y enlace, como en las pruebas actuales. No se habilita invitado, no se cambia Auth y no se contrata un proveedor. Con el SMTP integrado, la entrada general de jugadores externos sigue pendiente de resolver; no se presenta como una alfa pública ya preparada para cualquier correo.
 - Antes de cualquier convocatoria: probar, con autorización, un correo externo al equipo; confirmar llegada, enlace, redirección al juego, segundo acceso y retorno a la misma granja. Esa prueba NO se ha enviado.
 - Si se elige invitado, definir claramente pérdida de acceso al borrar datos o cambiar de navegador; conservar el acceso de las cuentas existentes. No prometer recuperación por correo sin un envío operativo.
 
@@ -60,7 +60,7 @@ Al corregir: conservar una referencia del commit previo y ejecutar las regresion
 No hay monitor automático programado ni mensajes externos enviados.
 
 PENDIENTES QUE REQUIEREN DECISIÓN O PRUEBA HUMANA
-Método de acceso; prueba real de entrada externa; fecha de convocatoria y responsables; medición de capacidad real y diversión; términos de cualquier evento. El documento EVENTO-ALPHA-REGLAS.txt sigue siendo preparación sin activar premios.
+Envío a correos externos manteniendo el acceso por correo elegido; prueba real de entrada externa; fecha de convocatoria y responsables; medición de capacidad real y diversión; términos de cualquier evento. El documento EVENTO-ALPHA-REGLAS.txt sigue siendo preparación sin activar premios.
 
 REFERENCIAS OFICIALES CONSULTADAS
 https://supabase.com/docs/guides/auth/auth-smtp
