@@ -6,6 +6,8 @@ let calls=0;
 const fixture=fs.readFileSync(serverFile,'utf8').split('const base=')[0].replace('const admin={auth:',"const admin={rpc:async(name,args)=>{globalThis.rpcArgs={name,args};return globalThis.rpcResult||{data:{ok:true,top:[],yo:null},error:null};},auth:");
 vm.runInContext(fixture+';globalThis.factory=servidor',h);
 (async()=>{
+ const real=require('./arrancar-el-juego.contexto').arrancar(root);
+ assert.equal(real.ctx.GF.esOcultoMvp('ov-lb'),false,'clasificación accesible en menú y atajo');
  const s=h.factory(null);
  assert.equal((await s.call({cuenta:'qa',ranking:{accion:'granja'}},false)).status,401);
  assert.equal((await s.call({cuenta:'otra',ranking:{accion:'granja'}})).status,409);
