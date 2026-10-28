@@ -1996,7 +1996,7 @@ function refreshHud() {
   if(typeof ubicarComprasPc==='function')ubicarComprasPc();
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/'+energiaGranjaMax());
   const ef=$('energia-granja-fill');if(ef)ef.style.width=Math.max(0,Math.min(100,energia/energiaGranjaMax()*100))+'%';
-  const ep=$('energia-granja-pill');if(ep)ep.style.display=GF.scene==='farm'?'':'none';
+  const ep=$('energia-granja-pill');if(ep){ep.style.display=GF.scene==='farm'?'':'none';const j=jornadaEstado();ep.title='Energía: 50 Free / 100 VIP; se recupera en 4 horas. Trabajo de hoy: '+j.plata+' / 5.000 Plata · '+j.energia+' / 200 energía productiva confirmada. +25 Plata por energía en siembra, cosecha, tala, minería y animales. Reinicio diario UTC.';}
   document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' Plata';});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPuedeCobrar(b.dataset.artefactoCobrar) && energia>=1);});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.textContent=artefactoTextoCobro(b.dataset.artefactoCobrar);});
@@ -2517,6 +2517,7 @@ function refreshInv() {
    Rejilla propia con lo que se COLOCA. Un clic elige dónde va — el mismo camino que ya usaban
    los planos (iniciarColocar), así que no hay una segunda forma de colocar cosas que mantener. */
 function refreshCobertizo() {
+  const jornada=$('cob-jornada');if(jornada)jornada.innerHTML=jornadaHtml();
   refreshProduccionGranja();
   const cont = $("cob-slots"); if (!cont) return;
   const items = (typeof cobertizoItems === "function") ? cobertizoItems() : [];
@@ -2644,11 +2645,13 @@ function bancoActualizarPrevia(){
   const tasaVista=$('banco-tasa');if(tasaVista)tasaVista.textContent=valida?tasa.toLocaleString('es-UY'):'—';
   boton.disabled=!(valida&&cantidad&&G.plata>=n*tasa&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&!MERCADO_EN_CURSO);
 }
+function jornadaHtml(){const j=jornadaEstado();return '<section class="sub"><h4>🪙 Trabajo diario · '+fmt(j.plata)+' / 5.000 Plata</h4><progress max="200" value="'+j.energia+'" aria-label="Trabajo diario confirmado"></progress><p>+25 Plata por energía productiva · hasta 200 al día UTC. Siembra, cosecha, tala, minería y animales. Se abona al guardar; Free y VIP. Además de tus ventas habituales.</p></section>';
+}
 function actividadGranjaHtml(){
   const a=actividadGranjaEstado();
-  return '<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gasta energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
+  return jornadaHtml()+'<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gasta energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
 }
-function actividadGranjaRefrescar(){for(const id of ['banco-actividad','vip-actividad']){const el=$(id);if(el)el.innerHTML=actividadGranjaHtml();}}
+function actividadGranjaRefrescar(){const j=$('cob-jornada');if(j)j.innerHTML=jornadaHtml();for(const id of ['banco-actividad','vip-actividad']){const el=$(id);if(el)el.innerHTML=actividadGranjaHtml();}}
 function refreshBanco(cotizar=true){
   if(typeof renderUsdt==='function')renderUsdt();
   if(cotizar&&typeof usdtConsultar==='function')usdtConsultar();

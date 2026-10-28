@@ -68,7 +68,7 @@ function picosUnificarEstado(d){
 const ACTIVIDAD_COSTOS={plant:1,harvest:1,chop:1,mine:1,animal:2,cook:1,auto:2};
 function actividadLibro(d){
   const a=d?.actividadGranja;
-  return {v:1,energia:Math.min(ACTIVIDAD_OBJETIVO,Math.max(0,Math.floor(num(a?.energia)))),registro:{...(a?.registro||{})},desde:num(a?.desde),cumplidaAt:num(a?.cumplidaAt)};
+  return {v:1,energia:Math.min(ACTIVIDAD_OBJETIVO,Math.max(0,Math.floor(num(a?.energia)))),registro:{...(a?.registro||{})},desde:num(a?.desde),cumplidaAt:num(a?.cumplidaAt),jornada:a?.jornada?JSON.parse(JSON.stringify(a.jornada)):null,bonoTotal:Math.max(0,num(a?.bonoTotal))};
 }
 function actividadAcreditar(data,cantidad,ahora){
   const a=actividadLibro(data);a.desde=a.desde||ahora;a.energia=Math.min(ACTIVIDAD_OBJETIVO,a.energia+Math.max(0,Math.floor(cantidad)));
@@ -84,7 +84,7 @@ function actividadEvidencias(a,b,ahora){
   let siembras=0,cosechas=0;
   for(let i=0;i<Math.min(256,(b.plots||[]).length);i++){
     const p=a.plots?.[i],q=b.plots[i];if(!q)continue;
-    const nueva=q.state==='growing'&&num(q.readyAt)>ahora&&(!p||p.state!=='growing'||q.cropKey!==p.cropKey||num(q.readyAt)>num(p.readyAt));
+    const nueva=q.state==='growing'&&num(q.readyAt)>ahora&&(!p||p.state==='dry'||(['ready','growing'].includes(p.state)&&num(p.readyAt)<=ahora));
     if(nueva)siembras++;
     if(p&&['ready','growing'].includes(p.state)&&num(p.readyAt)<=ahora&&(q.state==='dry'||nueva))cosechas++;
   }
@@ -97,14 +97,29 @@ function actividadEvidencias(a,b,ahora){
     const p=a.animals?.[k]?.[i],q=b.animals[k][i];
     if(p&&num(p.comidoAt)>0&&num(p.comidoAt)>=num(p.prodAt)&&Math.max(num(p.prodAt),num(p.comidoAt))+86400000<=ahora&&num(q.prodAt)>num(p.prodAt))animales++;
   }
-  return {plant:Math.max(siembras,Math.min(stat('plantar'),baja(a.seeds,b.seeds))),harvest:Math.min(stat('cosechar'),cosechas),
+  return {plant:Math.min(siembras,baja(a.seeds,b.seeds)),harvest:Math.min(stat('cosechar'),cosechas),
     chop:Math.min(stat('talar'),Math.max(0,num(a.tools?.axe)-num(b.tools?.axe))),
     mine:Math.min(stat('minar'),baja(a.picks?.dur,b.picks?.dur))+Math.min(excavados,sube(a.seeds,b.seeds)+sube(a.res,b.res)),
     animal:animales,craft:insumos>0?inventarioNuevo+colas(a.horno,b.horno,'listoAt')+derivados:0,
     cook:insumos>0?colas(a.cooking,b.cooking,'endAt')+colas(a.lombricario,b.lombricario,'listaEn'):0,
     auto:Math.min(Math.max(0,suma((a.godHand?.inv||[]).map(s=>s?.n))-suma((b.godHand?.inv||[]).map(s=>s?.n))),sube(a.res,b.res))};
 }
-function actividadActualizar(prev,next,ahora,recibo){
+// Recompensa de trabajo, no conversión monetaria. Sin crédito retroactivo ni por estar conectado.
+const JORNADA_META=200,JORNADA_PLATA=25;
+function jornadaAcreditar(prev,next,acciones,ahora){
+  const a=next.actividadGranja,dia=new Date(ahora).toISOString().slice(0,10);
+  const anterior=prev?.actividadGranja;
+  const j=anterior?.jornada?.dia===dia?{...anterior.jornada}:{dia,energia:0,plata:0};
+  // Sólo producción manual: nunca cocina, automatización, fabricación, cobros ni combate.
+  const n=['plant','harvest','chop','mine','animal'].reduce((s,k)=>s+num(acciones[k])*ACTIVIDAD_COSTOS[k],0);
+  const credito=Math.min(Math.max(0,JORNADA_META-num(j.energia)),Math.max(0,n));
+  const premio=credito*JORNADA_PLATA;
+  j.energia=num(j.energia)+credito;j.plata=num(j.plata)+premio;
+  a.jornada=j;a.bonoTotal=Math.max(0,num(anterior?.bonoTotal))+premio;
+  next.plata=num(next.plata)+premio;
+  return premio;
+}
+function actividadActualizar(prev,next,ahora,recibo,premiar=true){
   const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora):{},pedidos=next.actividadAcciones||{};
   const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
   const regen=(Math.max(0,Math.min(ahora,fin)-at)*100+Math.max(0,ahora-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
@@ -115,7 +130,7 @@ function actividadActualizar(prev,next,ahora,recibo){
     credito+=n*ACTIVIDAD_COSTOS[k];presupuesto-=n*ACTIVIDAD_COSTOS[k];a.registro[k]=pedido;acciones[k]=n;
   }
   if(recibo)Object.assign(recibo,acciones);
-  next.actividadGranja=a;next.actividadAcciones={...a.registro};logrosActualizar(prev,next,acciones);return actividadAcreditar(next,credito,ahora);
+  next.actividadGranja=a;next.actividadAcciones={...a.registro};logrosActualizar(prev,next,acciones);actividadAcreditar(next,credito,ahora);if(premiar)jornadaAcreditar(prev,next,acciones,ahora);return next.actividadGranja;
 }
 // Documento logros.docx aprobado el 21/10. Metas acumulativas, premios únicos.
 const LOGROS_TABLA={papa:[[100,100],[300,400],[1000,2000]],ciruela:[[100,110],[250,330],[1200,2200]],zanahoria:[[100,100],[250,300],[1200,2200]],cebolla:[[100,150],[250,300],[1200,2400]],calabacin:[[100,200],[250,350],[1300,2600]],madera:[[100,100],[200,200],[500,500]],piedra:[[100,100],[250,250],[1000,800]],visitas:[[10,10],[50,50],[100,150],[500,500]]};
@@ -801,7 +816,7 @@ Deno.serve(async (req) => {
 
     /* modo rechazo (futuro, tras calibrar): un guardado con sospechas no entra */
     if (MODO === "rechazo" && sospechas.length) return json({ error: "guardado rechazado", sospechas }, 422);
-    actividadActualizar(prevRow?.data??null,data,ahora.getTime()); // Sólo guardados aceptados; CAS evita duplicar crédito.
+    actividadActualizar(prevRow?.data??null,data,ahora.getTime(),undefined,body.jornada===1); // Sólo guardados aceptados; CAS evita duplicar crédito.
 
     /* el guardado ENTRA, y con él queda anotado lo del mercado que ya se contó: así el
        mismo permiso no se gasta dos veces. Si la columna todavía no existe (falta correr

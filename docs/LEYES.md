@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Incentivo de trabajo Free — 28/10/2026
+
+Dirección pide que una cuenta sin inversión pueda alcanzar la referencia de 0,50 diarios. Se incorpora Trabajo diario: 25 Plata por punto de energía productiva validada, máximo 200 puntos / 5.000 Plata por día UTC, para Free y VIP, además de ventas. Siembra, cosecha, tala, minería y animales; excluye animaciones, inactividad, fabricación, cocina, automatización y cobro de objetos. Sólo actividad nueva confirmada en guardados CAS; sin crédito retroactivo. No convierte divisas, no entrega Golden comprado, no activa depósitos ni retiros. Es una recompensa acotada de juego, no una rentabilidad garantizada en USD. Ver INCENTIVO-FREE-20261028.txt.
+
 ## Panel privado del equipo — 28/10/2026
 
 Dirección pide un panel para gestionar la información del juego y confirma a Francisco como Administrador y Suren como Dev, identificados por los correos verificados de Auth. Acceso cerrado por UUID en tabla privada; ninguna autorización por nombre, metadata editable ni rol de Discord. Resumen, cuentas, depósitos, verificaciones e historial de acciones; pausa de nuevas recargas y notas de revisión sin mover fondos. No incorpora apertura de depósitos, retiros, edición de saldos, reseteos ni delegación. Listas paginadas, sin sondeo y con datos mínimos. Depósitos y retiros mantienen el estado cerrado. Ver PANEL-EQUIPO-20261028.txt.

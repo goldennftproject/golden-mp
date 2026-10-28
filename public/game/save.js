@@ -1544,7 +1544,7 @@ async function saveFarmReal(force) {
   if (!sb || !UID) { avisarSinNube(); return; }
   const saveUid = UID;
   const op = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
-  const cuerpo = { name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), data: JSON.parse(JSON.stringify(snapshot())), op, ...(SAVE_BASES.has(saveUid) ? { base: SAVE_BASES.get(saveUid) } : {}) };
+  const cuerpo = { jornada:1, name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), data: JSON.parse(JSON.stringify(snapshot())), op, ...(SAVE_BASES.has(saveUid) ? { base: SAVE_BASES.get(saveUid) } : {}) };
   if (typeof showSaving === "function") showSaving();
   // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
   for (let intento = 0; intento < 2; intento++) {
@@ -1554,7 +1554,7 @@ async function saveFarmReal(force) {
       // RLS ya impide el upsert directo. Un ACK necesita la versión real del servidor.
         const { data: r, error: fe } = await alfaInvocarGuardado(cuerpo);
         if(UID!==saveUid)return;
-        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { actividadGranjaRecibir(r.actividadGranja); logrosRecibir(r.logrosV2); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); }
+        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el

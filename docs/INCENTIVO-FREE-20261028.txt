@@ -1,0 +1,13 @@
+TRABAJO DIARIO — BALANCE INICIAL ALFA
+
+Objetivo autorizado: que jugar Free sin inversión pueda alcanzar 5.000 Plata diarias, referencia nominal de 0,50 a 10.000 Plata/Golden. No existe conversión habilitada ni promesa de USDT.
+
+Implementación: +25 Plata por energía productiva confirmada, hasta 200 por día UTC = 5.000 Plata de recompensa. Se suma al beneficio normal de las ventas; NO es un techo a toda la producción ni un pago por conectarse. Free y VIP comparten esta recompensa; VIP conserva sus ventajas actuales. Registro y saldo se escriben juntos, con versión de guardado y deduplicación de operación. El cliente recibe sólo el incremento confirmado, sin reemplazar gastos o acciones en vuelo. Un cliente anterior no obtiene premios que no sabe conciliar.
+
+Actividades: plantar, cosechar, talar, minar, recoger animales. Excluidas: clics/animación sin recursos, fabricación, comprar, vender, cocina, automatización, reclamar objetos, combate e inactividad. Las siembras deben consumir semillas y cambiar una parcela disponible; no cuenta reiniciar una parcela que aún está creciendo.
+
+Simulación reproducible: node tools/test-jornada-free.js. Tres parcelas, sin VIP ni compras premium, cuatro sesiones separadas cuatro horas, hasta 48 minutos por sesión con papas de tres minutos: 200 acciones energéticas confirmadas, 100 cosechas y 5.000 Plata extra. La venta cubre semillas aun al piso de margen del 20%; el margen positivo restante y otros premios no están incluidos en esos 5.000. La simulación valida el registro productivo del servidor, no reproduce cada clic de la interfaz ni garantiza el comportamiento de todos los estilos de juego. Progresar permite sustituir parte del cultivo intensivo por otros trabajos. El total de 200 exige volver durante el día: 50 de energía de reserva y regeneración continua; no se paga por permanecer AFK.
+
+Impacto máximo adicional: 5.000 Plata por cuenta activa que complete la jornada; 100 cuentas = 500.000 Plata/día, 1.000 = 5.000.000. A referencia histórica serían 50/500 unidades diarias, pero sin reserva ni obligación monetaria actual. Abrir retiros exige revisar financiación, multicuentas, automatización y emisión total. Este límite por cuenta no equivale a protección anti-Sybil.
+
+No cambia tiempos, energía, costes, mapas, expansiones ni producción de objetos. El incentivo hace más fácil pagar costes en Plata: materiales, niveles y terreno siguen siendo condiciones de progreso. Hace falta medir este aceleramiento durante alfa; no se afirma una simulación integral de meses de progresión en esta revisión.
