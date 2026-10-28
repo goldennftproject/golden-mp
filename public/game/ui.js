@@ -2613,7 +2613,7 @@ function refreshArtefactos() {
   const vip=vipVigente(t),activos=Object.values(G.artefactos && G.artefactos.items || {}).filter(a=>t<a.desde+ARTEFACTO_DIAS*86400000).length;
   let h='<div class="flujo-menu"><span><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""> Golden<br><small>Comprar objeto</small></span><b aria-hidden="true">→</b><span>🌾</span><b aria-hidden="true">→</b><span><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""> Plata<br><small>Cobrar producción</small></span></div><div class="resumen-menu"><span><b>24 h</b>entre cobros</span><span><b>1 ⚡</b>por cobro</span><span><b>180 días</b>de producción</span></div><p class="sub">Sin VIP: 1 objeto activo · VIP: sin límite</p><details class="ayuda-menu"><summary>Condiciones de producción</summary><p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Sin VIP: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservas tus compras y sus cobros; no puedes ampliar la colección mientras haya uno activo.</p>'+
     '<p class="sub">Compra con Golden y reclama Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. </p>'+
-    '<p class="sub">El cambio de Plata a Golden se consulta en el Banco y puede variar. Depósitos y retiros USDT desactivados.</p></details><button class="ghost sm" data-panel="ov-banco">🏦 Cambiar Plata por Golden</button>';
+    '<p class="sub">Plata → Golden está desactivado durante la alfa. Depósitos USDT: consulta el Banco. Retiros desactivados.</p></details><button class="ghost sm" data-panel="ov-banco">🏦 Cambiar Plata por Golden</button>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
   const copias=Object.keys(G.artefactos && G.artefactos.items || {}).filter(id=>id.includes(':') && ARTEFACTO_DEF[artefactoModelo(id)]);
   for(const [id,d] of [...Object.entries(ARTEFACTO_DEF),...copias.map(id=>[id,ARTEFACTO_DEF[artefactoModelo(id)]])]){
@@ -2628,11 +2628,13 @@ function refreshArtefactos() {
   box.innerHTML=h;
   box.querySelectorAll('[data-artefacto-comprar]').forEach(b=>b.onclick=()=>{
     const id=b.dataset.artefactoComprar,d=ARTEFACTO_DEF[id];
-    askConfirm('¿Gastar '+d.golden+' Golden en '+d.label+'? Produce '+artefactoDiario(id).toFixed(2)+' Plata al día durante 180 días. Se reclama cada 24 horas y guarda como máximo un día. El cambio del Banco es variable. No hay depósitos ni retiros USDT.',()=>artefactoSolicitar('comprar',id),{title:'Comprar Objeto de Granja',yes:'Comprar',yesClass:'green',no:'Cancelar'});
+    askConfirm('¿Gastar '+d.golden+' Golden en '+d.label+'? Produce '+artefactoDiario(id).toFixed(2)+' Plata al día durante 180 días. Se reclama cada 24 horas y guarda como máximo un día. Plata → Golden está desactivado durante la alfa. Depósitos USDT: consulta el Banco. Retiros desactivados.',()=>artefactoSolicitar('comprar',id),{title:'Comprar Objeto de Granja',yes:'Comprar',yesClass:'green',no:'Cancelar'});
   });
   box.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>b.onclick=()=>artefactoSolicitar('cobrar',b.dataset.artefactoCobrar));
 }
 function bancoActualizarPrevia(){
+  const disabled=$('banco-canjear');if(disabled)disabled.disabled=true;
+  return; // El canje interno queda conservado, pero desactivado en la alfa.
   const input=$('banco-cantidad'),preview=$('banco-previa'),boton=$('banco-canjear');if(!input||!preview||!boton)return;
   const n=Number(input.value),valida=bancoCotizacionValida(),tasa=valida?BANCO_COTIZACION.tasa:0;
   const cantidad=Number.isSafeInteger(n)&&n>=1&&n<=1000000;
@@ -2648,7 +2650,11 @@ function actividadGranjaHtml(){
 }
 function actividadGranjaRefrescar(){for(const id of ['banco-actividad','vip-actividad']){const el=$(id);if(el)el.innerHTML=actividadGranjaHtml();}}
 function refreshBanco(cotizar=true){
+  if(typeof renderUsdt==='function')renderUsdt();
+  if(cotizar&&typeof usdtConsultar==='function')usdtConsultar();
   actividadGranjaRefrescar();
+  const internal=$('banco-interno');if(internal)internal.hidden=true;
+  return;
   const info=$('banco-info');if(!info)return;
   info.textContent=bancoCotizacionValida() ? 'Tasa vigente · válida durante 60 s' : 'Sin tasa vigente · conéctate y actualiza';
   info._cotizacionVigente=bancoCotizacionValida();
@@ -2666,6 +2672,25 @@ function refreshBanco(cotizar=true){
 function bancoTick(){
   const info=$('banco-info');
   if(isOpen('ov-banco')&&info&&info._cotizacionVigente!==bancoCotizacionValida())refreshBanco(false);
+}
+function usdtMensaje(text){const el=$('usdt-message');if(el)el.textContent=String(text||'');}
+function renderUsdt(){
+ const box=$('usdt-panel');if(!box)return;
+ const s=typeof USDT_ESTADO!=='undefined'&&USDT_ESTADO?.uid===UID?USDT_ESTADO:null;
+ const same=box.dataset.uid===String(UID);box.dataset.uid=String(UID);
+ const oldTx=same?$('usdt-tx')?.value:'',oldAmount=(same?$('usdt-amount')?.value:'')||'10',message=same?$('usdt-message')?.textContent||'':'';
+ let tx=oldTx||'';if(!tx&&UID){try{tx=localStorage.getItem('gf-usdt-tx-'+SB_REF+'-'+UID)||'';}catch{}}
+ const busy=typeof USDT_OCUPADO!=='undefined'&&USDT_OCUPADO;
+ box.innerHTML='<h4>💵 Comprar Golden con USDT</h4><div class="cambio-tasa"><b>1 USDT → 1 Golden</b></div>'+
+  '<p class="sub">BNB Smart Chain · USDT BEP-20 · Retiros desactivados</p>'+
+  (!s?'<p>Consulta tu wallet vinculada.</p>':!s.address?'<p class="sub">Una wallet propia por cuenta. La firma acredita que es tuya; no autoriza pagos.</p><button id="usdt-link" class="green sm">Vincular mi wallet</button>':
+  '<p class="sub">Tu wallet <code style="overflow-wrap:anywhere">'+escapeHtml(s.address)+'</code></p><p class="sub">Golden comprado sin gastar: <b>'+Number(s.paid_remaining||0).toLocaleString('es')+'</b> · se conserva para el lanzamiento.</p>'+
+  (s.deposits?'<p class="sub">Destino del juego <code style="overflow-wrap:anywhere">'+escapeHtml(s.destination)+'</code></p><label>USDT <input id="usdt-amount" type="number" min="1" max="10000" step="1" value="'+escapeHtml(oldAmount)+'"></label><button id="usdt-buy" class="green sm">Continuar en mi wallet</button><p class="sub">Importe entero de 1 a 10.000. Envía desde tu wallet vinculada; necesitas BNB para la comisión de red. No uses un exchange ni envíes BNB al destino.</p>':'<p class="sub"><b>Depósitos todavía cerrados. No envíes fondos.</b></p>')+
+  '<details class="ayuda-menu"><summary>Comprobar un depósito · historial</summary><label>Transacción <input id="usdt-tx" type="text" autocomplete="off" placeholder="0x…" value="'+escapeHtml(tx)+'" style="width:100%"></label><button id="usdt-check" class="sm">Comprobar depósito</button><p class="sub">120 confirmaciones y finalidad de la red. Puedes volver a comprobar sin repetir el pago.</p>'+((s.history||[]).map(r=>'<p class="sub">+'+Number(r.golden)+' Golden · <a href="https://bscscan.com/tx/'+escapeHtml(r.tx)+'" target="_blank" rel="noopener noreferrer">Ver comprobante</a></p>').join('')||'<p class="sub">Sin depósitos acreditados.</p>')+'</details>')+
+  '<button id="usdt-refresh" class="ghost sm">Actualizar wallet</button><p id="usdt-message" role="status">'+escapeHtml(message)+'</p>';
+ const bind=$('usdt-link'),buy=$('usdt-buy'),check=$('usdt-check'),refresh=$('usdt-refresh');
+ if(bind)bind.onclick=()=>usdtConWallet('vincular');if(buy)buy.onclick=()=>usdtConWallet('comprar');if(check)check.onclick=()=>usdtComprobar();if(refresh)refresh.onclick=()=>usdtConsultar(true);
+ for(const b of [bind,buy,check,refresh])if(b)b.disabled=busy;
 }
 function abrirCompra(destino){
   const directos={inicio:'ov-tienda',vip:'ov-vip',objetos:'ov-reliquias'};
@@ -2696,7 +2721,7 @@ function refreshTienda(){
     ['mejoras','Mejoras permanentes','Desarrolla tu granja','God Hand · edificios · recolección','Precios por mejora','Ver mejoras'],
     ['suministros','Packs de materiales','Construye y fabrica','Madera, piedra y minerales','Desde '+Math.min(...Object.values(PACKS_DEF).map(d=>d.golden))+' Golden','Ver packs']
   ];
-  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="ghost sm" data-panel="ov-banco">Banco</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong>'+tiendaVentajasVisuales(id)+tiendaPropiedadVisual(id)+(id==='vip'||id==='objetos'?'':'<p>'+detalle+'</p>')+'<div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construye el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos y retiros USDT desactivados.</p>';
+  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="ghost sm" data-panel="ov-banco">Banco</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong>'+tiendaVentajasVisuales(id)+tiendaPropiedadVisual(id)+(id==='vip'||id==='objetos'?'':'<p>'+detalle+'</p>')+'<div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construye el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos USDT: consulta el Banco. Retiros desactivados.</p>';
 }
 function ubicarComprasPc(){
   const nav=$('compras-accesos');if(!nav||window.innerWidth<=640)return;

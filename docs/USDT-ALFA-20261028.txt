@@ -1,0 +1,69 @@
+USDT Y GOLDEN — ALFA
+
+Decisiones de dirección:
+- Una wallet propia por cuenta y una cuenta por wallet, mediante firma EIP-191.
+- BNB Smart Chain mainnet (56). USDT BEP-20 admitido:
+  0x55d398326f99059ff775485246999027b3197955 (18 decimales).
+- Receptor: 0x4Abb7580EaC480203f4ce8890674A29519DD9139.
+- Compra: 1 USDT = 1 Golden. Importe entero, de 1 a 10.000 USDT por pago.
+- Plata → Golden desactivado en UI, cliente y guardar. No se reabre mediante
+  la antigua variable de tasa. Las funciones históricas se conservan sin acceso.
+- Retiros USDT desactivados: no hay firmante, clave de custodia ni operación de retiro.
+- No se borran saldos anteriores ni se inventan depósitos para ellos.
+
+Estado de apertura:
+La infraestructura y vinculación se publican, pero deposits_enabled permanece
+false hasta la prueba controlada de firma y pago. No enviar fondos todavía.
+La interfaz consulta ese estado del servidor antes de ofrecer el pago.
+Para terminar la aceptación, el propietario debe vincular personalmente su
+wallet, después se prepara una apertura controlada y él confirma un pago real
+en su wallet. El asistente no firma ni envía pagos por el usuario.
+
+Vinculación:
+Nonce aleatorio, cuenta y dominio en el texto, caducidad de 10 minutos y un
+solo uso. Firma recuperada en el servidor con ethers 6.15.0. Cambio/reemplazo
+de wallet no disponible en autoservicio. No se piden claves privadas.
+Una vinculación fija el bloque de inicio y excluye depósitos históricos.
+
+Comprobación y crédito:
+Sólo transferencia directa transfer(address,uint256), desde la wallet
+vinculada hacia el receptor, por el contrato admitido. No acepta BNB, exchanges,
+routers, transferFrom ni tokens con el mismo nombre. Se cotejan dos RPC distintos,
+recibo exitoso, evento Transfer, importe exacto, hash canónico del bloque,
+finalidad y 120 confirmaciones. Sin sondeo automático: comprobar a petición.
+La acreditación y el recibo se confirman en una transacción con bloqueo de
+granja y versión de guardado. PK por tx impide duplicados; el reintento devuelve
+el estado actual sin volver a acreditar ni exigir que los RPC sigan disponibles.
+No confiar en el importe, remitente, bloque ni destino enviados por el navegador.
+
+Golden comprado sin gastar:
+Libro privado paid_remaining, separado del JSON de la granja. Se gasta primero
+el Golden obtenido jugando. El remanente pagado sólo baja cuando el total bajo
+custodia queda por debajo de él. Mover Golden a contenedores/tumba no consume
+remanente pagado. Los ingresos gratuitos no aumentan ese remanente.
+Al pasar a release deja de reducirse el remanente de alfa; alfa_compras lo
+restaura una única vez junto con los derechos permanentes y VIP ya acordados.
+
+REINICIO FUTURO: cerrar acceso y depósitos; conservar Auth, wallets, recibos y
+derechos. Cambiar la fase a release ANTES de poner a cero las granjas, en la
+ventana de mantenimiento, y ANTES de restaurarlas. No abrir release ni llamar
+a restaurar antes de haber completado el reset: son etapas operativas ordenadas.
+No borrar cuentas o filas con historial financiero: hay protección de borrado.
+No se ejecutó ningún reset ni cambio de fase en esta entrega.
+
+Verificación realizada:
+- tests banco-servidor/cliente, divisas, guardado atómico, paneles y ranking.
+- test-usdt-protocol.mjs: firmas, red, contrato, destino, cantidades, remitente,
+  estado, bloque, finalidad, profundidad y discrepancias entre nodos.
+- test-usdt-edge.js: identidad, firmas, depósitos cerrados, retiros y reintentos.
+- SQL con cuentas ficticias dentro de BEGIN/ROLLBACK: nonce de un uso,
+  unicidad de wallet, cerrado, crédito, reintento, prioridad de gasto,
+  contenedor y restauración de ocho Golden pagados una sola vez.
+- Dos RPC de producción: chainId 56, decimals 18, finalized disponible.
+- Tras rollback: 5 cuentas, 5 granjas, 0 wallets, 0 depósitos; fase alpha.
+- No se ha realizado un pago real ni se ha firmado con una wallet de usuario.
+
+Documentación técnica contrastada:
+https://docs.ethers.org/v6/api/hashing/#verifyMessage
+https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/
+https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/bsc-api-list/

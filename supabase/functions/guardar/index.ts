@@ -693,9 +693,14 @@ Deno.serve(async (req) => {
     if(body?.banco && body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
     let tasaBanco=10000;
     if(body?.banco){
+      // Alfa: Golden sólo se adquiere mediante depósitos USDT verificados.
+      if(body.banco.accion==='cotizar')return json({ok:true,canje:false,tasa:null,revision:'desactivado-alfa',usdt:false});
+      return json({error:'El canje de Plata por Golden está desactivado durante la alfa'},403);
+      /* Contrato conservado para una futura decisión de lanzamiento.
       tasaBanco=Number(Deno.env.get('BANCO_PLATA_POR_GOLDEN') ?? 10000);
       if(!Number.isSafeInteger(tasaBanco)||tasaBanco<1||tasaBanco>1e9)return json({error:'Banco temporalmente no disponible'},503);
       if(body.banco.accion==='cotizar')return json({ok:true,tasa:tasaBanco,revision:'plata-golden:'+tasaBanco,usdt:false});
+      */
     }
     let granjaVisitada;
     if(body?.visita){

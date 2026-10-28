@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Depósitos USDT y separación de Golden — 28/10/2026
+
+Dirección autoriza vincular una wallet propia por cuenta y preparar USDT BEP-20 de BNB Smart Chain a 1 USDT por 1 Golden, al receptor facilitado. Firma de un uso y cuenta/dominio, unicidad global de dirección, verificación de dos nodos, finalidad y 120 confirmaciones, recibo único y acreditación atómica. El Golden comprado sin gastar tiene un registro privado y se conserva para release, gastando primero el obtenido jugando; no se reclasifican saldos previos como comprados. Dirección desactiva Plata → Golden durante alfa, también en el servidor. Retiros siguen bloqueados. Los depósitos permanecen cerrados hasta la prueba controlada que el propietario debe firmar y pagar personalmente. No se envían fondos, no se reinician granjas ni se activa release. Ver USDT-ALFA-20261028.txt.
+
 ## Reparación de armas equipadas — 28/10/2026
 
 Dirección comunica que un arma rota obliga a desequipar/equipar antes de reparar. La reparación ya admite durabilidad cero sin quitar el arma; se corrige la actualización que faltaba del HUD y los iconos tras reparar. Cambiar de pestaña en Herrería recompone también estado y disponibilidad con los recursos actuales. La prueba reproduce el refresco ausente y recorre el botón real de todas las armas rotas equipadas, conserva mejoras/runas/equipo y verifica costes únicos, bloqueo sin materiales y al 100%. No se ha reproducido un rechazo de la operación de reparación con materiales suficientes; no se afirma que ese rechazo tenga una causa demostrada. No cambian costes, durabilidad máxima ni guardado.

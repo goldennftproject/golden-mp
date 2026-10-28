@@ -36,7 +36,66 @@ async function bancoCotizar(){
 }
 function bancoCotizacionValida(){return !!(BANCO_COTIZACION && BANCO_COTIZACION.uid===UID && Date.now()-BANCO_COTIZACION.recibido<60000);}
 function artefactoSolicitar(accion,id){return economiaSolicitar({artefacto:{accion,id}});}
-function bancoSolicitar(golden,revision){return economiaSolicitar({banco:{accion:'canjear',golden,revision}});}
+function bancoSolicitar(golden,revision){toast('Plata → Golden está desactivado durante la alfa');}
+let USDT_ESTADO=null,USDT_CARGANDO=false,USDT_OCUPADO=false;
+async function usdtInvocar(usdt){
+ const uid=UID;if(!sb||!uid||!CARGA_OK||SOLO_LOCAL)throw Error('Inicia sesión y guarda tu granja para continuar');
+ const {data,error}=await conTope(sb.functions.invoke('usdt',{body:{cuenta:uid,usdt}}),30000,'wallet y depósitos');
+ if(UID!==uid)throw Error('La cuenta cambió');
+ if(error){let body;try{body=await error.context?.json();}catch{}throw Error(body?.error||'No se pudo consultar el servidor');}
+ if(!data?.ok)throw Error(data?.error||'Operación no confirmada');return data;
+}
+async function usdtConsultar(force=false){
+ if(USDT_CARGANDO)return;
+ if(!force&&USDT_ESTADO?.uid===UID&&Date.now()-USDT_ESTADO.at<30000){if(typeof renderUsdt==='function')renderUsdt();return;}
+ USDT_CARGANDO=true;
+ try{const uid=UID,data=await usdtInvocar({accion:'estado'});if(UID===uid)USDT_ESTADO={...data,uid,at:Date.now()};}
+ catch(e){if(typeof usdtMensaje==='function')usdtMensaje(e.message);}
+ finally{USDT_CARGANDO=false;if(typeof renderUsdt==='function')renderUsdt();}
+}
+async function usdtConWallet(accion){
+ if(USDT_OCUPADO)return;USDT_OCUPADO=true;const uid=UID;
+ try{
+  const provider=window.ethereum;if(!provider?.request)throw Error('Abre el juego con una wallet compatible, como MetaMask');
+  const accounts=await provider.request({method:'eth_requestAccounts'}),address=String(accounts?.[0]||'').toLowerCase();
+  if(UID!==uid)throw Error('La cuenta cambió');
+  if(accion==='vincular'){
+   const proof=await usdtInvocar({accion:'challenge',address});
+   const message='0x'+Array.from(new TextEncoder().encode(proof.message),b=>b.toString(16).padStart(2,'0')).join('');
+   const signature=await provider.request({method:'personal_sign',params:[message,address]});
+   if(UID!==uid)throw Error('La cuenta cambió');
+   await usdtInvocar({accion:'bind',nonce:proof.nonce,signature});usdtMensaje('Wallet vinculada a tu cuenta.');
+  }else{
+   await usdtConsultar(true);const s=USDT_ESTADO;
+   if(!s||s.uid!==uid||!s.deposits)throw Error('Los depósitos todavía no están abiertos. No envíes fondos.');
+   if(address!==s.address)throw Error('Selecciona en tu wallet la dirección vinculada a esta cuenta');
+   const amount=Number(document.getElementById('usdt-amount')?.value);
+   if(!Number.isSafeInteger(amount)||amount<1||amount>10000)throw Error('Elige entre 1 y 10.000 USDT enteros');
+   const chain=await provider.request({method:'eth_chainId'});
+   if(chain!=='0x38')await provider.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x38'}]});
+   if(UID!==uid)throw Error('La cuenta cambió');
+   const active=await provider.request({method:'eth_accounts'});
+   if(String(active?.[0]||'').toLowerCase()!==address||await provider.request({method:'eth_chainId'})!=='0x38')throw Error('La wallet o la red cambiaron; vuelve a intentarlo');
+   const data='0xa9059cbb'+s.destination.slice(2).padStart(64,'0')+(BigInt(amount)*10n**18n).toString(16).padStart(64,'0');
+   const tx=await provider.request({method:'eth_sendTransaction',params:[{from:address,to:s.token,data,value:'0x0'}]});
+   try{localStorage.setItem('gf-usdt-tx-'+SB_REF+'-'+uid,tx);}catch{}
+   if(UID!==uid)return;
+   const input=document.getElementById('usdt-tx');if(input)input.value=tx;
+   usdtMensaje('Pago enviado. Espera 120 confirmaciones y pulsa Comprobar depósito. No lo envíes de nuevo.');
+  }
+  if(accion==='vincular')await usdtConsultar(true);
+ }catch(e){if(UID===uid)usdtMensaje(e.code===4001?'Operación cancelada en la wallet.':e.message||'No se pudo completar la operación');}
+ finally{USDT_OCUPADO=false;if(typeof renderUsdt==='function')renderUsdt();}
+}
+async function usdtComprobar(){
+ if(USDT_OCUPADO)return;const input=document.getElementById('usdt-tx'),tx=String(input?.value||'').trim().toLowerCase();
+ if(!/^0x[0-9a-f]{64}$/.test(tx)){usdtMensaje('Pega el identificador de la transacción (0x y 64 caracteres).');return;}
+ USDT_OCUPADO=true;const uid=UID;try{
+  const result=await economiaSolicitar({usdt:{accion:'claim',tx}});
+  if(UID!==uid)return;
+  if(result?.ok){usdtMensaje('Depósito confirmado: +'+fmtGolden(result.cobro)+' Golden'+(result.repetido?' (ya acreditado)':'')+'.');await usdtConsultar(true);}
+ }finally{USDT_OCUPADO=false;if(typeof renderUsdt==='function')renderUsdt();}
+}
 function diarioSolicitar(){return economiaSolicitar({diario:{accion:'reclamar'}});}
 async function visitaConsultar(accion,destino){
   if(accion==='ver')return economiaSolicitar({visita:{accion,destino}});
@@ -77,7 +136,7 @@ async function economiaSolicitar(detalle) {
       mercadoMarcarPendiente(uid,body);
       let data,error;
       for(let n=0;n<2;n++){
-        try{({data,error}=await conTope(sb.functions.invoke('guardar',{body}),15000,'operación del objeto'));}catch(e){error=e;}
+        try{({data,error}=await conTope(sb.functions.invoke(detalle.usdt?'usdt':'guardar',{body}),detalle.usdt?30000:15000,'operación confirmada'));}catch(e){error=e;}
         if(!error && data && data.ok)break;
         const status=error && error.context && error.context.status;
         if(status>=400 && status<500){
@@ -89,7 +148,7 @@ async function economiaSolicitar(detalle) {
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recarga con conexión para consultar el servidor.');return;}
       if(!data.data||typeof data.updated_at!=='string')throw Error('Operación sin guardado confirmado');
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
-      toast(detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata', 'success', detalle.banco?'canje':detalle.diario||detalle.logro?'premio':detalle.infra||detalle.mejora?'mejora':'compra');
+      toast(detalle.usdt ? ("Depósito confirmado: +"+fmtGolden(data.cobro)+" Golden") : detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata', 'success', detalle.banco?'canje':detalle.diario||detalle.logro?'premio':detalle.infra||detalle.mejora?'mejora':'compra');
       return data;
     }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid)toast('No se pudo completar la operación; comprueba la conexión');}
   })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();});
