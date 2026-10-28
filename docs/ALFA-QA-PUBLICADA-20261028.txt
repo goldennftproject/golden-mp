@@ -1,0 +1,26 @@
+QA DE LA VERSION PUBLICADA - 28/10/2026
+
+Alcance: tutorial inicial, guardado, reintento tras respuesta perdida, comercio y visitas. Solo cuentas QA para operaciones de juego. No se modifico el estudio economico, los precios, las recompensas ni la disponibilidad de USDT.
+
+RESULTADOS
+- Tutorial en Chrome: tres siembras, crecimiento con tiempos persistentes, tres cosechas, venta de la cosecha y compra de una semilla. Avance de objetivos y destino visual comprobados.
+- Guardado: autoguardado tras inactividad, ausencia de escrituras repetidas en el periodo observado, lectura en Supabase, recuperacion explicita de conflicto y recarga que conserva progreso.
+- API publicada: respuesta HTTP real cortada con AbortController despues de las cabeceras; reintento con el mismo recibo devuelve repetido=true y la misma version. Saldo, recursos, semillas, parcelas y nodos se conservan. No es una simulacion de caida de toda la conexion fisica del PC.
+- Comercio entre dos cuentas QA: anuncio de una semilla por 2 Plata, compra, debito unico, entrega unica, cobro de la venta y dos reintentos del cobro sin duplicarlo. El vendedor pasa de 80 a 82 Plata.
+- Visitas en Chrome: lista, entrada visual en mapa aislado, semilla de visita, regreso a la granja propia y persistencia tras recarga. La segunda recogida de la misma granja es rechazada por el servidor: quedan dos semillas, no tres.
+- Solo lectura: clic en el mapa ajeno sin cambio de datos del propietario; huella del guardado identica antes y despues de la visita. Intento REST autenticado de editar otra cuenta QA devuelve cero filas, sin mutacion.
+
+CORRECCIONES
+- Acceso por correo tras salir o conservar marcas historicas: no crea granjas sustitutas.
+- Cierre de sesion exige confirmacion nueva del guardado; salida local no revoca otras sesiones del usuario.
+- Evita escrituras redundantes al ocultar/recargar despues del ciclo inactivo confirmado.
+- Regreso disponible mientras carga la visita, incluso si falla el documento.
+- Documento de visita descargado desde la pagina principal y mostrado mediante srcdoc. El sandbox sigue limitado a allow-scripts, sin allow-same-origin: el mapa no recibe G, credenciales ni el guardado privado del propietario.
+- Una visita ya cobrada muestra ese estado y deshabilita la recogida; tambien indica el limite diario. El servidor sigue siendo quien decide y valida cada cobro.
+
+REPRODUCCION
+- tools/test-api-publicada-reconexion.js recibe un token QA en memoria y valida la identidad contra una lista cerrada. No extrae credenciales del navegador ni guarda el token. Ejecuta una escritura sin alterar el progreso de la granja y prueba su recibo idempotente contra guardar.
+- tools/test-visita-visual.js comprueba proyeccion publica, sandbox, descarga del documento, estados de semilla y salida aun si no carga el marco.
+- tools/test-autoguardado-inactividad.js y tools/test-alfa-guardado-interrupciones.js cubren reloj de cinco segundos, inactividad, ACK, colas, timeouts, cuentas diferentes y recuperacion.
+
+Limites: estas pruebas no representan capacidad de cientos de jugadores ni garantizan ausencia de fallos en todos los navegadores. No sustituyen la observacion de uso real durante la alfa.

@@ -59,7 +59,9 @@ async function dibujar(g){
  const sitio=GF.PLOTS_BASE.find(p=>GF.tuyo(p.col,p.row,g.expansiones))||{col:1,row:1};
  semilla.style.left=((sitio.col+.5)*T+ox)+'px';semilla.style.top=((sitio.row+1)*T+oy)+'px';semilla.hidden=false;
  document.getElementById('titulo').textContent='Granja de '+g.nombre+' · Nivel '+g.nivel;
- estado.textContent='Una semilla por granja · máximo 3 al día UTC';
+ semilla.disabled=g.semillaEstado==='recogida'||g.semillaEstado==='limite';
+ semilla.textContent=g.semillaEstado==='recogida'?'✓ Semilla recogida':g.semillaEstado==='limite'?'Límite diario alcanzado':'🌱 Recoger semilla';
+ estado.textContent=g.semillaEstado==='recogida'?'Ya has recogido la semilla de esta granja hoy.':g.semillaEstado==='limite'?'Ya has recogido las tres semillas de visita de hoy (UTC).':'Una semilla por granja · máximo 3 al día UTC';
  document.getElementById('mundo').scrollLeft=Math.max(0,(canvas.width-innerWidth)/2);
 }
 window.addEventListener('message',async e=>{

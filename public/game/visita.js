@@ -8,6 +8,9 @@ function visitaAbrir(granja) {
   if (!granja || !granja.mapa || !vipVigente()) { toast('No se pudo cargar el mapa de esta granja.'); return; }
   visitaCerrar();
   const uid = UID, destino = granja.id;
+  const visitas = typeof G !== 'undefined' ? G.visitas : null;
+  const dia = new Date().toISOString().slice(0,10), ids = visitas?.dia === dia && Array.isArray(visitas.ids) ? visitas.ids : [];
+  const vista = {...granja,semillaEstado:ids.includes(destino)?'recogida':ids.length>=3?'limite':'disponible'};
   const frame = document.createElement('iframe');
   frame.title = 'Visitando la granja de ' + granja.nombre;
   frame.setAttribute('sandbox', 'allow-scripts');
@@ -25,7 +28,7 @@ function visitaAbrir(granja) {
   const recibir = async event => {
     if (event.source !== frame.contentWindow || VISITA_ACTUAL !== frame) return;
     if (UID !== uid) { visitaCerrar(); return; }
-    if (event.data?.tipo === 'visita-lista') { clearTimeout(espera); carga.remove(); frame.contentWindow.postMessage({tipo:'visita-datos',granja}, '*'); }
+    if (event.data?.tipo === 'visita-lista') { clearTimeout(espera); carga.remove(); frame.contentWindow.postMessage({tipo:'visita-datos',granja:vista}, '*'); }
     if (event.data?.tipo === 'visita-salir') visitaCerrar();
     if (event.data?.tipo !== 'visita-semilla' || enCurso) return;
     enCurso = true;

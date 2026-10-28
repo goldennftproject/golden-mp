@@ -16,6 +16,8 @@ w.eval(fs.readFileSync('public/game/visita-mapa.js','utf8'));
  await w.eval('dibujar('+JSON.stringify(view)+')');
  assert.equal(w.document.getElementById('semilla').hidden,false);
  assert.match(w.document.getElementById('titulo').textContent,/Dueño/);
+ await w.eval('dibujar('+JSON.stringify({...view,semillaEstado:'recogida'})+')');assert.equal(w.document.getElementById('semilla').disabled,true);assert.match(w.document.getElementById('estado').textContent,/Ya has recogido/);
+ await w.eval('dibujar('+JSON.stringify({...view,semillaEstado:'limite'})+')');assert.equal(w.document.getElementById('semilla').disabled,true);
  assert.equal(w.G,undefined,'el renderer no tiene una partida editable');
  const parentDom=new JSDOM('<body></body>',{runScripts:'outside-only'}),p=parentDom.window;
  Object.assign(p,{AbortController,fetch:async()=>({ok:true,text:async()=>fs.readFileSync('public/visita.html','utf8')}),UID:'visitante',vipVigente:()=>true,toast:()=>{},closeOv:()=>{},economiaSolicitar:async body=>{p.body=body;return {ok:true};}});
