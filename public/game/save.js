@@ -90,6 +90,7 @@ async function usdtConWallet(accion){
 async function usdtComprobar(){
  if(USDT_OCUPADO)return;const input=document.getElementById('usdt-tx'),tx=String(input?.value||'').trim().toLowerCase();
  if(!/^0x[0-9a-f]{64}$/.test(tx)){usdtMensaje('Pega el identificador de la transacción (0x y 64 caracteres).');return;}
+ try{localStorage.setItem('gf-usdt-tx-'+SB_REF+'-'+UID,tx);}catch{}
  USDT_OCUPADO=true;const uid=UID;try{
   const result=await economiaSolicitar({usdt:{accion:'claim',tx}});
   if(UID!==uid)return;
@@ -142,10 +143,10 @@ async function economiaSolicitar(detalle) {
         if(status>=400 && status<500){
           let d;try{d=await error.context.json();}catch(e){}
           if(status===409)SAVE_CONFLICTOS.add(uid);else mercadoLimpiarPendiente(uid);
-          toast(d && d.error || 'La operación no se realizó');return;
+          toast(d && d.error || 'La operación no se realizó');if(detalle.usdt)usdtMensaje(d?.error||'No se acreditó el depósito. No repitas el pago.');return;
         }
       }
-      if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recarga con conexión para consultar el servidor.');return;}
+      if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recarga con conexión para consultar el servidor.');if(detalle.usdt&&UID===uid)usdtMensaje('Resultado sin confirmar. Recarga para sincronizar y comprueba la misma transacción; no repitas el pago.');return;}
       if(!data.data||typeof data.updated_at!=='string')throw Error('Operación sin guardado confirmado');
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
       toast(detalle.usdt ? ("Depósito confirmado: +"+fmtGolden(data.cobro)+" Golden") : detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata', 'success', detalle.banco?'canje':detalle.diario||detalle.logro?'premio':detalle.infra||detalle.mejora?'mejora':'compra');
