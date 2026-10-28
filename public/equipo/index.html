@@ -1,0 +1,13 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self'; connect-src 'self' https://ulspkdaljeuleqqdokfk.supabase.co; base-uri 'self'; form-action 'self'">
+<title>Golden Farm · Equipo</title><link rel="stylesheet" href="./panel.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script><script type="module" src="./panel.js"></script></head>
+<body><header><img src="/assets/golden-farm-alpha-v1.png" alt="Golden Farm · Alpha"><div><h1>Panel del equipo</h1><p>Administración y seguimiento de la alfa</p></div><a href="/">Volver al juego</a></header>
+<main><section class="access"><span id="identity">Comprobando sesión…</span><button id="refresh">Actualizar</button></section>
+<p id="message" role="status"></p>
+<section id="panel" hidden><nav aria-label="Vistas del panel"><button data-view="resumen" aria-pressed="true">Resumen</button><button data-view="cuentas" aria-pressed="false">Cuentas</button><button data-view="depositos" aria-pressed="false">Depósitos</button><button data-view="incidencias" aria-pressed="false">Incidencias</button><button data-view="auditoria" aria-pressed="false">Auditoría</button></nav>
+<div class="toolbar"><form id="search-form"><label for="search">Buscar</label><input id="search" maxlength="100" placeholder="Nombre, ID, wallet o transacción"><button>Buscar</button></form><span id="updated"></span></div>
+<section id="content" aria-live="polite"></section><div id="pagination"><button id="previous">Anterior</button><span id="page"></span><button id="next">Siguiente</button></div>
+<p class="footnote">Actualización manual · BNB Smart Chain · USDT BEP-20 · Retiros bloqueados. Revisar una incidencia no acredita fondos.</p></section>
+<section id="login-help" hidden><h2>Acceso privado</h2><p>Inicia sesión en el juego con tu correo del equipo y vuelve aquí. Tener un rol en Discord no concede acceso a este panel.</p><a class="button" href="/">Abrir el juego</a></section></main></body></html>

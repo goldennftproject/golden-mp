@@ -1,0 +1,52 @@
+PANEL PRIVADO DEL EQUIPO — GOLDEN FARM
+
+Dirección confirma acceso por las dos cuentas de correo verificadas de Auth:
+Francisco (granja golden2): Administrador. Suren: Dev.
+Las cuentas de Salchi y QA no tienen acceso. Los nombres de granja y los roles
+de Discord no conceden permisos. Los correos y UUID de acceso no se publican
+en el código del cliente ni en esta documentación pública.
+
+Entrada: /equipo/ o Configuración > Panel del equipo, visible tras comprobar
+la cuenta en el servidor. Se reutiliza la sesión del juego del mismo dominio.
+Si falta sesión, abrir el juego e iniciar sesión allí; el panel no envía correos.
+
+Vistas:
+- Resumen: cuentas con granja, wallets, recibos USDT, Golden comprado restante,
+  verificaciones por revisar, derechos de alfa y granjas guardadas en 24 horas.
+  Este último dato no equivale a jugadores simultáneos.
+- Cuentas: nombre/UID, nivel, Plata, Golden, remanente comprado, wallet,
+  VIP vigente, derechos de alfa y último guardado. No devuelve el JSON de la
+  granja ni correos de jugadores, ni cambia inventarios o saldos.
+- Depósitos: recibos confirmados, importe, emisora, bloque, fecha y enlace BscScan.
+  Los totales acreditados no son una auditoría del saldo actual de la tesorería.
+- Incidencias: verificaciones de depósito admitidas desde este despliegue.
+  Estados pendiente/error/acreditado, número de comprobaciones y última revisión.
+  Máximo 50 transacciones de diagnóstico por cuenta; recibos financieros
+  separados, permanentes y completos. No reconstruye errores históricos.
+  Marcar revisada deja nota/operador/fecha, no acredita, devuelve ni mueve fondos.
+- Auditoría: altas iniciales de acceso, pausa de recargas y revisiones de incidencias.
+
+Control de pausa: disponible para ambos roles. Sólo cierra nuevas recargas.
+Es idempotente y no elimina recibos; los reintentos de recibos ya acreditados
+siguen funcionando. Este panel no abre depósitos ni hace retiros, reseteos,
+ediciones de saldo o delegación de permisos. Los depósitos continúan cerrados.
+
+Protección y coste:
+Edge equipo valida JWT y correo confirmado, obtiene el UID de Auth y consulta
+la tabla interna equipo_accesos en cada solicitud. No usa user_metadata.
+RPCs invoker ejecutables sólo por service_role; tablas privadas con RLS,
+sin acceso de anon/authenticated. service_role no recibe lectura de auth.users.
+Rol/sesión incorrectos no devuelven registros. Notas y nombres se pintan como
+texto; respuestas tardías tras cambio de cuenta se descartan. 25 filas/página,
+búsqueda acotada y actualización manual; sin sondeo periódico.
+Datos no almacenados en localStorage. Respuestas no-store, CSP y anti-iframe.
+La clave del cliente es la pública anon existente; nunca service_role.
+
+Validación:
+tools/test-equipo.sql: fixtures dentro de BEGIN/ROLLBACK y consultas ejecutadas
+como service_role. Accesos, denegación, proyección mínima, búsqueda, notas con
+versión, pausa idempotente, auditoría y saldos intactos. No modifica jugadores reales.
+tools/test-equipo-edge.js: Auth, correo confirmado, identidad y acciones limitadas.
+tools/test-equipo-ui.js: denegación sin datos, XSS, páginas, ausencia de sondeo,
+respuestas tardías y borrado visual tras cerrar sesión.
+Suite de depósitos y comprobaciones de guardado/paneles existentes conservadas.

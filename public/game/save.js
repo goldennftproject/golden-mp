@@ -37,6 +37,15 @@ async function bancoCotizar(){
 function bancoCotizacionValida(){return !!(BANCO_COTIZACION && BANCO_COTIZACION.uid===UID && Date.now()-BANCO_COTIZACION.recibido<60000);}
 function artefactoSolicitar(accion,id){return economiaSolicitar({artefacto:{accion,id}});}
 function bancoSolicitar(golden,revision){toast('Plata → Golden está desactivado durante la alfa');}
+let EQUIPO_ACCESO=null,EQUIPO_CONSULTANDO=false;
+async function equipoAcceso(){
+ const el=document.getElementById('cfg-equipo'),uid=UID;if(!el)return;
+ el.style.display='none';
+ if(!sb||!uid||!CARGA_OK||SOLO_LOCAL)return;
+ if(EQUIPO_ACCESO?.uid===uid&&Date.now()-EQUIPO_ACCESO.at<300000){el.style.display=EQUIPO_ACCESO.role?'':'none';return;}
+ if(EQUIPO_CONSULTANDO)return;EQUIPO_CONSULTANDO=true;
+ try{const {data,error}=await conTope(sb.functions.invoke('equipo',{body:{cuenta:uid,accion:'consultar',vista:'acceso'}}),10000,'acceso del equipo');if(UID===uid&&!error&&data?.ok){EQUIPO_ACCESO={uid,role:data.role,at:Date.now()};el.style.display=data.role?'':'none';}}catch{}finally{EQUIPO_CONSULTANDO=false;}
+}
 let USDT_ESTADO=null,USDT_CARGANDO=false,USDT_OCUPADO=false;
 async function usdtInvocar(usdt){
  const uid=UID;if(!sb||!uid||!CARGA_OK||SOLO_LOCAL)throw Error('Inicia sesión y guarda tu granja para continuar');

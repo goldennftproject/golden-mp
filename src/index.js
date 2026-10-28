@@ -158,6 +158,10 @@ app.get(/^\/game\/.+\.js$/, (req, res, next) => {
 app.use(express.static(path.join(__dirname, "..", "public"), {
   etag: true,
   setHeaders: (res, filePath) => {
+    if(filePath.startsWith(path.join(__dirname,'..','public','equipo')+path.sep)){
+      res.setHeader('Cache-Control','no-store');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','no-referrer');
+      res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self'; connect-src 'self' https://ulspkdaljeuleqqdokfk.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");return;
+    }
     /* 24/8 — el no-cache de los .js costaba una ida y vuelta POR ARCHIVO en cada carga, solo
        para que el server contestara "no cambió". Doce archivos, doce viajes de saludo antes de
        que corriera una línea del juego. Y era innecesario desde el día que el cargador les puso

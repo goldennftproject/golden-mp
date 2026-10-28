@@ -6,6 +6,8 @@ const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,
 Deno.serve(async req=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:CORS});
  if(req.method!=='POST')return json({error:'Método no permitido'},405);
+ let attemptAdmin:any=null,attemptUid:string|null=null,attemptTx:string|null=null;
+ async function record(state:string,detail:string){if(attemptAdmin&&attemptUid&&attemptTx){try{await attemptAdmin.rpc('usdt_intento',{p_uid:attemptUid,p_tx:attemptTx,p_state:state,p_detail:detail});}catch{console.warn('No se pudo registrar diagnóstico USDT');}}}
  try{
   const jwt=(req.headers.get('Authorization')||'').replace(/^Bearer\s+/i,'');if(!jwt)return json({error:'Sin sesión'},401);
   const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -32,12 +34,14 @@ Deno.serve(async req=>{
    const prior=await wallet('receipt',{p_address:tx});
    if(!prior.credited&&!(await wallet('estado')).deposits)return json({error:'Los depósitos todavía no están abiertos; no envíes fondos'},400);
    const w=await wallet(prior.credited?'estado':'check');
+   if(!prior.credited){attemptAdmin=admin;attemptUid=uid;attemptTx=tx;}
    const v=prior.credited?{block:null,hash:null,logIndex:null,amount:null}:await verifyDeposit(tx,w);
    const {data,error}=await admin.rpc('usdt_credit',{p_uid:uid,p_base:b.base,p_tx:tx,p_address:w.address,p_block:v.block,p_hash:v.hash,p_log:v.logIndex,p_amount:v.amount});
    if(error)throw new DepositError('No se pudo confirmar la acreditación; consulta de nuevo sin repetir el pago',503);
-   if(!data?.ok)return json({error:data?.error||'No se pudo acreditar'},data?.conflict?409:400);
+   if(!data?.ok){await record('error',data?.error||'No se pudo acreditar');return json({error:data?.error||'No se pudo acreditar'},data?.conflict?409:400);}
+   await record('acreditado','Depósito acreditado; recibo financiero confirmado');
    return json(data);
   }
   return json({error:'Acción no permitida; retiros desactivados'},400);
- }catch(e){return json({error:e instanceof DepositError?e.message:'No se pudo verificar; no envíes otro pago'},e instanceof DepositError?e.status:503);}
+ }catch(e){const status=e instanceof DepositError?e.status:503,message=e instanceof DepositError?e.message:'No se pudo verificar; no envíes otro pago';await record(status===425?'pendiente':'error',message);return json({error:message},status);}
 });

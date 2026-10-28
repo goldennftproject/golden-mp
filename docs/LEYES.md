@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Panel privado del equipo — 28/10/2026
+
+Dirección pide un panel para gestionar la información del juego y confirma a Francisco como Administrador y Suren como Dev, identificados por los correos verificados de Auth. Acceso cerrado por UUID en tabla privada; ninguna autorización por nombre, metadata editable ni rol de Discord. Resumen, cuentas, depósitos, verificaciones e historial de acciones; pausa de nuevas recargas y notas de revisión sin mover fondos. No incorpora apertura de depósitos, retiros, edición de saldos, reseteos ni delegación. Listas paginadas, sin sondeo y con datos mínimos. Depósitos y retiros mantienen el estado cerrado. Ver PANEL-EQUIPO-20261028.txt.
+
 ## Depósitos USDT y separación de Golden — 28/10/2026
 
 Dirección autoriza vincular una wallet propia por cuenta y preparar USDT BEP-20 de BNB Smart Chain a 1 USDT por 1 Golden, al receptor facilitado. Firma de un uso y cuenta/dominio, unicidad global de dirección, verificación de dos nodos, finalidad y 120 confirmaciones, recibo único y acreditación atómica. El Golden comprado sin gastar tiene un registro privado y se conserva para release, gastando primero el obtenido jugando; no se reclasifican saldos previos como comprados. Dirección desactiva Plata → Golden durante alfa, también en el servidor. Retiros siguen bloqueados. Los depósitos permanecen cerrados hasta la prueba controlada que el propietario debe firmar y pagar personalmente. No se envían fondos, no se reinician granjas ni se activa release. Ver USDT-ALFA-20261028.txt.

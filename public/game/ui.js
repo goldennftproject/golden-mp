@@ -5818,6 +5818,7 @@ async function copiarInformeAlfa(){
 }
 /* ---- configuración ---- */
 function refreshConfig() {
+  if(typeof equipoAcceso==='function')equipoAcceso();
   const informe=$('cfg-alfa-copiar');if(informe)informe.onclick=copiarInformeAlfa;
   const compras=$('cfg-alfa-compras');if(compras)compras.onclick=async()=>{
     const box=$('cfg-alfa-compras-lista');compras.disabled=true;box.textContent='Consultando el registro del servidor…';
