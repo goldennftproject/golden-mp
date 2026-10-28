@@ -1,0 +1,209 @@
+{
+  "scope": "Static audit of actual expansion gates/costs and energy; not a full progression simulation",
+  "dailyWorkReward": 5000,
+  "productiveEnergyTarget": 200,
+  "freeEnergyAtSixFourHourlyVisits": 300,
+  "vipEnergyAtSixFourHourlyVisits": 600,
+  "totalExpansionPlata": 15413,
+  "daysOfFullRewardForPlataOnly": 4,
+  "totalExpansionMaterials": {
+    "madera": 1853,
+    "piedra": 1481,
+    "bronce": 31,
+    "hierro": 26,
+    "oro": 27,
+    "diamante": 23,
+    "netherita": 10
+  },
+  "rows": [
+    {
+      "expansion": 1,
+      "level": 3,
+      "plata": 20,
+      "materials": {
+        "madera": 2,
+        "piedra": 2
+      },
+      "minutes": 10
+    },
+    {
+      "expansion": 2,
+      "level": 4,
+      "plata": 35,
+      "materials": {
+        "madera": 15,
+        "piedra": 10
+      },
+      "minutes": 20
+    },
+    {
+      "expansion": 3,
+      "level": 5,
+      "plata": 78,
+      "materials": {
+        "madera": 38,
+        "piedra": 25
+      },
+      "minutes": 30
+    },
+    {
+      "expansion": 4,
+      "level": 6,
+      "plata": 125,
+      "materials": {
+        "madera": 38,
+        "piedra": 32,
+        "bronce": 4
+      },
+      "minutes": 40
+    },
+    {
+      "expansion": 5,
+      "level": 7,
+      "plata": 188,
+      "materials": {
+        "madera": 49,
+        "piedra": 39,
+        "bronce": 6
+      },
+      "minutes": 50
+    },
+    {
+      "expansion": 6,
+      "level": 9,
+      "plata": 272,
+      "materials": {
+        "madera": 59,
+        "piedra": 47,
+        "bronce": 7
+      },
+      "minutes": 60
+    },
+    {
+      "expansion": 7,
+      "level": 10,
+      "plata": 380,
+      "materials": {
+        "madera": 76,
+        "piedra": 62,
+        "bronce": 4,
+        "hierro": 3
+      },
+      "minutes": 70
+    },
+    {
+      "expansion": 8,
+      "level": 11,
+      "plata": 518,
+      "materials": {
+        "madera": 89,
+        "piedra": 72,
+        "bronce": 4,
+        "hierro": 3
+      },
+      "minutes": 80
+    },
+    {
+      "expansion": 9,
+      "level": 13,
+      "plata": 687,
+      "materials": {
+        "madera": 108,
+        "piedra": 88,
+        "bronce": 6,
+        "hierro": 4
+      },
+      "minutes": 90
+    },
+    {
+      "expansion": 10,
+      "level": 15,
+      "plata": 894,
+      "materials": {
+        "madera": 124,
+        "piedra": 99,
+        "hierro": 4,
+        "oro": 4
+      },
+      "minutes": 100
+    },
+    {
+      "expansion": 11,
+      "level": 16,
+      "plata": 1139,
+      "materials": {
+        "madera": 146,
+        "piedra": 117,
+        "hierro": 6,
+        "oro": 4
+      },
+      "minutes": 110
+    },
+    {
+      "expansion": 12,
+      "level": 18,
+      "plata": 1430,
+      "materials": {
+        "madera": 167,
+        "piedra": 134,
+        "hierro": 6,
+        "oro": 6
+      },
+      "minutes": 120
+    },
+    {
+      "expansion": 13,
+      "level": 20,
+      "plata": 1768,
+      "materials": {
+        "madera": 195,
+        "piedra": 156,
+        "oro": 6,
+        "diamante": 4
+      },
+      "minutes": 130
+    },
+    {
+      "expansion": 14,
+      "level": 21,
+      "plata": 2160,
+      "materials": {
+        "madera": 219,
+        "piedra": 176,
+        "oro": 7,
+        "diamante": 6
+      },
+      "minutes": 140
+    },
+    {
+      "expansion": 15,
+      "level": 23,
+      "plata": 2606,
+      "materials": {
+        "madera": 251,
+        "piedra": 201,
+        "diamante": 6,
+        "netherita": 4
+      },
+      "minutes": 150
+    },
+    {
+      "expansion": 16,
+      "level": 25,
+      "plata": 3113,
+      "materials": {
+        "madera": 277,
+        "piedra": 221,
+        "diamante": 7,
+        "netherita": 6
+      },
+      "minutes": 160
+    }
+  ],
+  "findings": [
+    "All 16 expansion level gates still reject unlimited Plata.",
+    "All 16 expansion recipes still reject absent materials.",
+    "Both Free and VIP can reach the common daily reward cap; VIP retains energy/capacity advantages.",
+    "Plata alone is now a weak expansion gate; do not present this as a month-long economic simulation."
+  ]
+}

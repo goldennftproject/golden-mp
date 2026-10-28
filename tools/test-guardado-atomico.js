@@ -70,6 +70,16 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   assert.equal(pgGuardar.status,200,'guardar después de una compra no inventa otra sesión');
   const pgConflicto=await pg.call({base:pgAck.updated_at,op:'sesion-realmente-vieja',data:pgAck.data});
   assert.equal(pgConflicto.status,409,'una versión realmente antigua sigue bloqueada');
+  const now=Date.now(), rewardBase=new Date(now-1000).toISOString();
+  const rewardOld={plata:10,golden:0,level:1,res:{},seeds:{papa:3},plots:[{state:'dry'}],energiaGranja:{actual:50,at:now},produccion:{v:1,vipUnico:1,base:5,nodos:{},vipHasta:0}};
+  const rewardNext=structuredClone(rewardOld);rewardNext.seeds.papa=2;rewardNext.plots[0]={state:'growing',cropKey:'papa',readyAt:now+180000};rewardNext.energiaGranja.actual=49;rewardNext.actividadAcciones={plant:1};
+  const rewardServer=servidor({user_id:'qa',name:'QA',updated_at:rewardBase,data:rewardOld});
+  const rewardBody={jornada:1,base:rewardBase,op:'jornada-operacion-1',data:rewardNext};
+  const rewardResp=await rewardServer.call(rewardBody);assert.equal(rewardResp.status,200);assert.equal(rewardServer.row().data.plata,35);
+  const rewardRetry=await rewardServer.call(rewardBody);assert.equal(rewardRetry.status,200);assert.equal((await rewardRetry.json()).repetido,true);assert.equal(rewardServer.writes(),1);
+  const idle=await rewardServer.call({jornada:1,base:rewardServer.row().updated_at,op:'jornada-idle-next',data:rewardServer.row().data});assert.equal(idle.status,200);assert.equal(rewardServer.row().data.plata,35);
+  const racingReward=servidor({user_id:'qa',name:'QA',updated_at:rewardBase,data:rewardOld});
+  const rewardRace=await Promise.all([racingReward.call(rewardBody),racingReward.call({...rewardBody,op:'jornada-operacion-2'})]);assert.deepEqual(rewardRace.map(r=>r.status).sort(),[200,409]);assert.equal(racingReward.row().data.plata,35);
   // Cliente real: cola de escrituras, paquetes inmutables y base de la última respuesta.
   const ctx=real.ctx,run=c=>vm.runInContext(c,ctx);let invocaciones=[],soltar;
   ctx.qaSb={functions:{invoke:async(nombre,{body})=>{
@@ -83,6 +93,21 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   assert.equal(invocaciones[0].data.res.madera,10,"el paquete enviado no muta al seguir jugando");
   soltar({data:{ok:true,updated_at:"v2"},error:null});await primero;
   assert.equal(invocaciones.length,2);assert.equal(invocaciones[1].base,"v2");assert.equal(invocaciones[1].data.res.madera,20);
+  // ACK productivo: el premio ya persistido no debe generar un segundo guardado sucio.
+  ctx.qaSb={functions:{invoke:async()=>({data:{ok:true,updated_at:'bono-v1',actividadGranja:{v:1,energia:1,registro:{plant:1},bonoTotal:25}},error:null})}};
+  run("sb=qaSb;G.plata=10;G.actividadGranja=null;SAVE_CONFLICTOS.clear();lastSavedKey=null;");
+  await ctx.saveFarm(true);
+  assert.equal(ctx.G.plata,35,'premio confirmado añadido una vez');
+  assert.equal(run('lastSavedKey===snapKey()'),true,'ACK no deja un guardado falso pendiente');
+  let bonusRelease;
+  ctx.qaSb={functions:{invoke:async()=>new Promise(resolve=>{bonusRelease=resolve;})}};
+  run("sb=qaSb;G.plata=40;");
+  const bonusFlight=ctx.saveFarm(true);await Promise.resolve();await Promise.resolve();
+  run('G.plata-=7;');
+  bonusRelease({data:{ok:true,updated_at:'bono-v2',actividadGranja:{v:1,energia:2,registro:{plant:2},bonoTotal:50}},error:null});
+  await bonusFlight;
+  assert.equal(ctx.G.plata,58,'ACK suma premio sin borrar gasto en vuelo');
+  assert.equal(run('lastSavedKey===snapKey()'),false,'gasto en vuelo sigue pendiente');
   let llamadas=0,upserts=0;
   ctx.qaSb={functions:{invoke:async()=>{llamadas++;return{data:null,error:{context:{status:409}}};}},from:()=>{upserts++;throw Error("No debe intentar una puerta alternativa");}};
   run("sb=qaSb;lastSavedKey=null;log=()=>{};toast=()=>{};showSaveError=()=>{};G.plata=99;");

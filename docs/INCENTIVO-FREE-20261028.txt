@@ -11,3 +11,8 @@ Simulación reproducible: node tools/test-jornada-free.js. Tres parcelas, sin VI
 Impacto máximo adicional: 5.000 Plata por cuenta activa que complete la jornada; 100 cuentas = 500.000 Plata/día, 1.000 = 5.000.000. A referencia histórica serían 50/500 unidades diarias, pero sin reserva ni obligación monetaria actual. Abrir retiros exige revisar financiación, multicuentas, automatización y emisión total. Este límite por cuenta no equivale a protección anti-Sybil.
 
 No cambia tiempos, energía, costes, mapas, expansiones ni producción de objetos. El incentivo hace más fácil pagar costes en Plata: materiales, niveles y terreno siguen siendo condiciones de progreso. Hace falta medir este aceleramiento durante alfa; no se afirma una simulación integral de meses de progresión en esta revisión.
+
+REVISIÓN POSTERIOR
+node tools/auditar-incentivo-alfa.js produce docs/balance/incentivo-free-20261028.json desde las funciones vigentes. Las 16 expansiones suman 15.413 Plata, 1.853 madera, 1.481 piedra y minerales adicionales; sus niveles y materiales no pueden saltarse con Plata ilimitada. Es una auditoría estática, no una medición de días de progresión completa.
+
+El handler real (DB simulada) acredita 25 por una siembra nueva confirmada, conserva 35 de saldo partiendo de 10, devuelve el mismo recibo al reintentar, no aumenta por inactividad y sólo acepta una escritura concurrente. El cliente conserva gastos hechos durante la respuesta y deja de marcar como sucio un ACK sin acciones nuevas. Se corrige además la explicación de energía para talar/minar: uno, igual que el código.

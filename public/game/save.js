@@ -1535,6 +1535,7 @@ async function saveFarmReal(force) {
   // que falta no es el hydrate: es haber leído la nube. Se guarda acá y no se sube — ver abajo.
   if (!CARGA_OK && !SOLO_LOCAL) { console.warn("saveFarm bloqueado: la granja no se llegó a cargar"); return; }
   const key = snapKey();
+  let claveConfirmada=key;
   if (!force && key === lastSavedKey) return;   // nada que guardar: ni siquiera muestra el indicador
   copiaGuardar(snapshot());   // la copia local se deja SIEMPRE — y ahora « siempre » es verdad
   /* la puerta de la NUBE, que es distinta de la de arriba. En SOLO_LOCAL no se sube ni aunque la
@@ -1554,7 +1555,7 @@ async function saveFarmReal(force) {
       // RLS ya impide el upsert directo. Un ACK necesita la versión real del servidor.
         const { data: r, error: fe } = await alfaInvocarGuardado(cuerpo);
         if(UID!==saveUid)return;
-        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); }
+        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { const sinCambiosEnVuelo=snapKey()===key; actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(sinCambiosEnVuelo)claveConfirmada=snapKey(); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el
@@ -1584,7 +1585,7 @@ async function saveFarmReal(force) {
         }
         else throw Error('Guardado sin versión confirmada');
       if (UID !== saveUid) return;
-      lastSavedKey = key;   // recién ahora quedó persistido
+      lastSavedKey = claveConfirmada;   // Incluye el ACK; las acciones en vuelo siguen pendientes.
       if (typeof showSaved === "function") showSaved();
       return;
     } catch (e) { if(UID!==saveUid)return;if (intento === 0) await sleepMs(1500); else {console.warn("saveFarm sin conexión (reintenta solo):", e && e.message);if(typeof showSaveError==='function')showSaveError('Sin confirmar');} }

@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Revisión del incentivo y confirmación de guardado — 28/10/2026
+
+Se reproduce y corrige un ACK que, al añadir el premio confirmado, dejaba el guardado marcado como modificado. Si no hubo acciones en vuelo, la clave confirmada incorpora premio y libros del servidor; si hubo acciones, siguen pendientes. Pruebas del handler real con base de datos simulada verifican saldo, reintento con respuesta perdida, inactividad y CAS concurrente. Auditoría estática de las 16 expansiones: 15.413 Plata totales, niveles y materiales siguen obligatorios aun con saldo ilimitado. Free y VIP pueden completar la recompensa común con energía diaria; no se aumenta por VIP ni se modifican precios sin una simulación temporal completa. Se corrige el texto que decía que talar/minar cuestan dos puntos: el código cobra uno. Ver docs/balance/incentivo-free-20261028.json.
+
 ## Incentivo de trabajo Free — 28/10/2026
 
 Dirección pide que una cuenta sin inversión pueda alcanzar la referencia de 0,50 diarios. Se incorpora Trabajo diario: 25 Plata por punto de energía productiva validada, máximo 200 puntos / 5.000 Plata por día UTC, para Free y VIP, además de ventas. Siembra, cosecha, tala, minería y animales; excluye animaciones, inactividad, fabricación, cocina, automatización y cobro de objetos. Sólo actividad nueva confirmada en guardados CAS; sin crédito retroactivo. No convierte divisas, no entrega Golden comprado, no activa depósitos ni retiros. Es una recompensa acotada de juego, no una rentabilidad garantizada en USD. Ver INCENTIVO-FREE-20261028.txt.
