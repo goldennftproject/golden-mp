@@ -31,6 +31,10 @@ function visitaAbrir(granja) {
     if (event.data?.tipo === 'visita-lista') { clearTimeout(espera); carga.remove(); frame.contentWindow.postMessage({tipo:'visita-datos',granja:vista}, '*'); }
     if (event.data?.tipo === 'visita-salir') visitaCerrar();
     if (event.data?.tipo !== 'visita-semilla' || enCurso) return;
+    if (typeof bolsaCabeCantidad === 'function' && !bolsaCabeCantidad('seed','papa',1)) {
+      frame.contentWindow.postMessage({tipo:'visita-cobro',ok:false,mensaje:'Libera espacio en tu bolsa y vuelve a recoger la semilla. Sigue disponible.'},'*');
+      return;
+    }
     enCurso = true;
     const respuesta = await economiaSolicitar({visita:{accion:'semillas',destino}});
     enCurso = false;

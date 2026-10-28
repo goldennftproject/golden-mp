@@ -4,7 +4,7 @@
    capturar el puntero: ningún botón o hueco del panel inferior puede ejecutarse hasta responder.
      node tools/test-confirmacion-overlay-pc.js */
 const fs = require("fs"), vm = require("vm");
-const UI = fs.readFileSync("public/game/ui.js", "utf8");
+const UI = fs.readFileSync("public/game/ui.js", "utf8").replace(/\r\n/g,"\n");
 const HTML = fs.readFileSync("public/index.html", "utf8");
 const ini = UI.indexOf("function cerrarConfirmacionLocal() {");
 const fin = UI.indexOf("// qué se tiraría", ini);

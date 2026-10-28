@@ -21,4 +21,18 @@ for(const kind of ['res','seed','dish','fish','arm']){
 }
 run('estadoDeCero();G.res.piedra=99*(invSlots()-1);G.seeds.papa=1');assert.equal(c.mkPoner('seed','papa',1),true,'apilar no necesita hueco extra');assert.equal(c.G.seeds.papa,2);
 assert.equal(c.mkPoner('desconocido','papa',1),false);
-console.log('OK: enlaces caducados/reutilizados sin mensajes ajenos, bolsa llena en cinco familias, recarga, liberación de espacio, entrega única y durabilidad.');
+run('estadoDeCero();G.res.piedra=99*invSlots()');
+for(const d of [2,3,4,5,6])assert.equal(c.premioDiarioCabe(d),false);
+for(const d of [1,7])assert.equal(c.premioDiarioCabe(d),true);
+assert.equal(c.bolsaCabeCantidad('seed','papa',1),false);
+c.G.res.piedra-=99;assert.equal(c.premioDiarioCabe(2),true);
+// Formulario real: el fallo abre «Iniciar sesión», sin sugerir crear otra granja.
+const {JSDOM}=require('jsdom');c.document=new JSDOM(fs.readFileSync(root+'/public/index.html','utf8')).window.document;
+const main=fs.readFileSync(root+'/public/game/main.js','utf8');run('var MODO_PUERTA="apodo";'+main.slice(main.indexOf('function gateMsg('),main.indexOf('async function mandarElEnlace(')));
+c.ACCESO_ENLACE_ERROR=c.mensajeEnlaceAcceso('#error_code=otp_expired');c.puertaDelCorreo();
+assert.equal(c.document.getElementById('enter').textContent,'Enviar enlace');assert.equal(c.document.getElementById('nick').style.display,'none');assert.match(c.document.getElementById('gate-msg').textContent,/enlace nuevo/);
+(async()=>{
+ let requests=0;c.diarioSolicitar=async()=>{requests++;return{ok:true};};run('estadoDeCero();G.res.piedra=99*invSlots();dailyState=()=>({claimable:true,day:2});');
+ assert.equal(await c.claimDaily(),false);assert.equal(requests,0,'premio sin espacio no se consume en servidor');
+ console.log('OK: enlaces caducados/reutilizados con formulario de recuperación, bolsa llena en cinco familias, recarga, entrega única, durabilidad y premio diario sin consumir.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

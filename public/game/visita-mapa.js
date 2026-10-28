@@ -67,6 +67,6 @@ async function dibujar(g){
 window.addEventListener('message',async e=>{
  if(e.source!==parent)return;
  if(e.data?.tipo==='visita-datos'&&!recibida){recibida=true;try{await dibujar(e.data.granja);}catch{estado.textContent='No se pudo dibujar la granja. Vuelve e inténtalo de nuevo.';}}
- if(e.data?.tipo==='visita-cobro'){semilla.disabled=!!e.data.ok;semilla.textContent=e.data.ok?'✓ Semilla recogida':'🌱 Intentar recoger';estado.textContent=e.data.ok?'Semilla añadida a tu inventario.':'No se pudo recoger: comprueba tu VIP, el límite diario o la conexión.';}
+ if(e.data?.tipo==='visita-cobro'){semilla.disabled=!!e.data.ok;semilla.textContent=e.data.ok?'✓ Semilla recogida':'🌱 Intentar recoger';estado.textContent=e.data.ok?'Semilla añadida a tu inventario.':typeof e.data.mensaje==='string'?e.data.mensaje:'No se pudo recoger: comprueba tu VIP, el límite diario o la conexión.';}
 });
 enviar('visita-lista');

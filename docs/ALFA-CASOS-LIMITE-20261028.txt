@@ -1,0 +1,19 @@
+REVISION FINAL DE CASOS LIMITE - 28/10/2026
+
+Sin cambios en precios, recompensas, conversiones, USDT o el estudio economico.
+
+Acceso: captura del codigo de error antes de que Auth limpie el enlace; explicacion fija para enlace caducado o reutilizado, formulario de acceso existente y posibilidad de pedir otro. No se muestra error_description ajeno ni se interpreta como HTML. Los enlaces correctos no se alteran.
+
+Sesiones: comprobacion real con dos pestanas QA. La compra en la vigente queda en servidor (3 Plata y 3 semillas). La antigua se bloquea por conflicto, conserva su respaldo y ofrece recuperar la version del servidor en lugar de sobrescribirla.
+
+Inventario: correccion de entregas de semillas, platos, peces y armas que no comprobaban capacidad. Se revierten las adiciones que no caben; la entrega permanece pendiente. Se prueba persistencia al recargar, liberacion de espacio, cobro unico, apilamiento y durabilidad. Recursos y armaduras conservan sus controles existentes.
+
+Premios: la interfaz evita consumir el premio diario o la semilla de visita cuando falta espacio. El premio permanece disponible; las cantidades y limites no cambian. Recompensas de moneda y efectos no necesitan espacio en la bolsa.
+
+Errores: pruebas de ACK incompleto, timeout, cambio de cuenta, conflicto, recuperacion, respuesta perdida y doble clic. Ninguna respuesta fallida debe mostrar un guardado o compra confirmados.
+
+PC: regresiones de HUD en una fila, menus, guia de objetivos, paneles, modales de cantidad y confirmacion. Se corrigen dos arneses antiguos que cortaban mal el JavaScript con finales de linea CRLF de Windows; no era un error de sintaxis del juego.
+
+Pruebas: test-alfa-casos-limite, test-cuenta-email, test-puerta-del-correo, test-cerrar-sesion, test-alfa-guardado-interrupciones, test-autoguardado-inactividad, test-recuperar-guardado, test-guardado-atomico, test-p2p-atomico, test-visita-visual, test-alfa-bloqueos-visuales, test-paneles-intuitivos, test-hud-fila-pc, test-flujo-overlay-pc, test-cantidad-modal-pc y test-confirmacion-overlay-pc.
+
+Estas comprobaciones preparan la alfa, no certifican ausencia de todos los bugs ni capacidad de muchos usuarios. La experiencia real de jugadores se observa durante la alfa.

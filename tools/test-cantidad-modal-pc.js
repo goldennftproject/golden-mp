@@ -5,7 +5,7 @@
    Escape cancela sólo esta elección. Móvil conserva el flujo compacto anterior.
      node tools/test-cantidad-modal-pc.js */
 const fs = require("fs"), vm = require("vm");
-const UI = fs.readFileSync("public/game/ui.js", "utf8");
+const UI = fs.readFileSync("public/game/ui.js", "utf8").replace(/\r\n/g,"\n");
 const HTML = fs.readFileSync("public/index.html", "utf8");
 const ini = UI.indexOf("function cuantoAtajo(q, max) {");
 const fin = UI.indexOf("/* 8/9 (Suren) — LA VISTA", ini);

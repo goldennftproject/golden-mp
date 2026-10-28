@@ -11998,10 +11998,19 @@ function cultivoDuracion(ck,boost=1,starter=false,t=nowMs()){
   const base=CROP_DEF[ck].grow*1000*cdMult()*boost;
   return (starter&&FIRST_GROW_MS>0?Math.min(FIRST_GROW_MS,base):base)*cultivoTiempoMult(t);
 }
+function bolsaCabeCantidad(kind,key,n) {
+  const antes = bolsaCuentas().find(x=>x.kind===kind&&x.key===key)?.n || 0;
+  return canonicalStacks().length + Math.ceil((antes+n)/99) - Math.ceil(antes/99) <= invSlots();
+}
+function premioDiarioCabe(dia) {
+  const objeto = {2:['seed','papa',5],3:['pick','stone',3],4:['dish','papa_asada',2],5:['pick','stone',2],6:['seed','zanahoria',5]}[dia];
+  return !objeto || bolsaCabeCantidad(...objeto);
+}
 async function claimDaily() {
   const st = dailyState();
   if (!st.claimable) { toast("Ya reclamaste hoy — vuelve mañana"); return false; }
   const r = DAILY_REWARDS[st.day - 1];
+  if (!premioDiarioCabe(st.day)) { toast("Libera espacio en la bolsa antes de recoger el premio. Sigue disponible."); return false; }
   const confirmado = await diarioSolicitar();
   if (!confirmado || !confirmado.ok) return false;
   const detalle = r.label;
