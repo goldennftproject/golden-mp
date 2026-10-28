@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Simulación prolongada del incentivo — 28/10/2026
+
+Dirección pide simular varios días y ajustar según resultados. Se ejecutan ocho perfiles de granja a 120 días, tres semillas con visitas perdidas a 180 y presión de venta x10. El modelo usa funciones/tablas actuales y el registro del servidor, con adaptación explícita de sesiones y colocación; no simula combate, animales, cocina, colisiones ni liquidez P2P. Free regular alcanza una media neta aproximada de 5.046 Plata/día; las expansiones no son instantáneas. No se cambian costes, cupos ni la recompensa de 5.000 sin una necesidad demostrada. Se reproduce y corrige la pérdida de crédito al fabricar y consumir un hacha/pico en el mismo guardado: se contrastan estadísticas y recursos obtenidos además del saldo neto de herramientas, siempre dentro del presupuesto de energía. No se premia fabricar por sí solo, no se duplica al reintentar ni hay crédito histórico. Depósitos, retiros y canje siguen cerrados. Informe: BALANCE-LARGO-PLAZO-20261028.txt.
+
+
 ## Revisión del incentivo y confirmación de guardado — 28/10/2026
 
 Se reproduce y corrige un ACK que, al añadir el premio confirmado, dejaba el guardado marcado como modificado. Si no hubo acciones en vuelo, la clave confirmada incorpora premio y libros del servidor; si hubo acciones, siguen pendientes. Pruebas del handler real con base de datos simulada verifican saldo, reintento con respuesta perdida, inactividad y CAS concurrente. Auditoría estática de las 16 expansiones: 15.413 Plata totales, niveles y materiales siguen obligatorios aun con saldo ilimitado. Free y VIP pueden completar la recompensa común con energía diaria; no se aumenta por VIP ni se modifican precios sin una simulación temporal completa. Se corrige el texto que decía que talar/minar cuestan dos puntos: el código cobra uno. Ver docs/balance/incentivo-free-20261028.json.

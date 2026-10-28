@@ -1,0 +1,102 @@
+{
+  "rows": [
+    {
+      "perfil": "Free casual",
+      "diaNivel25": 76,
+      "diaExpansion16": null,
+      "plata30": 75832,
+      "plata60": 198343,
+      "plata90": 299739,
+      "plata120": 388890,
+      "mediaNetaDiaria": 3241,
+      "mediaUltimos30Dias": 2972,
+      "goldenComprasHipoteticas": 0
+    },
+    {
+      "perfil": "Free regular",
+      "diaNivel25": 42,
+      "diaExpansion16": 69,
+      "plata30": 148620,
+      "plata60": 298303,
+      "plata90": 447323,
+      "plata120": 605570,
+      "mediaNetaDiaria": 5046,
+      "mediaUltimos30Dias": 5275,
+      "goldenComprasHipoteticas": 0
+    },
+    {
+      "perfil": "Free activo",
+      "diaNivel25": 36,
+      "diaExpansion16": 55,
+      "plata30": 148056,
+      "plata60": 297651,
+      "plata90": 453560,
+      "plata120": 609469,
+      "mediaNetaDiaria": 5079,
+      "mediaUltimos30Dias": 5197,
+      "goldenComprasHipoteticas": 0
+    },
+    {
+      "perfil": "VIP regular",
+      "diaNivel25": 25,
+      "diaExpansion16": 38,
+      "plata30": 180344,
+      "plata60": 353613,
+      "plata90": 549282,
+      "plata120": 744951,
+      "mediaNetaDiaria": 6208,
+      "mediaUltimos30Dias": 6522,
+      "goldenComprasHipoteticas": 40
+    },
+    {
+      "perfil": "VIP activo",
+      "diaNivel25": 21,
+      "diaExpansion16": 33,
+      "plata30": 159938,
+      "plata60": 326887,
+      "plata90": 500402,
+      "plata120": 673917,
+      "mediaNetaDiaria": 5616,
+      "mediaUltimos30Dias": 5784,
+      "goldenComprasHipoteticas": 40
+    },
+    {
+      "perfil": "VIP vence dia 30",
+      "diaNivel25": 25,
+      "diaExpansion16": 42,
+      "plata30": 180344,
+      "plata60": 325174,
+      "plata90": 481000,
+      "plata120": 636826,
+      "mediaNetaDiaria": 5307,
+      "mediaUltimos30Dias": 5194,
+      "goldenComprasHipoteticas": 10
+    },
+    {
+      "perfil": "VIP y objeto inicial",
+      "diaNivel25": 25,
+      "diaExpansion16": 38,
+      "plata30": 205252,
+      "plata60": 403809,
+      "plata90": 624482,
+      "plata120": 845156,
+      "mediaNetaDiaria": 7043,
+      "mediaUltimos30Dias": 7356,
+      "goldenComprasHipoteticas": 50
+    },
+    {
+      "perfil": "Free irregular",
+      "diaNivel25": 56,
+      "diaExpansion16": 91,
+      "plata30": 114745,
+      "plata60": 239445,
+      "plata90": 349508,
+      "plata120": 475366,
+      "mediaNetaDiaria": 3961,
+      "mediaUltimos30Dias": 4195,
+      "goldenComprasHipoteticas": 0
+    }
+  ],
+  "invariantesVerificadas": true,
+  "alcance": "Modelo de economía de granja; no garantía de resultado o solvencia"
+}

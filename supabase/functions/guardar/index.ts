@@ -98,8 +98,8 @@ function actividadEvidencias(a,b,ahora){
     if(p&&num(p.comidoAt)>0&&num(p.comidoAt)>=num(p.prodAt)&&Math.max(num(p.prodAt),num(p.comidoAt))+86400000<=ahora&&num(q.prodAt)>num(p.prodAt))animales++;
   }
   return {plant:Math.min(siembras,baja(a.seeds,b.seeds)+Math.floor(Math.max(0,num(a.plata)-num(b.plata)))),harvest:Math.min(stat('cosechar'),cosechas),
-    chop:Math.min(stat('talar'),Math.max(0,num(a.tools?.axe)-num(b.tools?.axe))),
-    mine:Math.min(stat('minar'),baja(a.picks?.dur,b.picks?.dur))+Math.min(excavados,sube(a.seeds,b.seeds)+sube(a.res,b.res)),
+    chop:Math.min(stat('talar'),Math.max(Math.max(0,num(a.tools?.axe)-num(b.tools?.axe)),(num(b.skills?.crafting)-num(a.skills?.crafting)>=5?Math.max(0,num(b.res?.madera)-num(a.res?.madera)):0))),
+    mine:Math.min(stat('minar'),Math.max(baja(a.picks?.dur,b.picks?.dur),(num(b.skills?.crafting)-num(a.skills?.crafting)>=10?['piedra','bronce','hierro','oro','diamante','netherita'].reduce((s,k)=>s+Math.min(Math.max(0,num(b.stats?.minar?.[k])-num(a.stats?.minar?.[k])),Math.max(0,num(b.res?.[k])-num(a.res?.[k]))),0):0)))+Math.min(excavados,sube(a.seeds,b.seeds)+sube(a.res,b.res)),
     animal:animales,craft:insumos>0?inventarioNuevo+colas(a.horno,b.horno,'listoAt')+derivados:0,
     cook:insumos>0?colas(a.cooking,b.cooking,'endAt')+colas(a.lombricario,b.lombricario,'listaEn'):0,
     auto:Math.min(Math.max(0,suma((a.godHand?.inv||[]).map(s=>s?.n))-suma((b.godHand?.inv||[]).map(s=>s?.n))),sube(a.res,b.res))};

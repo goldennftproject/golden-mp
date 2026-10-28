@@ -1,0 +1,92 @@
+GOLDEN FARM — SIMULACIÓN DE PROGRESIÓN A LARGO PLAZO
+28/10/2026
+
+ALCANCE
+8 perfiles durante 120 días. Tres semillas reproducibles de visitas irregulares durante 180 días y una prueba de presión de ventas x10 durante 120 días. Las ejecuciones largas extienden parte de los perfiles; no representan jugadores reales.
+
+PERFILES
+Free casual: 2 sesiones de 10 minutos al día.
+Free regular: 4 sesiones de 20 minutos, separadas cuatro horas.
+Free activo: 4 sesiones de 50 minutos.
+VIP: mismos horarios, 10 Golden cada 30 días cuando se renueva.
+También: VIP que vence sin renovar, VIP con objeto inicial de 10 Golden y Free con 25% de visitas perdidas.
+
+RESULTADOS (saldos después de semillas, herramientas, nodos y expansiones)
+
+Free casual
+- Nivel 25: día 76. Expansión 16: todavía no alcanzada al día 120.
+- Plata días 30 / 60 / 90 / 120: 75832 / 198343 / 299739 / 388890.
+- Ganancia media: 3241 Plata/día. Últimos 30 días: 2972.
+- Compras premium hipotéticas en 120 días: 0 Golden. No se realizaron pagos.
+
+Free regular
+- Nivel 25: día 42. Expansión 16: día 69.
+- Plata días 30 / 60 / 90 / 120: 148620 / 298303 / 447323 / 605570.
+- Ganancia media: 5046 Plata/día. Últimos 30 días: 5275.
+- Compras premium hipotéticas en 120 días: 0 Golden. No se realizaron pagos.
+
+Free activo
+- Nivel 25: día 36. Expansión 16: día 55.
+- Plata días 30 / 60 / 90 / 120: 148056 / 297651 / 453560 / 609469.
+- Ganancia media: 5079 Plata/día. Últimos 30 días: 5197.
+- Compras premium hipotéticas en 120 días: 0 Golden. No se realizaron pagos.
+
+VIP regular
+- Nivel 25: día 25. Expansión 16: día 38.
+- Plata días 30 / 60 / 90 / 120: 180344 / 353613 / 549282 / 744951.
+- Ganancia media: 6208 Plata/día. Últimos 30 días: 6522.
+- Compras premium hipotéticas en 120 días: 40 Golden. No se realizaron pagos.
+
+VIP activo
+- Nivel 25: día 21. Expansión 16: día 33.
+- Plata días 30 / 60 / 90 / 120: 159938 / 326887 / 500402 / 673917.
+- Ganancia media: 5616 Plata/día. Últimos 30 días: 5784.
+- Compras premium hipotéticas en 120 días: 40 Golden. No se realizaron pagos.
+
+VIP vence dia 30
+- Nivel 25: día 25. Expansión 16: día 42.
+- Plata días 30 / 60 / 90 / 120: 180344 / 325174 / 481000 / 636826.
+- Ganancia media: 5307 Plata/día. Últimos 30 días: 5194.
+- Compras premium hipotéticas en 120 días: 10 Golden. No se realizaron pagos.
+
+VIP y objeto inicial
+- Nivel 25: día 25. Expansión 16: día 38.
+- Plata días 30 / 60 / 90 / 120: 205252 / 403809 / 624482 / 845156.
+- Ganancia media: 7043 Plata/día. Últimos 30 días: 7356.
+- Compras premium hipotéticas en 120 días: 50 Golden. No se realizaron pagos.
+
+Free irregular
+- Nivel 25: día 56. Expansión 16: día 91.
+- Plata días 30 / 60 / 90 / 120: 114745 / 239445 / 349508 / 475366.
+- Ganancia media: 3961 Plata/día. Últimos 30 días: 4195.
+- Compras premium hipotéticas en 120 días: 0 Golden. No se realizaron pagos.
+
+ESTRÉS
+- Free irregular, semilla 11: 180 días, 16 expansiones, nivel 25, saldo 733105 Plata.
+- Free irregular, semilla 29: 180 días, 16 expansiones, nivel 25, saldo 695808 Plata.
+- Free irregular, semilla 47: 180 días, 16 expansiones, nivel 25, saldo 713986 Plata.
+- Free regular · presión x10, semilla 11: 120 días, 16 expansiones, nivel 25, saldo 595692 Plata.
+
+LECTURA DEL BALANCE
+El Free regular sostiene la referencia de unas 5.000 Plata netas/día en este modelo, reinvirtiendo en el mapa. El casual tarda más y cobra menos. El VIP acelera capacidad y progresión, sin duplicar la recompensa diaria común. Las recompensas no generan interés compuesto ni permiten comprar Golden con Plata durante alfa.
+La Plata pesa menos como freno; niveles, materiales, herramientas, capacidad y obras siguen limitando la expansión. No se elevan costes por el mero hecho de observar saldos grandes. Tras completar las mejoras existe ahorro de Plata; no debe interpretarse como una deuda respaldada por USDT.
+El caso de mucha oferta reduce el ingreso de cultivos pero afecta poco al saldo total porque domina el premio de trabajo diario. No prueba que un mercado entre jugadores tenga liquidez ni que los jugadores se diversifiquen.
+
+CORRECCIÓN IMPLEMENTADA
+Se reproduce que fabricar y consumir un hacha o pico dentro del mismo guardado podía dejar el contador de herramientas sin cambio neto y perder el crédito de trabajo. La validación admite la combinación de progreso de recolección, recurso obtenido, XP de fabricación y energía consumida cuando no hay consumo neto de herramienta. El consumo normal sigue siendo una evidencia válida. No se paga por fabricar ni por animaciones y no se duplica el premio al reintentar.
+No se modifican el límite de 5.000 Plata, tiempos, precios, saldos anteriores ni las compras. Sin crédito retroactivo.
+
+MÉTODO Y LIMITACIONES
+Se usan tablas actuales y funciones reales de XP, tareas, energía, cultivos, herramientas, precios marginales y registro de trabajo del servidor. El catálogo de demanda se contrastó con la base real mediante una consulta de sólo lectura. No se escribieron partidas de prueba en producción.
+El reloj usa pasos de 30 segundos que agrupan acciones; no reproduce el tiempo de cada clic o trayecto. El motor de decisiones es un adaptador de eventos: elige cultivos por sesión/ausencia y pausa nodos para reservar capacidad a materiales que necesita. En el caso de VIP vencido, recuperar un nodo requiere pausar otro. Es una decisión simulada del jugador; no se añadió automatización al juego.
+No simula navegación gráfica, colocación/collisiones, dificultad de combate, cocina, animales, visitas, logros/recompensas extraordinarias ni compradores reales del comercio entre jugadores. No falsifica tareas de combate: aplica los requisitos y las vías de especialización existentes. Los días de avance son estimaciones del modelo, no fechas garantizadas.
+Los perfiles usan estrategias distintas; una sesión más larga no garantiza más beneficio si el cultivo elegido encaja peor con las ausencias. No se infiere de ello que jugar más reduzca mecánicamente las recompensas.
+Verifica conservación del dinero modelado, recursos no negativos, tope diario, capacidad y ausencia de saldo negativo. El límite por cuenta no es protección contra multicuentas/bots ni validación de solvencia para futuros retiros.
+La conversión Plata→Golden y los retiros permanecen desactivados. Esta prueba de economía interna no financia ni garantiza una equivalencia en dólares.
+
+REPRODUCIR
+node tools/simular-progresion-larga.js
+node tools/simular-progresion-estres.js
+node tools/test-actividad-granja.js
+node tools/test-guardado-atomico.js
+node tools/resumir-progresion-larga.js
