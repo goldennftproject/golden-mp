@@ -620,7 +620,9 @@ function puertaDelCorreo() {
      la caché y perdí la granja », y esa pregunta no depende de cómo entren los nuevos */
   if (alt) alt.style.display = "block";
   if (!solo) return;   // bandera apagada: la puerta de siempre, solo con el atajo de volver
-  pintarPuerta("apodo");
+  const fallo = typeof ACCESO_ENLACE_ERROR === 'string' ? ACCESO_ENLACE_ERROR : '';
+  pintarPuerta(fallo ? "volver" : "apodo");
+  if (fallo) gateMsg(fallo,"mal");
 }
 
 function pintarPuerta(modo) {

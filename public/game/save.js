@@ -7,6 +7,20 @@ const SB_URL = "https://ulspkdaljeuleqqdokfk.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc3BrZGFsamV1bGVxcWRva2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDk5NTMsImV4cCI6MjEwNDk4NTk1M30.HRtJ0kEX6kxAZl2uUhNur2czVmbwCl2jtEcM50p0EsA";
 const SB_REF = (SB_URL.match(/https:\/\/([^.]+)\./) || [])[1] || "sb";
 
+// Capturar solo códigos de fallo antes de que Auth procese y limpie el enlace.
+function mensajeEnlaceAcceso(hash='',search='') {
+  if (typeof URLSearchParams === 'undefined') return '';
+  for (const texto of [hash,search]) {
+    const p = new URLSearchParams(String(texto).replace(/^[#?]/,''));
+    if (!p.has('error') && !p.has('error_code')) continue;
+    if (p.get('error_code') === 'otp_expired' || p.get('error') === 'access_denied')
+      return 'Este enlace ha caducado o ya se ha utilizado. Solicita un enlace nuevo con el correo de tu granja.';
+    return 'No se pudo validar este enlace. Solicita uno nuevo con el correo de tu granja.';
+  }
+  return '';
+}
+var ACCESO_ENLACE_ERROR = mensajeEnlaceAcceso(location.hash,location.search);
+
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
 const SAVE_BASES = new Map(), SAVE_CONFLICTOS = new Set();
 const SAVE_CONFIRMACIONES = new Map();

@@ -4260,14 +4260,18 @@ function mkPoner(kind, key, n, payload) {
     if (canonicalStacks().length > invSlots()) { delete G.armor[key]; delete G.armorDur[key]; delete G.armorOff[key]; return false; }
     return true;
   }
-  if (kind === "res") { if (!tryAddRes(key, n)) return false; }
-  else if (kind === "seed") G.seeds[key] = (G.seeds[key] || 0) + n;
-  else if (kind === "dish") { G.dishes = G.dishes || {}; G.dishes[key] = (G.dishes[key] || 0) + n; }
-  else if (kind === "fish") { G.fish = G.fish || {}; G.fish[key] = (G.fish[key] || 0) + n; }
-  else if (kind === "arm") {
-    G.weapons = G.weapons || {};
-    if (G.weapons[key]) return false;   // ya tenés una igual: NO se pisa (se perdían el +N, la durabilidad y las runas)
-    G.weapons[key] = payload || { dur: (ARM_DEF[key] ? ARM_DEF[key].dur : 40) };
+  if (!['res','seed','dish','fish','arm'].includes(kind) || !Number.isFinite(n) || n <= 0) return false;
+  if (kind === "res") return tryAddRes(key, n);
+  const campo = {seed:'seeds',dish:'dishes',fish:'fish',arm:'weapons'}[kind];
+  G[campo] = G[campo] || {};
+  const existia = Object.prototype.hasOwnProperty.call(G[campo],key), antes = G[campo][key];
+  if (kind === 'arm') {
+    if (n !== 1 || antes) return false;
+    G[campo][key] = payload || {dur:ARM_DEF[key] ? ARM_DEF[key].dur : 40};
+  } else G[campo][key] = (antes || 0) + n;
+  if (canonicalStacks().length > invSlots()) {
+    if (existia) G[campo][key] = antes; else delete G[campo][key];
+    return false;
   }
   return true;
 }
