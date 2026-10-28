@@ -13,7 +13,7 @@ function mensajeEnlaceAcceso(hash='',search='') {
   for (const texto of [hash,search]) {
     const p = new URLSearchParams(String(texto).replace(/^[#?]/,''));
     if (!p.has('error') && !p.has('error_code')) continue;
-    if (p.get('error_code') === 'otp_expired' || p.get('error') === 'access_denied')
+    if (p.get('error_code') === 'otp_expired' || p.get('error') === 'otp_expired')
       return 'Este enlace ha caducado o ya se ha utilizado. Solicita un enlace nuevo con el correo de tu granja.';
     return 'No se pudo validar este enlace. Solicita uno nuevo con el correo de tu granja.';
   }

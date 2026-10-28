@@ -6,6 +6,7 @@ const run=s=>vm.runInContext(s,c);c.URLSearchParams=URLSearchParams;
 for(const k of ['toast','log','refreshHud','syncSlots','refreshInv','refreshHotbar','saveFarm'])c[k]=()=>{};c.isOpen=()=>false;
 assert.match(c.mensajeEnlaceAcceso('#error=access_denied&error_code=otp_expired'),/caducado o ya se ha utilizado/);
 assert.match(c.mensajeEnlaceAcceso('','?error_code=otp_expired'),/correo de tu granja/);
+assert.match(c.mensajeEnlaceAcceso('#error=access_denied&error_code=provider_disabled'),/No se pudo validar/);
 assert.equal(c.mensajeEnlaceAcceso('#access_token=no-se-lee&refresh_token=no-se-lee'),'');
 assert.ok(!c.mensajeEnlaceAcceso('#error=otro&error_description=%3Cscript%3E').includes('script'));
 // Bolsa realmente llena: cada tipo debe permanecer pendiente, sin entrega parcial.
