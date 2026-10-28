@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Reparación de armas equipadas — 28/10/2026
+
+Dirección comunica que un arma rota obliga a desequipar/equipar antes de reparar. La reparación ya admite durabilidad cero sin quitar el arma; se corrige la actualización que faltaba del HUD y los iconos tras reparar. Cambiar de pestaña en Herrería recompone también estado y disponibilidad con los recursos actuales. La prueba reproduce el refresco ausente y recorre el botón real de todas las armas rotas equipadas, conserva mejoras/runas/equipo y verifica costes únicos, bloqueo sin materiales y al 100%. No se ha reproducido un rechazo de la operación de reparación con materiales suficientes; no se afirma que ese rechazo tenga una causa demostrada. No cambian costes, durabilidad máxima ni guardado.
+
 ## Clasificación de granja para la alfa — 27/10/2026
 
 Dirección pide ranking para posibles premios futuros de alfa. Granja pasa a ser la pestaña principal: nivel guardado y después XP productiva guardada, con cortes históricos y prestigio existentes; empates comparten puesto. Top 50 y posición propia fuera del top. Consulta autenticada de sólo lectura, RPC invoker accesible sólo al servicio y caché cliente de tres minutos por identidad. Se mantienen las comparaciones antiguas y las visitas VIP sin edición. No se activan premios, USDT ni reset; fecha de cierre, elegibilidad y reparto quedan por decidir. Ver RANKING-ALFA-20261027.txt.

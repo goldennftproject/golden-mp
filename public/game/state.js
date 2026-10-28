@@ -6773,6 +6773,7 @@ function repairWeapon(id) {
   if (!canAfford(w.repair)) { toast("Te faltan materiales para reparar"); return; }
   payCost(w.repair); G.weapons[id].dur = w.dur;
   log("Reparaste " + w.label + " (100%).", "good"); toast("Reparada"); forgeWork(); refreshForge();
+  refreshHud(); if (typeof syncSlots === "function") syncSlots();
   if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv();
 }
 function useWeapon(id) { if (G.weapons[id] && G.weapons[id].dur > 0) G.weapons[id].dur--; return G.weapons[id] ? G.weapons[id].dur : 0; }

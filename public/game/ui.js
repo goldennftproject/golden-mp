@@ -6605,6 +6605,7 @@ function initUI() {
     $("forge-pane-craft").style.display = s === "craft" ? "" : "none";
     const pa = $("forge-pane-armas"); if (pa) pa.style.display = s === "armas" ? "" : "none";
     $("forge-pane-repair").style.display = s === "repair" ? "" : "none";
+    refreshForge();   // estado y materiales actuales, aunque la ventana ya estuviera abierta
     if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al cambiar de pestaña, el brillo salta al botón del objetivo
   });
   // modo edición: cierra las ventanas y deja solo dos botoncitos flotantes sobre la hotbar
