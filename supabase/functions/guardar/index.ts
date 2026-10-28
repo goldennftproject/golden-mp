@@ -97,7 +97,7 @@ function actividadEvidencias(a,b,ahora){
     const p=a.animals?.[k]?.[i],q=b.animals[k][i];
     if(p&&num(p.comidoAt)>0&&num(p.comidoAt)>=num(p.prodAt)&&Math.max(num(p.prodAt),num(p.comidoAt))+86400000<=ahora&&num(q.prodAt)>num(p.prodAt))animales++;
   }
-  return {plant:Math.min(siembras,baja(a.seeds,b.seeds)),harvest:Math.min(stat('cosechar'),cosechas),
+  return {plant:Math.min(siembras,baja(a.seeds,b.seeds)+Math.floor(Math.max(0,num(a.plata)-num(b.plata)))),harvest:Math.min(stat('cosechar'),cosechas),
     chop:Math.min(stat('talar'),Math.max(0,num(a.tools?.axe)-num(b.tools?.axe))),
     mine:Math.min(stat('minar'),baja(a.picks?.dur,b.picks?.dur))+Math.min(excavados,sube(a.seeds,b.seeds)+sube(a.res,b.res)),
     animal:animales,craft:insumos>0?inventarioNuevo+colas(a.horno,b.horno,'listoAt')+derivados:0,
