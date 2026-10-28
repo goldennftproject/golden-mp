@@ -510,24 +510,16 @@ async function initSave() {
         } catch (e) { console.warn("refreshSession:", e.message); }
       }
     }
-    /* si hubo granja y no se pudo revivir, NO se crea otra: se falla y el jugador ve el cartel.
-       Una granja inalcanzable se puede recuperar mañana; una granja huérfana, nunca. */
-    if (!session && CUENTA_PREVIA) {
-      console.warn("este navegador tuvo granja y no se pudo abrir la sesión: no se crea ninguna cuenta nueva");
-      sesionLog("SIN SESIÓN pero con granja previa: no se crea cuenta nueva");
-      return false;
-    }
-    /* ---- 18/9 — SOLO SE ENTRA CON CORREO -------------------------------------------------
-       Acá abajo nacía la cuenta anónima. Con la bandera puesta ya no nace: este navegador es
-       virgen (las tres comprobaciones de arriba ya descartaron que tenga granja), así que en
-       vez de fabricarle un "Granjero" que se va a evaporar con la caché, se sale y la puerta
-       pide el correo. La cuenta la crea el enlace del correo, no esta línea.
-       Nótese DÓNDE está el corte: después de revivir y después de la reja de CUENTA_PREVIA. Si
-       el navegador ya tenía granja, nunca se llega hasta acá — entra por los caminos de
-       siempre. Esto no le cierra la puerta a nadie que ya esté jugando. */
+    // Sin sesión, el acceso por correo recupera la cuenta existente. Nunca crea
+    // una granja ni restaura copias locales; el enlace valida quién entra.
     if (!session && typeof GF !== "undefined" && GF.SOLO_EMAIL) {
       PUERTA_EMAIL = true;
-      sesionLog("navegador virgen y SOLO_EMAIL: no se crea cuenta anónima, se pide el correo");
+      sesionLog("sin sesión: se pide acceso por correo, sin cargar la copia local");
+      return false;
+    }
+    // La protección histórica sigue impidiendo crear cuentas anónimas sustitutas.
+    if (!session && CUENTA_PREVIA) {
+      sesionLog("SIN SESIÓN pero con granja previa: no se crea cuenta nueva");
       return false;
     }
     if (!session) {
@@ -1834,8 +1826,15 @@ async function cerrarSesion() {
   try { const c = await cuentaEstado(); tieneEmail = !!(c && c.modo === "email"); } catch (e) {}
   if (!tieneEmail) return { error: "esta granja no tiene correo: si cierras sesión no hay forma de volver a ella" };
   try {
-    if (typeof saveFarm === "function") { try { await saveFarm(true); } catch (e) {} }
-    try { await sb.auth.signOut(); } catch (e) {}
+    const uid = UID, antes = SAVE_CONFIRMACIONES.get(uid) || 0;
+    if (typeof saveFarm !== "function") return { error: "no se pudo confirmar el guardado; sigues conectado" };
+    await saveFarm(true);
+    if (UID !== uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid) || 0) <= antes)
+      return { error: "no se pudo confirmar el guardado; sigues conectado" };
+    const salida = await conTope(sb.auth.signOut({scope:"local"}), 10000, "cerrar sesión");
+    if (salida && salida.error) return { error: "no se pudo cerrar la sesión; vuelve a intentarlo" };
+    // Bloquea autosaves y callbacks durante los 400 ms anteriores a la recarga.
+    CARGA_OK = false; UID = null; SESION_ACTUAL = null; PUERTA_EMAIL = true;
     try { localStorage.removeItem(GF_CUENTA_KEY); } catch (e) {}
     try { localStorage.removeItem(GF_COPIA_KEY); } catch (e) {}
     sesionLog("sesión cerrada por el jugador");

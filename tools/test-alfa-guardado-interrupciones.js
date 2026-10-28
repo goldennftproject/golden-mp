@@ -44,5 +44,19 @@ function entorno(){
  e=entorno();let reads=0;e.c.qaSb={auth:{getUser:async()=>({data:{user:{id:'qa'}}})},from:()=>({select:()=>({eq:()=>({maybeSingle:()=>{reads++;return new Promise(()=>{});}})})})};e.run('sb=qaSb');done=false;const load=e.c.loadFarm().then(()=>done=true);await e.advance(55000);assert.equal(done,true);await load;assert.equal(reads,3);assert.equal(e.run('CARGA_OK'),false);assert.equal(e.run('CARGA_FALLO'),true);
  // Una petición ya terminada elimina su temporizador de tope (sesiones largas).
  e=entorno();await e.run("conTope(Promise.resolve('ok'),15000,'qa')");assert.equal(e.timers.size,0);
+ // Salir requiere un ACK nuevo y no borra las llaves si falla el guardado.
+ for(const confirma of [false,true]){
+  e=entorno();let salidas=0;
+  e.c.qaSb={auth:{signOut:async()=>{salidas++;return{error:null};}},functions:{invoke:async()=>({data:confirma?{ok:true,updated_at:'v2'}:{ok:true}})}};
+  e.run("sb=qaSb;cuentaEstado=async()=>({modo:'email'});localStorage.setItem(GF_CUENTA_KEY,JSON.stringify({uid:'qa'}));");
+  const salida=e.c.cerrarSesion();await e.advance(2000);const r=await salida;assert.equal(salidas,confirma?1:0);
+  assert.equal(!!r.ok,confirma);assert.equal(e.run('UID'),confirma?null:'qa');
+  assert.equal(!!e.run('localStorage.getItem(GF_CUENTA_KEY)'),!confirma);
+ }
+ // La copia histórica no puede bloquear el formulario de correo ni restaurarse.
+ e=entorno();let anon=0;
+ e.c.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),signInAnonymously:async()=>{anon++;throw Error('Prohibido');}}})};
+ e.run("prepararEpocaServidor();GF.SOLO_EMAIL=true;huboGranja=()=>true;marcaCuenta=()=>null;UID=null;");
+ assert.equal(await e.c.initSave(),false);assert.equal(e.run('PUERTA_EMAIL'),true);assert.equal(e.run('UID'),null);assert.equal(anon,0);
  console.log('OK: red colgada, reconexión, respuesta perdida/tardía, recibo único, ACK incompleto, sin escritura directa y cambios de cuenta durante guardado/recuperación.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
