@@ -65,5 +65,9 @@ function entorno(){
  e.run('CUENTA_PREVIA=true;PUERTA_EMAIL=true;hayGranjaLocal=()=>false');
  e.run('(function(){'+main.slice(start,end)+'\n})();');assert.equal(puertas,1);assert.equal(fallosCarga,0);
  e.run('PUERTA_EMAIL=false');e.run('(function(){'+main.slice(start,end)+'\n})();');assert.equal(fallosCarga,1);
+ const marker='document.getElementById("enter").addEventListener("click", async () => {',clickStart=main.indexOf(marker)+marker.length,clickEnd=main.indexOf('\n});',clickStart);
+ assert.ok(clickStart>marker.length&&clickEnd>clickStart);let enlaces=0;e.c.mandarElEnlace=async()=>enlaces++;
+ e.run("CUENTA_PREVIA=true;PUERTA_EMAIL=true;UID=null;var MODO_PUERTA='volver'");
+ await e.run('(async function(){'+main.slice(clickStart,clickEnd)+'\n})();');assert.equal(enlaces,1,'la cuenta antigua puede solicitar su enlace');
  console.log('OK: red colgada, reconexión, respuesta perdida/tardía, recibo único, ACK incompleto, sin escritura directa y cambios de cuenta durante guardado/recuperación.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

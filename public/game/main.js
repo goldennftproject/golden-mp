@@ -701,7 +701,8 @@ document.getElementById("enter").addEventListener("click", async () => {
      escribe la granja nueva. Si el navegador ya tenía una, acá se corta, pase lo que pase más
      arriba. Tres comprobaciones para el mismo fallo puede parecer mucho; es el único de toda
      la sesión que no se puede deshacer. */
-  if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA && !UID) {
+  if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA && !UID &&
+      !(typeof PUERTA_EMAIL !== "undefined" && PUERTA_EMAIL)) {
     console.warn("Entrar bloqueado: este navegador ya tiene granja y no se pudo abrir la sesión");
     return pantallaNoSePudo();
   }

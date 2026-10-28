@@ -143,8 +143,8 @@ console.log("\n7b · POR QUÉ BORRAR EL ALMACENAMIENTO Y RECARGAR NO LIMPIA NADA
      el próximo que lo pruebe no pierda la tarde que perdimos nosotros. Lo que sirve para
      probar de verdad es una ventana de incógnito. */
   const SAVE2 = fs.readFileSync(path.join(RAIZ, "public/game/save.js"), "utf8");
-  ok("(hecho) el juego guarda en beforeunload, y por eso reescribe lo que borraste",
-    /beforeunload", \(\) => \{ saveFarm\(\); \}/.test(SAVE2));
+  ok("beforeunload conserva cambios pendientes sin repetir el ciclo confirmado",
+    /beforeunload", \(\) => \{ if \(!guardado\) saveFarm\(\); \}/.test(SAVE2));
   ok("(hecho) y la copia local vive en localStorage, que es lo que se reescribe",
     /localStorage\.setItem\(GF_COPIA_KEY/.test(SAVE2));
   ok("(hecho) el camino de « partida local sin cuenta » sigue existiendo…",
