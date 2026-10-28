@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..'),source=fs.readFileSync(path.join(root,'s
 const server={};vm.createContext(server);vm.runInContext(source.split('/* === REGLAS ===')[1].split('/* === FIN REGLAS ===')[0].replace(/^[\s\S]*?const VERSION/,'const VERSION'),server);
 const confirm=vm.runInContext('actividadActualizar',server);
 const demand={calabaza:25,brocoli:30,girasol:15,trigo:20,maiz:20};
-function simulate(profile,{days=120,seed=11,pressure=1,noReward=false}={}){
+function* progression(profile,{days=120,seed=11,pressure=1,noReward=false}={}){
  const c=require('./arrancar-el-juego.contexto').arrancar(root).ctx,clock={now:Date.UTC(2026,9,28)};
  c.Date=class extends Date{constructor(...a){super(...(a.length?a:[clock.now]));}static now(){return clock.now;}};
  const run=s=>vm.runInContext(s,c),G=run('G');
@@ -45,7 +45,7 @@ function simulate(profile,{days=120,seed=11,pressure=1,noReward=false}={}){
   let used=G.plots.length+nodes.filter(n=>!n.pausedAt).length;
   if(kind&&used>=cap){const candidates=nodes.filter(n=>!n.pausedAt&&['tree','rock'].includes(n.kind)&&nodes.filter(o=>!o.pausedAt&&o.kind===n.kind).length>1);const pause=candidates[0];if(pause){pause.pausedAt=clock.now;used--;}}
   if(used>=cap)return;
-  if(!kind){if(G.plots.length<Math.min(8,3+Math.floor(G.expansiones/3))&&used+1<=cap)kind='plot';else kind=nodes.filter(n=>n.kind==='tree').length<=nodes.filter(n=>n.kind==='rock').length?'tree':'rock';}
+  if(!kind){if(G.plots.length<Math.min(8,3+Math.floor(G.expansiones/3))&&used+1<=cap)kind='plot';else kind=['tree','rock'].includes(profile.specialty)?profile.specialty:nodes.filter(n=>n.kind==='tree').length<=nodes.filter(n=>n.kind==='rock').length?'tree':'rock';}
   const price={plot:20,tree:30,rock:30,bronce:180,hierro:300,oro:500,diamante:900,netherita:1400}[kind],free=G.produccion.vale>0&&['plot','tree','rock'].includes(kind);
   if(!free&&G.plata<price)return;if(free)G.produccion.vale--;else {G.plata-=price;cash.nodes+=price;}
   if(kind==='plot'){G.plots.push({state:'dry'});G.plotsOwned++;}else{const cd=(kind==='tree'?T.CD.tree:kind==='rock'?T.CD.rock:T.ORE_DEF[kind].cd)*1000*c.vipTiempoMult();nodes.push({kind,readyAt:clock.now+cd,cdIni:clock.now});}
@@ -89,11 +89,13 @@ function simulate(profile,{days=120,seed=11,pressure=1,noReward=false}={}){
    if(profile.object&&day>0&&visit===0){clock.now=at;if(c.energiaGranjaPuede('harvest')){c.energiaGranjaPagar('harvest');const amount=c.artefactoDiario('cobre');G.plata+=amount;cash.objects+=amount;}}
    for(clock.now=at;clock.now<end;clock.now+=30000){finishExpansion();sell();invest();actNodes();actCrops(end,next);sell();assert.ok(G.plata>=-1e-8);assert.ok(c.energiaGranjaTick()>=-1e-8);}
   }
-  const expected=3+cash.reward+cash.sales+cash.objects-cash.seeds-cash.tools-cash.expansions-cash.nodes;assert.ok(Math.abs(expected-G.plata)<1e-6,'cash conservation');assert.ok(cash.reward-before.reward<=5000,'daily cap');assert.ok(G.plots.length+nodes.filter(n=>!n.pausedAt).length<=c.produccionCapacidad(),'capacity');for(const amount of Object.values(G.res))assert.ok(amount>=0,'resource nonnegative');
-  const delta={};for(const k of Object.keys(cash))delta[k]=Math.round((cash[k]-before[k])*100)/100;
+  yield {day:day+1,G,cash,profile,capacity:c.produccionCapacidad(),nextExpansion:c.expansionSiguiente(),priceOf:c.priceOf};
+  const expected=3+(cash.p2pIn||0)-(cash.p2pOut||0)+cash.reward+cash.sales+cash.objects-cash.seeds-cash.tools-cash.expansions-cash.nodes;assert.ok(Math.abs(expected-G.plata)<1e-6,'cash conservation');assert.ok(cash.reward-before.reward<=5000,'daily cap');assert.ok(G.plots.length+nodes.filter(n=>!n.pausedAt).length<=c.produccionCapacidad(),'capacity');for(const amount of Object.values(G.res))assert.ok(amount>=0,'resource nonnegative');
+  const delta={};for(const k of Object.keys(cash))delta[k]=Math.round((cash[k]-(before[k]||0))*100)/100;
   daily.push({day:day+1,level:G.level,expansions:G.expansiones||0,plata:Math.round(G.plata),xp:Math.round(c.farmXpProductiva()),infra:G.infraestructura?.granja||0,capacity:c.produccionCapacidad(),plots:G.plots.length,nodes:nodes.filter(n=>!n.pausedAt).length,pausedNodes:nodes.filter(n=>n.pausedAt).length,cashFlow:delta});
  }
  return {profile:profile.name,seed,days,pressure,noReward,goldenSpent:paid.golden,final:daily.at(-1),cash,harvests,actions,bagBlocks,toolBlocks,seedBlocks,resources:JSON.parse(JSON.stringify(G.res)),nodeLayout:nodes.map(n=>({kind:n.kind,paused:!!n.pausedAt})),skills:JSON.parse(JSON.stringify(G.skills)),unmetTasks:c.tareasDelNivel(G.level+1).filter(t=>c.tareaProgreso(t)<t[2]),milestones,daily};
 }
+function simulate(profile,options){const it=progression(profile,options);let step;do{step=it.next();}while(!step.done);return step.value;}
 if(require.main===module){const out=process.argv[2]||'docs/balance/progresion-larga-20261028.json',days=+(process.env.SIM_DAYS||120);const profiles=[{name:'Free casual',visits:2,minutes:10},{name:'Free regular',visits:4,spacing:4,minutes:20},{name:'Free activo',visits:4,spacing:4,minutes:50},{name:'VIP regular',vip:true,renew:true,visits:4,spacing:4,minutes:20},{name:'VIP activo',vip:true,renew:true,visits:4,spacing:4,minutes:50},{name:'VIP vence dia 30',vip:true,visits:4,spacing:4,minutes:20},{name:'VIP y objeto inicial',vip:true,object:true,renew:true,visits:4,spacing:4,minutes:20},{name:'Free irregular',visits:4,spacing:4,minutes:20,miss:.25}];const results=profiles.map(p=>{const r=simulate(p,{days});console.log(JSON.stringify({completed:p.name,days,level:r.final.level,expansions:r.final.expansions,plata:r.final.plata}));return r;});fs.mkdirSync(path.dirname(path.resolve(out)),{recursive:true});fs.writeFileSync(out,JSON.stringify({modelVersion:4,sourceSha256:Object.fromEntries(['public/game/state.js','supabase/functions/guardar/index.ts'].map(f=>[f,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,f))).digest('hex')])),model:'Core farm, event adapter using current client rules and server work ledger. No combat, cooking, animals, peer buyers or financial conversion. No graphical placement/navigation model.',results},null,2));console.log(JSON.stringify(results.map(({profile,final,cash,unmetTasks,bagBlocks,toolBlocks})=>({profile,final,cash,unmetTasks,bagBlocks,toolBlocks})),null,2));}
-module.exports={simulate};
+module.exports={simulate,progression};

@@ -568,7 +568,7 @@ function mercadoPermiso(uid, filas, ack, prev, next) {
   for (const f of (Array.isArray(filas) ? filas : [])) {
     if (!f) continue;
     const mia = f.seller === uid, qty = num(f.qty), esRes = f.kind === "res" && f.item;
-    if (mia && f.paid) nuevo.ventas += f.fee_pct==null ? num(f.price) : Math.max(1,Math.round(num(f.price)*(1-num(f.fee_pct)/100)));
+    if (mia && f.paid) nuevo.ventas += f.fee_pct==null ? num(f.price) : Math.max(1,Math.floor((num(f.price)*(100-num(f.fee_pct))+50)/100));
     if (f.sold_to === uid && !mia && esRes) nuevo.compras[f.item] = num(nuevo.compras[f.item]) + qty;
     if (mia && !f.sold_to && esRes) nuevo.abiertas[f.item] = num(nuevo.abiertas[f.item]) + qty;
   }

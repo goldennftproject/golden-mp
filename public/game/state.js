@@ -4228,6 +4228,8 @@ function colorNombre() { return COS_COLORES[cosElegido().color] || COS_COLORES.b
 // Comisión que se QUEMA (sumidero sano): sale del precio que cobra el vendedor.
 var MARKET_FEE = 10;            // Publicaciones nuevas Free; el servidor captura 7% para VIP.
 function marketFee(fila) { return fila ? (fila.fee_pct == null ? 5 : fila.fee_pct) : (vipVigente() ? 7 : 10)-(G.infraestructura?.mercado?2:0); }
+// Same positive-integer rounding as PostgreSQL round(price*(100-fee)/100).
+function marketNet(price,fee){price=Number(price);fee=Number(fee);if(!Number.isSafeInteger(price)||price<1||!Number.isInteger(fee)||fee<0||fee>100)return 0;return Math.max(1,Math.floor((price*(100-fee)+50)/100));}
 var MARKET_MAX_PUB = 10;        // publicaciones activas por jugador
 const MARKET_KINDS = { res: "Recurso", seed: "Semilla", dish: "Plato", fish: "Pez", arm: "Arma", armor: "Armadura" };
 function mkTengo(kind, key) {

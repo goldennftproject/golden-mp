@@ -6999,7 +6999,7 @@ async function refreshP2P() {
     const activas = filas.filter(r => !r.sold_to), vendidas = filas.filter(r => r.sold_to && !r.paid);
     if (vendidas.length) h += '<div class="fnm">Ventas por cobrar</div>';
     vendidas.forEach(r => {
-      const neto = Math.max(1, Math.round(r.price * (1 - marketFee(r) / 100)));
+      const neto = marketNet(r.price, marketFee(r));
       h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + ' — VENDIDO</div>' +
         '<div class="fds">Te quedan ' + fmt(neto) + ' de plata (precio ' + fmt(r.price) + ' − ' + marketFee(r) + '% de comisión)</div></div>' +
         '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';

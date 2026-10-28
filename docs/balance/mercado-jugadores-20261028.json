@@ -1,0 +1,3257 @@
+{
+  "model": "Real farm agents, finite inventory and money; hypothetical demand/price strategies. Native RPC tests separately validate atomicity. Not a real market forecast.",
+  "results": [
+    {
+      "name": "Compradores y vendedores",
+      "days": 90,
+      "size": 6,
+      "seed": 11,
+      "posted": 667,
+      "trades": 407,
+      "grossPlata": 407965,
+      "feeBurnPlata": 36379,
+      "usdtFromMarketFees": 0,
+      "cancellations": 236,
+      "sellThrough": 0.6101949025487257,
+      "final": {
+        "day": 90,
+        "trades": 1,
+        "grossPlata": 407965,
+        "burnedPlata": 36379,
+        "usdtFromMarketFees": 0,
+        "open": 24,
+        "unsettledPlata": 201,
+        "accountsPlata": 3188476
+      },
+      "daily": [
+        {
+          "day": 1,
+          "trades": 3,
+          "grossPlata": 540,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 540,
+          "accountsPlata": 29847
+        },
+        {
+          "day": 2,
+          "trades": 2,
+          "grossPlata": 966,
+          "burnedPlata": 45,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 426,
+          "accountsPlata": 62139
+        },
+        {
+          "day": 3,
+          "trades": 3,
+          "grossPlata": 2286,
+          "burnedPlata": 75,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 1320,
+          "accountsPlata": 94602
+        },
+        {
+          "day": 4,
+          "trades": 4,
+          "grossPlata": 4550,
+          "burnedPlata": 182,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 2264,
+          "accountsPlata": 126855
+        },
+        {
+          "day": 5,
+          "trades": 5,
+          "grossPlata": 7175,
+          "burnedPlata": 374,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 2625,
+          "accountsPlata": 160254
+        },
+        {
+          "day": 6,
+          "trades": 3,
+          "grossPlata": 9877,
+          "burnedPlata": 593,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 2702,
+          "accountsPlata": 193813
+        },
+        {
+          "day": 7,
+          "trades": 4,
+          "grossPlata": 14072,
+          "burnedPlata": 810,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 4195,
+          "accountsPlata": 225267
+        },
+        {
+          "day": 8,
+          "trades": 4,
+          "grossPlata": 19038,
+          "burnedPlata": 1167,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 4966,
+          "accountsPlata": 256389
+        },
+        {
+          "day": 9,
+          "trades": 4,
+          "grossPlata": 23095,
+          "burnedPlata": 1593,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 4057,
+          "accountsPlata": 289988
+        },
+        {
+          "day": 10,
+          "trades": 3,
+          "grossPlata": 27295,
+          "burnedPlata": 1919,
+          "usdtFromMarketFees": 0,
+          "open": 3,
+          "unsettledPlata": 4200,
+          "accountsPlata": 323119
+        },
+        {
+          "day": 11,
+          "trades": 5,
+          "grossPlata": 33970,
+          "burnedPlata": 2258,
+          "usdtFromMarketFees": 0,
+          "open": 4,
+          "unsettledPlata": 6675,
+          "accountsPlata": 352909
+        },
+        {
+          "day": 12,
+          "trades": 4,
+          "grossPlata": 39670,
+          "burnedPlata": 2844,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 5700,
+          "accountsPlata": 386758
+        },
+        {
+          "day": 13,
+          "trades": 6,
+          "grossPlata": 47770,
+          "burnedPlata": 3333,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 8100,
+          "accountsPlata": 416267
+        },
+        {
+          "day": 14,
+          "trades": 4,
+          "grossPlata": 53020,
+          "burnedPlata": 4062,
+          "usdtFromMarketFees": 0,
+          "open": 7,
+          "unsettledPlata": 5250,
+          "accountsPlata": 448515
+        },
+        {
+          "day": 15,
+          "trades": 5,
+          "grossPlata": 59920,
+          "burnedPlata": 4506,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 6900,
+          "accountsPlata": 483096
+        },
+        {
+          "day": 16,
+          "trades": 6,
+          "grossPlata": 68020,
+          "burnedPlata": 5115,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 8100,
+          "accountsPlata": 512227
+        },
+        {
+          "day": 17,
+          "trades": 6,
+          "grossPlata": 75340,
+          "burnedPlata": 5844,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 7320,
+          "accountsPlata": 536004
+        },
+        {
+          "day": 18,
+          "trades": 6,
+          "grossPlata": 83140,
+          "burnedPlata": 6495,
+          "usdtFromMarketFees": 0,
+          "open": 4,
+          "unsettledPlata": 7800,
+          "accountsPlata": 564951
+        },
+        {
+          "day": 19,
+          "trades": 5,
+          "grossPlata": 90040,
+          "burnedPlata": 7194,
+          "usdtFromMarketFees": 0,
+          "open": 6,
+          "unsettledPlata": 6900,
+          "accountsPlata": 597245
+        },
+        {
+          "day": 20,
+          "trades": 5,
+          "grossPlata": 96940,
+          "burnedPlata": 7803,
+          "usdtFromMarketFees": 0,
+          "open": 7,
+          "unsettledPlata": 6900,
+          "accountsPlata": 620734
+        },
+        {
+          "day": 21,
+          "trades": 6,
+          "grossPlata": 105040,
+          "burnedPlata": 8448,
+          "usdtFromMarketFees": 0,
+          "open": 7,
+          "unsettledPlata": 8100,
+          "accountsPlata": 645295
+        },
+        {
+          "day": 22,
+          "trades": 5,
+          "grossPlata": 111640,
+          "burnedPlata": 9177,
+          "usdtFromMarketFees": 0,
+          "open": 9,
+          "unsettledPlata": 6600,
+          "accountsPlata": 678973
+        },
+        {
+          "day": 23,
+          "trades": 3,
+          "grossPlata": 115840,
+          "burnedPlata": 9756,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 4200,
+          "accountsPlata": 719410
+        },
+        {
+          "day": 24,
+          "trades": 6,
+          "grossPlata": 123940,
+          "burnedPlata": 10140,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 8100,
+          "accountsPlata": 750157
+        },
+        {
+          "day": 25,
+          "trades": 6,
+          "grossPlata": 132040,
+          "burnedPlata": 10869,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 8100,
+          "accountsPlata": 769514
+        },
+        {
+          "day": 26,
+          "trades": 6,
+          "grossPlata": 140140,
+          "burnedPlata": 11598,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 8100,
+          "accountsPlata": 798230
+        },
+        {
+          "day": 27,
+          "trades": 5,
+          "grossPlata": 146740,
+          "burnedPlata": 12327,
+          "usdtFromMarketFees": 0,
+          "open": 13,
+          "unsettledPlata": 6600,
+          "accountsPlata": 842679
+        },
+        {
+          "day": 28,
+          "trades": 7,
+          "grossPlata": 156047,
+          "burnedPlata": 12906,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 9307,
+          "accountsPlata": 856808
+        },
+        {
+          "day": 29,
+          "trades": 5,
+          "grossPlata": 162647,
+          "burnedPlata": 13719,
+          "usdtFromMarketFees": 0,
+          "open": 13,
+          "unsettledPlata": 6600,
+          "accountsPlata": 910402
+        },
+        {
+          "day": 30,
+          "trades": 5,
+          "grossPlata": 169547,
+          "burnedPlata": 14298,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 6900,
+          "accountsPlata": 961179
+        },
+        {
+          "day": 31,
+          "trades": 6,
+          "grossPlata": 177647,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 8100,
+          "accountsPlata": 988848
+        },
+        {
+          "day": 32,
+          "trades": 6,
+          "grossPlata": 185747,
+          "burnedPlata": 15672,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 8100,
+          "accountsPlata": 1004851
+        },
+        {
+          "day": 33,
+          "trades": 6,
+          "grossPlata": 193847,
+          "burnedPlata": 16401,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 8100,
+          "accountsPlata": 1035766
+        },
+        {
+          "day": 34,
+          "trades": 5,
+          "grossPlata": 200747,
+          "burnedPlata": 17130,
+          "usdtFromMarketFees": 0,
+          "open": 15,
+          "unsettledPlata": 6900,
+          "accountsPlata": 1093362
+        },
+        {
+          "day": 35,
+          "trades": 6,
+          "grossPlata": 208847,
+          "burnedPlata": 17739,
+          "usdtFromMarketFees": 0,
+          "open": 15,
+          "unsettledPlata": 8100,
+          "accountsPlata": 1142356
+        },
+        {
+          "day": 36,
+          "trades": 6,
+          "grossPlata": 216947,
+          "burnedPlata": 18468,
+          "usdtFromMarketFees": 0,
+          "open": 15,
+          "unsettledPlata": 8100,
+          "accountsPlata": 1157632
+        },
+        {
+          "day": 37,
+          "trades": 5,
+          "grossPlata": 223547,
+          "burnedPlata": 19197,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 6600,
+          "accountsPlata": 1194716
+        },
+        {
+          "day": 38,
+          "trades": 5,
+          "grossPlata": 230447,
+          "burnedPlata": 19821,
+          "usdtFromMarketFees": 0,
+          "open": 17,
+          "unsettledPlata": 6900,
+          "accountsPlata": 1230106
+        },
+        {
+          "day": 39,
+          "trades": 6,
+          "grossPlata": 238367,
+          "burnedPlata": 20430,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 7920,
+          "accountsPlata": 1275556
+        },
+        {
+          "day": 40,
+          "trades": 6,
+          "grossPlata": 246134,
+          "burnedPlata": 21141,
+          "usdtFromMarketFees": 0,
+          "open": 15,
+          "unsettledPlata": 7767,
+          "accountsPlata": 1336019
+        },
+        {
+          "day": 41,
+          "trades": 6,
+          "grossPlata": 253771,
+          "burnedPlata": 21837,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 7637,
+          "accountsPlata": 1376478
+        },
+        {
+          "day": 42,
+          "trades": 3,
+          "grossPlata": 257508,
+          "burnedPlata": 22520,
+          "usdtFromMarketFees": 0,
+          "open": 18,
+          "unsettledPlata": 3737,
+          "accountsPlata": 1419992
+        },
+        {
+          "day": 43,
+          "trades": 6,
+          "grossPlata": 264560,
+          "burnedPlata": 22849,
+          "usdtFromMarketFees": 0,
+          "open": 15,
+          "unsettledPlata": 7052,
+          "accountsPlata": 1457630
+        },
+        {
+          "day": 44,
+          "trades": 4,
+          "grossPlata": 268748,
+          "burnedPlata": 23478,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 4188,
+          "accountsPlata": 1500556
+        },
+        {
+          "day": 45,
+          "trades": 6,
+          "grossPlata": 274655,
+          "burnedPlata": 23852,
+          "usdtFromMarketFees": 0,
+          "open": 11,
+          "unsettledPlata": 5907,
+          "accountsPlata": 1538251
+        },
+        {
+          "day": 46,
+          "trades": 5,
+          "grossPlata": 279634,
+          "burnedPlata": 24376,
+          "usdtFromMarketFees": 0,
+          "open": 11,
+          "unsettledPlata": 4979,
+          "accountsPlata": 1582255
+        },
+        {
+          "day": 47,
+          "trades": 5,
+          "grossPlata": 283576,
+          "burnedPlata": 24807,
+          "usdtFromMarketFees": 0,
+          "open": 10,
+          "unsettledPlata": 3942,
+          "accountsPlata": 1626781
+        },
+        {
+          "day": 48,
+          "trades": 6,
+          "grossPlata": 288793,
+          "burnedPlata": 25183,
+          "usdtFromMarketFees": 0,
+          "open": 8,
+          "unsettledPlata": 5217,
+          "accountsPlata": 1667840
+        },
+        {
+          "day": 49,
+          "trades": 6,
+          "grossPlata": 293819,
+          "burnedPlata": 25648,
+          "usdtFromMarketFees": 0,
+          "open": 7,
+          "unsettledPlata": 5026,
+          "accountsPlata": 1703616
+        },
+        {
+          "day": 50,
+          "trades": 6,
+          "grossPlata": 298682,
+          "burnedPlata": 26100,
+          "usdtFromMarketFees": 0,
+          "open": 6,
+          "unsettledPlata": 4863,
+          "accountsPlata": 1740719
+        },
+        {
+          "day": 51,
+          "trades": 5,
+          "grossPlata": 302624,
+          "burnedPlata": 26540,
+          "usdtFromMarketFees": 0,
+          "open": 8,
+          "unsettledPlata": 3942,
+          "accountsPlata": 1781017
+        },
+        {
+          "day": 52,
+          "trades": 5,
+          "grossPlata": 306566,
+          "burnedPlata": 26888,
+          "usdtFromMarketFees": 0,
+          "open": 9,
+          "unsettledPlata": 3942,
+          "accountsPlata": 1817681
+        },
+        {
+          "day": 53,
+          "trades": 6,
+          "grossPlata": 311429,
+          "burnedPlata": 27236,
+          "usdtFromMarketFees": 0,
+          "open": 9,
+          "unsettledPlata": 4863,
+          "accountsPlata": 1858980
+        },
+        {
+          "day": 54,
+          "trades": 5,
+          "grossPlata": 315555,
+          "burnedPlata": 27676,
+          "usdtFromMarketFees": 0,
+          "open": 10,
+          "unsettledPlata": 4126,
+          "accountsPlata": 1901565
+        },
+        {
+          "day": 55,
+          "trades": 6,
+          "grossPlata": 320418,
+          "burnedPlata": 28042,
+          "usdtFromMarketFees": 0,
+          "open": 10,
+          "unsettledPlata": 4863,
+          "accountsPlata": 1935372
+        },
+        {
+          "day": 56,
+          "trades": 6,
+          "grossPlata": 325281,
+          "burnedPlata": 28482,
+          "usdtFromMarketFees": 0,
+          "open": 10,
+          "unsettledPlata": 4863,
+          "accountsPlata": 1969974
+        },
+        {
+          "day": 57,
+          "trades": 5,
+          "grossPlata": 329223,
+          "burnedPlata": 28922,
+          "usdtFromMarketFees": 0,
+          "open": 11,
+          "unsettledPlata": 3942,
+          "accountsPlata": 2011276
+        },
+        {
+          "day": 58,
+          "trades": 5,
+          "grossPlata": 333349,
+          "burnedPlata": 29298,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 4126,
+          "accountsPlata": 2051284
+        },
+        {
+          "day": 59,
+          "trades": 6,
+          "grossPlata": 338212,
+          "burnedPlata": 29664,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 4863,
+          "accountsPlata": 2089240
+        },
+        {
+          "day": 60,
+          "trades": 6,
+          "grossPlata": 343075,
+          "burnedPlata": 30104,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 4863,
+          "accountsPlata": 2128224
+        },
+        {
+          "day": 61,
+          "trades": 6,
+          "grossPlata": 347938,
+          "burnedPlata": 30544,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 4863,
+          "accountsPlata": 2172296
+        },
+        {
+          "day": 62,
+          "trades": 6,
+          "grossPlata": 352801,
+          "burnedPlata": 30984,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 4863,
+          "accountsPlata": 2212946
+        },
+        {
+          "day": 63,
+          "trades": 5,
+          "grossPlata": 356743,
+          "burnedPlata": 31424,
+          "usdtFromMarketFees": 0,
+          "open": 13,
+          "unsettledPlata": 3942,
+          "accountsPlata": 2249142
+        },
+        {
+          "day": 64,
+          "trades": 6,
+          "grossPlata": 361606,
+          "burnedPlata": 31772,
+          "usdtFromMarketFees": 0,
+          "open": 13,
+          "unsettledPlata": 4863,
+          "accountsPlata": 2282442
+        },
+        {
+          "day": 65,
+          "trades": 6,
+          "grossPlata": 366469,
+          "burnedPlata": 32212,
+          "usdtFromMarketFees": 0,
+          "open": 13,
+          "unsettledPlata": 4863,
+          "accountsPlata": 2320919
+        },
+        {
+          "day": 66,
+          "trades": 4,
+          "grossPlata": 369674,
+          "burnedPlata": 32652,
+          "usdtFromMarketFees": 0,
+          "open": 15,
+          "unsettledPlata": 3205,
+          "accountsPlata": 2357131
+        },
+        {
+          "day": 67,
+          "trades": 5,
+          "grossPlata": 373800,
+          "burnedPlata": 32926,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 4126,
+          "accountsPlata": 2392285
+        },
+        {
+          "day": 68,
+          "trades": 6,
+          "grossPlata": 378552,
+          "burnedPlata": 33292,
+          "usdtFromMarketFees": 0,
+          "open": 15,
+          "unsettledPlata": 4752,
+          "accountsPlata": 2428204
+        },
+        {
+          "day": 69,
+          "trades": 6,
+          "grossPlata": 383210,
+          "burnedPlata": 33721,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 4658,
+          "accountsPlata": 2466223
+        },
+        {
+          "day": 70,
+          "trades": 5,
+          "grossPlata": 386868,
+          "burnedPlata": 34140,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 3658,
+          "accountsPlata": 2505095
+        },
+        {
+          "day": 71,
+          "trades": 4,
+          "grossPlata": 389605,
+          "burnedPlata": 34487,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 2737,
+          "accountsPlata": 2536282
+        },
+        {
+          "day": 72,
+          "trades": 2,
+          "grossPlata": 390841,
+          "burnedPlata": 34714,
+          "usdtFromMarketFees": 0,
+          "open": 18,
+          "unsettledPlata": 1236,
+          "accountsPlata": 2571940
+        },
+        {
+          "day": 73,
+          "trades": 4,
+          "grossPlata": 393252,
+          "burnedPlata": 34837,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 2411,
+          "accountsPlata": 2606129
+        },
+        {
+          "day": 74,
+          "trades": 4,
+          "grossPlata": 395429,
+          "burnedPlata": 35060,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 2177,
+          "accountsPlata": 2638980
+        },
+        {
+          "day": 75,
+          "trades": 3,
+          "grossPlata": 396816,
+          "burnedPlata": 35278,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 1387,
+          "accountsPlata": 2676483
+        },
+        {
+          "day": 76,
+          "trades": 3,
+          "grossPlata": 398203,
+          "burnedPlata": 35416,
+          "usdtFromMarketFees": 0,
+          "open": 15,
+          "unsettledPlata": 1387,
+          "accountsPlata": 2709837
+        },
+        {
+          "day": 77,
+          "trades": 4,
+          "grossPlata": 399971,
+          "burnedPlata": 35540,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 1768,
+          "accountsPlata": 2745915
+        },
+        {
+          "day": 78,
+          "trades": 2,
+          "grossPlata": 400809,
+          "burnedPlata": 35691,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 838,
+          "accountsPlata": 2779411
+        },
+        {
+          "day": 79,
+          "trades": 3,
+          "grossPlata": 402042,
+          "burnedPlata": 35763,
+          "usdtFromMarketFees": 0,
+          "open": 17,
+          "unsettledPlata": 1233,
+          "accountsPlata": 2815358
+        },
+        {
+          "day": 80,
+          "trades": 2,
+          "grossPlata": 402822,
+          "burnedPlata": 35876,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 780,
+          "accountsPlata": 2852290
+        },
+        {
+          "day": 81,
+          "trades": 3,
+          "grossPlata": 404055,
+          "burnedPlata": 35944,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 1233,
+          "accountsPlata": 2887951
+        },
+        {
+          "day": 82,
+          "trades": 3,
+          "grossPlata": 405288,
+          "burnedPlata": 36057,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 1233,
+          "accountsPlata": 2920586
+        },
+        {
+          "day": 83,
+          "trades": 2,
+          "grossPlata": 406068,
+          "burnedPlata": 36170,
+          "usdtFromMarketFees": 0,
+          "open": 21,
+          "unsettledPlata": 780,
+          "accountsPlata": 2950812
+        },
+        {
+          "day": 84,
+          "trades": 0,
+          "grossPlata": 406068,
+          "burnedPlata": 36238,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2985511
+        },
+        {
+          "day": 85,
+          "trades": 2,
+          "grossPlata": 406722,
+          "burnedPlata": 36238,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 654,
+          "accountsPlata": 3018645
+        },
+        {
+          "day": 86,
+          "trades": 1,
+          "grossPlata": 407049,
+          "burnedPlata": 36284,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 327,
+          "accountsPlata": 3050067
+        },
+        {
+          "day": 87,
+          "trades": 1,
+          "grossPlata": 407327,
+          "burnedPlata": 36307,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 278,
+          "accountsPlata": 3084688
+        },
+        {
+          "day": 88,
+          "trades": 1,
+          "grossPlata": 407563,
+          "burnedPlata": 36335,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 236,
+          "accountsPlata": 3119298
+        },
+        {
+          "day": 89,
+          "trades": 1,
+          "grossPlata": 407764,
+          "burnedPlata": 36359,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 201,
+          "accountsPlata": 3153904
+        },
+        {
+          "day": 90,
+          "trades": 1,
+          "grossPlata": 407965,
+          "burnedPlata": 36379,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 201,
+          "accountsPlata": 3188476
+        }
+      ],
+      "accounts": [
+        {
+          "id": 0,
+          "level": 25,
+          "expansions": 15,
+          "plata": 604630
+        },
+        {
+          "id": 1,
+          "level": 25,
+          "expansions": 16,
+          "plata": 497835
+        },
+        {
+          "id": 2,
+          "level": 25,
+          "expansions": 16,
+          "plata": 519403
+        },
+        {
+          "id": 3,
+          "level": 25,
+          "expansions": 16,
+          "plata": 540188
+        },
+        {
+          "id": 4,
+          "level": 25,
+          "expansions": 16,
+          "plata": 549795
+        },
+        {
+          "id": 5,
+          "level": 25,
+          "expansions": 16,
+          "plata": 476625
+        }
+      ]
+    },
+    {
+      "name": "Sin compradores",
+      "days": 60,
+      "size": 6,
+      "seed": 11,
+      "posted": 422,
+      "trades": 0,
+      "grossPlata": 0,
+      "feeBurnPlata": 0,
+      "usdtFromMarketFees": 0,
+      "cancellations": 398,
+      "sellThrough": 0,
+      "final": {
+        "day": 60,
+        "trades": 0,
+        "grossPlata": 0,
+        "burnedPlata": 0,
+        "usdtFromMarketFees": 0,
+        "open": 24,
+        "unsettledPlata": 0,
+        "accountsPlata": 2159415
+      },
+      "daily": [
+        {
+          "day": 1,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 3,
+          "unsettledPlata": 0,
+          "accountsPlata": 30387
+        },
+        {
+          "day": 2,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 0,
+          "accountsPlata": 63064
+        },
+        {
+          "day": 3,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 9,
+          "unsettledPlata": 0,
+          "accountsPlata": 96863
+        },
+        {
+          "day": 4,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 10,
+          "unsettledPlata": 0,
+          "accountsPlata": 130197
+        },
+        {
+          "day": 5,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 0,
+          "accountsPlata": 164063
+        },
+        {
+          "day": 6,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 0,
+          "accountsPlata": 198013
+        },
+        {
+          "day": 7,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 0,
+          "accountsPlata": 231867
+        },
+        {
+          "day": 8,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 0,
+          "accountsPlata": 263823
+        },
+        {
+          "day": 9,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 16,
+          "unsettledPlata": 0,
+          "accountsPlata": 297771
+        },
+        {
+          "day": 10,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 19,
+          "unsettledPlata": 0,
+          "accountsPlata": 330161
+        },
+        {
+          "day": 11,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 359999
+        },
+        {
+          "day": 12,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 21,
+          "unsettledPlata": 0,
+          "accountsPlata": 394331
+        },
+        {
+          "day": 13,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 21,
+          "unsettledPlata": 0,
+          "accountsPlata": 428413
+        },
+        {
+          "day": 14,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 21,
+          "unsettledPlata": 0,
+          "accountsPlata": 463130
+        },
+        {
+          "day": 15,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 21,
+          "unsettledPlata": 0,
+          "accountsPlata": 496735
+        },
+        {
+          "day": 16,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 528904
+        },
+        {
+          "day": 17,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 562467
+        },
+        {
+          "day": 18,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 593536
+        },
+        {
+          "day": 19,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 627523
+        },
+        {
+          "day": 20,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 658386
+        },
+        {
+          "day": 21,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 690826
+        },
+        {
+          "day": 22,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 724543
+        },
+        {
+          "day": 23,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 21,
+          "unsettledPlata": 0,
+          "accountsPlata": 738218
+        },
+        {
+          "day": 24,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 21,
+          "unsettledPlata": 0,
+          "accountsPlata": 759568
+        },
+        {
+          "day": 25,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 802878
+        },
+        {
+          "day": 26,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 839618
+        },
+        {
+          "day": 27,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 871437
+        },
+        {
+          "day": 28,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 902311
+        },
+        {
+          "day": 29,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 914673
+        },
+        {
+          "day": 30,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 947000
+        },
+        {
+          "day": 31,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 999084
+        },
+        {
+          "day": 32,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1017473
+        },
+        {
+          "day": 33,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1043636
+        },
+        {
+          "day": 34,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1101176
+        },
+        {
+          "day": 35,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1143727
+        },
+        {
+          "day": 36,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1183822
+        },
+        {
+          "day": 37,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1207132
+        },
+        {
+          "day": 38,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1232637
+        },
+        {
+          "day": 39,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1259528
+        },
+        {
+          "day": 40,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 23,
+          "unsettledPlata": 0,
+          "accountsPlata": 1319082
+        },
+        {
+          "day": 41,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 23,
+          "unsettledPlata": 0,
+          "accountsPlata": 1360603
+        },
+        {
+          "day": 42,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1402345
+        },
+        {
+          "day": 43,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1428518
+        },
+        {
+          "day": 44,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1458927
+        },
+        {
+          "day": 45,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1490314
+        },
+        {
+          "day": 46,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1523105
+        },
+        {
+          "day": 47,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1565626
+        },
+        {
+          "day": 48,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1619715
+        },
+        {
+          "day": 49,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1665932
+        },
+        {
+          "day": 50,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1711109
+        },
+        {
+          "day": 51,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1753753
+        },
+        {
+          "day": 52,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1800031
+        },
+        {
+          "day": 53,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1846350
+        },
+        {
+          "day": 54,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1892680
+        },
+        {
+          "day": 55,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1937557
+        },
+        {
+          "day": 56,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1977531
+        },
+        {
+          "day": 57,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2018295
+        },
+        {
+          "day": 58,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2065354
+        },
+        {
+          "day": 59,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2112617
+        },
+        {
+          "day": 60,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2159415
+        }
+      ],
+      "accounts": [
+        {
+          "id": 0,
+          "level": 25,
+          "expansions": 9,
+          "plata": 382256
+        },
+        {
+          "id": 1,
+          "level": 25,
+          "expansions": 11,
+          "plata": 346207
+        },
+        {
+          "id": 2,
+          "level": 25,
+          "expansions": 10,
+          "plata": 346821
+        },
+        {
+          "id": 3,
+          "level": 25,
+          "expansions": 9,
+          "plata": 391103
+        },
+        {
+          "id": 4,
+          "level": 25,
+          "expansions": 10,
+          "plata": 346821
+        },
+        {
+          "id": 5,
+          "level": 25,
+          "expansions": 11,
+          "plata": 346207
+        }
+      ]
+    },
+    {
+      "name": "Caída de compradores desde día 31",
+      "days": 90,
+      "size": 6,
+      "seed": 11,
+      "posted": 656,
+      "trades": 141,
+      "grossPlata": 169547,
+      "feeBurnPlata": 14943,
+      "usdtFromMarketFees": 0,
+      "cancellations": 491,
+      "sellThrough": 0.2149390243902439,
+      "final": {
+        "day": 90,
+        "trades": 0,
+        "grossPlata": 169547,
+        "burnedPlata": 14943,
+        "usdtFromMarketFees": 0,
+        "open": 24,
+        "unsettledPlata": 0,
+        "accountsPlata": 3646055
+      },
+      "daily": [
+        {
+          "day": 1,
+          "trades": 3,
+          "grossPlata": 540,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 540,
+          "accountsPlata": 29847
+        },
+        {
+          "day": 2,
+          "trades": 2,
+          "grossPlata": 966,
+          "burnedPlata": 45,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 426,
+          "accountsPlata": 62139
+        },
+        {
+          "day": 3,
+          "trades": 3,
+          "grossPlata": 2286,
+          "burnedPlata": 75,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 1320,
+          "accountsPlata": 94602
+        },
+        {
+          "day": 4,
+          "trades": 4,
+          "grossPlata": 4550,
+          "burnedPlata": 182,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 2264,
+          "accountsPlata": 126855
+        },
+        {
+          "day": 5,
+          "trades": 5,
+          "grossPlata": 7175,
+          "burnedPlata": 374,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 2625,
+          "accountsPlata": 160254
+        },
+        {
+          "day": 6,
+          "trades": 3,
+          "grossPlata": 9877,
+          "burnedPlata": 593,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 2702,
+          "accountsPlata": 193813
+        },
+        {
+          "day": 7,
+          "trades": 4,
+          "grossPlata": 14072,
+          "burnedPlata": 810,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 4195,
+          "accountsPlata": 225267
+        },
+        {
+          "day": 8,
+          "trades": 4,
+          "grossPlata": 19038,
+          "burnedPlata": 1167,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 4966,
+          "accountsPlata": 256389
+        },
+        {
+          "day": 9,
+          "trades": 4,
+          "grossPlata": 23095,
+          "burnedPlata": 1593,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 4057,
+          "accountsPlata": 289988
+        },
+        {
+          "day": 10,
+          "trades": 3,
+          "grossPlata": 27295,
+          "burnedPlata": 1919,
+          "usdtFromMarketFees": 0,
+          "open": 3,
+          "unsettledPlata": 4200,
+          "accountsPlata": 323119
+        },
+        {
+          "day": 11,
+          "trades": 5,
+          "grossPlata": 33970,
+          "burnedPlata": 2258,
+          "usdtFromMarketFees": 0,
+          "open": 4,
+          "unsettledPlata": 6675,
+          "accountsPlata": 352909
+        },
+        {
+          "day": 12,
+          "trades": 4,
+          "grossPlata": 39670,
+          "burnedPlata": 2844,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 5700,
+          "accountsPlata": 386758
+        },
+        {
+          "day": 13,
+          "trades": 6,
+          "grossPlata": 47770,
+          "burnedPlata": 3333,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 8100,
+          "accountsPlata": 416267
+        },
+        {
+          "day": 14,
+          "trades": 4,
+          "grossPlata": 53020,
+          "burnedPlata": 4062,
+          "usdtFromMarketFees": 0,
+          "open": 7,
+          "unsettledPlata": 5250,
+          "accountsPlata": 448515
+        },
+        {
+          "day": 15,
+          "trades": 5,
+          "grossPlata": 59920,
+          "burnedPlata": 4506,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 6900,
+          "accountsPlata": 483096
+        },
+        {
+          "day": 16,
+          "trades": 6,
+          "grossPlata": 68020,
+          "burnedPlata": 5115,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 8100,
+          "accountsPlata": 512227
+        },
+        {
+          "day": 17,
+          "trades": 6,
+          "grossPlata": 75340,
+          "burnedPlata": 5844,
+          "usdtFromMarketFees": 0,
+          "open": 5,
+          "unsettledPlata": 7320,
+          "accountsPlata": 536004
+        },
+        {
+          "day": 18,
+          "trades": 6,
+          "grossPlata": 83140,
+          "burnedPlata": 6495,
+          "usdtFromMarketFees": 0,
+          "open": 4,
+          "unsettledPlata": 7800,
+          "accountsPlata": 564951
+        },
+        {
+          "day": 19,
+          "trades": 5,
+          "grossPlata": 90040,
+          "burnedPlata": 7194,
+          "usdtFromMarketFees": 0,
+          "open": 6,
+          "unsettledPlata": 6900,
+          "accountsPlata": 597245
+        },
+        {
+          "day": 20,
+          "trades": 5,
+          "grossPlata": 96940,
+          "burnedPlata": 7803,
+          "usdtFromMarketFees": 0,
+          "open": 7,
+          "unsettledPlata": 6900,
+          "accountsPlata": 620734
+        },
+        {
+          "day": 21,
+          "trades": 6,
+          "grossPlata": 105040,
+          "burnedPlata": 8448,
+          "usdtFromMarketFees": 0,
+          "open": 7,
+          "unsettledPlata": 8100,
+          "accountsPlata": 645295
+        },
+        {
+          "day": 22,
+          "trades": 5,
+          "grossPlata": 111640,
+          "burnedPlata": 9177,
+          "usdtFromMarketFees": 0,
+          "open": 9,
+          "unsettledPlata": 6600,
+          "accountsPlata": 678973
+        },
+        {
+          "day": 23,
+          "trades": 3,
+          "grossPlata": 115840,
+          "burnedPlata": 9756,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 4200,
+          "accountsPlata": 719410
+        },
+        {
+          "day": 24,
+          "trades": 6,
+          "grossPlata": 123940,
+          "burnedPlata": 10140,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 8100,
+          "accountsPlata": 750157
+        },
+        {
+          "day": 25,
+          "trades": 6,
+          "grossPlata": 132040,
+          "burnedPlata": 10869,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 8100,
+          "accountsPlata": 769514
+        },
+        {
+          "day": 26,
+          "trades": 6,
+          "grossPlata": 140140,
+          "burnedPlata": 11598,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 8100,
+          "accountsPlata": 798230
+        },
+        {
+          "day": 27,
+          "trades": 5,
+          "grossPlata": 146740,
+          "burnedPlata": 12327,
+          "usdtFromMarketFees": 0,
+          "open": 13,
+          "unsettledPlata": 6600,
+          "accountsPlata": 842679
+        },
+        {
+          "day": 28,
+          "trades": 7,
+          "grossPlata": 156047,
+          "burnedPlata": 12906,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 9307,
+          "accountsPlata": 856808
+        },
+        {
+          "day": 29,
+          "trades": 5,
+          "grossPlata": 162647,
+          "burnedPlata": 13719,
+          "usdtFromMarketFees": 0,
+          "open": 13,
+          "unsettledPlata": 6600,
+          "accountsPlata": 910402
+        },
+        {
+          "day": 30,
+          "trades": 5,
+          "grossPlata": 169547,
+          "burnedPlata": 14298,
+          "usdtFromMarketFees": 0,
+          "open": 14,
+          "unsettledPlata": 6900,
+          "accountsPlata": 961179
+        },
+        {
+          "day": 31,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 996948
+        },
+        {
+          "day": 32,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1013680
+        },
+        {
+          "day": 33,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1044696
+        },
+        {
+          "day": 34,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1097298
+        },
+        {
+          "day": 35,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1158485
+        },
+        {
+          "day": 36,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1203007
+        },
+        {
+          "day": 37,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1224936
+        },
+        {
+          "day": 38,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1259568
+        },
+        {
+          "day": 39,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1296269
+        },
+        {
+          "day": 40,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1336039
+        },
+        {
+          "day": 41,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1396837
+        },
+        {
+          "day": 42,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1440548
+        },
+        {
+          "day": 43,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1483522
+        },
+        {
+          "day": 44,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1531068
+        },
+        {
+          "day": 45,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1577528
+        },
+        {
+          "day": 46,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1623774
+        },
+        {
+          "day": 47,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1667948
+        },
+        {
+          "day": 48,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1713311
+        },
+        {
+          "day": 49,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1760674
+        },
+        {
+          "day": 50,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1808980
+        },
+        {
+          "day": 51,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1853682
+        },
+        {
+          "day": 52,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1897212
+        },
+        {
+          "day": 53,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1943488
+        },
+        {
+          "day": 54,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1992198
+        },
+        {
+          "day": 55,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2042060
+        },
+        {
+          "day": 56,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2087961
+        },
+        {
+          "day": 57,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2133017
+        },
+        {
+          "day": 58,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2182104
+        },
+        {
+          "day": 59,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2232167
+        },
+        {
+          "day": 60,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2279154
+        },
+        {
+          "day": 61,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2319773
+        },
+        {
+          "day": 62,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2360304
+        },
+        {
+          "day": 63,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2404647
+        },
+        {
+          "day": 64,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2447787
+        },
+        {
+          "day": 65,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2492143
+        },
+        {
+          "day": 66,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2540204
+        },
+        {
+          "day": 67,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2589539
+        },
+        {
+          "day": 68,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2636646
+        },
+        {
+          "day": 69,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2682583
+        },
+        {
+          "day": 70,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2730557
+        },
+        {
+          "day": 71,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2780512
+        },
+        {
+          "day": 72,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2828400
+        },
+        {
+          "day": 73,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2870899
+        },
+        {
+          "day": 74,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2911683
+        },
+        {
+          "day": 75,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2957149
+        },
+        {
+          "day": 76,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3005910
+        },
+        {
+          "day": 77,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3050553
+        },
+        {
+          "day": 78,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3095467
+        },
+        {
+          "day": 79,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3145146
+        },
+        {
+          "day": 80,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3190441
+        },
+        {
+          "day": 81,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3236845
+        },
+        {
+          "day": 82,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3285497
+        },
+        {
+          "day": 83,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3327792
+        },
+        {
+          "day": 84,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3373987
+        },
+        {
+          "day": 85,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3422601
+        },
+        {
+          "day": 86,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3468922
+        },
+        {
+          "day": 87,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3515194
+        },
+        {
+          "day": 88,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3557959
+        },
+        {
+          "day": 89,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3600665
+        },
+        {
+          "day": 90,
+          "trades": 0,
+          "grossPlata": 169547,
+          "burnedPlata": 14943,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 3646055
+        }
+      ],
+      "accounts": [
+        {
+          "id": 0,
+          "level": 25,
+          "expansions": 12,
+          "plata": 648466
+        },
+        {
+          "id": 1,
+          "level": 25,
+          "expansions": 14,
+          "plata": 581727
+        },
+        {
+          "id": 2,
+          "level": 25,
+          "expansions": 13,
+          "plata": 599189
+        },
+        {
+          "id": 3,
+          "level": 25,
+          "expansions": 14,
+          "plata": 630542
+        },
+        {
+          "id": 4,
+          "level": 25,
+          "expansions": 13,
+          "plata": 601294
+        },
+        {
+          "id": 5,
+          "level": 25,
+          "expansions": 14,
+          "plata": 584837
+        }
+      ]
+    },
+    {
+      "name": "Todos producen madera",
+      "days": 60,
+      "size": 6,
+      "seed": 11,
+      "posted": 418,
+      "trades": 5,
+      "grossPlata": 8887,
+      "feeBurnPlata": 623,
+      "usdtFromMarketFees": 0,
+      "cancellations": 389,
+      "sellThrough": 0.011961722488038277,
+      "final": {
+        "day": 60,
+        "trades": 0,
+        "grossPlata": 8887,
+        "burnedPlata": 623,
+        "usdtFromMarketFees": 0,
+        "open": 24,
+        "unsettledPlata": 0,
+        "accountsPlata": 2164502
+      },
+      "daily": [
+        {
+          "day": 1,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 0,
+          "unsettledPlata": 0,
+          "accountsPlata": 30320
+        },
+        {
+          "day": 2,
+          "trades": 0,
+          "grossPlata": 0,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 2,
+          "unsettledPlata": 0,
+          "accountsPlata": 62688
+        },
+        {
+          "day": 3,
+          "trades": 3,
+          "grossPlata": 887,
+          "burnedPlata": 0,
+          "usdtFromMarketFees": 0,
+          "open": 1,
+          "unsettledPlata": 887,
+          "accountsPlata": 95363
+        },
+        {
+          "day": 4,
+          "trades": 0,
+          "grossPlata": 887,
+          "burnedPlata": 63,
+          "usdtFromMarketFees": 0,
+          "open": 6,
+          "unsettledPlata": 0,
+          "accountsPlata": 128655
+        },
+        {
+          "day": 5,
+          "trades": 0,
+          "grossPlata": 887,
+          "burnedPlata": 63,
+          "usdtFromMarketFees": 0,
+          "open": 12,
+          "unsettledPlata": 0,
+          "accountsPlata": 162217
+        },
+        {
+          "day": 6,
+          "trades": 0,
+          "grossPlata": 887,
+          "burnedPlata": 63,
+          "usdtFromMarketFees": 0,
+          "open": 17,
+          "unsettledPlata": 0,
+          "accountsPlata": 196827
+        },
+        {
+          "day": 7,
+          "trades": 0,
+          "grossPlata": 887,
+          "burnedPlata": 63,
+          "usdtFromMarketFees": 0,
+          "open": 17,
+          "unsettledPlata": 0,
+          "accountsPlata": 231415
+        },
+        {
+          "day": 8,
+          "trades": 0,
+          "grossPlata": 887,
+          "burnedPlata": 63,
+          "usdtFromMarketFees": 0,
+          "open": 17,
+          "unsettledPlata": 0,
+          "accountsPlata": 263553
+        },
+        {
+          "day": 9,
+          "trades": 0,
+          "grossPlata": 887,
+          "burnedPlata": 63,
+          "usdtFromMarketFees": 0,
+          "open": 17,
+          "unsettledPlata": 0,
+          "accountsPlata": 294525
+        },
+        {
+          "day": 10,
+          "trades": 2,
+          "grossPlata": 8887,
+          "burnedPlata": 63,
+          "usdtFromMarketFees": 0,
+          "open": 18,
+          "unsettledPlata": 8000,
+          "accountsPlata": 318617
+        },
+        {
+          "day": 11,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 355344
+        },
+        {
+          "day": 12,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 390465
+        },
+        {
+          "day": 13,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 425325
+        },
+        {
+          "day": 14,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 459099
+        },
+        {
+          "day": 15,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 492839
+        },
+        {
+          "day": 16,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 524446
+        },
+        {
+          "day": 17,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 557529
+        },
+        {
+          "day": 18,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 584861
+        },
+        {
+          "day": 19,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 622970
+        },
+        {
+          "day": 20,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 658191
+        },
+        {
+          "day": 21,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 694539
+        },
+        {
+          "day": 22,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 719925
+        },
+        {
+          "day": 23,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 729802
+        },
+        {
+          "day": 24,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 20,
+          "unsettledPlata": 0,
+          "accountsPlata": 760617
+        },
+        {
+          "day": 25,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 803074
+        },
+        {
+          "day": 26,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 843344
+        },
+        {
+          "day": 27,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 878600
+        },
+        {
+          "day": 28,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 913895
+        },
+        {
+          "day": 29,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 921013
+        },
+        {
+          "day": 30,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 953209
+        },
+        {
+          "day": 31,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1000327
+        },
+        {
+          "day": 32,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1023649
+        },
+        {
+          "day": 33,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1058900
+        },
+        {
+          "day": 34,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1112716
+        },
+        {
+          "day": 35,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1143646
+        },
+        {
+          "day": 36,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1180240
+        },
+        {
+          "day": 37,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1191517
+        },
+        {
+          "day": 38,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1216705
+        },
+        {
+          "day": 39,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1240652
+        },
+        {
+          "day": 40,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1309221
+        },
+        {
+          "day": 41,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 22,
+          "unsettledPlata": 0,
+          "accountsPlata": 1354203
+        },
+        {
+          "day": 42,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1394068
+        },
+        {
+          "day": 43,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1415322
+        },
+        {
+          "day": 44,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1445710
+        },
+        {
+          "day": 45,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1476002
+        },
+        {
+          "day": 46,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1511911
+        },
+        {
+          "day": 47,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1567602
+        },
+        {
+          "day": 48,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1622113
+        },
+        {
+          "day": 49,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1669401
+        },
+        {
+          "day": 50,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1716721
+        },
+        {
+          "day": 51,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1761954
+        },
+        {
+          "day": 52,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1805432
+        },
+        {
+          "day": 53,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1852554
+        },
+        {
+          "day": 54,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1899718
+        },
+        {
+          "day": 55,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1945165
+        },
+        {
+          "day": 56,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 1982160
+        },
+        {
+          "day": 57,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2022938
+        },
+        {
+          "day": 58,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2069837
+        },
+        {
+          "day": 59,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2117097
+        },
+        {
+          "day": 60,
+          "trades": 0,
+          "grossPlata": 8887,
+          "burnedPlata": 623,
+          "usdtFromMarketFees": 0,
+          "open": 24,
+          "unsettledPlata": 0,
+          "accountsPlata": 2164502
+        }
+      ],
+      "accounts": [
+        {
+          "id": 0,
+          "level": 25,
+          "expansions": 9,
+          "plata": 393853
+        },
+        {
+          "id": 1,
+          "level": 25,
+          "expansions": 11,
+          "plata": 342236
+        },
+        {
+          "id": 2,
+          "level": 25,
+          "expansions": 11,
+          "plata": 346504
+        },
+        {
+          "id": 3,
+          "level": 25,
+          "expansions": 9,
+          "plata": 392726
+        },
+        {
+          "id": 4,
+          "level": 25,
+          "expansions": 11,
+          "plata": 346638
+        },
+        {
+          "id": 5,
+          "level": 25,
+          "expansions": 11,
+          "plata": 342545
+        }
+      ]
+    }
+  ]
+}

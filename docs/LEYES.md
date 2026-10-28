@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Mercado y sostenibilidad de retiros — 28/10/2026
+
+Dirección pide simular P2P y retiros sin activarlos. Se prepara mercado con recursos y dinero finitos, compradores explícitos, cuotas, comisiones y cobros pendientes; se contrasta con las operaciones reales en una transacción revertida. La financiación se analiza aparte: quemar Plata o gastar Golden ganado no aporta USDT. La calculadora de reservas es sólo local y nunca ejecutable; no habilita canjes ni movimientos. El informe específico de capital queda fuera del repositorio público. Se corrige la discrepancia de redondeo de comisión 250 al 7%: PostgreSQL paga 233 y JavaScript podía mostrar/calcular permiso 232. Se alinea el redondeo sin cambiar tasas, datos ni ventas pasadas. Ver MERCADO-RETIROS-SIMULACION-20261028.txt.
+
+
 ## Simulación prolongada del incentivo — 28/10/2026
 
 Dirección pide simular varios días y ajustar según resultados. Se ejecutan ocho perfiles de granja a 120 días, tres semillas con visitas perdidas a 180 y presión de venta x10. El modelo usa funciones/tablas actuales y el registro del servidor, con adaptación explícita de sesiones y colocación; no simula combate, animales, cocina, colisiones ni liquidez P2P. Free regular alcanza una media neta aproximada de 5.046 Plata/día; las expansiones no son instantáneas. No se cambian costes, cupos ni la recompensa de 5.000 sin una necesidad demostrada. Se reproduce y corrige la pérdida de crédito al fabricar y consumir un hacha/pico en el mismo guardado: se contrastan estadísticas y recursos obtenidos además del saldo neto de herramientas, siempre dentro del presupuesto de energía. No se premia fabricar por sí solo, no se duplica al reintentar ni hay crédito histórico. Depósitos, retiros y canje siguen cerrados. Informe: BALANCE-LARGO-PLAZO-20261028.txt.

@@ -1,0 +1,13 @@
+MERCADO Y RETIROS — HERRAMIENTAS DE ANÁLISIS (28/10/2026)
+
+No habilitan pagos. La reserva real y el informe específico de tesorería se conservan localmente fuera del repositorio público.
+
+Mercado: tools/simular-mercado-jugadores.js acopla agentes de granja con stock/Plata finitos. Respeta lotes enteros, cuota Free 1 / VIP 10 más tiendita, comisiones 10/7/8/5 capturadas al publicar, cobro diferido y cancelación sin devolver cuota. Produce escenarios con compradores, sin compradores, pérdida de compradores y producción concentrada. Los precios y decisiones son supuestos, no predicciones. Las comisiones en Plata no son ingreso USDT.
+
+Retiro: tools/simular-retiros-sostenibilidad.js usa SIM_RESERVE como entrada (cero por defecto); escribe fuera del repositorio en la carpeta del usuario, o en la ruta de salida indicada. Prueba renovación con dinero externo o moneda ganada, gasto permanente frente a saldo aplazado, objetos, retiros diarios/conjuntos, caída de ingresos y presupuestos limitados. Los saldos negativos del contrafactual exponen faltantes; nunca se ejecutan pagos.
+
+Política de ejemplo: public/equipo/solvencia.mjs protege Golden, compromisos, gas y colchón. Aplica límites por liquidez y por ingresos recurrentes, con reparto proporcional en unidades enteras. Siempre analysisOnly=true, executable=false y withdrawalsEnabled=false. La calculadora del panel privado usa sólo entradas manuales locales: no transmite ni conserva la tesorería introducida.
+
+La financiación no nace del volumen P2P ni del Golden ganado. A la referencia de 0,50 por día y VIP de 10 Golden/30 días pagado externamente, los pagos nominales serían 15 al mes frente a 10 de ingreso antes de costes. Cambiar el presupuesto o la tasa reduce el valor efectivo de lo cobrado; no garantiza esa rentabilidad. No se cambian precios, VIP ni premio de trabajo para ocultar ese desfase.
+
+Corrección: redondeo entero de comisión entre la interfaz y el guardado, alineado con PostgreSQL. Caso 250 Plata al 7%: 233 netas. No modifica comisiones ni ventas históricas. tools/test-redondeo-p2p.js recorre 40.000 combinaciones; tools/test-solvencia.js comprueba límites y reparto. Las operaciones nativas se probaron con ROLLBACK.
