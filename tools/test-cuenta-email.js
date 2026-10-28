@@ -26,7 +26,7 @@ function armar(fakeUser, opts) {
   const borradas = [];           // qué llaves se borraron del navegador
   const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Date, JSON, Object, Array,
     Number, String, Boolean, Set, Map, Promise, isNaN, isFinite, parseInt, parseFloat,
-    performance: { now: () => 0 }, setTimeout: (f) => { try { f(); } catch (e) {} return 0; }, setInterval: () => 0, clearInterval() {},
+    performance: { now: () => 0 }, setTimeout: (f) => { try { f(); } catch (e) {} return 0; }, setInterval: () => 0, clearInterval() {}, clearTimeout() {},
     document: dom.window.document, Image: dom.window.Image,
     location: { search: "", hash: "", origin: "https://juego.test", pathname: "/", reload: () => orden.push("reload") } };
   ctx.window = ctx; ctx.globalThis = ctx;
@@ -43,7 +43,8 @@ function armar(fakeUser, opts) {
   /* el saveFarm de verdad necesita media granja montada; acá interesa CUÁNDO se llama, no qué
      escribe, así que se reemplaza por uno que solo deja constancia */
   vm.runInContext("(function(f){ saveFarm = f; })", ctx)(async (force) => {
-    llamadas.guardados++; orden.push("guardar" + (force ? ":force" : "")); return true;
+    llamadas.guardados++; orden.push("guardar" + (force ? ":force" : ""));
+    vm.runInContext("SAVE_CONFIRMACIONES.set(UID,(SAVE_CONFIRMACIONES.get(UID)||0)+1)",ctx); return true;
   });
   const sb = opts.sinNube ? null : { auth: {
     getUser: async () => { if (opts.getUserFalla) throw new Error("red caída"); return { data: { user: fakeUser } }; },

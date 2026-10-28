@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..'),save=fs.readFileSync(path.join(root,'pub
 const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.js':'','game/save.js':save.replace('window.SAVE_READY = initSave();','window.SAVE_READY = Promise.resolve();')});
 const run=s=>vm.runInContext(s,c);let t=1800000000000,tick,intervals=0,calls=0,ok=true;const events={};
 c.Date=class extends Date{static now(){return t;}};c.nowMs=()=>t;
-c.document.addEventListener=(k,fn)=>{events[k]=fn;};c.addEventListener=()=>{};c.setInterval=(fn,ms)=>{assert.equal(ms,1000);tick=fn;intervals++;return 1;};
+c.document.addEventListener=(k,fn)=>{events[k]=fn;};c.addEventListener=(k,fn)=>{events[k]=fn;};c.setInterval=(fn,ms)=>{assert.equal(ms,1000);tick=fn;intervals++;return 1;};
 run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;SAVE_EN_CURSO=null;MERCADO_EN_CURSO=null;SAVE_CONFLICTOS.clear();lastSavedKey=null;saveTimer=null;");
 const realSave=c.saveFarm;
 c.saveFarm=async()=>{calls++;if(ok)run("SAVE_CONFIRMACIONES.set(UID,(SAVE_CONFIRMACIONES.get(UID)||0)+1);lastSavedKey=snapKey();");};
@@ -16,6 +16,7 @@ c.saveFarm=async()=>{calls++;if(ok)run("SAVE_CONFIRMACIONES.set(UID,(SAVE_CONFIR
  t++;await tick();assert.equal(calls,1);
  t+=5000;c.G.energiaGranja.at=t;await tick();assert.equal(calls,1,'sin cambios no escribe aunque avance la marca de regeneración');
  c.G.plata++;c.G.energiaGranja.actual=40;t+=3600000;await tick();assert.equal(calls,1,'una hora sin interacción no repite aunque cambien recursos o regeneración');
+ c.document.visibilityState='hidden';events.visibilitychange();events.beforeunload();await Promise.resolve();assert.equal(calls,1,'ocultar o recargar tras el ACK no vuelve a escribir por timers');c.document.visibilityState='visible';
  assert.equal(c.nodoCargas({readyAt:t-7200000,cdIni:t-9000000},1800),4,'el reloj de nodos sigue avanzando sin guardar');
  events.keydown();t+=4999;await tick();assert.equal(calls,1);t++;await tick();assert.equal(calls,2,'nueva interacción habilita un nuevo ciclo');
  c.G.plata++;events.input();t+=4999;await tick();assert.equal(calls,2);t++;ok=false;await tick();assert.equal(calls,3);

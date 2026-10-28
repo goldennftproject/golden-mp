@@ -2034,8 +2034,8 @@ function startAutosave() {
     intento=Date.now();const uid=UID,vuelta=ciclo,antes=SAVE_CONFIRMACIONES.get(uid)||0;
     try{await saveFarm();if(UID===uid&&ciclo===vuelta&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes)guardado=true;}catch{}
   },1000);
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveFarm(); });
-  window.addEventListener("beforeunload", () => { saveFarm(); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && !guardado) saveFarm(); });
+  window.addEventListener("beforeunload", () => { if (!guardado) saveFarm(); });
 }
 
 // arranca la sesión en segundo plano; main.js espera esta promesa
