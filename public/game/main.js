@@ -577,7 +577,8 @@ function pantallaNoSePudo() {
       }
       console.warn("hay partida local sin cuenta, pero SOLO_EMAIL está puesto: se pide el correo (la partida local queda guardada, no se toca)");
     }
-    if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA) {
+    if (typeof CUENTA_PREVIA !== "undefined" && CUENTA_PREVIA &&
+        !(typeof PUERTA_EMAIL !== "undefined" && PUERTA_EMAIL)) {
       console.warn("hay cuenta en este navegador: NO se pide apodo (crearía una granja nueva)");
       window.CARGA_MOTIVO = window.CARGA_MOTIVO || "login";
       try { CARGA_FALLO = true; } catch (_) { window.CARGA_FALLO = true; }

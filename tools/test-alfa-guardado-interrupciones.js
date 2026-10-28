@@ -58,5 +58,12 @@ function entorno(){
  e.c.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),signInAnonymously:async()=>{anon++;throw Error('Prohibido');}}})};
  e.run("prepararEpocaServidor();GF.SOLO_EMAIL=true;huboGranja=()=>true;marcaCuenta=()=>null;UID=null;");
  assert.equal(await e.c.initSave(),false);assert.equal(e.run('PUERTA_EMAIL'),true);assert.equal(e.run('UID'),null);assert.equal(anon,0);
+ // La última reja de main debe permitir correo incluso con una cuenta histórica.
+ const main=fs.readFileSync(root+'/public/game/main.js','utf8').replace(/\r\n/g,'\n'),start=main.indexOf('    const soloCorreo ='),end=main.indexOf('\n  }\n})();',start);
+ assert.ok(start>0&&end>start);let puertas=0,fallosCarga=0;
+ e.c.puertaDelCorreo=()=>puertas++;e.c.pantallaNoSePudo=()=>fallosCarga++;e.c.hideEl=()=>{};
+ e.run('CUENTA_PREVIA=true;PUERTA_EMAIL=true;hayGranjaLocal=()=>false');
+ e.run('(function(){'+main.slice(start,end)+'\n})();');assert.equal(puertas,1);assert.equal(fallosCarga,0);
+ e.run('PUERTA_EMAIL=false');e.run('(function(){'+main.slice(start,end)+'\n})();');assert.equal(fallosCarga,1);
  console.log('OK: red colgada, reconexión, respuesta perdida/tardía, recibo único, ACK incompleto, sin escritura directa y cambios de cuenta durante guardado/recuperación.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

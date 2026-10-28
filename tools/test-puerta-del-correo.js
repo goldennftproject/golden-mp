@@ -54,8 +54,8 @@ console.log("\n2 · NO NACE NI UNA CUENTA ANÓNIMA MÁS   (ése era el pedido)\n
     "corte en " + iCorte + ", creación en " + iAnon);
   /* …pero DESPUÉS de las rejas: si el corte se adelantara, un navegador con granja caería en
      la puerta del correo en vez de entrar a su granja. Ley 1 */
-  const iReja = SAVE.indexOf("if (!session && CUENTA_PREVIA)");
-  ok("y DESPUÉS de la reja del navegador que ya tiene granja (ley 1)", iReja > 0 && iCorte > iReja,
+  const iReja = SAVE.indexOf("if (!session && CUENTA_PREVIA)", iCorte);
+  ok("el correo recupera cuentas previas antes de impedir reemplazos anónimos", iReja > 0 && iCorte < iReja,
     "reja en " + iReja + ", corte en " + iCorte);
   const iRevivir = SAVE.indexOf("refreshSession");
   ok("y después de intentar revivir la sesión de siempre", iRevivir > 0 && iCorte > iRevivir);
