@@ -916,6 +916,7 @@ function planoTengo(t) { return !!(G.planos && G.planos[t]); }
 // 18/8: los planos también se mudaron al Cobertizo — ya no ocupan un hueco de la barra rápida
 function planoAHotbar() {}
 function darPlano(t, silencioso) {
+  if (GF.esAltarOculto(t)) return;
   const b = BUILD_DEF[t]; if (!b) return;
   if (G.built && G.built[t]) return;                  // ya construido
   if (G.obras && G.obras[t]) return;                  // la obra ya está colocada
@@ -1173,7 +1174,8 @@ function tutoSub() {
   return tutoSubNodoEnEspera(st);
 }
 function obraDe(t) { return G.obras && G.obras[t]; }
-function obraColocar(t, col, row, vivo) {   // la llama la escena con la celda elegida
+function obraColocar(t, col, row, vivo) {
+  if (GF.esAltarOculto(t)) return false;   // la llama la escena con la celda elegida
   if (!planoTengo(t)) return false;
   delete G.planos[t];
   // 13/8: el plano usado sale de la hotbar (entró solo al ganarlo)
@@ -1225,7 +1227,8 @@ function obraFalta(t) {
   if (b.golden) { const f = b.golden - (dep.golden || 0); if (f > 0) out.push(["golden", f, b.golden, dep.golden || 0]); }
   return out;
 }
-function obraDepositar(t, cantidades) {   // devuelve true si con este depósito quedó COMPLETA
+function obraDepositar(t, cantidades) {
+  if (GF.esAltarOculto(t)) return false;   // devuelve true si con este depósito quedó COMPLETA
   const b = BUILD_DEF[t]; if (!b || !obraDe(t)) return false;
   // 14/8: durante el tutorial manda el PASO, no el nivel — misma regla que la entrega del
   // plano (planosSync): con el embudo estricto no hay forma de subir de nivel para destrabar
@@ -1254,7 +1257,8 @@ function obraDepositar(t, cantidades) {   // devuelve true si con este depósito
   if (typeof saveFarm === "function") saveFarm(true);
   return obraFalta(t).length === 0;
 }
-function obraConstruir(t) {   // la llama la escena cuando el depósito se completó
+function obraConstruir(t) {
+  if (GF.esAltarOculto(t)) return false;   // la llama la escena cuando el depósito se completó
   const b = BUILD_DEF[t];
   G.built[t] = true;
   if (G.obraDep) delete G.obraDep[t];
@@ -2134,8 +2138,8 @@ function farmUnlockTxt(n) {
   const partes = [];
   const ex = FARM_EXPANSION.indexOf(n); if (ex >= 0) partes.push("expansión " + (ex + 1));
   if (typeof PLANO_NIVEL !== "undefined") for (const t in PLANO_NIVEL)
-    if (PLANO_NIVEL[t] === n && BUILD_DEF[t]) partes.push("plano de " + BUILD_DEF[t].label);
-  if (typeof FARM_EDIF2 !== "undefined" && FARM_EDIF2[n] && BUILD_DEF[FARM_EDIF2[n]])
+    if (!GF.esAltarOculto(t) && PLANO_NIVEL[t] === n && BUILD_DEF[t]) partes.push("plano de " + BUILD_DEF[t].label);
+  if (typeof FARM_EDIF2 !== "undefined" && FARM_EDIF2[n] && !GF.esAltarOculto(FARM_EDIF2[n]) && BUILD_DEF[FARM_EDIF2[n]])
     partes.push(BUILD_DEF[FARM_EDIF2[n]].label + " nivel 2");
   if (typeof FARM_COFRE !== "undefined" && FARM_COFRE[n]) partes.push("+" + FARM_COFRE[n] + " de capacidad de cofre");
   if (typeof FARM_VALES !== "undefined" && FARM_VALES[n]) partes.push("+" + FARM_VALES[n] + " vales del tablón");
@@ -3716,7 +3720,7 @@ function brujula() {
   try {
     /* 1 · ganado y sin cobrar */
     for (const t in (G.planos || {})) {
-      if (!BUILD_DEF[t] || (G.built && G.built[t]) || (G.obras && G.obras[t])) continue;
+      if (GF.esAltarOculto(t) || !BUILD_DEF[t] || (G.built && G.built[t]) || (G.obras && G.obras[t])) continue;
       return B({ txt: "Tienes el plano de " + BUILD_DEF[t].label + " esperando: colócalo (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: '[data-plano="'+t+'"]' });
     }
     if((G.produccion?.vale||0)>0)
@@ -3727,7 +3731,7 @@ function brujula() {
       return B({ txt: "Hay una carta de tu abuelo en el buzón", target: "buzon" });
     /* 2 · a medias */
     for (const t in (G.obras || {})) {
-      if (!BUILD_DEF[t] || (G.built && G.built[t])) continue;
+      if (GF.esAltarOculto(t) || !BUILD_DEF[t] || (G.built && G.built[t])) continue;
       const falta = (typeof obraFalta === "function") ? obraFalta(t) : [];
       const partes = falta.slice(0, 2).map(f => f[1] + " de " + ((typeof RES_LABEL !== "undefined" && RES_LABEL[f[0]]) || f[0]).toLowerCase());
       return B({ txt: "Termina la obra de " + BUILD_DEF[t].label + (partes.length ? ": faltan " + partes.join(" y ") : ""), target: t });
@@ -5586,6 +5590,7 @@ const OFRENDA_ORDER = ["madera","piedra","bronce","hierro","oro","diamante","net
 function ofrendaPuntos() { return Math.floor(G.ofrendaPts || 0); }
 function ofrendaValor(k) { return OFRENDA_PTS[k] || 0; }
 function ofrendar(k, n) {
+  if (!GF.ALTAR_ACTIVO) return false;
   n = Math.max(1, Math.floor(n || 1));
   if (!(G.built && G.built.ofrendas)) { toast("Primero construye el Altar de Ofrendas"); return; }
   const pts = ofrendaValor(k); if (!pts) { toast("Ese recurso no se puede ofrendar"); return; }
@@ -6437,6 +6442,7 @@ function eqRunaVal(tipo) {   // valor total de un tipo de runa en el arma EQUIPA
 }
 function altarRefresh() { if (typeof refreshAltar === "function" && isOpen("ov-altar")) refreshAltar(); refreshHud(); if (isOpen("ov-inv")) refreshInv(); if (typeof syncSlots === "function") syncSlots(); }
 function upgradeWeapon(id, usarPolvo, usarProt) {
+  if (!GF.ALTAR_ACTIVO) return false;
   const w = G.weapons[id]; if (!w || !ARM_DEF[id]) return;
   const next = (w.plus || 0) + 1;
   if (next > 15) { toast("Ya está en +15: el tope de tope"); return; }
@@ -6472,6 +6478,7 @@ function upgradeWeapon(id, usarPolvo, usarProt) {
   altarRefresh(); if (typeof saveFarm === "function") saveFarm(true);
 }
 function craftAltarItem(id) {
+  if (!GF.ALTAR_ACTIVO) return false;
   const c = ALTAR_CRAFT[id]; if (!c) return;
   if (!canAfford(c.cost)) { toast("Te faltan materiales"); return; }
   if (c.plata && G.plata < c.plata) { toast("Te falta plata (" + c.plata + ")"); return; }
@@ -6483,6 +6490,7 @@ function craftAltarItem(id) {
   altarRefresh();
 }
 function craftRunaI(tipo) {
+  if (!GF.ALTAR_ACTIVO) return false;
   if (!RUNA_TIPOS[tipo]) return;
   if (!canAfford(RUNA_CRAFT.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < RUNA_CRAFT.plata) { toast("Te falta plata (" + RUNA_CRAFT.plata + ")"); return; }
@@ -6492,7 +6500,8 @@ function craftRunaI(tipo) {
   addXp("crafting", 8); log("Has fabricado 1 " + runaLabel(tipo, 1) + ".", "good"); toast("+1 " + runaLabel(tipo, 1));
   altarRefresh();
 }
-function fuseRuna(tipo, r) {   // 3 runas de rareza r → 1 de rareza r+1 (muy Silkroad)
+function fuseRuna(tipo, r) {
+  if (!GF.ALTAR_ACTIVO) return false;   // 3 runas de rareza r → 1 de rareza r+1 (muy Silkroad)
   if (r >= 5) return;
   const k = runaKey(tipo, r), gold = FUSE_GOLD[r];
   if ((G.res[k] || 0) < 3) { toast("Necesitas 3 " + runaLabel(tipo, r)); return; }
@@ -6502,7 +6511,8 @@ function fuseRuna(tipo, r) {   // 3 runas de rareza r → 1 de rareza r+1 (muy S
   addXp("crafting", 10); log("Fusionaste 3 " + runaLabel(tipo, r) + " en 1 " + runaLabel(tipo, r + 1) + ".", "gold"); toast("¡" + runaLabel(tipo, r + 1) + "!");
   altarRefresh();
 }
-function socketRuna(id, slot, tipo, r) {   // socketear DESTRUYE la runa anterior de esa ranura (doc)
+function socketRuna(id, slot, tipo, r) {
+  if (!GF.ALTAR_ACTIVO) return false;   // socketear DESTRUYE la runa anterior de esa ranura (doc)
   const w = G.weapons[id]; if (!w) return;
   if (slot > socketsOpen(w.plus || 0)) { toast("Esa ranura se abre a +" + (slot === 1 ? 3 : slot === 2 ? 7 : 12)); return; }
   const sk = armSockets(id);
@@ -8236,7 +8246,7 @@ function cobertizoItems() {
     for (let i = 0; i < decoTengo(id); i++) list.push({ kind: "deco", key: id });
   });
   { let n = chestsInBag(); while (n-- > 0) list.push({ kind: "chest", key: "cofre" }); }
-  if (G.planos) for (const t in G.planos) if (G.planos[t]) list.push({ kind: "plano", key: t });
+  if (G.planos) for (const t in G.planos) if (G.planos[t] && !GF.esAltarOculto(t)) list.push({ kind: "plano", key: t });
   return list;
 }
 function cobertizoCuenta() { return cobertizoItems().length; }
@@ -10995,6 +11005,7 @@ function cartaAbueloPendiente() {   // la más vieja sin leer cuyo nivel ya alca
   const nv = (typeof farmLevel === "function") ? farmLevel() : (G.level || 1);
   G.buzonLeidas = G.buzonLeidas || {};
   for (const c of CARTAS_ABUELO) {
+    if (!GF.ALTAR_ACTIVO && c.n === 4) continue;
     if (nv < c.nivel) return null;          // las siguientes piden más granja
     if (!G.buzonLeidas["abuelo" + c.n]) return c;
   }
@@ -12075,7 +12086,7 @@ function metaSemana() {
    Nadie escribe una lista de hitos a mano — si mañana se agrega una carta, aparece sola. */
 function caminoGuarida() {
   const nv = (typeof farmLevel === "function") ? farmLevel() : (G.level || 1);
-  const hitos = CARTAS_ABUELO.map(c => ({
+  const hitos = CARTAS_ABUELO.filter(c => GF.ALTAR_ACTIVO || c.n !== 4).map(c => ({
     nivel: c.nivel,
     titulo: c.titulo,
     hecho: nv >= c.nivel,

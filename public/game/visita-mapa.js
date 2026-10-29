@@ -25,6 +25,7 @@ async function dibujar(g){
  let tree=0,rock=0;
  for(const [i,o]of GF.WORLD_OBJECTS.entries()){
   const lock=o.type==='tree'?tree++:o.type==='rock'?rock++:-1;
+  if(GF.esAltarOculto(o.type))continue;
   if(!GF.PESCA_ACTIVA&&['lombricario','lonja','boya','fish'].includes(o.type))continue;
   if(edificios.includes(o.type)&&!m.built[o.type]&&!m.obras[o.type])continue;
   if(['tree','rock','ore'].includes(o.type)){

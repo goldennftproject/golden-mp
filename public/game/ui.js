@@ -124,6 +124,7 @@ function enfocarOvPc(el) {
   orden.slice(-(OV_FRENTE_MAX - OV_FRENTE_BASE)).forEach((ov, i) => escribirCapaOv(ov, OV_FRENTE_BASE + 1 + i));
 }
 function openOv(id) {
+  if (GF.esAltarOculto(id)) return;
   if (GF.esPescaOculta && GF.esPescaOculta(id)) { toast("La pesca está pausada para una próxima actualización. Tu progreso se conserva."); return; }
   /* 10/9 — LA PUERTA ÚNICA DEL MVP. Todo panel entra por acá: el menú, los atajos de teclado,
      las cartas del buzón, los botones « Ver el Pase ». Cerrando acá se cierra en todos a la vez,
@@ -2851,7 +2852,7 @@ function hotItemExists(d) {
   if (d.kind === "cana") return !!((G.canas || {})[d.key]);
   if (d.kind === "fish") return llevoTengo("fish", d.key) > 0;
   if (d.kind === "dish") return llevoTengo("dish", d.key) > 0;
-  if (d.kind === "plano") return !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
+  if (d.kind === "plano") return !GF.esAltarOculto(d.key) && !!(G.planos && G.planos[d.key]);   // 13/8: planos en la barra
   if (d.kind === "regalo") return ((typeof cobertizoBolsa === "function" ? cobertizoBolsa()[d.key] : 0) || 0) > 0;   // 18/8: el cobertizo
   return true;   // herramientas siempre están
 }
@@ -5574,7 +5575,7 @@ function refreshBuzon() {
   const img = $("bz-img"), sobres = $("bz-sobres"), carta = $("bz-carta"), pila = $("bz-pila"), estado = $("bz-estado");
   if (!img || !sobres) return;
   const cartas = (typeof buzonCartas === "function") ? buzonCartas() : [];   // también archiva
-  const leidas = (G.buzonArchivo || []).filter(a => !cartas.some(c => c.id === a.id && a.dia === dayStamp(0))).slice().reverse();
+  const leidas = (G.buzonArchivo || []).filter(a => (GF.ALTAR_ACTIVO || a.id !== "abuelo4") && !cartas.some(c => c.id === a.id && a.dia === dayStamp(0))).slice().reverse();
 
   // el buzón grande cuenta el estado: con carta asomando si hay nuevas
   img.src = "assets/farm/" + (cartas.length ? "buzon_full" : "buzon") + ".png?v=3";

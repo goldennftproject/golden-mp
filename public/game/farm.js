@@ -269,7 +269,7 @@ class FarmScene extends Phaser.Scene {
       /* LA BOYA DE TROFEOS no está hasta que se compra en la Lonja por 30 Escamas. Se declara
          en el mundo como todo lo demás —así vive en el mismo sitio y no en un caso especial del
          renderizador— y sencillamente no se dibuja hasta entonces. */
-      const sinComprar = (o.type === "boya" && !(G.built && G.built.boya_trofeos)) || (!GF.PESCA_ACTIVA && ["lombricario","lonja","boya","fish"].includes(o.type));
+      const sinComprar = GF.esAltarOculto(o.type) || (o.type === "boya" && !(G.built && G.built.boya_trofeos)) || (!GF.PESCA_ACTIVA && ["lombricario","lonja","boya","fish"].includes(o.type));
       if (locked || rocaBloq || sinExpansion || sinComprar) { s.setVisible(false); oculto = true; }
       const rw = (o.type === "ore" || o.type === "rock") ? o.w * (typeof NODO_ESCALA === "number" ? NODO_ESCALA : 0.67)   // 9/8: 0.90 — al 0.67 las pepitas no se leían
         : (o.type === "tree") ? o.w * 0.8                                   // árboles −20%

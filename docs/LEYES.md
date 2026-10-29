@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Altar pausado para alfa — 29/10/2026
+
+Dirección pide desactivar el altar conservándolo para después. GF.ALTAR_ACTIVO pausa Runas y Ofrendas: dibujo y colisión, visitas, planos, obras, accesos y operaciones. Se ocultan los desbloqueos y la carta del altar (también archivada), sin borrar estado ni recursos ni cambiar índices del mapa. Tutorial y brújula no dirigen a estos edificios. Reactivar la bandera recupera las definiciones y propiedades existentes. No cambia la economía ni se migra la base de datos.
+
+
 ## Mercado y sostenibilidad de retiros — 28/10/2026
 
 Dirección pide simular P2P y retiros sin activarlos. Se prepara mercado con recursos y dinero finitos, compradores explícitos, cuotas, comisiones y cobros pendientes; se contrasta con las operaciones reales en una transacción revertida. La financiación se analiza aparte: quemar Plata o gastar Golden ganado no aporta USDT. La calculadora de reservas es sólo local y nunca ejecutable; no habilita canjes ni movimientos. El informe específico de capital queda fuera del repositorio público. Se corrige la discrepancia de redondeo de comisión 250 al 7%: PostgreSQL paga 233 y JavaScript podía mostrar/calcular permiso 232. Se alinea el redondeo sin cambiar tasas, datos ni ventas pasadas. Ver MERCADO-RETIROS-SIMULACION-20261028.txt.

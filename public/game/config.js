@@ -1,6 +1,8 @@
 /* Golden Farm · configuración compartida (layout en TILES, alineado a la grilla) */
 window.GF = window.GF || {};
 GF.FASE_JUEGO = 'alpha'; // Cambiar sólo en el lanzamiento aprobado, junto al estado del servidor.
+GF.ALTAR_ACTIVO = false; // Pausa de alfa reversible: no borrar edificios, planos ni materiales guardados.
+GF.esAltarOculto = tipo => !GF.ALTAR_ACTIVO && ["altar", "ofrendas", "ov-altar", "ov-ofrendas"].includes(tipo);
 GF.PLAZA_HABILITADA = false; // Plaza fuera de esta versión; conservar escena para recuperarla.
 
 /* ¿ESTE CLIC ES DE LA INTERFAZ O DEL MUNDO? (24/8)
@@ -737,6 +739,7 @@ GF.rehacerColisiones = function () {
    Es la MISMA regla que ya vale para las parcelas: se ocupa la celda cuando la cosa es tuya.
    Ante la duda, presente — así un fallo acá deja una celda de más, nunca un objeto atravesable. */
 GF.objetoPresente = function (c) {
+  if (GF.esAltarOculto(c.tipo)) return false;
   if (!GF.PESCA_ACTIVA && ["lombricario","lonja","boya","fish"].includes(c.tipo)) return false;
   if (typeof G === "undefined" || !G) return true;
   if (typeof produccionNodoPoseido === "function" && G.produccion) {
