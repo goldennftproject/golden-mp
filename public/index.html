@@ -787,16 +787,6 @@
       box-shadow:inset 0 1px 0 rgba(255,241,196,.12);text-shadow:0 1px 0 #241505}
   }
   @media(min-width:641px){
-    /* Reiniciar una granja no es otro ajuste. Las dos confirmaciones siguen siendo la protección
-       real; este recuadro hace visible el riesgo ANTES del primer clic, sin cambiar el móvil. */
-    #ov-config .cfg-danger{margin-top:12px;padding:10px 12px 12px;border:1px solid rgba(238,122,94,.72);
-      border-radius:10px;background:linear-gradient(135deg,rgba(97,33,22,.70),rgba(53,22,15,.62));box-shadow:inset 0 0 0 1px rgba(55,13,8,.34)}
-    #ov-config .cfg-danger::before{content:"ACCIÓN IRREVERSIBLE";display:block;color:#ffd0c4;font-size:11px;font-weight:900;
-      letter-spacing:.85px;text-shadow:0 1px 0 #241505}
-    #ov-config .cfg-danger .row{margin-top:7px}
-    #ov-config .cfg-danger #cfg-reiniciar{width:100%}
-    #ov-config .cfg-danger .sub{margin:8px 0 0;padding:0;background:none;border:none;border-radius:0;color:#ffe5dd;
-      text-align:left;text-shadow:0 1px 0 #241505}
     /* Configuración PC: una cuenta sin correo agrega acciones y el panel puede superar una
        pantalla baja. Se desplaza dentro de su marco, con la X siempre alcanzable al abrirlo. */
     #ov-config .card{max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain}
@@ -1968,11 +1958,6 @@
         <button class="red sm" id="cfg-salir" disabled>Cerrar sesión</button>
       </div>
       <p id="cfg-auth-nota" style="min-height:26px">Tu granja te sigue a cualquier dispositivo: entra con tu correo.</p>
-      <!-- 24/9 (dirección): reiniciar la cuenta — la granja vuelve a cero, el correo se queda -->
-      <div class="cfg-danger">
-        <div class="row"><button class="red sm" id="cfg-reiniciar">Reiniciar progreso</button></div>
-        <p class="sub">Borra TODA tu granja (nivel, plata, terreno, objetos) y empiezas como un jugador nuevo. Tu correo se mantiene. No se puede deshacer.</p>
-      </div>
     </div>
     <div class="cfgsec">
       <h4>Sonido</h4>
