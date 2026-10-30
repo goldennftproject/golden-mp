@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const src=fs.readFileSync('supabase/functions/guardar/index.ts','utf8'),c={};vm.createContext(c);vm.runInContext(src.split('/* === REGLAS ===')[1].split('/* === FIN REGLAS ===')[0].replace(/^[\s\S]*?const VERSION/,'const VERSION'),c);
+const run=s=>vm.runInContext(s,c);
+run(`var t=Date.now(),p={plata:3,cooking:[{id:'papa_asada',endAt:t-1,total:1000},{id:'papa_asada',endAt:t-2,total:1000}],dishes:{},stats:{cocinar:{}}},n=JSON.parse(JSON.stringify(p));n.cooking=[];n.dishes.papa_asada=2;n.stats.cocinar.papa_asada=2;`);
+assert.equal(run('platosTerminados(p,n,t)'),2);
+run('actividadActualizar(p,n,t)');assert.equal(run('n.actividadGranja.jornada.progreso.platos'),2);assert.equal(run('n.plata'),3);
+run('var q=JSON.parse(JSON.stringify(n));actividadActualizar(n,q,t+1000)');assert.equal(run('q.actividadGranja.jornada.progreso.platos'),2);
+run('var fake=JSON.parse(JSON.stringify(n));fake.dishes.papa_asada=30;fake.stats.cocinar.papa_asada=30');assert.equal(run('platosTerminados(n,fake,t)'),0);
+run('var future=JSON.parse(JSON.stringify(p));future.cooking.forEach(x=>x.endAt=t+1000)');assert.equal(run('platosTerminados(future,n,t)'),0);
+run('var kept=JSON.parse(JSON.stringify(n));kept.cooking=p.cooking');assert.equal(run('platosTerminados(p,kept,t)'),0);
+run('var full=JSON.parse(JSON.stringify(n));full.dishes={};full.stats={};');assert.equal(run('platosTerminados(p,full,t)'),0);
+run("var old={actividadGranja:{jornada:{v:2,dia:new Date(t).toISOString().slice(0,10),plata:500,progreso:{harvest:20},cobradas:{cosecha:500},ops:[]}}}");assert.equal(run('jornadaLibro(old,t).cobradas.cocina'),500);
+console.log('OK: cocina cuenta platos recogidos, no colas, compras, bolsa llena, platos futuros ni reintentos; premio previo no se duplica.');

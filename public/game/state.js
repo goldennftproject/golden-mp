@@ -145,12 +145,12 @@ function actividadGranjaRecibir(a,acreditar=false){
 }
 const JORNADA_MISIONES=[
  {id:'siembra',tipo:'plant',meta:20,plata:500,nombre:'🌱 Siembra 20 semillas'},
- {id:'cosecha',tipo:'harvest',meta:20,plata:500,nombre:'🥔 Cosecha 20 parcelas'},
+ {id:'cocina',tipo:'platos',meta:30,plata:500,nombre:'🍲 Cocina 30 platos',detalle:'Recoge los platos terminados de la Cocina'},
  {id:'madera',tipo:'chop',meta:10,plata:500,nombre:'🪓 Recoge madera 10 veces'},
  {id:'mineria',tipo:'mine',meta:10,plata:500,nombre:'⛏ Mina 10 veces'},
  {id:'jornada',tipo:'energia',meta:200,plata:3000,nombre:'🌾 Completa tu jornada',detalle:'Usa 200 de energía en siembra, cosecha, tala, minería o animales'}
 ];
-function jornadaEstado(){const dia=new Date(nowMs()).toISOString().slice(0,10),old=G.actividadGranja?.jornada;const j=old?.dia===dia?old:null;return {dia,energia:j?.v===2?j.energia:0,plata:j?.plata||0,progreso:j?.v===2?j.progreso||{}:{},cobradas:j?.v===2?j.cobradas||{}:{},meta:200,max:5000};}
+function jornadaEstado(){const dia=new Date(nowMs()).toISOString().slice(0,10),old=G.actividadGranja?.jornada;const j=old?.dia===dia?old:null;return {dia,energia:j?.v===2?j.energia:0,plata:j?.plata||0,progreso:j?.v===2?j.progreso||{}:{},cobradas:j?.v===2?{...j.cobradas,...(j.cobradas?.cosecha?{cocina:j.cobradas.cosecha}:{})}:{},meta:200,max:5000};}
 async function jornadaReclamar(id){const j=jornadaEstado();await economiaSolicitar({mision:{id,dia:j.dia}});if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar();if(isOpen('ov-objetivos'))refreshObjetivos();}
 function actividadGranjaEstado(){const energia=Math.min(2000,Math.max(0,G.actividadGranja&&G.actividadGranja.energia||0));return {energia,objetivo:2000,cumplida:energia>=2000,vip:vipVigente(),usdt:false};}
 function energiaGranjaAgregar(key,n,tipo) {

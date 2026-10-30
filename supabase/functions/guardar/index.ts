@@ -108,14 +108,14 @@ function actividadEvidencias(a,b,ahora){
 const JORNADA_META=200;
 const JORNADA_MISIONES=[
  {id:'siembra',tipo:'plant',meta:20,plata:500},
- {id:'cosecha',tipo:'harvest',meta:20,plata:500},
+ {id:'cocina',tipo:'platos',meta:30,plata:500},
  {id:'madera',tipo:'chop',meta:10,plata:500},
  {id:'mineria',tipo:'mine',meta:10,plata:500},
  {id:'jornada',tipo:'energia',meta:200,plata:3000}
 ];
 function jornadaLibro(prev,ahora){
  const dia=new Date(ahora).toISOString().slice(0,10),old=prev?.actividadGranja?.jornada;
- if(old?.dia===dia&&old.v===2)return JSON.parse(JSON.stringify(old));
+ if(old?.dia===dia&&old.v===2){const j=JSON.parse(JSON.stringify(old));if(j.cobradas?.cosecha&&!j.cobradas.cocina)j.cobradas.cocina=j.cobradas.cosecha;return j;}
  // El dinero ya recibido hoy cuenta para el límite, pero no regala progreso retroactivo.
  return {v:2,dia,energia:0,plata:old?.dia===dia?Math.min(5000,Math.max(0,num(old.plata))):0,progreso:{},cobradas:{},ops:[]};
 }
@@ -126,6 +126,7 @@ function jornadaAcreditar(prev,next,acciones,ahora){
   j.progreso[k]=Math.min(200,Math.max(0,num(j.progreso[k]))+n);
   j.energia=Math.min(200,num(j.energia)+n*ACTIVIDAD_COSTOS[k]);
  }
+ j.progreso.platos=Math.min(30,Math.max(0,num(j.progreso.platos))+Math.max(0,num(acciones.platos)));
  next.actividadGranja.jornada=j;
  next.actividadGranja.bonoTotal=Math.max(0,num(prev?.actividadGranja?.bonoTotal));
  return 0;
@@ -145,6 +146,18 @@ function jornadaOperacion(data,id,dia,ahora,op){
  a.jornada=j;a.bonoTotal+=cobro;d.actividadGranja=a;d.plata=num(d.plata)+cobro;
  return {data:d,cobro};
 }
+// Sólo platos terminados y recogidos de una cola ya aceptada. No compras ni lombricario.
+function platosTerminados(prev,next,ahora){
+ if(!prev)return 0;
+ const cola=Array.isArray(prev.cooking)?prev.cooking:[],actual=Array.isArray(next.cooking)?next.cooking:[];
+ const key=c=>String(c.id)+':'+c.endAt,restantes=new Map();
+ for(const c of actual)restantes.set(key(c),(restantes.get(key(c))||0)+1);
+ const candidatos={};
+ for(const c of cola){const k=key(c),n=restantes.get(k)||0;if(n){restantes.set(k,n-1);continue;}
+  if(num(c.endAt)>0&&num(c.endAt)<=ahora)candidatos[c.id]=(candidatos[c.id]||0)+1;
+ }
+ return Object.keys(candidatos).reduce((s,k)=>s+Math.min(candidatos[k],Math.max(0,num(next.stats?.cocinar?.[k])-num(prev.stats?.cocinar?.[k])),Math.max(0,num(next.dishes?.[k])-num(prev.dishes?.[k]))),0);
+}
 function actividadActualizar(prev,next,ahora,recibo,premiar=true){
   const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora):{},pedidos=next.actividadAcciones||{};
   const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
@@ -155,6 +168,7 @@ function actividadActualizar(prev,next,ahora,recibo,premiar=true){
     const n=Math.min(pedido-anterior,Math.max(0,Math.floor(num(pruebas[k]))),Math.floor((presupuesto+1e-6)/ACTIVIDAD_COSTOS[k]));
     credito+=n*ACTIVIDAD_COSTOS[k];presupuesto-=n*ACTIVIDAD_COSTOS[k];a.registro[k]=pedido;acciones[k]=n;
   }
+  acciones.platos=platosTerminados(prev,next,ahora);
   if(recibo)Object.assign(recibo,acciones);
   next.actividadGranja=a;next.actividadAcciones={...a.registro};logrosActualizar(prev,next,acciones);actividadAcreditar(next,credito,ahora);if(premiar)jornadaAcreditar(prev,next,acciones,ahora);return next.actividadGranja;
 }

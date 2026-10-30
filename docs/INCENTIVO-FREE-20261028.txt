@@ -1,5 +1,5 @@
 ACTUALIZACIÓN 30/10 — EL ABONO AUTOMÁTICO DE ESTE INFORME QUEDA SUSTITUIDO
-Misiones diarias con cobro manual: siembra 20, cosecha 20, tala 10 y minería 10 (500 Plata cada una); jornada de 200 energía productiva (3.000 Plata). Máximo 5.000 por día UTC. Sólo nueva actividad validada, sin pagos por acción ni inactividad. Los importes automáticos previos de hoy cuentan para el máximo y no se quitan del saldo. Acceso: Menú > Progreso o pulsando Energía.
+Misiones diarias con cobro manual: siembra 20, cocina y recoge 30 platos, tala 10 y minería 10 (500 Plata cada una); jornada de 200 energía productiva (3.000 Plata). Máximo 5.000 por día UTC. Sólo nueva actividad validada, sin pagos por acción ni inactividad. Los importes automáticos previos de hoy cuentan para el máximo y no se quitan del saldo. Acceso: botón Misiones bajo Tienda, Menú > Progreso o pulsando Energía.
 
 REGISTRO HISTÓRICO DEL DISEÑO ANTERIOR
 
