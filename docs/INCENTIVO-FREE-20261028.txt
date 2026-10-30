@@ -1,3 +1,8 @@
+ACTUALIZACIÓN 30/10 — EL ABONO AUTOMÁTICO DE ESTE INFORME QUEDA SUSTITUIDO
+Misiones diarias con cobro manual: siembra 20, cosecha 20, tala 10 y minería 10 (500 Plata cada una); jornada de 200 energía productiva (3.000 Plata). Máximo 5.000 por día UTC. Sólo nueva actividad validada, sin pagos por acción ni inactividad. Los importes automáticos previos de hoy cuentan para el máximo y no se quitan del saldo. Acceso: Menú > Progreso o pulsando Energía.
+
+REGISTRO HISTÓRICO DEL DISEÑO ANTERIOR
+
 TRABAJO DIARIO — BALANCE INICIAL ALFA
 
 Objetivo autorizado: que jugar Free sin inversión pueda alcanzar 5.000 Plata diarias, referencia nominal de 0,50 a 10.000 Plata/Golden. No existe conversión habilitada ni promesa de USDT.

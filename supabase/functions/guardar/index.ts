@@ -104,20 +104,46 @@ function actividadEvidencias(a,b,ahora){
     cook:insumos>0?colas(a.cooking,b.cooking,'endAt')+colas(a.lombricario,b.lombricario,'listaEn'):0,
     auto:Math.min(Math.max(0,suma((a.godHand?.inv||[]).map(s=>s?.n))-suma((b.godHand?.inv||[]).map(s=>s?.n))),sube(a.res,b.res))};
 }
-// Recompensa de trabajo, no conversión monetaria. Sin crédito retroactivo ni por estar conectado.
-const JORNADA_META=200,JORNADA_PLATA=25;
+// Misiones diarias: las acciones sólo registran progreso. Cobro explícito y CAS.
+const JORNADA_META=200;
+const JORNADA_MISIONES=[
+ {id:'siembra',tipo:'plant',meta:20,plata:500},
+ {id:'cosecha',tipo:'harvest',meta:20,plata:500},
+ {id:'madera',tipo:'chop',meta:10,plata:500},
+ {id:'mineria',tipo:'mine',meta:10,plata:500},
+ {id:'jornada',tipo:'energia',meta:200,plata:3000}
+];
+function jornadaLibro(prev,ahora){
+ const dia=new Date(ahora).toISOString().slice(0,10),old=prev?.actividadGranja?.jornada;
+ if(old?.dia===dia&&old.v===2)return JSON.parse(JSON.stringify(old));
+ // El dinero ya recibido hoy cuenta para el límite, pero no regala progreso retroactivo.
+ return {v:2,dia,energia:0,plata:old?.dia===dia?Math.min(5000,Math.max(0,num(old.plata))):0,progreso:{},cobradas:{},ops:[]};
+}
 function jornadaAcreditar(prev,next,acciones,ahora){
-  const a=next.actividadGranja,dia=new Date(ahora).toISOString().slice(0,10);
-  const anterior=prev?.actividadGranja;
-  const j=anterior?.jornada?.dia===dia?{...anterior.jornada}:{dia,energia:0,plata:0};
-  // Sólo producción manual: nunca cocina, automatización, fabricación, cobros ni combate.
-  const n=['plant','harvest','chop','mine','animal'].reduce((s,k)=>s+num(acciones[k])*ACTIVIDAD_COSTOS[k],0);
-  const credito=Math.min(Math.max(0,JORNADA_META-num(j.energia)),Math.max(0,n));
-  const premio=credito*JORNADA_PLATA;
-  j.energia=num(j.energia)+credito;j.plata=num(j.plata)+premio;
-  a.jornada=j;a.bonoTotal=Math.max(0,num(anterior?.bonoTotal))+premio;
-  next.plata=num(next.plata)+premio;
-  return premio;
+ const j=jornadaLibro(prev,ahora);
+ for(const k of ['plant','harvest','chop','mine','animal']){
+  const n=Math.max(0,Math.floor(num(acciones[k])));
+  j.progreso[k]=Math.min(200,Math.max(0,num(j.progreso[k]))+n);
+  j.energia=Math.min(200,num(j.energia)+n*ACTIVIDAD_COSTOS[k]);
+ }
+ next.actividadGranja.jornada=j;
+ next.actividadGranja.bonoTotal=Math.max(0,num(prev?.actividadGranja?.bonoTotal));
+ return 0;
+}
+function jornadaOperacion(data,id,dia,ahora,op){
+ const d=JSON.parse(JSON.stringify(data)),a=actividadLibro(d),j=jornadaLibro(d,ahora);
+ const receipt=(j.ops||[]).find(x=>x.op===op);
+ if(receipt)return receipt.id===id&&receipt.dia===dia?{repetido:true,cobro:receipt.cobro}:{error:'Recibo de misión usado para otra solicitud'};
+ if(dia!==j.dia)return {error:'El día ha cambiado. Actualiza las misiones diarias'};
+ const m=JORNADA_MISIONES.find(x=>x.id===id);if(!m)return {error:'Misión desconocida'};
+ if(j.cobradas[id])return {error:'Ya has reclamado esta misión hoy'};
+ const progreso=m.tipo==='energia'?num(j.energia):num(j.progreso[m.tipo]);
+ if(progreso<m.meta)return {error:'Todavía no has completado esta misión'};
+ const cobro=Math.min(m.plata,Math.max(0,5000-num(j.plata)));
+ if(!cobro)return {error:'Ya has recibido el máximo diario de 5.000 Plata'};
+ j.cobradas[id]=cobro;j.plata+=cobro;j.ops.push({op,id,dia,cobro});
+ a.jornada=j;a.bonoTotal+=cobro;d.actividadGranja=a;d.plata=num(d.plata)+cobro;
+ return {data:d,cobro};
 }
 function actividadActualizar(prev,next,ahora,recibo,premiar=true){
   const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora):{},pedidos=next.actividadAcciones||{};
@@ -743,7 +769,7 @@ Deno.serve(async (req) => {
       return json(data);
     }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
-    if(body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro){
+    if(body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
       const a=body.artefacto;
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
@@ -751,7 +777,7 @@ Deno.serve(async (req) => {
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
-      const r=body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      const r=body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
       if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,premio:r.premio,repetido:true,granja:granjaVisitada});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);

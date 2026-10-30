@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Misiones diarias y cobro manual — 30/10/2026
+
+Dirección rechaza el abono por acción y aprueba misiones reclamables. Las acciones productivas validadas sólo avanzan objetivos: sembrar 20, cosechar 20, recoger madera 10 veces, minar 10 veces (500 Plata cada uno), y gastar 200 de energía productiva (3.000 Plata). Cobro manual autenticado, recibo idempotente y CAS; máximo conjunto 5.000 por día UTC. El dinero ya recibido hoy cuenta para el límite sin descontarlo; las acciones previas no se transforman en misiones nuevas completadas. Menú Progreso, Cobertizo y energía muestran la lista. No altera el estudio económico, USDT ni otros premios existentes.
+
+
 ## Altar pausado para alfa — 29/10/2026
 
 Dirección pide desactivar el altar conservándolo para después. GF.ALTAR_ACTIVO pausa Runas y Ofrendas: dibujo y colisión, visitas, planos, obras, accesos y operaciones. Se ocultan los desbloqueos y la carta del altar (también archivada), sin borrar estado ni recursos ni cambiar índices del mapa. Tutorial y brújula no dirigen a estos edificios. Reactivar la bandera recupera las definiciones y propiedades existentes. No cambia la economía ni se migra la base de datos.

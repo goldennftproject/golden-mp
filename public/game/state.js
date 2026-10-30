@@ -139,11 +139,19 @@ function energiaGranjaPagar(tipo,n=1,silencio=false) {
 }
 function actividadGranjaRecibir(a,acreditar=false){
   if(!a||a.v!==1||!Number.isSafeInteger(a.energia)||a.energia<0||a.energia>2000)return;
-  if(acreditar){const premio=Math.max(0,(Number(a.bonoTotal)||0)-(Number(G.actividadGranja?.bonoTotal)||0));if(premio){G.plata+=premio;if(typeof log==='function')log('Trabajo de granja: +'+premio+' Plata');}}
+  if(acreditar){const premio=Math.max(0,(Number(a.bonoTotal)||0)-(Number(G.actividadGranja?.bonoTotal)||0));if(premio){G.plata+=premio;if(typeof log==='function')log('Misión diaria: +'+premio+' Plata');}}
   G.actividadGranja=JSON.parse(JSON.stringify(a));G.actividadAcciones=G.actividadAcciones||{};
   for(const k of Object.keys(ENERGIA_GRANJA_COSTO)){const n=a.registro&&a.registro[k];if(Number.isSafeInteger(n)&&n>=0)G.actividadAcciones[k]=Math.max(G.actividadAcciones[k]||0,n);}
 }
-function jornadaEstado(){const j=G.actividadGranja?.jornada,dia=new Date(nowMs()).toISOString().slice(0,10);return {energia:j?.dia===dia?j.energia:0,plata:j?.dia===dia?j.plata:0,meta:200,max:5000};}
+const JORNADA_MISIONES=[
+ {id:'siembra',tipo:'plant',meta:20,plata:500,nombre:'🌱 Siembra 20 semillas'},
+ {id:'cosecha',tipo:'harvest',meta:20,plata:500,nombre:'🥔 Cosecha 20 parcelas'},
+ {id:'madera',tipo:'chop',meta:10,plata:500,nombre:'🪓 Recoge madera 10 veces'},
+ {id:'mineria',tipo:'mine',meta:10,plata:500,nombre:'⛏ Mina 10 veces'},
+ {id:'jornada',tipo:'energia',meta:200,plata:3000,nombre:'🌾 Completa tu jornada',detalle:'Usa 200 de energía en siembra, cosecha, tala, minería o animales'}
+];
+function jornadaEstado(){const dia=new Date(nowMs()).toISOString().slice(0,10),old=G.actividadGranja?.jornada;const j=old?.dia===dia?old:null;return {dia,energia:j?.v===2?j.energia:0,plata:j?.plata||0,progreso:j?.v===2?j.progreso||{}:{},cobradas:j?.v===2?j.cobradas||{}:{},meta:200,max:5000};}
+async function jornadaReclamar(id){const j=jornadaEstado();await economiaSolicitar({mision:{id,dia:j.dia}});if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar();if(isOpen('ov-objetivos'))refreshObjetivos();}
 function actividadGranjaEstado(){const energia=Math.min(2000,Math.max(0,G.actividadGranja&&G.actividadGranja.energia||0));return {energia,objetivo:2000,cumplida:energia>=2000,vip:vipVigente(),usdt:false};}
 function energiaGranjaAgregar(key,n,tipo) {
   if(!energiaGranjaPuede(tipo))return false;

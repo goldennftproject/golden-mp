@@ -1997,7 +1997,7 @@ function refreshHud() {
   if(typeof ubicarComprasPc==='function')ubicarComprasPc();
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/'+energiaGranjaMax());
   const ef=$('energia-granja-fill');if(ef)ef.style.width=Math.max(0,Math.min(100,energia/energiaGranjaMax()*100))+'%';
-  const ep=$('energia-granja-pill');if(ep){ep.style.display=GF.scene==='farm'?'':'none';const j=jornadaEstado();ep.title='Energía: 50 Free / 100 VIP; se recupera en 4 horas. Trabajo de hoy: '+j.plata+' / 5.000 Plata · '+j.energia+' / 200 energía productiva confirmada. +25 Plata por energía en siembra, cosecha, tala, minería y animales. Reinicio diario UTC.';}
+  const ep=$('energia-granja-pill');if(ep){ep.style.display=GF.scene==='farm'?'':'none';const j=jornadaEstado();ep.title='Energía: 50 Free / 100 VIP; se recupera en 4 horas. Trabajo de hoy: '+j.plata+' / 5.000 Plata · '+j.energia+' / 200 energía productiva confirmada. Completa misiones y pulsa Reclamar en Progreso. Reinicio diario UTC.';}
   document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' Plata';});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPuedeCobrar(b.dataset.artefactoCobrar) && energia>=1);});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.textContent=artefactoTextoCobro(b.dataset.artefactoCobrar);});
@@ -2646,8 +2646,7 @@ function bancoActualizarPrevia(){
   const tasaVista=$('banco-tasa');if(tasaVista)tasaVista.textContent=valida?tasa.toLocaleString('es-UY'):'—';
   boton.disabled=!(valida&&cantidad&&G.plata>=n*tasa&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&!MERCADO_EN_CURSO);
 }
-function jornadaHtml(){const j=jornadaEstado();return '<section class="sub"><h4>🪙 Trabajo diario · '+fmt(j.plata)+' / 5.000 Plata</h4><progress max="200" value="'+j.energia+'" aria-label="Trabajo diario confirmado"></progress><p>+25 Plata por energía productiva · hasta 200 al día UTC. Siembra, cosecha, tala, minería y animales. Se abona al guardar; Free y VIP. Además de tus ventas habituales.</p></section>';
-}
+function jornadaHtml(){const j=jornadaEstado();return '<section class="sub"><h4>📋 Misiones diarias · '+fmt(j.plata)+' / 5.000 Plata</h4><p>Completa objetivos y pulsa Reclamar. Reinicio a las 00:00 UTC.</p>'+JORNADA_MISIONES.map(m=>{const n=Math.min(m.meta,m.tipo==='energia'?j.energia:j.progreso[m.tipo]||0),hecha=!!j.cobradas[m.id],premio=Math.min(m.plata,Math.max(0,5000-j.plata));return '<div class="forge-row"><div class="finfo"><div class="fnm">'+m.nombre+'</div>'+(m.detalle?'<div class="fds">'+m.detalle+'</div>':'')+'<progress max="'+m.meta+'" value="'+n+'" aria-label="'+m.nombre+'"></progress><div class="fds">'+n+' / '+m.meta+' · '+fmt(hecha?Number(j.cobradas[m.id]):premio)+' Plata</div></div><button class="green sm" '+(hecha||n<m.meta||!premio?'disabled':'')+' onclick="jornadaReclamar(\''+m.id+'\')">'+(hecha?'✓ Reclamada':!premio?'Límite diario':n>=m.meta?'Reclamar':'En progreso')+'</button></div>';}).join('')+'</section>';}
 function actividadGranjaHtml(){
   const a=actividadGranjaEstado();
   return jornadaHtml()+'<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gasta energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
@@ -4442,7 +4441,7 @@ function raidBotin(parte) {
    Ni una mecánica nueva — solo dejar de esconder las que hay. */
 function refreshObjetivos() {
   const box = $("objetivos-list"); if (!box) return;
-  let h = "";
+  let h = jornadaHtml();
 
   /* ── 1 · ESTA SEMANA ──────────────────────────────────────────────────────────────────────
      El encargo semanal existe desde siempre y nadie lo veía. Con nombre, barra y reloj pasa de

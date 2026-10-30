@@ -75,16 +75,16 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   const rewardNext=structuredClone(rewardOld);rewardNext.seeds.papa=2;rewardNext.plots[0]={state:'growing',cropKey:'papa',readyAt:now+180000};rewardNext.energiaGranja.actual=49;rewardNext.actividadAcciones={plant:1};
   const rewardServer=servidor({user_id:'qa',name:'QA',updated_at:rewardBase,data:rewardOld});
   const rewardBody={jornada:1,base:rewardBase,op:'jornada-operacion-1',data:rewardNext};
-  const rewardResp=await rewardServer.call(rewardBody);assert.equal(rewardResp.status,200);assert.equal(rewardServer.row().data.plata,35);
+  const rewardResp=await rewardServer.call(rewardBody);assert.equal(rewardResp.status,200);assert.equal(rewardServer.row().data.plata,10);
   const rewardRetry=await rewardServer.call(rewardBody);assert.equal(rewardRetry.status,200);assert.equal((await rewardRetry.json()).repetido,true);assert.equal(rewardServer.writes(),1);
-  const idle=await rewardServer.call({jornada:1,base:rewardServer.row().updated_at,op:'jornada-idle-next',data:rewardServer.row().data});assert.equal(idle.status,200);assert.equal(rewardServer.row().data.plata,35);
+  const idle=await rewardServer.call({jornada:1,base:rewardServer.row().updated_at,op:'jornada-idle-next',data:rewardServer.row().data});assert.equal(idle.status,200);assert.equal(rewardServer.row().data.plata,10);
   const racingReward=servidor({user_id:'qa',name:'QA',updated_at:rewardBase,data:rewardOld});
-  const rewardRace=await Promise.all([racingReward.call(rewardBody),racingReward.call({...rewardBody,op:'jornada-operacion-2'})]);assert.deepEqual(rewardRace.map(r=>r.status).sort(),[200,409]);assert.equal(racingReward.row().data.plata,35);
+  const rewardRace=await Promise.all([racingReward.call(rewardBody),racingReward.call({...rewardBody,op:'jornada-operacion-2'})]);assert.deepEqual(rewardRace.map(r=>r.status).sort(),[200,409]);assert.equal(racingReward.row().data.plata,10);
   const compoundOld={...structuredClone(rewardOld),seeds:{},plots:[],skills:{crafting:0},tools:{axe:0},stats:{talar:{_:0}}};
   const compoundNext=structuredClone(compoundOld);compoundNext.plata=8;compoundNext.skills.crafting=5;compoundNext.res.madera=1;compoundNext.stats.talar._=1;compoundNext.energiaGranja.actual=49;compoundNext.actividadAcciones={chop:1};
   const compoundServer=servidor({user_id:'qa',name:'QA',updated_at:rewardBase,data:compoundOld});
   const compoundBody={jornada:1,base:rewardBase,op:'hacha-fabricada-consumida',data:compoundNext};
-  assert.equal((await compoundServer.call(compoundBody)).status,200);assert.equal(compoundServer.row().data.plata,33,'gasto de 2 y premio de 25 en el handler real');
+  assert.equal((await compoundServer.call(compoundBody)).status,200);assert.equal(compoundServer.row().data.plata,8,'gasto de 2; la actividad sólo progresa sin pago automático');
   assert.equal((await compoundServer.call(compoundBody)).status,200);assert.equal(compoundServer.writes(),1,'el recibo compuesto no duplica crédito');
   // Cliente real: cola de escrituras, paquetes inmutables y base de la última respuesta.
   const ctx=real.ctx,run=c=>vm.runInContext(c,ctx);let invocaciones=[],soltar;

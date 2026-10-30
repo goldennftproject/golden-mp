@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),vm=require('vm'),{JSDOM}=require('jsdom');
+const {ctx}=require('./arrancar-el-juego.contexto').arrancar(require('path').resolve(__dirname,'..'));
+const run=s=>vm.runInContext(s,ctx),html=()=>new JSDOM(run('jornadaHtml()')).window.document;
+run("estadoDeCero(); G.actividadGranja={v:1,energia:0,bonoTotal:0,jornada:{v:2,dia:new Date(nowMs()).toISOString().slice(0,10),energia:200,plata:0,progreso:{plant:20,harvest:20,chop:10,mine:10},cobradas:{}}}");
+let doc=html();assert.equal(doc.querySelectorAll('button').length,5);assert.equal(doc.querySelectorAll('button:disabled').length,0);
+for(const b of doc.querySelectorAll('button'))new Function(b.getAttribute('onclick'));
+assert.ok(doc.body.textContent.includes('Reclamar'));assert.ok(!doc.body.textContent.includes('+25'));
+run("G.actividadGranja.jornada.cobradas.siembra=500;G.actividadGranja.jornada.plata=500");doc=html();assert.equal(doc.querySelector('button').disabled,true);assert.ok(doc.querySelector('button').textContent.includes('Reclamada'));
+run("G.actividadGranja.jornada.dia='2000-01-01'");assert.equal(html().querySelectorAll('button:disabled').length,5);
+run("G.actividadGranja.jornada={dia:new Date(nowMs()).toISOString().slice(0,10),energia:100,plata:2500}");assert.equal(html().querySelectorAll('button:disabled').length,5);assert.equal(run('jornadaEstado().plata'),2500);
+console.log('OK: cinco misiones, progreso, botones ejecutables, cobros bloqueados y cambio de dia/migracion.');
