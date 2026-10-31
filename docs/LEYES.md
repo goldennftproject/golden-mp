@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Entrada oficial única — 31/10/2026
+
+Dirección confirma goldenfarm.onrender.com como entrada oficial. El host antiguo golden-mp.onrender.com redirige GET/HEAD al oficial conservando ruta y query, sin cachear accesos. Location sin fragmento conserva el fragmento original según navegación HTTP. Salud de Render y desarrollo local siguen operativos. No se toca Supabase, Auth, datos ni permisos; quien sólo tenía sesión local en el dominio antiguo puede iniciar sesión con el mismo correo en el oficial.
+
+
 ## Acceso a recargas desde compras — 31/10/2026
 
 Dirección pide llevar a vinculación/recarga cuando falte Golden. VIP, objetos, tienda, God Hand, pasivas, adornos y suministros ofrecen Recargar Golden con coste y faltante. Abre el Banco, consulta estado y enfoca Vincular mi wallet o el importe si ya está vinculada. No solicita firmas ni envía pagos al navegar; la compra con saldo conserva confirmación y los bloqueos por propiedad, cupos, conexión o límites no se convierten en recargas.
