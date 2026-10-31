@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Acceso a recargas desde compras — 31/10/2026
+
+Dirección pide llevar a vinculación/recarga cuando falte Golden. VIP, objetos, tienda, God Hand, pasivas, adornos y suministros ofrecen Recargar Golden con coste y faltante. Abre el Banco, consulta estado y enfoca Vincular mi wallet o el importe si ya está vinculada. No solicita firmas ni envía pagos al navegar; la compra con saldo conserva confirmación y los bloqueos por propiedad, cupos, conexión o límites no se convierten en recargas.
+
+
 ## Depósitos habilitados para alfa — 31/10/2026
 
 Dirección autoriza abrir los depósitos antes del primer pago real: deposits_enabled=true. Verificado estado del Banco, función USDT activa, dos nodos BSC y pruebas de protocolo. No se afirma validación de una transferencia real, pendiente de firma y envío personal desde la wallet del jugador. Retiros y Plata → Golden permanecen desactivados.

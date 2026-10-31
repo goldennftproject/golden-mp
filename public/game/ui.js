@@ -2579,6 +2579,7 @@ function refreshProduccionGranja() {
   cont.querySelectorAll("[data-prod-pause]").forEach(b => b.onclick = () => produccionAlternar(b.dataset.prodPause));
   const comprarVip = $("prod-vip-comprar");
   if (comprarVip) comprarVip.onclick = confirmarCompraVip;
+  ofrecerRecargaGolden(comprarVip,PRODUCCION_VIP_PRECIO,vipGranja);
   if (clave) {
     const b = Array.from(cont.querySelectorAll("[data-prod-pause], [data-prod-buy]")).find(b => !b.disabled && (b.dataset.prodPause === clave || b.dataset.prodBuy === clave));
     if (b) { const d = b.closest("details"); if (d) d.open = true; b.focus({ preventScroll: true }); }
@@ -2615,7 +2616,7 @@ function refreshArtefactos() {
   const vip=vipVigente(t),activos=Object.values(G.artefactos && G.artefactos.items || {}).filter(a=>t<a.desde+ARTEFACTO_DIAS*86400000).length;
   let h='<div class="flujo-menu"><span><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""> Golden<br><small>Comprar objeto</small></span><b aria-hidden="true">→</b><span>🌾</span><b aria-hidden="true">→</b><span><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""> Plata<br><small>Cobrar producción</small></span></div><div class="resumen-menu"><span><b>24 h</b>entre cobros</span><span><b>1 ⚡</b>por cobro</span><span><b>180 días</b>de producción</span></div><p class="sub">Sin VIP: 1 objeto activo · VIP: sin límite</p><details class="ayuda-menu"><summary>Condiciones de producción</summary><p class="sub">Objetos de colección que producen Plata, no Golden directo. No ocupan terreno ni cupos productivos. Sin VIP: un objeto activo. VIP: sin límite de ejemplares, incluidos duplicados. Al vencer el VIP conservas tus compras y sus cobros; no puedes ampliar la colección mientras haya uno activo.</p>'+
     '<p class="sub">Compra con Golden y reclama Plata cada 24 horas por 1 de energía. Acumulación máxima: un día; vida útil: 180 días. </p>'+
-    '<p class="sub">Plata → Golden está desactivado durante la alfa. Depósitos USDT: consulta el Banco. Retiros desactivados.</p></details><button class="ghost sm" data-panel="ov-banco">🏦 Cambiar Plata por Golden</button>';
+    '<p class="sub">Plata → Golden está desactivado durante la alfa. Depósitos USDT: consulta el Banco. Retiros desactivados.</p></details><button class="ghost sm" onclick="abrirRecargaGolden()">🏦 Recargar Golden</button>';
   if(!online)h+='<p class="sub">Compras y cobros requieren conexión y guardado sincronizado.</p>';
   const copias=Object.keys(G.artefactos && G.artefactos.items || {}).filter(id=>id.includes(':') && ARTEFACTO_DEF[artefactoModelo(id)]);
   for(const [id,d] of [...Object.entries(ARTEFACTO_DEF),...copias.map(id=>[id,ARTEFACTO_DEF[artefactoModelo(id)]])]){
@@ -2632,6 +2633,7 @@ function refreshArtefactos() {
     const id=b.dataset.artefactoComprar,d=ARTEFACTO_DEF[id];
     askConfirm('¿Gastar '+d.golden+' Golden en '+d.label+'? Produce '+artefactoDiario(id).toFixed(2)+' Plata al día durante 180 días. Se reclama cada 24 horas y guarda como máximo un día. Plata → Golden está desactivado durante la alfa. Depósitos USDT: consulta el Banco. Retiros desactivados.',()=>artefactoSolicitar('comprar',id),{title:'Comprar Objeto de Granja',yes:'Comprar',yesClass:'green',no:'Cancelar'});
   });
+  box.querySelectorAll('[data-artefacto-comprar]').forEach(b=>{const id=b.dataset.artefactoComprar,d=ARTEFACTO_DEF[id];if(d){const motivo=b.title;ofrecerRecargaGolden(b,d.golden,!!motivo&&!motivo.startsWith('Faltan '));}});
   box.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>b.onclick=()=>artefactoSolicitar('cobrar',b.dataset.artefactoCobrar));
 }
 function bancoActualizarPrevia(){
@@ -2677,6 +2679,20 @@ function bancoTick(){
   if(isOpen('ov-banco')&&info&&info._cotizacionVigente!==bancoCotizacionValida())refreshBanco(false);
 }
 function usdtMensaje(text){const el=$('usdt-message');if(el)el.textContent=String(text||'');}
+let RECARGA_GOLDEN_SOLICITADA=null;
+function abrirRecargaGolden(precio=0){
+ RECARGA_GOLDEN_SOLICITADA={faltan:Math.max(1,Math.ceil(precio-(G.golden||0)))};
+ closeAllOv();openOv('ov-banco');
+ if(typeof usdtConsultar==='function')usdtConsultar(true);
+ $('usdt-panel')?.scrollIntoView?.({block:'nearest'});
+}
+function ofrecerRecargaGolden(boton,precio,bloqueado=false){
+ if(!boton||bloqueado||!Number.isFinite(precio)||precio<=0||(G.golden||0)>=precio)return;
+ boton.disabled=false;boton.textContent='Recargar Golden';
+ boton.title='Te faltan '+fmtGolden(precio-(G.golden||0))+' Golden · abre el Banco para vincular tu wallet o recargar';
+ boton.onclick=()=>abrirRecargaGolden(precio);
+ if(boton.parentElement&&!boton.nextElementSibling?.dataset?.recargaCoste){const nota=document.createElement('small');nota.className='motivo-accion';nota.dataset.recargaCoste='1';nota.textContent='Coste: '+fmtGolden(precio)+' Golden · faltan '+fmtGolden(precio-(G.golden||0));boton.insertAdjacentElement('afterend',nota);}
+}
 function renderUsdt(){
  const box=$('usdt-panel');if(!box)return;
  const s=typeof USDT_ESTADO!=='undefined'&&USDT_ESTADO?.uid===UID?USDT_ESTADO:null;
@@ -2694,6 +2710,11 @@ function renderUsdt(){
  const bind=$('usdt-link'),buy=$('usdt-buy'),check=$('usdt-check'),refresh=$('usdt-refresh');
  if(bind)bind.onclick=()=>usdtConWallet('vincular');if(buy)buy.onclick=()=>usdtConWallet('comprar');if(check)check.onclick=()=>usdtComprobar();if(refresh)refresh.onclick=()=>usdtConsultar(true);
  for(const b of [bind,buy,check,refresh])if(b)b.disabled=busy;
+ if(RECARGA_GOLDEN_SOLICITADA&&s){
+  const amount=$('usdt-amount'),destino=bind||amount||refresh;
+  if(amount)amount.value=String(Math.min(10000,RECARGA_GOLDEN_SOLICITADA.faltan));
+  if(destino){destino.scrollIntoView?.({block:'nearest'});destino.focus?.({preventScroll:true});RECARGA_GOLDEN_SOLICITADA=null;}
+ }
 }
 function abrirCompra(destino){
   const directos={inicio:'ov-tienda',vip:'ov-vip',objetos:'ov-reliquias'};
@@ -2724,7 +2745,7 @@ function refreshTienda(){
     ['mejoras','Mejoras permanentes','Desarrolla tu granja','God Hand · edificios · recolección','Precios por mejora','Ver mejoras'],
     ['suministros','Packs de materiales','Construye y fabrica','Madera, piedra y minerales','Desde '+Math.min(...Object.values(PACKS_DEF).map(d=>d.golden))+' Golden','Ver packs']
   ];
-  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="ghost sm" data-panel="ov-banco">Banco</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong>'+tiendaVentajasVisuales(id)+tiendaPropiedadVisual(id)+(id==='vip'||id==='objetos'?'':'<p>'+detalle+'</p>')+'<div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construye el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos USDT: consulta el Banco. Retiros desactivados.</p>';
+  box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="gold sm" onclick="abrirRecargaGolden()">Recargar Golden</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong>'+tiendaVentajasVisuales(id)+tiendaPropiedadVisual(id)+(id==='vip'||id==='objetos'?'':'<p>'+detalle+'</p>')+'<div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construye el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos USDT: consulta el Banco. Retiros desactivados.</p>';
 }
 function ubicarComprasPc(){
   const nav=$('compras-accesos');if(!nav||window.innerWidth<=640)return;
@@ -2754,6 +2775,7 @@ function refreshVip() {
     '<p class="sub">El pase está desactivado. Esta compra utiliza Golden. Para recargar con USDT en BNB Smart Chain, abre el Banco. Retiros desactivados.</p><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="vip-actividad" aria-live="polite"></div></details>';
   actividadGranjaRefrescar();
   $('vip-comprar').onclick=confirmarCompraVip;
+  ofrecerRecargaGolden($('vip-comprar'),precio,activo);
 }
 function confirmarCompraVip() {
   askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos)? ' + produccionVipPaseTexto() + ' Los nodos adicionales se compran por separado.', () => {const r=passBuyVip();if(isOpen('ov-vip'))refreshVip();return r;}, {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
@@ -4948,6 +4970,7 @@ function refreshDeco() {
   box.querySelectorAll("[data-plot]").forEach(b => b.onclick = () => { comprarParcela(); refreshDeco(); });
   // 18/8: expandir el terreno. No se refresca el panel después porque la escena se reinicia con
   // telón (la forma del mundo cambió) y el panel se vuelve a pintar al abrirlo.
+  box.querySelectorAll('[data-buydeco]').forEach(b=>{const d=DECO_DEF[b.dataset.buydeco];if(d&&!d.plata)ofrecerRecargaGolden(b,d.golden);});
   const eb = $("exp-comprar");
   if (eb) eb.onclick = () => { if (typeof expansionComprar === "function" && expansionComprar()) { try { refreshDeco(); refreshHud(); } catch (e) {} } };
   const de = $("deco-editar"); if (de) de.onclick = () => { if (window.setEditMode) setEditMode(true); };   // cierra la Tienda y abre el modo edición con el selector de adornos
@@ -5007,6 +5030,9 @@ function refreshNft() {
   box.querySelectorAll('[data-pasiva]').forEach(b => { b.onclick=()=>askConfirm('Mejorar '+NFT_DEF[b.dataset.pasiva].label+' por 50.000 Plata: el bono pasa de +0,10 a +0,15 unidades por recolección efectiva. Compra única, sin energía.',()=>mejorarPasiva(b.dataset.pasiva),{title:'Mejorar pasiva',yes:'Mejorar',yesClass:'gold',no:'Cancelar'}); });
   box.querySelectorAll("[data-nft-pase]").forEach(b => { b.onclick = () => openOv("ov-pass"); });
   const gh = $("buy-godhand"); if (gh) gh.onclick = () => { comprarGodHand(); refreshNft(); };
+  ofrecerRecargaGolden(gh,GODHAND_GOLDEN,tengoGodHand());
+  box.querySelectorAll('[data-nft]').forEach(b=>ofrecerRecargaGolden(b,nftPrecioGolden(b.dataset.nft),tengoNft(b.dataset.nft)));
+  box.querySelectorAll('[data-infra="tienda"]').forEach(b=>ofrecerRecargaGolden(b,INFRA_TIENDA_GOLDEN,!!G.infraestructura?.tienda));
   const ga = $("gh-admin"); if (ga) ga.onclick = () => { if (typeof refreshGodHand === "function") refreshGodHand(); openOv("ov-godhand"); };   // GOD HAND 2.0
 }
 
@@ -5699,6 +5725,8 @@ function refreshPacks(){
  box.querySelectorAll('[data-pack]').forEach(b=>b.onclick=()=>{const id=b.dataset.pack,d=PACKS_DEF[id];askConfirm('Comprar '+d.label+' por '+d.golden+' Golden. Los materiales quedan en Entregas pendientes hasta que tengas espacio.',()=>economiaSolicitar({pack:{id}}),{title:'Comprar materiales',yes:'Comprar',no:'Cancelar'});});
  const caja=$('caja-comprar');if(caja)caja.onclick=()=>askConfirm('Vas a gastar 1 Golden en un premio al azar: '+CAJA_SUMINISTROS.premios.map(p=>(p.peso/100)+'%: '+p.qty+' '+RES_LABEL[p.item]).join(' · ')+'. Máximo tres cajas al día UTC. El premio queda en Entregas pendientes.',()=>economiaSolicitar({pack:{id:'caja'}}),{title:'Comprar caja de suministros',yes:'Comprar · 1 Golden',no:'Cancelar'});
  $('pack-recoger').onclick=()=>{mkPendCobrar();refreshPacks();};
+ box.querySelectorAll('[data-pack]').forEach(b=>{const id=b.dataset.pack;ofrecerRecargaGolden(b,PACKS_DEF[id].golden,packComprado(id));});
+ ofrecerRecargaGolden(caja,CAJA_SUMINISTROS.golden,cajasUsadas()>=CAJA_SUMINISTROS.max);
 }
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
