@@ -17,6 +17,7 @@ process.once('exit',()=>{clearInterval(alfaIntervalo);alfa.emitir();});
 app.get('/healthz',(req,res)=>{res.set('Cache-Control','no-store');res.json({ok:true,version:process.env.RENDER_GIT_COMMIT||'dev'});});
 // Dejar salud operativa para Render; el resto de enlaces antiguos abre el dominio oficial.
 app.use(require('./canonical-host').redirigirDominioAntiguo);
+app.use(require('./alpha-access').pausaRegistro);
 
 /* ===================== EL ARRANQUE PESA UN MEGA (24/8, dirección) =====================
    « Sigue tardando en entrar a la granja, algo se ha roto ahí en el inicio. »

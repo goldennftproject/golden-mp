@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Alfa pospuesta: registro sin acceso al juego — 31/10/2026
+
+Dirección cierra temporalmente el acceso y mantiene el registro. El dominio oficial sirve sólo un formulario de registro/confirmación, sin Phaser ni granja. Las sesiones técnicas del enlace de confirmación no se persisten y se cierran localmente; no se bloquea crear ni confirmar cuentas en Auth. Las escrituras de granjas y mercado quedan rechazadas por disparadores del servidor mientras golden_internal.game_access.game_open=false. Depósitos cerrados, datos intactos y panel privado conservado. Para reabrir, actualizar expresamente el control DB y src/alpha-access.json de forma coordinada; los depósitos se deciden aparte. No borrar ni resetear cuentas al reabrir.
+
+
 ## Entrada oficial única — 31/10/2026
 
 Dirección confirma goldenfarm.onrender.com como entrada oficial. El host antiguo golden-mp.onrender.com redirige GET/HEAD al oficial conservando ruta y query, sin cachear accesos. Location sin fragmento conserva el fragmento original según navegación HTTP. Salud de Render y desarrollo local siguen operativos. No se toca Supabase, Auth, datos ni permisos; quien sólo tenía sesión local en el dominio antiguo puede iniciar sesión con el mismo correo en el oficial.
