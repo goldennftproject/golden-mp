@@ -1,3 +1,8 @@
+ACTUALIZACIÓN 31/10/2026 — DEPÓSITOS ABIERTOS POR DIRECCIÓN
+El usuario autoriza habilitar deposits_enabled para la alfa, antes de su primera transferencia real. Configuración activada y consultada mediante usdt_wallet estado. Dos nodos de BSC, token, finalidad y pruebas de protocolo/Edge verificadas. El flujo real de firma, pago y acreditación sigue pendiente de una transferencia del usuario. No se ha firmado ni enviado dinero por el asistente. Retiros y Plata → Golden siguen desactivados.
+
+REGISTRO HISTÓRICO DE PREPARACIÓN
+
 USDT Y GOLDEN — ALFA
 
 Decisiones de dirección:

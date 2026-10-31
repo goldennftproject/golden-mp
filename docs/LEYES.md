@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Depósitos habilitados para alfa — 31/10/2026
+
+Dirección autoriza abrir los depósitos antes del primer pago real: deposits_enabled=true. Verificado estado del Banco, función USDT activa, dos nodos BSC y pruebas de protocolo. No se afirma validación de una transferencia real, pendiente de firma y envío personal desde la wallet del jugador. Retiros y Plata → Golden permanecen desactivados.
+
+
 ## Misiones diarias y cobro manual — 30/10/2026
 
 Dirección rechaza el abono por acción y aprueba misiones reclamables. Las acciones productivas validadas sólo avanzan objetivos: sembrar 20, cocinar y recoger 30 platos, recoger madera 10 veces, minar 10 veces (500 Plata cada uno), y gastar 200 de energía productiva (3.000 Plata). Cobro manual autenticado, recibo idempotente y CAS; máximo conjunto 5.000 por día UTC. El dinero ya recibido hoy cuenta para el límite sin descontarlo; las acciones previas no se transforman en misiones nuevas completadas. Menú Progreso, Cobertizo y energía muestran la lista. Un botón Misiones bajo Tienda abre directamente esa lista. La cocina contrasta colas aceptadas, hora de finalización, platos entregados y estadísticas; una misión de cosecha ya cobrada hoy se conserva como cobrada para evitar otro premio por la sustitución. No altera el estudio económico, USDT ni otros premios existentes.
