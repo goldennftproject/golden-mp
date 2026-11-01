@@ -1,0 +1,18 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
+const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(process.cwd());
+const doc=new JSDOM(fs.readFileSync('public/index.html','utf8')).window.document;c.document=doc;c.$=id=>doc.getElementById(id);c.qrcode=require('qrcode-generator');
+const run=s=>vm.runInContext(s,c);run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;");
+const first={id:'11111111-1111-4111-8111-111111111111',amount:'10.000001',created_at:new Date().toISOString(),expires_at:new Date(Date.now()+1800000).toISOString(),tx:null};
+const old={...first,id:'22222222-2222-4222-8222-222222222222',amount:'10.000002',expires_at:new Date(Date.now()-10000).toISOString()};
+run('USDT_ESTADO='+JSON.stringify({uid:'qa',deposits:true,destination:'0x4abb7580eac480203f4ce8890674a29519dd9139',orders:[first,old],history:[]}));
+c.renderUsdt();
+assert.equal(doc.querySelector('#usdt-link'),null);assert.equal(doc.querySelector('#usdt-buy'),null);
+assert.equal(doc.querySelector('#usdt-exact').value,'10.000001');assert.ok(doc.querySelector('#usdt-qr svg'));
+assert.ok(doc.querySelector('#usdt-copy-amount'));assert.ok(doc.querySelector('#usdt-create'));assert.ok(doc.querySelector('#usdt-check'));
+const select=doc.querySelector('#usdt-order');select.value=old.id;select.onchange();
+assert.equal(doc.querySelector('#usdt-exact'),null,'expired request must not offer payment');
+assert.match(doc.querySelector('#usdt-panel').textContent,/No pagues esta solicitud/);
+run("UID='different';");c.renderUsdt();assert.equal(doc.querySelector('#usdt-order'),null,'account change must not show another order');
+const source=fs.readFileSync('public/game/save.js','utf8');
+assert.ok(!/eth_requestAccounts|personal_sign|eth_sendTransaction|wallet_switchEthereumChain/.test(source),'no wallet RPC in client');
+console.log('OK UI: exact amount, QR, copy controls, expired payment hidden, account isolation and zero wallet RPC requests.');

@@ -1,6 +1,7 @@
 export const DESTINATION='0x4abb7580eac480203f4ce8890674a29519dd9139';
 export const TOKEN='0x55d398326f99059ff775485246999027b3197955';
 export const RPCS=['https://bsc-dataseed.bnbchain.org','https://bsc-dataseed.defibit.io'];
+export const DISCOVERY_RPCS=['https://bsc-rpc.publicnode.com','https://bsc.drpc.org'];
 export const TRANSFER='0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const lower=x=>String(x||'').toLowerCase();
 export class DepositError extends Error{constructor(message,status=400){super(message);this.status=status;}}
@@ -18,22 +19,51 @@ export async function inspectDeposit(call,tx,wallet){
  if(!receipt||!transaction)throw new DepositError('Transacción todavía no encontrada; espera y vuelve a comprobar',425);
  if(receipt.status!=='0x1')throw new DepositError('La transacción falló; no se acreditó Golden');
  const block=BigInt(receipt.blockNumber);
- if(block<=BigInt(wallet.start_block))throw new DepositError('El depósito debe ser posterior a la vinculación de tu wallet');
+ if(block<=BigInt(wallet.start_block))throw new DepositError('El depósito debe ser posterior a la solicitud de recarga');
+ const sender=wallet.amount_wei?lower(transaction.from):wallet.address;
+ if(!/^0x[0-9a-f]{40}$/.test(sender)||sender===DESTINATION)throw new DepositError('Remitente no válido');
  if(!finalized||BigInt(finalized.number)<block||BigInt(head)-block+1n<120n)throw new DepositError('Esperando finalidad y 120 confirmaciones; vuelve a comprobar sin pagar otra vez',425);
- if(lower(transaction.from)!==wallet.address||lower(receipt.from)!==wallet.address||lower(transaction.to)!==TOKEN||lower(receipt.to)!==TOKEN||lower(transaction.hash)!==tx||lower(receipt.transactionHash)!==tx)throw new DepositError('El pago no procede de tu wallet vinculada al contrato USDT admitido');
+ if(lower(transaction.from)!==sender||lower(receipt.from)!==sender||lower(transaction.to)!==TOKEN||lower(receipt.to)!==TOKEN||lower(transaction.hash)!==tx||lower(receipt.transactionHash)!==tx)throw new DepositError('El pago no procede de tu wallet vinculada al contrato USDT admitido');
  const input=lower(transaction.input);
  if(!/^0xa9059cbb[0-9a-f]{128}$/.test(input)||input.slice(10,74)!==DESTINATION.slice(2).padStart(64,'0'))throw new DepositError('Sólo se admiten transferencias directas de USDT al destino del juego');
  const amount=BigInt('0x'+input.slice(74));
- if(amount<10n**18n||amount>10000n*10n**18n||amount%(10n**18n)!==0n)throw new DepositError('El importe debe ser entero, entre 1 y 10.000 USDT');
- const logs=receipt.logs.filter(l=>lower(l.address)===TOKEN&&l.topics?.length===3&&lower(l.topics[0])===TRANSFER&&lower(l.topics[1])==='0x'+wallet.address.slice(2).padStart(64,'0')&&lower(l.topics[2])==='0x'+DESTINATION.slice(2).padStart(64,'0'));
+ if(wallet.amount_wei && amount!==BigInt(wallet.amount_wei))throw new DepositError('El importe no coincide con tu solicitud. No repitas el pago; contacta con el equipo.');
+ if(!wallet.amount_wei && (amount<10n**18n||amount>10000n*10n**18n||amount%(10n**18n)!==0n))throw new DepositError('El importe debe ser entero, entre 1 y 10.000 USDT');
+ const logs=receipt.logs.filter(l=>lower(l.address)===TOKEN&&l.topics?.length===3&&lower(l.topics[0])===TRANSFER&&lower(l.topics[1])==='0x'+sender.slice(2).padStart(64,'0')&&lower(l.topics[2])==='0x'+DESTINATION.slice(2).padStart(64,'0'));
  if(logs.length!==1||logs[0].removed||!/^0x[0-9a-fA-F]{64}$/.test(logs[0].data)||BigInt(logs[0].data)!==amount)throw new DepositError('No se encontró una transferencia USDT válida por ese importe');
  const canonical=await call('eth_getBlockByNumber',[receipt.blockNumber,false]);
  if(!canonical||lower(canonical.hash)!==lower(receipt.blockHash)||lower(transaction.blockHash)!==lower(receipt.blockHash))throw new DepositError('El bloque cambió; espera antes de comprobar de nuevo',425);
  const logIndex=Number(BigInt(logs[0].logIndex));if(!Number.isSafeInteger(logIndex)||logIndex<0)throw new DepositError('Comprobante inválido',503);
+ if(wallet.amount_wei){
+  const time=Number(BigInt(canonical.timestamp));
+  if(!Number.isSafeInteger(time)||time<Math.floor(Date.parse(wallet.created_at)/1000)||time>Math.floor(Date.parse(wallet.expires_at)/1000))throw new DepositError('Pago fuera del plazo de la solicitud. Contacta con el equipo; no vuelvas a pagar.');
+  return {block:Number(block),hash:lower(receipt.blockHash),logIndex,amount:amount.toString(),address:sender,time};
+ }
  return {block:Number(block),hash:lower(receipt.blockHash),logIndex,amount:amount.toString()};
 }
 export async function verifyDeposit(tx,wallet,call=rpcCall){
  const results=await Promise.all(RPCS.map(url=>inspectDeposit((m,p)=>call(url,m,p),tx,wallet)));
  if(JSON.stringify(results[0])!==JSON.stringify(results[1]))throw new DepositError('Los nodos no coinciden; no se acreditó nada, vuelve a comprobar',503);
  return results[0];
+}
+
+// Bounded, user-triggered search. No permanent polling or external indexer.
+export async function findOrderPayment(order,call=rpcCall){
+ const from=BigInt(order.scan_block)+1n;
+ const heads=await Promise.all(RPCS.map(async url=>{
+  const [chain,rawHead,final]=await Promise.all([call(url,'eth_chainId'),call(url,'eth_blockNumber'),call(url,'eth_getBlockByNumber',['finalized',false])]);
+  if(chain!=='0x38')throw new DepositError('Red incorrecta',503);
+  if(!final)throw new DepositError('Esperando finalidad de la red',425);
+  const safe=BigInt(rawHead)-119n;return safe<BigInt(final.number)?safe:BigInt(final.number);
+ }));
+ const head=heads.reduce((a,b)=>a<b?a:b),end=head<from+1999n?head:from+1999n;
+ if(end<from)return {tx:null,scanned:Number(from-1n)};
+ const lists=await Promise.all(DISCOVERY_RPCS.map(async url=>{
+  const logs=await call(url,'eth_getLogs',[{address:TOKEN,fromBlock:'0x'+from.toString(16),toBlock:'0x'+end.toString(16),topics:[TRANSFER,null,'0x'+DESTINATION.slice(2).padStart(64,'0')]}]);
+  if(!Array.isArray(logs))throw new DepositError('No se pudo buscar el pago. Pega su identificador de transacción.',503);
+  return logs.filter(l=>!l.removed&&lower(l.address)===TOKEN&&l.topics?.length===3&&lower(l.topics[0])===TRANSFER&&lower(l.topics[2])==='0x'+DESTINATION.slice(2).padStart(64,'0')&&/^0x[0-9a-f]{64}$/i.test(l.data)&&BigInt(l.data)===BigInt(order.amount_wei))
+   .map(l=>({tx:lower(l.transactionHash),block:Number(BigInt(l.blockNumber)),hash:lower(l.blockHash),log:Number(BigInt(l.logIndex))})).sort((a,b)=>a.block-b.block||a.log-b.log);
+ }));
+ if(JSON.stringify(lists[0])!==JSON.stringify(lists[1]))throw new DepositError('Los nodos no coinciden; vuelve a comprobar o pega la transacción.',503);
+ return {tx:lists[0][0]?.tx||null,scanned:Number(end)};
 }

@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Recargas sin vincular wallet — 01/11/2026
+
+Dirección autoriza: «Bueno, hagámoslo así entonces, sin tener que vincular». Cada solicitud guarda un importe exclusivo permanente y un plazo de 30 minutos; no se reutiliza para otra cuenta. El importe completo, incluidos sus decimales, acredita Golden 1:1. Sin conexión, firma ni envío desde el juego: el jugador envía USDT BEP-20 por BNB Smart Chain desde su wallet externa. Se comprueba por búsqueda acotada o hash, con dos nodos, bloque posterior a la solicitud, importe, destino, contrato, plazo, finalidad y 120 confirmaciones. Pagos tardíos o distintos no se acreditan automáticamente; requieren revisión. Idempotencia, CAS, conservación de Golden pagado y registro administrativo permanecen. Retiros y Plata → Golden siguen desactivados. Cambiar el flujo no retira la clasificación de MetaMask del dominio.
+
+
 ## Botón de sonido en el HUD — 01/11/2026
 
 Dirección pide activar o silenciar desde la barra superior. Botón musical compacto junto a Menú, con trazo de silencio, tooltip y estado accesible. Comparte sfxOn y gf_sound con Configuración; ambos controles se sincronizan y la preferencia persiste al recargar. Las notas diferidas de efectos no suenan si se ha silenciado antes de su ejecución. Sin cambios de juego ni guardado.

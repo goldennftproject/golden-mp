@@ -2289,7 +2289,7 @@
       <div class="menu-seccion">Economía</div>
       <button class="gmi" title="Comprar semillas y vender tus cultivos por Plata." data-panel="ov-market"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18 M4 10V6l2-3h12l2 3v4 M5 10v11h14V10 M9 21v-7h6v7"/></svg></span><span class="menu-label">Mercado de cultivos</span></button>
       <button class="gmi" title="Comprar objetos que producen Plata y cobrar su producción." data-panel="ov-reliquias"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-6 9 6v12z M7 21v-9h10v9 M7 7V3h4"/></svg></span><span class="menu-label">Objetos de Granja</span></button>
-      <button class="gmi" title="Consultar wallet, depósitos USDT y Golden." data-panel="ov-banco"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8l10-5 10 5z M4 11v7 M9 11v7 M15 11v7 M20 11v7 M2 21h20"/></svg></span><span class="menu-label">Banco</span></button>
+      <button class="gmi" title="Consultar recargas USDT y Golden." data-panel="ov-banco"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8l10-5 10 5z M4 11v7 M9 11v7 M15 11v7 M20 11v7 M2 21h20"/></svg></span><span class="menu-label">Banco</span></button>
       <button class="gmi" title="Comprar y vender con otros jugadores." data-panel="ov-p2p"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h15l-4-4 M18 8l-4 4 M21 16H6l4-4 M6 16l4 4"/></svg></span><span class="menu-label">Comercio entre jugadores</span></button>
       <button class="gmi" title="Ver ventajas y comprar o renovar VIP." data-panel="ov-vip"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l5 4 4-7 4 7 5-4-2 13H5z"/></svg></span><span class="menu-label">VIP</span></button>
       <div class="menu-seccion">Comunidad</div>
@@ -2458,7 +2458,7 @@
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
     const GF_BUILD = "20260928-163402";
-    const files = ["game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
+    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
        entrar »). El cargador de abajo pide un archivo, espera a que llegue, pide el siguiente:

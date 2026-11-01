@@ -2699,7 +2699,7 @@ function abrirRecargaGolden(precio=0){
 function ofrecerRecargaGolden(boton,precio,bloqueado=false){
  if(!boton||bloqueado||!Number.isFinite(precio)||precio<=0||(G.golden||0)>=precio)return;
  boton.disabled=false;boton.textContent='Recargar Golden';
- boton.title='Te faltan '+fmtGolden(precio-(G.golden||0))+' Golden · abre el Banco para vincular tu wallet o recargar';
+ boton.title='Te faltan '+fmtGolden(precio-(G.golden||0))+' Golden · abre el Banco para preparar una recarga';
  boton.onclick=()=>abrirRecargaGolden(precio);
  if(boton.parentElement&&!boton.nextElementSibling?.dataset?.recargaCoste){const nota=document.createElement('small');nota.className='motivo-accion';nota.dataset.recargaCoste='1';nota.textContent='Coste: '+fmtGolden(precio)+' Golden · faltan '+fmtGolden(precio-(G.golden||0));boton.insertAdjacentElement('afterend',nota);}
 }
@@ -2707,24 +2707,29 @@ function renderUsdt(){
  const box=$('usdt-panel');if(!box)return;
  const s=typeof USDT_ESTADO!=='undefined'&&USDT_ESTADO?.uid===UID?USDT_ESTADO:null;
  const same=box.dataset.uid===String(UID);box.dataset.uid=String(UID);
- const oldTx=same?$('usdt-tx')?.value:'',oldAmount=(same?$('usdt-amount')?.value:'')||'10',message=same?$('usdt-message')?.textContent||'':'';
- let tx=oldTx||'';if(!tx&&UID){try{tx=localStorage.getItem('gf-usdt-tx-'+SB_REF+'-'+UID)||'';}catch{}}
+ const oldId=same?$('usdt-order')?.value:null,oldAmount=(same?$('usdt-amount')?.value:'')||'10',message=same?$('usdt-message')?.textContent||'':'';
+ const orders=s?.orders||[],o=orders.find(r=>r.id===oldId)||orders.find(r=>!r.tx)||orders[0];
+ const oldTx=same&&oldId===o?.id?$('usdt-tx')?.value||'':'';
  const busy=typeof USDT_OCUPADO!=='undefined'&&USDT_OCUPADO;
- box.innerHTML='<h4>💵 Comprar Golden con USDT</h4><div class="cambio-tasa"><b>1 USDT → 1 Golden</b></div>'+
-  '<section class="sub" style="border:2px solid #b58c32;padding:10px"><strong>Red: BNB Smart Chain (BSC)</strong><br>Token: <b>USDT · BEP-20</b></section><p class="sub">Retiros desactivados</p>'+
-  (!s?'<p>Consulta tu wallet vinculada.</p>':!s.address?'<p class="sub">Una wallet propia por cuenta. La firma acredita que es tuya; no autoriza pagos.</p><button id="usdt-link" class="green sm">Vincular mi wallet</button>':
-  '<p class="sub">Tu wallet <code style="overflow-wrap:anywhere">'+escapeHtml(s.address)+'</code></p><p class="sub">Golden comprado sin gastar: <b>'+Number(s.paid_remaining||0).toLocaleString('es')+'</b> · se conserva para el lanzamiento.</p>'+
-  (s.deposits?'<p class="sub"><b>Destino · sólo USDT en BNB Smart Chain</b><br><code style="overflow-wrap:anywhere">'+escapeHtml(s.destination)+'</code></p><label>USDT <input id="usdt-amount" type="number" min="1" max="10000" step="1" value="'+escapeHtml(oldAmount)+'"></label><button id="usdt-buy" class="green sm">Pagar USDT en BNB Smart Chain</button><p class="sub">Importe entero de 1 a 10.000. Envía desde tu wallet vinculada; necesitas BNB para la comisión de red. No uses un exchange ni envíes BNB al destino.</p>':'<p class="sub"><b>Depósitos todavía cerrados. No envíes fondos.</b></p>')+
-  '<details class="ayuda-menu"><summary>Comprobar un depósito · historial</summary><label>Transacción <input id="usdt-tx" type="text" autocomplete="off" placeholder="0x…" value="'+escapeHtml(tx)+'" style="width:100%"></label><button id="usdt-check" class="sm">Comprobar depósito</button><p class="sub">120 confirmaciones y finalidad de la red. Puedes volver a comprobar sin repetir el pago.</p>'+((s.history||[]).map(r=>'<p class="sub">+'+Number(r.golden)+' Golden · <a href="https://bscscan.com/tx/'+escapeHtml(r.tx)+'" target="_blank" rel="noopener noreferrer">Ver comprobante</a></p>').join('')||'<p class="sub">Sin depósitos acreditados.</p>')+'</details>')+
-  '<button id="usdt-refresh" class="ghost sm">Actualizar wallet</button><p id="usdt-message" role="status">'+escapeHtml(message)+'</p>';
- const bind=$('usdt-link'),buy=$('usdt-buy'),check=$('usdt-check'),refresh=$('usdt-refresh');
- if(bind)bind.onclick=()=>usdtConWallet('vincular');if(buy)buy.onclick=()=>usdtConWallet('comprar');if(check)check.onclick=()=>usdtComprobar();if(refresh)refresh.onclick=()=>usdtConsultar(true);
- for(const b of [bind,buy,check,refresh])if(b)b.disabled=busy;
- if(RECARGA_GOLDEN_SOLICITADA&&s){
-  const amount=$('usdt-amount'),destino=bind||amount||refresh;
-  if(amount)amount.value=String(Math.min(10000,RECARGA_GOLDEN_SOLICITADA.faltan));
-  if(destino){destino.scrollIntoView?.({block:'nearest'});destino.focus?.({preventScroll:true});RECARGA_GOLDEN_SOLICITADA=null;}
- }
+ const active=o&&!o.tx&&Date.parse(o.expires_at)>Date.now();
+ box.innerHTML='<h4>Comprar Golden con USDT</h4><div class="cambio-tasa"><b>1 USDT → 1 Golden</b></div>'+
+ '<section class="sub" style="border:2px solid #b58c32;padding:10px"><strong>Red: BNB Smart Chain (BSC)</strong><br>Token: <b>USDT · BEP-20</b></section><p class="sub">Sin conectar tu wallet al juego · Retiros desactivados</p>'+
+ (!s?'<p>Consultando recargas…</p>':
+ '<p class="sub">Golden comprado sin gastar: <b>'+Number(s.paid_remaining||0).toLocaleString('es',{maximumFractionDigits:6})+'</b> · se conserva para el lanzamiento.</p>'+
+ (s.deposits?'<label>Golden que quieres recargar <input id="usdt-amount" type="number" min="1" max="10000" step="1" value="'+escapeHtml(oldAmount)+'"></label><button id="usdt-create" class="green sm">Preparar recarga</button>':'<p><b>Depósitos cerrados. No envíes fondos.</b></p>')+
+ (o?'<hr><label>Solicitud <select id="usdt-order" style="max-width:100%">'+orders.map(r=>'<option value="'+escapeHtml(r.id)+'"'+(r.id===o.id?' selected':'')+'>'+escapeHtml(r.amount)+' USDT · '+(r.tx?'Pagada':Date.parse(r.expires_at)>Date.now()?'Pendiente':'Plazo terminado')+'</option>').join('')+'</select></label>'+
+ (active&&s.deposits?'<p><b>Envía exactamente</b></p><input id="usdt-exact" readonly aria-label="Importe exacto USDT" value="'+escapeHtml(o.amount)+'" style="font-size:22px;width:100%;box-sizing:border-box"><button id="usdt-copy-amount" class="sm">Copiar importe</button><p>Recibirás <b>'+escapeHtml(o.amount)+' Golden</b>, incluidos los decimales. El importe identifica tu cuenta; no lo redondees.</p><label>Dirección receptora<input id="usdt-destination" readonly value="'+escapeHtml(s.destination)+'" style="width:100%;box-sizing:border-box"></label><button id="usdt-copy-address" class="sm">Copiar dirección</button><div id="usdt-qr" aria-label="QR de la dirección receptora"></div><p class="sub">Envía USDT desde tu billetera por BNB Smart Chain antes de '+escapeHtml(new Date(o.expires_at).toLocaleTimeString('es'))+'. El QR contiene solo la dirección: introduce el importe exacto indicado. La cantidad recibida debe ser exacta, sin descontar comisiones. Necesitas BNB para la comisión de red.</p>':
+ '<p class="sub">'+(o.tx?'Solicitud pagada. No vuelvas a enviar a este importe.':'Plazo terminado. No pagues esta solicitud. Si ya pagaste dentro del plazo, puedes comprobarlo; si pagaste tarde o otra cantidad, contacta con el equipo sin repetir el envío.')+'</p>')+
+ '<label>Identificador de transacción (opcional)<input id="usdt-tx" type="text" autocomplete="off" placeholder="0x… · úsalo si la búsqueda no encuentra tu pago" value="'+escapeHtml(oldTx||o.tx||'')+'" style="width:100%;box-sizing:border-box"></label><button id="usdt-check" class="green sm">Comprobar pago</button><p class="sub">Se comprueban dos nodos, finalidad y 120 confirmaciones. No repitas el envío mientras esperas.</p>':'')+
+ '<details class="ayuda-menu"><summary>Historial de depósitos</summary>'+((s.history||[]).map(r=>'<p class="sub">+'+Number(r.golden).toLocaleString('es',{maximumFractionDigits:6})+' Golden · <a href="https://bscscan.com/tx/'+escapeHtml(r.tx)+'" target="_blank" rel="noopener noreferrer">Ver comprobante</a></p>').join('')||'<p class="sub">Sin depósitos acreditados.</p>')+'</details>')+
+ '<button id="usdt-refresh" class="ghost sm">Actualizar recargas</button><p id="usdt-message" role="status">'+escapeHtml(message)+'</p>';
+ const create=$('usdt-create'),check=$('usdt-check'),refresh=$('usdt-refresh'),select=$('usdt-order');
+ if(create)create.onclick=()=>usdtCrearSolicitud();if(check)check.onclick=()=>usdtComprobar();if(refresh)refresh.onclick=()=>usdtConsultar(true);
+ if(select)select.onchange=()=>{const tx=$('usdt-tx');if(tx)tx.value='';renderUsdt();};
+ for(const [id,type] of [['usdt-copy-address','address'],['usdt-copy-amount','amount']]){const b=$(id);if(b)b.onclick=()=>usdtCopiar(type);}
+ if(active&&s.deposits&&typeof qrcode==='function'){const qr=qrcode(0,'M');qr.addData(s.destination);qr.make();$('usdt-qr').innerHTML=qr.createSvgTag({cellSize:3,margin:12,scalable:false});}
+ for(const b of [create,check,refresh,select,$('usdt-copy-address'),$('usdt-copy-amount')])if(b)b.disabled=busy;
+ if(RECARGA_GOLDEN_SOLICITADA&&s){const amount=$('usdt-amount');if(amount){amount.value=String(Math.min(10000,RECARGA_GOLDEN_SOLICITADA.faltan));amount.scrollIntoView?.({block:'nearest'});amount.focus?.({preventScroll:true});RECARGA_GOLDEN_SOLICITADA=null;}}
 }
 function abrirCompra(destino){
   const directos={inicio:'ov-tienda',vip:'ov-vip',objetos:'ov-reliquias'};

@@ -87,7 +87,7 @@ async function equipoAcceso(){
 let USDT_ESTADO=null,USDT_CARGANDO=false,USDT_OCUPADO=false;
 async function usdtInvocar(usdt){
  const uid=UID;if(!sb||!uid||!CARGA_OK||SOLO_LOCAL)throw Error('Inicia sesión y guarda tu granja para continuar');
- const {data,error}=await conTope(sb.functions.invoke('usdt',{body:{cuenta:uid,usdt}}),30000,'wallet y depósitos');
+ const {data,error}=await conTope(sb.functions.invoke('usdt',{body:{cuenta:uid,usdt}}),30000,'recargas USDT');
  if(UID!==uid)throw Error('La cuenta cambió');
  if(error){let body;try{body=await error.context?.json();}catch{}throw Error(body?.error||'No se pudo consultar el servidor');}
  if(!data?.ok)throw Error(data?.error||'Operación no confirmada');return data;
@@ -100,49 +100,37 @@ async function usdtConsultar(force=false){
  catch(e){if(typeof usdtMensaje==='function')usdtMensaje(e.message);}
  finally{USDT_CARGANDO=false;if(typeof renderUsdt==='function')renderUsdt();}
 }
-async function usdtConWallet(accion){
- if(USDT_OCUPADO)return;USDT_OCUPADO=true;const uid=UID;
- try{
-  const provider=window.ethereum;if(!provider?.request)throw Error('Abre el juego con una wallet compatible, como MetaMask');
-  const accounts=await provider.request({method:'eth_requestAccounts'}),address=String(accounts?.[0]||'').toLowerCase();
-  if(UID!==uid)throw Error('La cuenta cambió');
-  if(accion==='vincular'){
-   const proof=await usdtInvocar({accion:'challenge',address});
-   const message='0x'+Array.from(new TextEncoder().encode(proof.message),b=>b.toString(16).padStart(2,'0')).join('');
-   const signature=await provider.request({method:'personal_sign',params:[message,address]});
-   if(UID!==uid)throw Error('La cuenta cambió');
-   await usdtInvocar({accion:'bind',nonce:proof.nonce,signature});usdtMensaje('Wallet vinculada a tu cuenta.');
-  }else{
-   await usdtConsultar(true);const s=USDT_ESTADO;
-   if(!s||s.uid!==uid||!s.deposits)throw Error('Los depósitos todavía no están abiertos. No envíes fondos.');
-   if(address!==s.address)throw Error('Selecciona en tu wallet la dirección vinculada a esta cuenta');
-   const amount=Number(document.getElementById('usdt-amount')?.value);
-   if(!Number.isSafeInteger(amount)||amount<1||amount>10000)throw Error('Elige entre 1 y 10.000 USDT enteros');
-   const chain=await provider.request({method:'eth_chainId'});
-   if(chain!=='0x38')await provider.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x38'}]});
-   if(UID!==uid)throw Error('La cuenta cambió');
-   const active=await provider.request({method:'eth_accounts'});
-   if(String(active?.[0]||'').toLowerCase()!==address||await provider.request({method:'eth_chainId'})!=='0x38')throw Error('La wallet o la red cambiaron; vuelve a intentarlo');
-   const data='0xa9059cbb'+s.destination.slice(2).padStart(64,'0')+(BigInt(amount)*10n**18n).toString(16).padStart(64,'0');
-   const tx=await provider.request({method:'eth_sendTransaction',params:[{from:address,to:s.token,data,value:'0x0'}]});
-   try{localStorage.setItem('gf-usdt-tx-'+SB_REF+'-'+uid,tx);}catch{}
-   if(UID!==uid)return;
-   const input=document.getElementById('usdt-tx');if(input)input.value=tx;
-   usdtMensaje('Pago enviado. Espera 120 confirmaciones y pulsa Comprobar depósito. No lo envíes de nuevo.');
-  }
-  if(accion==='vincular')await usdtConsultar(true);
- }catch(e){if(UID===uid)usdtMensaje(e.code===4001?'Operación cancelada en la wallet.':e.message||'No se pudo completar la operación');}
+// Deposits never request wallet connection, signatures or transactions.
+async function usdtCrearSolicitud(){
+ if(USDT_OCUPADO)return;const uid=UID,amount=Number(document.getElementById('usdt-amount')?.value);
+ if(!Number.isSafeInteger(amount)||amount<1||amount>10000){usdtMensaje('Elige entre 1 y 10.000 Golden enteros');return;}
+ USDT_OCUPADO=true;
+ try{await usdtInvocar({accion:'create',amount});if(UID===uid){const select=document.getElementById('usdt-order');if(select)select.value='';await usdtConsultar(true);usdtMensaje('Solicitud preparada. Copia el importe exacto, incluidos todos los decimales.');}}
+ catch(e){if(UID===uid)usdtMensaje(e.message);}
  finally{USDT_OCUPADO=false;if(typeof renderUsdt==='function')renderUsdt();}
 }
+async function usdtCopiar(tipo){
+ const s=USDT_ESTADO?.uid===UID?USDT_ESTADO:null;
+ const id=document.getElementById('usdt-order')?.value;
+ const o=s?.orders?.find(o=>o.id===id);
+ const text=tipo==='address'?s?.destination:o?.amount;
+ if(!text)return;
+ try{await navigator.clipboard.writeText(text);usdtMensaje(tipo==='address'?'Dirección copiada.':'Importe exacto copiado: '+text+' USDT.');}
+ catch(e){const input=document.getElementById(tipo==='address'?'usdt-destination':'usdt-exact');input?.focus();input?.select();usdtMensaje('Selecciona y copia el dato.');}
+}
 async function usdtComprobar(){
- if(USDT_OCUPADO)return;const input=document.getElementById('usdt-tx'),tx=String(input?.value||'').trim().toLowerCase();
- if(!/^0x[0-9a-f]{64}$/.test(tx)){usdtMensaje('Pega el identificador de la transacción (0x y 64 caracteres).');return;}
- try{localStorage.setItem('gf-usdt-tx-'+SB_REF+'-'+UID,tx);}catch{}
- USDT_OCUPADO=true;const uid=UID;try{
-  const result=await economiaSolicitar({usdt:{accion:'claim',tx}});
-  if(UID!==uid)return;
-  if(result?.ok){usdtMensaje('Depósito confirmado: +'+fmtGolden(result.cobro)+' Golden'+(result.repetido?' (ya acreditado)':'')+'.');await usdtConsultar(true);}
- }finally{USDT_OCUPADO=false;if(typeof renderUsdt==='function')renderUsdt();}
+ if(USDT_OCUPADO)return;
+ const uid=UID,order=document.getElementById('usdt-order')?.value;
+ let tx=String(document.getElementById('usdt-tx')?.value||'').trim().toLowerCase();
+ if(!order){usdtMensaje('Crea o selecciona una solicitud.');return;}
+ if(tx&&!/^0x[0-9a-f]{64}$/.test(tx)){usdtMensaje('El identificador de transacción no es válido.');return;}
+ USDT_OCUPADO=true;
+ try{
+  if(!tx){const found=await usdtInvocar({accion:'find',order});if(UID!==uid)return;if(found.pending){usdtMensaje(found.message);return;}tx=found.tx;const input=document.getElementById('usdt-tx');if(input)input.value=tx;}
+  const result=await economiaSolicitar({usdt:{accion:'claim',order,tx}});
+  if(UID===uid&&result?.ok){await usdtConsultar(true);usdtMensaje('Depósito confirmado: +'+Number(result.cobro).toFixed(6)+' Golden'+(result.repetido?' (ya acreditado)':'')+'.');}
+ }catch(e){if(UID===uid)usdtMensaje(e.message||'No se pudo comprobar; no repitas el pago.');}
+ finally{USDT_OCUPADO=false;if(typeof renderUsdt==='function')renderUsdt();}
 }
 function diarioSolicitar(){return economiaSolicitar({diario:{accion:'reclamar'}});}
 async function visitaConsultar(accion,destino){
