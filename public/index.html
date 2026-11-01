@@ -1580,6 +1580,21 @@
   #hudbar{overflow-x:auto;scrollbar-width:thin}
 }
 
+
+ /* Dropdown: one consistent icon system, without shortcut labels. */
+ #gmenu .gmitems{width:264px;max-width:calc(100vw - 16px);padding:6px;background:linear-gradient(110deg,#57351f,#392618);border:2px solid #bd8a49;border-radius:8px;box-shadow:0 5px 18px #0008;box-sizing:border-box}
+ #gmenu .menu-seccion{padding:10px 8px 5px;background:none;border:0;color:#dcbf88;font-size:10px;letter-spacing:.09em}
+ #gmenu .menu-seccion:first-child{padding-top:4px}
+ #gmenu .gmi{width:100%;min-height:36px;box-sizing:border-box;gap:9px;padding:5px 8px;border:1px solid transparent;border-image:none;border-radius:4px;background:transparent;color:#fff0ce;font-size:12px;font-weight:700;text-shadow:0 1px 1px #201208;line-height:1.25;flex-shrink:0}
+ #gmenu .gmi:hover{background:#ffffff12;border-color:#b98b4e}
+ #gmenu .gmi:focus-visible{background:#ffffff12;outline:2px solid #ffe08a;outline-offset:-2px}
+ #gmenu .menu-icon{width:24px;height:24px;display:grid;place-items:center;flex-shrink:0;color:#f1cb81;background:#21170e66;border:1px solid #aa7c444d;border-radius:4px}
+ #gmenu .menu-icon svg{width:18px;height:18px}
+ #gmenu .menu-label{flex:1;min-width:0}
+ #gmenu .menu-badge{margin-left:auto;flex-shrink:0;padding:2px 5px;border-radius:4px;background:#20150e;color:#f8d991;font-size:10px;font-weight:700}
+ #gmenu .menu-badge:empty{display:none}
+ #gmenu #gm-fijar[aria-pressed="true"] .menu-icon{color:#fff1b3;border-color:#e1b65e}
+
 </style>
 </head>
 <body>
@@ -2242,32 +2257,32 @@
   <div class="gmenu collapsed" id="gmenu">
     <div class="gmitems" role="navigation" aria-label="Menús del juego">
       <div class="menu-seccion">Mi granja</div>
-      <button class="gmi" title="Objetos, semillas y materiales que llevas." data-panel="ov-inv"><span class="ic" aria-hidden="true">🎒</span> Inventario <b class="key">I</b></button>
-      <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="menu-opcion"><span class="ic" aria-hidden="true">🏚</span> Cobertizo <b class="key" id="gm-cob"></b><small>Colocar · capacidad</small></span></button>
-      <button class="gmi" title="Elegir armas, armaduras y herramientas." data-panel="ov-equip"><span class="menu-opcion"><span class="ic" aria-hidden="true">⚔️</span> Equipo <b class="key">P</b><small>Armas · herramientas</small></span></button>
-      <button class="gmi" title="Niveles de cultivo, tala, minería y combate." data-panel="ov-skills"><span class="ic" aria-hidden="true">📊</span> Habilidades <b class="key">X</b></button>
-      <button class="gmi" title="Elegir a qué zona viajar." data-panel="ov-mapa"><span class="ic" aria-hidden="true">🗺️</span> Mapa <b class="key">N</b></button>
+      <button class="gmi" title="Objetos, semillas y materiales que llevas." data-panel="ov-inv"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8V6a6 6 0 0 1 12 0v2 M4 8h16v13H4z M8 12h8v5H8z"/></svg></span><span class="menu-label">Inventario</span></button>
+      <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7 M5 9v12h14V9 M9 21v-7h6v7"/></svg></span><span class="menu-label">Cobertizo</span><b class="menu-badge" id="gm-cob"></b></button>
+      <button class="gmi" title="Elegir armas, armaduras y herramientas." data-panel="ov-equip"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 18 M19 3L5 21 M3 17l4 4 M17 21l4-4"/></svg></span><span class="menu-label">Equipo</span></button>
+      <button class="gmi" title="Niveles de cultivo, tala, minería y combate." data-panel="ov-skills"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11h4v9 M10 20V6h4v14 M16 20V3h4v17"/></svg></span><span class="menu-label">Habilidades</span></button>
+      <button class="gmi" title="Elegir a qué zona viajar." data-panel="ov-mapa"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2z M9 3v16 M15 5v16"/></svg></span><span class="menu-label">Mapa</span></button>
       <div class="menu-seccion">Objetivos y premios</div>
-      <button class="gmi" title="Ver objetivos y reclamar misiones diarias." data-panel="ov-objetivos"><span class="menu-opcion"><span class="ic" aria-hidden="true">🎯</span> Progreso <b class="key" id="gm-cam"></b><small>Objetivos · misiones diarias</small></span></button>
-      <button class="gmi" title="Ver y reclamar la recompensa diaria." data-panel="ov-paquete"><span class="ic" aria-hidden="true">🎁</span> Premio diario <b class="key">G</b></button>
-      <button class="gmi" title="Seguir metas y reclamar sus premios." data-panel="ov-logros"><span class="ic" aria-hidden="true">🏆</span> Logros <b class="key" id="gm-log"></b></button>
-      <button class="gmi destacada" title="Consultar las tareas de hoy." data-panel="ov-misiones"><span class="ic" aria-hidden="true">📜</span> Misiones de hoy <b class="key" id="gm-mis">0/3</b></button>
-      <button class="gmi" title="Consultar la colección de peces." data-panel="ov-album"><span class="ic" aria-hidden="true">📖</span> Álbum <b class="key" id="gm-alb"></b></button>
-      <button class="gmi" title="Consultar el pase de batalla." data-panel="ov-pass"><span class="ic" aria-hidden="true">⭐</span> Pase de Batalla</button>
+      <button class="gmi" title="Ver objetivos y reclamar misiones diarias." data-panel="ov-objetivos"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-8-8 M12 8a4 4 0 1 0 4 4 M12 12l9-9"/></svg></span><span class="menu-label">Progreso</span><b class="menu-badge" id="gm-cam"></b></button>
+      <button class="gmi" title="Ver y reclamar la recompensa diaria." data-panel="ov-paquete"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18v4H3z M5 12v9h14v-9 M12 8v13 M12 8C3 8 6 0 12 8 M12 8c9 0 6-8 0 0"/></svg></span><span class="menu-label">Premio diario</span></button>
+      <button class="gmi" title="Seguir metas y reclamar sus premios." data-panel="ov-logros"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v7a5 5 0 0 1-10 0z M7 5H3v3a4 4 0 0 0 4 4 M17 5h4v3a4 4 0 0 1-4 4 M12 15v6 M8 21h8"/></svg></span><span class="menu-label">Logros</span><b class="menu-badge" id="gm-log"></b></button>
+      <button class="gmi destacada" title="Consultar las tareas de hoy." data-panel="ov-misiones"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4H4v17h16V4h-4 M8 3h8v4H8z M8 12l2 2 5-5 M8 18h8"/></svg></span><span class="menu-label">Misiones de hoy</span><b class="menu-badge" id="gm-mis">0/3</b></button>
+      <button class="gmi" title="Consultar la colección de peces." data-panel="ov-album"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h7l2 2 2-2h7v16h-7l-2 2-2-2H3z M12 6v16"/></svg></span><span class="menu-label">Álbum</span><b class="menu-badge" id="gm-alb"></b></button>
+      <button class="gmi" title="Consultar el pase de batalla." data-panel="ov-pass"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg></span><span class="menu-label">Pase de Batalla</span></button>
       <div class="menu-seccion">Economía</div>
-      <button class="gmi" title="Comprar semillas y vender tus cultivos por Plata." data-panel="ov-market"><span class="ic" aria-hidden="true">🌱</span> Mercado de cultivos</button>
-      <button class="gmi" title="Comprar objetos que producen Plata y cobrar su producción." data-panel="ov-reliquias"><span class="ic" aria-hidden="true">🌾</span> Objetos de Granja</button>
-      <button class="gmi" title="Consultar wallet, depósitos USDT y Golden." data-panel="ov-banco"><span class="ic" aria-hidden="true">🏦</span> Banco</button>
-      <button class="gmi" title="Comprar y vender con otros jugadores." data-panel="ov-p2p"><span class="menu-opcion"><span class="ic" aria-hidden="true">🤝</span> Comercio entre jugadores<small>Comprar · vender</small></span></button>
-      <button class="gmi" title="Ver ventajas y comprar o renovar VIP." data-panel="ov-vip"><span class="ic" aria-hidden="true">👑</span> VIP</button>
+      <button class="gmi" title="Comprar semillas y vender tus cultivos por Plata." data-panel="ov-market"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18 M4 10V6l2-3h12l2 3v4 M5 10v11h14V10 M9 21v-7h6v7"/></svg></span><span class="menu-label">Mercado de cultivos</span></button>
+      <button class="gmi" title="Comprar objetos que producen Plata y cobrar su producción." data-panel="ov-reliquias"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-6 9 6v12z M7 21v-9h10v9 M7 7V3h4"/></svg></span><span class="menu-label">Objetos de Granja</span></button>
+      <button class="gmi" title="Consultar wallet, depósitos USDT y Golden." data-panel="ov-banco"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8l10-5 10 5z M4 11v7 M9 11v7 M15 11v7 M20 11v7 M2 21h20"/></svg></span><span class="menu-label">Banco</span></button>
+      <button class="gmi" title="Comprar y vender con otros jugadores." data-panel="ov-p2p"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h15l-4-4 M18 8l-4 4 M21 16H6l4-4 M6 16l4 4"/></svg></span><span class="menu-label">Comercio entre jugadores</span></button>
+      <button class="gmi" title="Ver ventajas y comprar o renovar VIP." data-panel="ov-vip"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l5 4 4-7 4 7 5-4-2 13H5z"/></svg></span><span class="menu-label">VIP</span></button>
       <div class="menu-seccion">Comunidad</div>
-      <button class="gmi" title="Visitar granjas con VIP activo." data-panel="ov-visitas"><span class="ic" aria-hidden="true">🌱</span> Visitas VIP</button>
-      <button class="gmi" title="Consultar la clasificación de jugadores." data-panel="ov-lb"><span class="ic" aria-hidden="true">🏅</span> Ranking <b class="key">L</b></button>
-      <button class="gmi" title="Gestionar el clan y sus asaltos." data-panel="ov-clan"><span class="ic" aria-hidden="true">🛡️</span> Clan</button>
-      <button class="gmi" title="Elegir apariencias y adornos." data-panel="ov-cos"><span class="ic" aria-hidden="true">🎨</span> Cosméticos</button>
+      <button class="gmi" title="Visitar granjas con VIP activo." data-panel="ov-visitas"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8 M5 10v11h14V10 M9 21v-7h6v7 M12 6v4 M10 8h4"/></svg></span><span class="menu-label">Visitas VIP</span></button>
+      <button class="gmi" title="Consultar la clasificación de jugadores." data-panel="ov-lb"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21v-7h6v7 M9 21V8h6v13 M15 21V3h6v18"/></svg></span><span class="menu-label">Ranking</span></button>
+      <button class="gmi" title="Gestionar el clan y sus asaltos." data-panel="ov-clan"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 3v6c0 5-9 9-9 9s-9-4-9-9V6z M8 12l3 3 5-6"/></svg></span><span class="menu-label">Clan</span></button>
+      <button class="gmi" title="Elegir apariencias y adornos." data-panel="ov-cos"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 1-4 2 2 0 0 1 1-4h2a3 3 0 0 0 3-3c0-4-4-7-9-7z M7 9h.1 M11 6h.1 M16 7h.1"/></svg></span><span class="menu-label">Cosméticos</span></button>
       <div class="menu-seccion">Opciones</div>
-      <button class="gmi" title="Ajustar sonido, controles y opciones." data-panel="ov-config"><span class="ic" aria-hidden="true">⚙️</span> Configuración <b class="key">C</b></button>
-      <button class="gmi" id="gm-fijar"><span class="ic"></span> 📌 Menú fijo: No</button>
+      <button class="gmi" title="Ajustar sonido, controles y opciones." data-panel="ov-config"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6"/></svg></span><span class="menu-label">Configuración</span></button>
+      <button class="gmi" id="gm-fijar"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l-1 6 4 4H5l4-4z M12 13v9"/></svg></span><span class="menu-label">Menú fijo</span><span class="menu-badge" id="gm-fijar-estado">No</span></button>
     </div>
   </div>
 

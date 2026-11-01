@@ -6586,7 +6586,7 @@ function initUI() {
   // ni al hacer clic afuera. La preferencia sobrevive al F5 (localStorage).
   window.menuFijo = () => { try { return localStorage.getItem("gmenuFijo") === "1"; } catch (e) { return false; } };
   const gmFijar = $("gm-fijar");
-  const gmFijarTxt = () => { if (gmFijar) gmFijar.innerHTML = '<span class="ic"></span> ' + (menuFijo() ? "📌 Menú fijo: Sí" : "📌 Menú fijo: No"); };
+  const gmFijarTxt = () => { if (!gmFijar) return; const fijo = menuFijo(); gmFijar.setAttribute("aria-pressed", String(fijo)); const estado = $("gm-fijar-estado"); if (estado) estado.textContent = fijo ? "Sí" : "No"; };
   if (gmFijar) { gmFijarTxt(); gmFijar.onclick = () => { try { localStorage.setItem("gmenuFijo", menuFijo() ? "0" : "1"); } catch (e) {} gmFijarTxt(); toast(menuFijo() ? "El menú queda desplegado" : "El menú se recoge solo"); }; }
   if (menuFijo()) gmenu.classList.remove("collapsed");
   placeMenuPc(); syncRecientesMenuPc();
