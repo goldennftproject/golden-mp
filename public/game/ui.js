@@ -1,5 +1,15 @@
 /* Golden Farm · UI (overlay HTML sobre el canvas de Phaser) */
 function $(id) { return document.getElementById(id); }
+function syncSonidoBotones(){
+ const activo=!!(window.sfxIsOn&&sfxIsOn()),hud=$('hud-sound'),cfg=$('cfg-sound');
+ if(hud){hud.classList.toggle('sound-muted',!activo);hud.setAttribute('aria-pressed',String(activo));hud.title=activo?'Silenciar sonido':'Activar sonido';hud.setAttribute('aria-label',hud.title);}
+ if(cfg)cfg.textContent=activo?'Sonido: Activado':'Sonido: Desactivado';
+}
+function alternarSonido(){
+ if(typeof window.sfxOn!=='function')return;
+ sfxOn(!(window.sfxIsOn&&sfxIsOn()));syncSonidoBotones();
+ if(window.sfxIsOn&&sfxIsOn()&&window.sfx)sfx('click');
+}
 function setTxt(id, v) { const e = $(id); if (e) e.textContent = v; }
 
 /* ---- toast / log ---- */
@@ -6711,8 +6721,8 @@ function initUI() {
       toast(guiaOn() ? "Guía de objetivos activada" : "Guía apagada — juega como quieras (los objetivos premian igual)");
     }; } }
   const sndBtn = $("cfg-sound");
-  const sndLabel = () => { if (sndBtn) sndBtn.textContent = (window.sfxIsOn && sfxIsOn()) ? "Sonido: Activado" : "Sonido: Desactivado"; };
-  if (sndBtn) { sndLabel(); sndBtn.onclick = () => { if (window.sfxOn) sfxOn(!(window.sfxIsOn && sfxIsOn())); sndLabel(); if (window.sfx) sfx("click"); }; }
+  syncSonidoBotones();
+  if(sndBtn)sndBtn.onclick=alternarSonido;
   const cr = $("cfg-reset"); if (cr) cr.onclick = doFarmReset;
   const ed = $("edit-done"); if (ed) ed.onclick = () => setEditMode(false);
   // 13/8: botón Cancelar del modo colocar — visible solo mientras hay algo "en la mano"

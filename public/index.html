@@ -35,6 +35,10 @@
   #loading .loading-brand .gf-logo{position:absolute;left:0;top:50%;transform:translateY(-50%);width:100%;height:auto}
   .hudbar{position:fixed;left:0;top:0;right:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;pointer-events:none}
   .hudbar>*{pointer-events:auto}
+  #hud-sound{position:relative;min-width:36px;padding:1px 6px;line-height:1;cursor:pointer}
+  #hud-sound span{font-size:22px}
+  #hud-sound.sound-muted span{opacity:.55}
+  #hud-sound.sound-muted::after{content:"";position:absolute;left:20%;right:20%;top:48%;height:2px;background:#f5d0ae;box-shadow:0 0 2px #321609;transform:rotate(-45deg);pointer-events:none}
   #guardado-manual{position:fixed;right:16px;bottom:16px;z-index:8}
   #gm-guardar{display:grid;place-items:center;width:44px;height:44px;padding:8px;border:3px solid #f4e7c0;border-image:none;border-radius:50%;background:#766144;color:#fff4ce;box-shadow:0 2px 0 #382b20;cursor:pointer}
   #gm-guardar svg{width:24px;height:24px;pointer-events:none}
@@ -1560,7 +1564,7 @@
   #hudbar .hud-xp-label,#hudbar .hpeta{display:none}
   #hudbar #lvlpill{order:1}#hudbar #energia-granja-pill{order:2}
   #hudbar .divisa-hud{order:3}#hudbar #hppill{order:4}#hudbar #cbar{order:5}
-  #hudbar #stampill{order:6}#hudbar #menu-btn{order:7;margin-left:auto;flex-shrink:0}
+  #hudbar #stampill{order:6}#hudbar #hud-sound{order:7;margin-left:auto;flex-shrink:0}#hudbar #menu-btn{order:8;margin-left:0;flex-shrink:0}
   #hudbar #buffpill{max-width:calc(100vw - 16px);flex-wrap:wrap;pointer-events:auto}
 }
 @media(min-width:641px) and (max-width:1190px){
@@ -1607,6 +1611,7 @@
       <div class="pill hppill" id="hppill" title="Vida"><span class="hpcor">❤</span><span class="k">Vida</span><span class="hpbarw"><span class="hpfill" id="hp-fill"></span></span><b id="s-hp">100/100</b><span class="k hpeta" id="hp-eta"></span></div>
       <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los enemigos derrotados, sin importar el arma"><span class="k">Combate · Nv.</span><b id="c-lvl">1</b><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k">XP</span><span class="k" id="c-xp">0/100</span></div>
       <div class="pill" data-mvp-hud><span class="k">Semana</span><b id="s-week">1</b></div>
+      <button class="btnpill" id="hud-sound" type="button" title="Silenciar sonido" aria-label="Silenciar sonido" aria-pressed="true" onclick="alternarSonido()"><span aria-hidden="true">♫</span></button>
       <button class="btnpill" id="menu-btn">☰ Menú</button>
     </div>
     <!-- 2/9 (reporte de dirección: « al abrir el paquete del daily se movió la barra de arriba »).

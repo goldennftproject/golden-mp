@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Botón de sonido en el HUD — 01/11/2026
+
+Dirección pide activar o silenciar desde la barra superior. Botón musical compacto junto a Menú, con trazo de silencio, tooltip y estado accesible. Comparte sfxOn y gf_sound con Configuración; ambos controles se sincronizan y la preferencia persiste al recargar. Las notas diferidas de efectos no suenan si se ha silenciado antes de su ejecución. Sin cambios de juego ni guardado.
+
+
 ## Reapertura de registro e ingreso — 01/11/2026
 
 Dirección autoriza reactivar registro e ingreso para todos. Se coordinan src/alpha-access.json gameOpen=true y golden_internal.game_access.game_open=true sin cambiar usuarios, granjas ni privilegios. Depósitos permanecen cerrados hasta autorización separada. La pausa reversible y sus pruebas se conservan.

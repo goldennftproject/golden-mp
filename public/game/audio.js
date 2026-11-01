@@ -9,6 +9,7 @@
   }
   function env(g, t0, a, d, v) { g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(v, t0 + a); g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + d); }
   function tone(freq, type, a, d, v, slide) {
+    if (!on) return;
     const c = ac(); if (!c) return;
     const o = c.createOscillator(), g = c.createGain();
     o.type = type; o.frequency.setValueAtTime(freq, c.currentTime);
@@ -17,6 +18,7 @@
     o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + a + d + 0.05);
   }
   function noise(d, v, fLow, fHigh) {
+    if (!on) return;
     const c = ac(); if (!c) return;
     const n = Math.floor(c.sampleRate * d), b = c.createBuffer(1, n, c.sampleRate), ch = b.getChannelData(0);
     for (let i = 0; i < n; i++) ch[i] = Math.random() * 2 - 1;
