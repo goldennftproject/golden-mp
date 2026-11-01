@@ -54,6 +54,8 @@
   @media(prefers-reduced-motion:reduce){#gm-guardar[aria-busy="true"] svg{animation:none}}
   #gm-guardado:empty{display:none}
   #gm-guardado{position:absolute;right:0;bottom:54px;width:260px;max-width:calc(100vw - 32px);box-sizing:border-box;padding:8px 12px;border:1px solid #c9b88c;border-radius:8px;background:#302b20;color:#fff4ce;font-size:12px;pointer-events:none}
+  #jugadores-online{gap:5px;font-size:12px;white-space:nowrap}
+  .presencia-punto{width:7px;height:7px;border-radius:50%;background:#9cdd6a;box-shadow:0 0 3px #18280e}
   .brand h1{margin:0;font-size:20px;letter-spacing:2px;color:var(--gold);font-weight:800}
   .hud{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
   /* 2/9: la repisa de las píldoras que van y vienen (estamina, buffs de comida). Es ABSOLUTA
@@ -1558,7 +1560,7 @@
 /* PC: los recursos permanentes comparten una fila; sólo los efectos temporales flotan. */
 @media(min-width:641px){
   #hudbar{flex-wrap:nowrap;justify-content:flex-start;gap:5px;padding:3px 8px;min-height:54px}
-  #hudbar .brand{order:0;flex:0 0 180px;min-width:0}
+  #hudbar .brand{order:0;flex:0 0 auto;min-width:0}
   #hudbar .hud{display:contents}
   #hudbar .pill,#hudbar .btnpill{flex:0 0 auto;min-width:max-content;padding:1px 5px;gap:4px;font-size:12px}
   #hudbar .pill .k{font-size:12px}
@@ -1572,12 +1574,12 @@
   #hudbar #buffpill{max-width:calc(100vw - 16px);flex-wrap:wrap;pointer-events:auto}
 }
 @media(min-width:641px) and (max-width:1190px){
-  #hudbar .brand{flex-basis:145px}#hudbar .brand h1:has(.gf-logo){width:145px;height:42px}#hudbar .brand .gf-logo{width:145px}
+  #hudbar .brand{flex-basis:auto}#hudbar .brand h1:has(.gf-logo){width:145px;height:42px}#hudbar .brand .gf-logo{width:145px}
   #hudbar .cbarw,#hudbar .hpbarw{display:none}
   #hudbar .pill,#hudbar .btnpill{padding:1px 3px;gap:3px;border-width:6px}
 }
 @media(min-width:641px) and (max-width:1450px){
-  #hudbar .brand{flex-basis:155px}#hudbar .brand h1:has(.gf-logo){width:155px;height:44px}#hudbar .brand .gf-logo{width:155px}
+  #hudbar .brand{flex-basis:auto}#hudbar .brand h1:has(.gf-logo){width:155px;height:44px}#hudbar .brand .gf-logo{width:155px}
   #hudbar .hpbarw,#hudbar #stampill .cbarw{display:none}
 }
 @media(min-width:641px) and (max-width:1100px){
@@ -1611,7 +1613,7 @@
 
   <div class="hudbar" id="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1><img class="gf-logo" src="assets/golden-farm-alpha-v1.png" alt="Golden Farm · Alpha" width="1974" height="797"></h1>
-      <div class="pill" data-mvp-hud title="Ventanas del juego conectadas ahora"><span class="k">Ventanas conectadas</span><b id="s-online">1</b></div>
+      <div class="pill" id="jugadores-online" title="Cuentas conectadas al juego. Varias pestañas de una cuenta cuentan una sola vez."><span class="presencia-punto" aria-hidden="true"></span><span class="k">En línea</span><b id="s-online">—</b></div>
       <!-- 14/9: el botón de PRUEBAS y el modo testeo se eliminaron (portero en modo rechazo) -->
     </div>
     <div class="hud">

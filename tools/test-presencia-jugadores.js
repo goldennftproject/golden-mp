@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {jugadorPresencia,contarJugadores}=require('../src/presencia');
+const a='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',b='bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+assert.equal(jugadorPresencia('not-a-player'),null);assert.equal(jugadorPresencia([a]),null);assert.equal(jugadorPresencia(a.toUpperCase()),a);
+const clients=new Set([{jugador:a},{jugador:a},{jugador:b},{jugador:null}]);assert.equal(contarJugadores(clients),2);
+clients.delete([...clients][0]);assert.equal(contarJugadores(clients),2);clients.delete([...clients][0]);assert.equal(contarJugadores(clients),1);
+const streams=[],el={textContent:'—'};
+const ctx={UID:null,CARGA_OK:false,SOLO_LOCAL:false,document:{getElementById:()=>el},encodeURIComponent,Number};
+ctx.EventSource=function(url){this.url=url;this.close=()=>this.closed=true;streams.push(this);};ctx.window=ctx;
+vm.createContext(ctx);let src=fs.readFileSync('public/game/update.js','utf8');src=src.slice(src.indexOf('  let current'),src.indexOf('  async function check'));
+vm.runInContext(src,ctx);ctx.listen();assert.equal(streams[0].url,'/events');
+ctx.UID=a;ctx.CARGA_OK=true;ctx.listen();assert.equal(streams[0].closed,true);assert.equal(streams[1].url,'/events?player='+a);
+ctx.listen();assert.equal(streams.length,2,'sin reconexiones ni consultas periódicas mientras no cambia la cuenta');
+streams[1].onmessage({data:JSON.stringify({players:2})});assert.equal(el.textContent,2);
+streams[1].onerror();assert.equal(el.textContent,'—');ctx.UID=null;ctx.listen();assert.equal(streams[1].closed,true);
+console.log('OK: cuentas únicas, pestañas múltiples, anónimos, desconexión, sesión y canal SSE.');

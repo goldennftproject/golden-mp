@@ -4,17 +4,25 @@
    al instante: push exacto. El sondeo queda de respaldo por si el stream no anda. */
 (function () {
   let current = null, shown = false, burstUntil = 0, timer = null;
+  let presenciaStream = null, presenciaId = null;
+  function cuentaPresencia() {
+    return typeof UID !== 'undefined' && UID && typeof CARGA_OK !== 'undefined' && CARGA_OK &&
+      typeof SOLO_LOCAL !== 'undefined' && !SOLO_LOCAL ? UID : '';
+  }
 
   // --- push del server (SSE): detección instantánea tras cada deploy ---
   function listen() {
     if (!window.EventSource) return;   // navegador viejísimo: queda el sondeo
+    const id = cuentaPresencia();
+    if (presenciaStream && presenciaId === id) return;
+    if (presenciaStream) presenciaStream.close();
+    presenciaId = id;
     try {
-      const es = new EventSource("/events");
+      const es = presenciaStream = new EventSource('/events' + (id ? '?player=' + encodeURIComponent(id) : ''));
       es.onmessage = (ev) => {
         try {
-          const { v, online } = JSON.parse(ev.data);
-          // contador de ventanas conectadas del HUD (no equivale a personas únicas)
-          if (typeof online === "number") { const el = document.getElementById("s-online"); if (el) el.textContent = online; }
+          const { v, players } = JSON.parse(ev.data);
+          if (Number.isInteger(players) && players >= 0) { const el = document.getElementById("s-online"); if (el) el.textContent = players; }
           if (!v) return;
           window.__gfServerVersion=v;
           if (current === null) { current = v; anotar("canal en vivo: versión inicial " + v.slice(0, 7)); return; }   // versión con la que cargaste
@@ -22,7 +30,8 @@
         } catch (e) {}
       };
       // si el stream muere, EventSource se reconecta solo (retry: 3s); no hay que hacer nada
-    } catch (e) {}
+      es.onerror = () => { const el = document.getElementById('s-online'); if (el) el.textContent = '—'; };
+    } catch (e) { presenciaStream = null; }
   }
 
   async function check() {
@@ -145,5 +154,9 @@
 
   // push en vivo desde el arranque + sondeo de respaldo (cada 15s; ráfaga si el server no contesta)
   listen();
+  // Sólo comprueba cambios de cuenta en memoria. No sondea el servidor.
+  setInterval(listen, 5000);
+  window.addEventListener('pagehide', () => { if (presenciaStream) presenciaStream.close(); presenciaStream = null; });
+  window.addEventListener('pageshow', listen);
   setTimeout(() => { check().then(schedule); }, 3000);
 })();
