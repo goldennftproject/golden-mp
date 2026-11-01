@@ -1,0 +1,22 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
+const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(process.cwd());
+const doc=new JSDOM(fs.readFileSync('public/index.html','utf8')).window.document;c.document=doc;c.$=id=>doc.getElementById(id);
+const run=s=>vm.runInContext(s,c);run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;");
+const o={id:'11111111-1111-4111-8111-111111111111',amount:'10.000001',expires_at:new Date(Date.now()+60000).toISOString()};
+run('USDT_ESTADO='+JSON.stringify({uid:'qa',deposits:true,destination:'0x'+'1'.repeat(40),orders:[o],history:[]}));
+c.renderUsdt();const input=doc.getElementById('usdt-tx');assert(doc.getElementById('usdt-paste'));
+doc.getElementById('banco-interno').hidden=true;c.isOpen=()=>true;c.bancoCotizacionValida=()=>false;
+input.focus();input.value='partial';input.setSelectionRange(2,2);
+for(let i=0;i<100;i++)c.bancoTick();
+assert.equal(doc.getElementById('usdt-tx'),input);assert.equal(doc.activeElement,input);assert.equal(input.selectionStart,2);
+(async()=>{
+ let submits=0,read=async()=> '  0x'+'A'.repeat(64)+'  ';
+ const paste=vm.createContext({UID:'qa',USDT_OCUPADO:false,document:doc,navigator:{clipboard:{readText:()=>read()}},usdtMensaje:t=>doc.getElementById('usdt-message').textContent=t});
+ const source=fs.readFileSync('public/game/save.js','utf8');
+ vm.runInContext(source.slice(source.indexOf('async function usdtPegarTransaccion(){'),source.indexOf('async function usdtComprobar(){')),paste);
+ await paste.usdtPegarTransaccion();assert.equal(input.value,'0x'+'a'.repeat(64));assert.equal(submits,0);assert.match(doc.getElementById('usdt-message').textContent,/Transacción pegada/);
+ read=async()=> 'bad';await paste.usdtPegarTransaccion();assert.equal(input.value,'0x'+'a'.repeat(64));assert.match(doc.getElementById('usdt-message').textContent,/no contiene/);
+ read=async()=>{throw Error('denied');};await paste.usdtPegarTransaccion();assert.match(doc.getElementById('usdt-message').textContent,/Ctrl\+V/);
+ let resolve;read=()=>new Promise(r=>resolve=r);const pending=paste.usdtPegarTransaccion();paste.UID='other';resolve('0x'+'b'.repeat(64));await pending;assert.equal(input.value,'0x'+'a'.repeat(64));
+ console.log('OK: paste is user-triggered, valid hash only, no auto-claim, denied clipboard fallback, account isolation and stable input across 100 bank ticks.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

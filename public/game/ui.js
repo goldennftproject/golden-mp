@@ -2685,6 +2685,7 @@ function refreshBanco(cotizar=true){
   bancoActualizarPrevia();if(cotizar)bancoCotizar();
 }
 function bancoTick(){
+  if($('banco-interno')?.hidden)return;
   const info=$('banco-info');
   if(isOpen('ov-banco')&&info&&info._cotizacionVigente!==bancoCotizacionValida())refreshBanco(false);
 }
@@ -2720,15 +2721,17 @@ function renderUsdt(){
  (o?'<hr><label>Solicitud <select id="usdt-order" style="max-width:100%">'+orders.map(r=>'<option value="'+escapeHtml(r.id)+'"'+(r.id===o.id?' selected':'')+'>'+escapeHtml(r.amount)+' USDT · '+(r.tx?'Pagada':Date.parse(r.expires_at)>Date.now()?'Pendiente':'Plazo terminado')+'</option>').join('')+'</select></label>'+
  (active&&s.deposits?'<p><b>Envía exactamente</b></p><input id="usdt-exact" readonly aria-label="Importe exacto USDT" value="'+escapeHtml(o.amount)+'" style="font-size:22px;width:100%;box-sizing:border-box"><button id="usdt-copy-amount" class="sm">Copiar importe</button><p>Recibirás <b>'+escapeHtml(o.amount)+' Golden</b>, incluidos los decimales. El importe identifica tu cuenta; no lo redondees.</p><label>Dirección receptora<input id="usdt-destination" readonly value="'+escapeHtml(s.destination)+'" style="width:100%;box-sizing:border-box"></label><button id="usdt-copy-address" class="sm">Copiar dirección</button><div id="usdt-qr" aria-label="QR de la dirección receptora"></div><p class="sub">Envía USDT desde tu billetera por BNB Smart Chain antes de '+escapeHtml(new Date(o.expires_at).toLocaleTimeString('es'))+'. El QR contiene solo la dirección: introduce el importe exacto indicado. La cantidad recibida debe ser exacta, sin descontar comisiones. Necesitas BNB para la comisión de red.</p>':
  '<p class="sub">'+(o.tx?'Solicitud pagada. No vuelvas a enviar a este importe.':'Plazo terminado. No pagues esta solicitud. Si ya pagaste dentro del plazo, puedes comprobarlo; si pagaste tarde o otra cantidad, contacta con el equipo sin repetir el envío.')+'</p>')+
- '<label>Identificador de transacción (opcional)<input id="usdt-tx" type="text" autocomplete="off" placeholder="0x… · úsalo si la búsqueda no encuentra tu pago" value="'+escapeHtml(oldTx||o.tx||'')+'" style="width:100%;box-sizing:border-box"></label><button id="usdt-check" class="green sm">Comprobar pago</button><p class="sub">Se comprueban dos nodos, finalidad y 120 confirmaciones. No repitas el envío mientras esperas.</p>':'')+
+ '<label>Identificador de transacción (opcional)<input id="usdt-tx" type="text" autocomplete="off" placeholder="0x… · úsalo si la búsqueda no encuentra tu pago" value="'+escapeHtml(oldTx||o.tx||'')+'" style="width:100%;box-sizing:border-box"></label><button id="usdt-paste" class="sm">Pegar</button><button id="usdt-check" class="green sm">Comprobar pago</button><p class="sub">Se comprueban dos nodos, finalidad y 120 confirmaciones. No repitas el envío mientras esperas.</p>':'')+
  '<details class="ayuda-menu"><summary>Historial de depósitos</summary>'+((s.history||[]).map(r=>'<p class="sub">+'+Number(r.golden).toLocaleString('es',{maximumFractionDigits:6})+' Golden · <a href="https://bscscan.com/tx/'+escapeHtml(r.tx)+'" target="_blank" rel="noopener noreferrer">Ver comprobante</a></p>').join('')||'<p class="sub">Sin depósitos acreditados.</p>')+'</details>')+
+ (typeof SAVE_CONFLICTOS!=='undefined'&&SAVE_CONFLICTOS.has(UID)?'<p class="sub">Hay un conflicto de guardado pendiente. Tu depósito no se pierde.</p><button id="usdt-sync" class="sm">Revisar guardado</button>':'')+
  '<button id="usdt-refresh" class="ghost sm">Actualizar recargas</button><p id="usdt-message" role="status">'+escapeHtml(message)+'</p>';
  const create=$('usdt-create'),check=$('usdt-check'),refresh=$('usdt-refresh'),select=$('usdt-order');
+ const paste=$('usdt-paste');if(paste)paste.onclick=()=>usdtPegarTransaccion();const sync=$('usdt-sync');if(sync)sync.onclick=()=>guardarAhora();
  if(create)create.onclick=()=>usdtCrearSolicitud();if(check)check.onclick=()=>usdtComprobar();if(refresh)refresh.onclick=()=>usdtConsultar(true);
  if(select)select.onchange=()=>{const tx=$('usdt-tx');if(tx)tx.value='';renderUsdt();};
  for(const [id,type] of [['usdt-copy-address','address'],['usdt-copy-amount','amount']]){const b=$(id);if(b)b.onclick=()=>usdtCopiar(type);}
  if(active&&s.deposits&&typeof qrcode==='function'){const qr=qrcode(0,'M');qr.addData(s.destination);qr.make();$('usdt-qr').innerHTML=qr.createSvgTag({cellSize:3,margin:12,scalable:false});}
- for(const b of [create,check,refresh,select,$('usdt-copy-address'),$('usdt-copy-amount')])if(b)b.disabled=busy;
+ for(const b of [create,check,refresh,select,paste,$('usdt-copy-address'),$('usdt-copy-amount')])if(b)b.disabled=busy;
  if(RECARGA_GOLDEN_SOLICITADA&&s){const amount=$('usdt-amount');if(amount){amount.value=String(Math.min(10000,RECARGA_GOLDEN_SOLICITADA.faltan));amount.scrollIntoView?.({block:'nearest'});amount.focus?.({preventScroll:true});RECARGA_GOLDEN_SOLICITADA=null;}}
 }
 function abrirCompra(destino){

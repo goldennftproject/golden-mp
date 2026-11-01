@@ -56,14 +56,23 @@ export async function findOrderPayment(order,call=rpcCall){
   if(!final)throw new DepositError('Esperando finalidad de la red',425);
   const safe=BigInt(rawHead)-119n;return safe<BigInt(final.number)?safe:BigInt(final.number);
  }));
- const head=heads.reduce((a,b)=>a<b?a:b),end=head<from+1999n?head:from+1999n;
- if(end<from)return {tx:null,scanned:Number(from-1n)};
- const lists=await Promise.all(DISCOVERY_RPCS.map(async url=>{
-  const logs=await call(url,'eth_getLogs',[{address:TOKEN,fromBlock:'0x'+from.toString(16),toBlock:'0x'+end.toString(16),topics:[TRANSFER,null,'0x'+DESTINATION.slice(2).padStart(64,'0')]}]);
-  if(!Array.isArray(logs))throw new DepositError('No se pudo buscar el pago. Pega su identificador de transacción.',503);
-  return logs.filter(l=>!l.removed&&lower(l.address)===TOKEN&&l.topics?.length===3&&lower(l.topics[0])===TRANSFER&&lower(l.topics[2])==='0x'+DESTINATION.slice(2).padStart(64,'0')&&/^0x[0-9a-f]{64}$/i.test(l.data)&&BigInt(l.data)===BigInt(order.amount_wei))
-   .map(l=>({tx:lower(l.transactionHash),block:Number(BigInt(l.blockNumber)),hash:lower(l.blockHash),log:Number(BigInt(l.logIndex))})).sort((a,b)=>a.block-b.block||a.log-b.log);
- }));
- if(JSON.stringify(lists[0])!==JSON.stringify(lists[1]))throw new DepositError('Los nodos no coinciden; vuelve a comprobar o pega la transacción.',503);
- return {tx:lists[0][0]?.tx||null,scanned:Number(end)};
+ const head=heads.reduce((a,b)=>a<b?a:b);
+ let start=from,scanned=Number(from-1n);
+ for(let page=0;page<3&&start<=head;page++){
+  const end=head<start+1999n?head:start+1999n;
+  const settled=await Promise.allSettled(DISCOVERY_RPCS.map(async url=>{
+   const logs=await call(url,'eth_getLogs',[{address:TOKEN,fromBlock:'0x'+start.toString(16),toBlock:'0x'+end.toString(16),topics:[TRANSFER,null,'0x'+DESTINATION.slice(2).padStart(64,'0')]}]);
+   if(!Array.isArray(logs))throw new DepositError('No se pudo buscar el pago. Pega su identificador de transacción.',503);
+   return logs.filter(l=>!l.removed&&lower(l.address)===TOKEN&&l.topics?.length===3&&lower(l.topics[0])===TRANSFER&&lower(l.topics[2])==='0x'+DESTINATION.slice(2).padStart(64,'0')&&/^0x[0-9a-f]{64}$/i.test(l.data)&&BigInt(l.data)===BigInt(order.amount_wei))
+    .map(l=>({tx:lower(l.transactionHash),block:Number(BigInt(l.blockNumber)),hash:lower(l.blockHash),log:Number(BigInt(l.logIndex))})).sort((a,b)=>a.block-b.block||a.log-b.log);
+  }));
+  const lists=settled.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  if(!lists.length)throw new DepositError('La búsqueda no está disponible. Pega el identificador de la transacción.',503);
+  if(lists.some(l=>JSON.stringify(l)!==JSON.stringify(lists[0])))throw new DepositError('Los proveedores no coinciden; vuelve a comprobar o pega la transacción.',503);
+  scanned=Number(end);
+  // Discovery only locates candidates. verifyDeposit still verifies each receipt with BOTH BSC RPCs.
+  if(lists[0][0]?.tx)return {tx:lists[0][0].tx,scanned};
+  start=end+1n;
+ }
+ return {tx:null,scanned};
 }

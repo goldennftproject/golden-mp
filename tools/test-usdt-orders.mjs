@@ -29,3 +29,10 @@ let logsCalls=0;
 const empty=await findOrderPayment(order,async(u,m,p)=>{if(m==='eth_getLogs'){logsCalls++;assert(BigInt(p[0].toBlock)-BigInt(p[0].fromBlock)<2000n);return [];}return fixture()(m,p);});
 assert.equal(empty.tx,null);assert.equal(logsCalls,2);
 console.log('OK: exact fractional payment, arbitrary sender, timing, 120 confirmations, finality, two nodes, bounded discovery and mismatch rejection.');
+
+const fallback=await findOrderPayment(order,async(u,m,p)=>{if(u.includes('drpc.org'))throw Error('provider unavailable');return fixture()(m,p);});
+assert.equal(fallback.tx,tx,'one failed discovery provider must not prevent independent receipt verification');
+await assert.rejects(()=>findOrderPayment(order,async()=>{throw Error('all unavailable');}));
+let pages=0;
+const paged=await findOrderPayment(order,async(u,m,p)=>{if(m==='eth_blockNumber')return '0xffff';if(m==='eth_getBlockByNumber'&&p[0]==='finalized')return {number:'0xff00'};if(m==='eth_getLogs'){pages++;return [];}return fixture()(m,p);});
+assert.equal(pages,6);assert.equal(paged.scanned,6050,'one click scans at most 6000 blocks');

@@ -118,8 +118,20 @@ async function usdtCopiar(tipo){
  try{await navigator.clipboard.writeText(text);usdtMensaje(tipo==='address'?'Dirección copiada.':'Importe exacto copiado: '+text+' USDT.');}
  catch(e){const input=document.getElementById(tipo==='address'?'usdt-destination':'usdt-exact');input?.focus();input?.select();usdtMensaje('Selecciona y copia el dato.');}
 }
+async function usdtPegarTransaccion(){
+ const uid=UID,input=document.getElementById('usdt-tx');
+ if(!input||USDT_OCUPADO)return;
+ try{
+  const text=String(await navigator.clipboard.readText()).trim().toLowerCase();
+  if(UID!==uid||!input.isConnected)return;
+  if(!/^0x[0-9a-f]{64}$/.test(text)){usdtMensaje('El portapapeles no contiene un identificador de transacción válido.');input.focus();return;}
+  input.value=text;input.focus();input.setSelectionRange?.(text.length,text.length);
+  usdtMensaje('Transacción pegada. Pulsa Comprobar pago.');
+ }catch(e){if(UID===uid){input.focus();usdtMensaje('El navegador no permite leer el portapapeles. Pega con Ctrl+V o mantén pulsado el campo.');}}
+}
 async function usdtComprobar(){
  if(USDT_OCUPADO)return;
+ if(SAVE_CONFLICTOS.has(UID)){usdtMensaje('El guardado tiene un conflicto pendiente. Pulsa Revisar guardado o el disquete para recuperar la versión del servidor con respaldo local. Después comprueba el mismo pago.');if(typeof renderUsdt==='function')renderUsdt();return;}
  const uid=UID,order=document.getElementById('usdt-order')?.value;
  let tx=String(document.getElementById('usdt-tx')?.value||'').trim().toLowerCase();
  if(!order){usdtMensaje('Crea o selecciona una solicitud.');return;}
