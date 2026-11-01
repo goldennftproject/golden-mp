@@ -173,13 +173,18 @@ async function recuperarGuardadoServidor(){
  finally{RECUPERANDO_GUARDADO=false;desbloquear();}
 }
 async function economiaSolicitar(detalle) {
-  if(MERCADO_EN_CURSO || !sb || !UID || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(UID)){toast('Necesitas conexión y guardado sincronizado');return;}
+  if(MERCADO_EN_CURSO || !sb || !UID || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(UID)){
+    const mensaje=MERCADO_EN_CURSO?'Hay otra operación en curso. Espera a que termine.':SAVE_CONFLICTOS.has(UID)?'Hay un conflicto de guardado. Pulsa Revisar guardado o el disquete antes de comprobar el mismo pago.':'La sesión aún no está conectada y cargada desde el servidor. Espera o vuelve a iniciar sesión; no repitas el pago.';
+    toast(detalle.usdt?mensaje:'Necesitas conexión y guardado sincronizado');if(detalle.usdt)usdtMensaje(mensaje);return;
+  }
   const uid=UID, desbloquear=mercadoBloquearPantalla('Confirmando la operación del objeto…');
+  if(detalle.usdt)usdtMensaje('Confirmando el guardado antes de acreditar…');
   const confirmadas=SAVE_CONFIRMACIONES.get(uid)||0, flush=saveFarm(true);
   MERCADO_EN_CURSO=(async()=>{
     try{
       await conTope(flush,15000,'guardado previo al objeto');
-      if(UID!==uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid)||0)<=confirmadas || !SAVE_BASES.get(uid)){toast('No se pudo sincronizar; no se operó');return;}
+      if(UID!==uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid)||0)<=confirmadas || !SAVE_BASES.get(uid)){toast('No se pudo sincronizar; no se operó');if(detalle.usdt)usdtMensaje('El guardado previo no se ha confirmado. Pulsa el disquete y vuelve a comprobar el mismo pago. No envíes USDT de nuevo.');return;}
+      if(detalle.usdt)usdtMensaje('Verificando la transacción en BNB Smart Chain…');
       const body={cuenta:uid,...detalle,base:SAVE_BASES.get(uid),op:window.crypto.randomUUID()};
       mercadoMarcarPendiente(uid,body);
       let data,error;
@@ -198,7 +203,7 @@ async function economiaSolicitar(detalle) {
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
       toast(detalle.usdt ? ("Depósito confirmado: +"+fmtGolden(data.cobro)+" Golden") : detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.mision ? 'Misión reclamada: +'+fmtPlata(data.cobro)+' Plata' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata', 'success', detalle.banco?'canje':detalle.diario||detalle.logro||detalle.mision?'premio':detalle.infra||detalle.mejora?'mejora':'compra');
       return data;
-    }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid)toast('No se pudo completar la operación; comprueba la conexión');}
+    }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid){toast('No se pudo completar la operación; comprueba la conexión');if(detalle.usdt)usdtMensaje('No se pudo completar la comprobación. El pago no debe repetirse; revisa el guardado y consulta el mismo hash.');}}
   })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();});
   return MERCADO_EN_CURSO;
 }
