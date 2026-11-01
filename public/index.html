@@ -64,6 +64,7 @@
   .pill .k{color:#a9bd94;font-weight:600;font-size:12px}
   /* barra de Combate global (doc maestro 2/8): insignia + relleno dorado + XP */
   .cpill{gap:6px}
+  #energia-granja-eta{font-size:10px;color:#ffe4a6;font-variant-numeric:tabular-nums}
   .hud-xp-numeros{display:inline-flex;align-items:center}
   .hud-xp-numeros small{display:none} /* La XP restante se consulta en el tooltip, sin elevar el HUD. */
   .cpill #c-lvl{min-width:14px;text-align:center}
@@ -1557,16 +1558,16 @@
 /* PC: los recursos permanentes comparten una fila; sólo los efectos temporales flotan. */
 @media(min-width:641px){
   #hudbar{flex-wrap:nowrap;justify-content:flex-start;gap:5px;padding:3px 8px;min-height:54px}
-  #hudbar .brand{order:0;flex:0 0 180px;min-width:0}
+  #hudbar .brand{order:0;flex:0 0 180px;min-width:0;margin-right:clamp(10px,2vw,32px)}
   #hudbar .hud{display:contents}
   #hudbar .pill,#hudbar .btnpill{flex:0 0 auto;min-width:max-content;padding:1px 5px;gap:4px;font-size:12px}
   #hudbar .pill .k{font-size:12px}
   #hudbar .cbarw,#hudbar .hpbarw{width:42px;flex:0 1 42px;min-width:22px}
   #hudbar #lvlpill .cbarw,#hudbar #cbar .cbarw{display:none}
   #hudbar .hud-xp-label,#hudbar .hpeta{display:none}
-  #hudbar #lvlpill{order:1}#hudbar #energia-granja-pill{order:2}
+  #hudbar #lvlpill{order:1;margin-left:auto}#hudbar #energia-granja-pill{order:2}
   #hudbar .divisa-hud{order:3}#hudbar #hppill{order:4}#hudbar #cbar{order:5}
-  #hudbar #stampill{order:6}#hudbar #hud-sound{order:7;margin-left:auto;flex-shrink:0}#hudbar #menu-btn{order:8;margin-left:0;flex-shrink:0}
+  #hudbar #stampill{order:6}#hudbar #hud-sound{order:7;margin-left:0;flex-shrink:0}#hudbar #menu-btn{order:8;margin-left:0;flex-shrink:0}
   #hudbar #buffpill{max-width:calc(100vw - 16px);flex-wrap:wrap;pointer-events:auto}
 }
 @media(min-width:641px) and (max-width:1190px){
@@ -1638,7 +1639,7 @@
          los menúes. Estas dos píldoras viven ahora en una REPISA flotante pegada bajo la barra,
          fuera de su flujo — vengan o se vayan, la barra no se entera. -->
     <div id="hud-flot">
-      <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: 50 sin VIP / 100 VIP; recuperación continua, 4 horas de vacía a llena. Clic para ver costes y capacidad."><span class="k">⚡ Energía</span><span class="cbarw"><span class="cfill lvlf" id="energia-granja-fill"></span></span><span class="k" id="s-energia-granja">50/50</span></button>
+      <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: 50 sin VIP / 100 VIP; recuperación continua, 4 horas de vacía a llena. Clic para ver costes y capacidad."><span class="k">⚡ Energía</span><span class="cbarw"><span class="cfill lvlf" id="energia-granja-fill"></span></span><span class="k" id="s-energia-granja">50/50</span><span id="energia-granja-eta" hidden></span></button>
       <div class="pill cpill" id="stampill" role="button" tabindex="0" aria-label="Recargar estamina" aria-haspopup="dialog" aria-controls="ov-confirm" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">⚔ Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
       <!-- 31/8 (de los vídeos de referencia: « Food 00:00 » — la comida es un RELOJ). Los platos
            llevaban buffs con vencimiento desde el doc maestro del 2/8 y no se enseñaban en ningún

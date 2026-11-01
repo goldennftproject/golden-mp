@@ -2002,12 +2002,44 @@ function ordenarHudPc() {
     if (energia.parentElement !== flot) flot.insertBefore(energia, stam);
   }
 }
+function energiaHudTiempo(ms) {
+  const segundos = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(segundos / 3600), m = Math.floor(segundos / 60) % 60, s = segundos % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0");
+}
+function refreshEnergiaHud(energia) {
+  const ep = $("energia-granja-pill"), eta = $("energia-granja-eta");
+  if (!ep) return;
+  const max = energiaGranjaMax(), t = nowMs();
+  ep.style.display = GF.scene === "farm" ? "" : "none";
+  if (energia >= max - 1e-9) {
+    if (eta) { eta.textContent = ""; eta.hidden = true; }
+    ep.title = "Energía completa: " + max + "/" + max + ". Clic para ver energía y capacidad.";
+    return;
+  }
+  // Proyecta el mismo modelo de regeneración; también contempla el vencimiento del VIP.
+  const tiempoHasta = (completa) => {
+    let lo = 0, hi = 4 * 3600000;
+    const objetivo = Math.floor(energia) + 1;
+    for (let i = 0; i < 28; i++) {
+      const medio = (lo + hi) / 2, futuro = t + medio;
+      const valor = energiaModelo(G, futuro), capacidad = energiaGranjaMax(futuro);
+      if (valor >= (completa ? capacidad : Math.min(objetivo, capacidad)) - 1e-9) hi = medio;
+      else lo = medio;
+    }
+    return Math.round(hi);
+  };
+  const siguiente = tiempoHasta(false), completa = tiempoHasta(true);
+  if (eta) { eta.hidden = false; eta.textContent = "+1 " + energiaHudTiempo(siguiente); }
+  ep.title = "Energía: " + Math.floor(energia) + "/" + max + " · Siguiente punto en " + energiaHudTiempo(siguiente) +
+    " · Completa en " + energiaHudTiempo(completa) + ". Recuperación continua; 4 horas de vacía a llena. Clic para ver energía y capacidad.";
+}
 function refreshHud() {
   ordenarHudPc();
   if(typeof ubicarComprasPc==='function')ubicarComprasPc();
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/'+energiaGranjaMax());
   const ef=$('energia-granja-fill');if(ef)ef.style.width=Math.max(0,Math.min(100,energia/energiaGranjaMax()*100))+'%';
-  const ep=$('energia-granja-pill');if(ep){ep.style.display=GF.scene==='farm'?'':'none';const j=jornadaEstado();ep.title='Energía: 50 Free / 100 VIP; se recupera en 4 horas. Trabajo de hoy: '+j.plata+' / 5.000 Plata · '+j.energia+' / 200 energía productiva confirmada. Completa misiones y pulsa Reclamar en Progreso. Reinicio diario UTC.';}
+  refreshEnergiaHud(energia);
   document.querySelectorAll('[data-artefacto-pendiente]').forEach(el=>{el.textContent=fmtPlata(artefactoPendiente(el.dataset.artefactoPendiente))+' Plata';});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.disabled=!(typeof sb!=='undefined' && sb && UID && CARGA_OK && !SOLO_LOCAL && !SAVE_CONFLICTOS.has(UID) && !MERCADO_EN_CURSO && artefactoPuedeCobrar(b.dataset.artefactoCobrar) && energia>=1);});
   document.querySelectorAll('[data-artefacto-cobrar]').forEach(b=>{b.textContent=artefactoTextoCobro(b.dataset.artefactoCobrar);});
