@@ -20,35 +20,45 @@ Deno.serve(async req=>{
    if(!data?.ok)throw new DepositError(data?.error||'Solicitud no válida');
    return data;
   }
-  if(action==='estado')return json({...await order('estado'),destination:DESTINATION,token:TOKEN,chain:56,rate:1,withdrawals:false,min:1,max:10000,mode:'exact_amount'});
+  if(action==='estado')return json({...await order('estado'),destination:DESTINATION,token:TOKEN,chain:56,rate:1,withdrawals:false,min:1,max:10000,mode:'exact_amount',durable_receipts:true});
   if(action==='create'){
    const amount=b.usdt.amount;
    if(!Number.isSafeInteger(amount)||amount<1||amount>10000)return json({error:'Elige entre 1 y 10.000 Golden enteros'},400);
    const heads=await Promise.all(RPCS.map(async url=>{if(await rpcCall(url,'eth_chainId')!=='0x38')throw new DepositError('Red incorrecta',503);return Number(BigInt(await rpcCall(url,'eth_blockNumber')));}));
    return json(await order('create',{p_golden:amount,p_block:Math.max(...heads)}));
   }
-  if(action==='find'||action==='claim'){
+  if(action==='find'||action==='verify'||action==='claim'){
    const id=String(b.usdt.order||'');
    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return json({error:'Selecciona tu solicitud de recarga'},400);
    const o=(await order('get',{p_id:id})).order;
-   let tx=String(b.usdt.tx||o.tx||'').toLowerCase();
+   let tx=String(b.usdt.tx||o.verified_tx||o.tx||'').toLowerCase();
+   if(o.verified_tx&&tx!==o.verified_tx)return json({error:'Esta solicitud ya tiene otro pago confirmado. Comprueba el pago registrado.'},400);
+   const savedProof=!!o.verified_tx&&o.verified_tx===tx;
    const prior=tx&&/^0x[0-9a-f]{64}$/.test(tx)?await wallet('receipt',{p_address:tx}):{credited:false};
-   if(!prior.credited){
+   if(!prior.credited&&!savedProof){
     if(!(await order('estado')).deposits)return json({error:'Depósitos cerrados. No envíes fondos.'},400);
-    await order(action==='find'?'find_check':'check',{p_id:id});
+    await order(action==='find'||(action==='verify'&&!tx)?'find_check':'check',{p_id:id});
    }
-   if(action==='find'){
+   if(action==='find'||(action==='verify'&&!tx)){
     if(!tx){
      let found;
      try{found=await findOrderPayment(o);}catch(e){return json({error:'La búsqueda no está disponible. Pega el identificador de la transacción para comprobar el mismo pago.',manual:true},503);}
      tx=found.tx||'';
      if(!tx){await order('advance',{p_id:id,p_block:found.scanned});return json({ok:true,pending:true,message:'No se encontró el pago en el tramo revisado. Puedes volver a buscar o pegar la transacción. No repitas el envío.'});}
     }
-    return json({ok:true,tx});
+    if(action==='find')return json({ok:true,tx});
    }
    if(!/^0x[0-9a-f]{64}$/.test(tx))return json({error:'Identificador de transacción inválido'},400);
    if(!prior.credited){attemptAdmin=admin;attemptUid=uid;attemptTx=tx;}
-   const v=prior.credited?{block:null,hash:null,logIndex:null,amount:null,address:null,time:null}:await verifyDeposit(tx,o);
+   const v=prior.credited?{block:null,hash:null,logIndex:null,amount:null,address:null,time:null}:savedProof?
+    {block:o.verified_block,hash:o.verified_hash,logIndex:o.verified_log,amount:o.amount_wei,address:o.verified_address,time:o.verified_time}:await verifyDeposit(tx,o);
+   if(!prior.credited&&!savedProof){
+    const prepared=await admin.rpc('usdt_prepare_order',{p_uid:uid,p_id:id,p_tx:tx,p_address:v.address,p_block:v.block,p_hash:v.hash,p_log:v.logIndex,p_amount:v.amount,p_time:v.time});
+    if(prepared.error)throw new DepositError('El pago se verificó pero no pudo registrarse. Comprueba la misma transacción; no repitas el envío',503);
+    if(!prepared.data?.ok)throw new DepositError(prepared.data?.error||'No se pudo registrar el pago');
+    await record('pendiente','Pago verificado y conservado; Golden pendiente de sincronizar con la granja');
+   }
+   if(action==='verify')return json({ok:true,verified:true,credited:!!prior.credited,tx,amount:o.amount});
    const {data,error}=await admin.rpc('usdt_credit_order',{p_uid:uid,p_base:b.base,p_id:id,p_tx:tx,p_address:v.address,p_block:v.block,p_hash:v.hash,p_log:v.logIndex,p_amount:v.amount,p_time:v.time});
    if(error)throw new DepositError('No se pudo confirmar la acreditación; comprueba el mismo pago sin repetirlo',503);
    if(!data?.ok){await record('error',data?.error||'No se pudo acreditar');return json({error:data?.error||'No se pudo acreditar'},data?.conflict?409:400);}

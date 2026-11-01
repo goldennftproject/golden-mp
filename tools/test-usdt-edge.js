@@ -7,6 +7,7 @@ class DepositError extends Error{constructor(m,status=400){super(m);this.status=
  const admin={auth:{getUser:async t=>t==='qa'?{data:{user:{id:'qa'}}}:{error:{}}},rpc:async(name,p)=>{
   assert.equal(p.p_uid,'qa');
   if(name==='usdt_intento')return {data:null};
+  if(name==='usdt_prepare_order'){Object.assign(order,{verified_tx:p.p_tx,verified_address:p.p_address,verified_block:p.p_block,verified_hash:p.p_hash,verified_log:p.p_log,verified_time:p.p_time});return {data:{ok:true,verified:true,tx:p.p_tx}};}
   if(name==='usdt_credit_order'){credits++;assert.equal(p.p_id,id);return {data:{ok:true,cobro:10.000001,data:{golden:10.000001},updated_at:'v2'}};}
   if(name==='usdt_wallet'){assert.equal(p.p_action,'receipt');return {data:{ok:true,credited:prior}};}
   assert.equal(name,'usdt_order');

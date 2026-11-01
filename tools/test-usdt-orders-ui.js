@@ -12,6 +12,8 @@ assert.ok(doc.querySelector('#usdt-copy-amount'));assert.ok(doc.querySelector('#
 const select=doc.querySelector('#usdt-order');select.value=old.id;select.onchange();
 assert.equal(doc.querySelector('#usdt-exact'),null,'expired request must not offer payment');
 assert.match(doc.querySelector('#usdt-panel').textContent,/No pagues esta solicitud/);
+run('USDT_ESTADO.orders[0].verified_tx='+JSON.stringify('0x'+'a'.repeat(64)));
+doc.querySelector('#usdt-order').value=first.id;c.renderUsdt();assert.equal(doc.querySelector('#usdt-exact'),null,'verified request must not ask for another payment');assert.match(doc.querySelector('#usdt-panel').textContent,/pago está confirmado/);
 run("UID='different';");c.renderUsdt();assert.equal(doc.querySelector('#usdt-order'),null,'account change must not show another order');
 const source=fs.readFileSync('public/game/save.js','utf8');
 assert.ok(!/eth_requestAccounts|personal_sign|eth_sendTransaction|wallet_switchEthereumChain/.test(source),'no wallet RPC in client');

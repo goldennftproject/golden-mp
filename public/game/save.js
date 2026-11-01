@@ -85,6 +85,7 @@ async function equipoAcceso(){
  try{const {data,error}=await conTope(sb.functions.invoke('equipo',{body:{cuenta:uid,accion:'consultar',vista:'acceso'}}),10000,'acceso del equipo');if(UID===uid&&!error&&data?.ok){EQUIPO_ACCESO={uid,role:data.role,at:Date.now()};el.style.display=data.role?'':'none';}}catch{}finally{EQUIPO_CONSULTANDO=false;}
 }
 let USDT_ESTADO=null,USDT_CARGANDO=false,USDT_OCUPADO=false;
+let USDT_PENDIENTE=null,USDT_REINTENTO_AT=0,USDT_REINTENTO_TIMER=null;
 async function usdtInvocar(usdt){
  const uid=UID;if(!sb||!uid||!CARGA_OK||SOLO_LOCAL)throw Error('Inicia sesión y guarda tu granja para continuar');
  const {data,error}=await conTope(sb.functions.invoke('usdt',{body:{cuenta:uid,usdt}}),30000,'recargas USDT');
@@ -96,9 +97,14 @@ async function usdtConsultar(force=false){
  if(USDT_CARGANDO)return;
  if(!force&&USDT_ESTADO?.uid===UID&&Date.now()-USDT_ESTADO.at<30000){if(typeof renderUsdt==='function')renderUsdt();return;}
  USDT_CARGANDO=true;
- try{const uid=UID,data=await usdtInvocar({accion:'estado'});if(UID===uid)USDT_ESTADO={...data,uid,at:Date.now()};}
+ try{const uid=UID,data=await usdtInvocar({accion:'estado'});if(UID===uid){
+  USDT_ESTADO={...data,uid,at:Date.now()};
+  const o=(data.orders||[]).find(o=>o.verified_tx&&!o.tx);
+  if(USDT_PENDIENTE?.uid!==uid)USDT_REINTENTO_AT=0;
+  USDT_PENDIENTE=o?{uid,order:o.id,tx:o.verified_tx}:null;
+ }}
  catch(e){if(typeof usdtMensaje==='function')usdtMensaje(e.message);}
- finally{USDT_CARGANDO=false;if(typeof renderUsdt==='function')renderUsdt();}
+ finally{USDT_CARGANDO=false;if(typeof renderUsdt==='function')renderUsdt();usdtProgramarPendiente();}
 }
 // Deposits never request wallet connection, signatures or transactions.
 async function usdtCrearSolicitud(){
@@ -129,20 +135,52 @@ async function usdtPegarTransaccion(){
   usdtMensaje('Transacción pegada. Pulsa Comprobar pago.');
  }catch(e){if(UID===uid){input.focus();usdtMensaje('El navegador no permite leer el portapapeles. Pega con Ctrl+V o mantén pulsado el campo.');}}
 }
+function usdtProgramarPendiente(){
+ if(!USDT_PENDIENTE||USDT_PENDIENTE.uid!==UID||USDT_REINTENTO_TIMER!==null||USDT_ESTADO?.uid===UID&&USDT_ESTADO.deposits===false)return;
+ USDT_REINTENTO_TIMER=setTimeout(()=>{
+  USDT_REINTENTO_TIMER=null;
+  if(!USDT_PENDIENTE||USDT_PENDIENTE.uid!==UID||USDT_OCUPADO||MERCADO_EN_CURSO||SAVE_EN_CURSO||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||Date.now()-USDT_REINTENTO_AT<10000)return;
+  return usdtAplicarPendiente();
+ },0);
+}
+async function usdtAplicarPendiente(){
+ const pending=USDT_PENDIENTE,uid=UID;
+ if(!pending||pending.uid!==uid||USDT_OCUPADO||SAVE_CONFLICTOS.has(uid)||!CARGA_OK||SOLO_LOCAL||MERCADO_EN_CURSO||SAVE_EN_CURSO)return;
+ USDT_OCUPADO=true;USDT_REINTENTO_AT=Date.now();
+ usdtMensaje('Pago confirmado. Sincronizando el Golden…');if(typeof renderUsdt==='function')renderUsdt();
+ try{
+  const result=await economiaSolicitar({usdt:{accion:'claim',order:pending.order,tx:pending.tx}});
+  if(UID!==uid)return;
+  if(result?.ok){
+   USDT_PENDIENTE=null;
+   await usdtConsultar(true);
+   usdtMensaje('Depósito confirmado: +'+Number(result.cobro).toFixed(6)+' Golden'+(result.repetido?' (ya acreditado)':'')+'.');
+  }else usdtMensaje('Tu pago está confirmado y conservado. El Golden se aplicará al sincronizar el guardado. Si hay un conflicto, pulsa Revisar guardado. No envíes otro pago.');
+ }catch(e){if(UID===uid)usdtMensaje('Pago conservado. No se pudo sincronizar el Golden todavía; se reintentará al guardar o volver a entrar. No repitas el envío.');}
+ finally{USDT_OCUPADO=false;if(typeof renderUsdt==='function')renderUsdt();}
+}
 async function usdtComprobar(){
  if(USDT_OCUPADO)return;
- if(SAVE_CONFLICTOS.has(UID)){usdtMensaje('El guardado tiene un conflicto pendiente. Pulsa Revisar guardado o el disquete para recuperar la versión del servidor con respaldo local. Después comprueba el mismo pago.');if(typeof renderUsdt==='function')renderUsdt();return;}
  const uid=UID,order=document.getElementById('usdt-order')?.value;
  let tx=String(document.getElementById('usdt-tx')?.value||'').trim().toLowerCase();
  if(!order){usdtMensaje('Crea o selecciona una solicitud.');return;}
  if(tx&&!/^0x[0-9a-f]{64}$/.test(tx)){usdtMensaje('El identificador de transacción no es válido.');return;}
- USDT_OCUPADO=true;usdtMensaje('Comprobando el pago…');if(typeof renderUsdt==='function')renderUsdt();
+ USDT_OCUPADO=true;usdtMensaje('Verificando y registrando el pago…');if(typeof renderUsdt==='function')renderUsdt();
+ let aplicar=false;
  try{
-  if(!tx){const found=await usdtInvocar({accion:'find',order});if(UID!==uid)return;if(found.pending){usdtMensaje(found.message);return;}tx=found.tx;const input=document.getElementById('usdt-tx');if(input)input.value=tx;}
-  const result=await economiaSolicitar({usdt:{accion:'claim',order,tx}});
-  if(UID===uid&&result?.ok){await usdtConsultar(true);usdtMensaje('Depósito confirmado: +'+Number(result.cobro).toFixed(6)+' Golden'+(result.repetido?' (ya acreditado)':'')+'.');}
+  const result=await usdtInvocar({accion:'verify',order,tx:tx||undefined});
+  if(UID!==uid)return;
+  if(result.pending){usdtMensaje(result.message);return;}
+  if(!result.verified||!/^0x[0-9a-f]{64}$/.test(result.tx||''))throw Error('El servidor no confirmó el pago.');
+  if(result.credited){USDT_PENDIENTE=null;await usdtConsultar(true);usdtMensaje('Este pago ya está acreditado. No envíes otro pago. Si no ves el saldo, sincroniza el guardado o vuelve a entrar.');return;}
+  USDT_PENDIENTE={uid,order,tx:result.tx};USDT_REINTENTO_AT=0;
+  const input=document.getElementById('usdt-tx');if(input)input.value=result.tx;
+  await usdtConsultar(true);
+  if(SAVE_CONFLICTOS.has(uid)){usdtMensaje('Pago confirmado y conservado. Revisa el guardado para aplicar el Golden; el pago no debe repetirse.');}
+  else aplicar=true;
  }catch(e){if(UID===uid)usdtMensaje(e.message||'No se pudo comprobar; no repitas el pago.');}
  finally{USDT_OCUPADO=false;if(typeof renderUsdt==='function')renderUsdt();}
+ if(aplicar&&UID===uid)await usdtAplicarPendiente();
 }
 function diarioSolicitar(){return economiaSolicitar({diario:{accion:'reclamar'}});}
 async function visitaConsultar(accion,destino){
@@ -168,7 +206,7 @@ async function recuperarGuardadoServidor(){
    try{hydrate(data.data);}finally{CARGA_OK=true;}
    SAVE_BASES.set(uid,data.updated_at);mercadoLimpiarPendiente(uid);SAVE_CONFLICTOS.delete(uid);SAVE_OTRA=false;copiaGuardar(snapshot());lastSavedKey=snapKey();
    refreshHud();syncSlots();if(window.FARM?.scene?.isActive?.()&&typeof reiniciarGranjaSuave==='function')reiniciarGranjaSuave();
-   toast('Guardado del servidor recuperado. El respaldo del conflicto se conserva en este navegador.');return true;
+   toast('Guardado del servidor recuperado. El respaldo del conflicto se conserva en este navegador.');USDT_REINTENTO_AT=0;usdtProgramarPendiente();return true;
  }catch(e){toast('No se pudo recuperar; se conserva la partida y el bloqueo de seguridad.');return false;}
  finally{RECUPERANDO_GUARDADO=false;desbloquear();}
 }
@@ -204,7 +242,7 @@ async function economiaSolicitar(detalle) {
       toast(detalle.usdt ? ("Depósito confirmado: +"+fmtGolden(data.cobro)+" Golden") : detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.mision ? 'Misión reclamada: +'+fmtPlata(data.cobro)+' Plata' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata', 'success', detalle.banco?'canje':detalle.diario||detalle.logro||detalle.mision?'premio':detalle.infra||detalle.mejora?'mejora':'compra');
       return data;
     }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid){toast('No se pudo completar la operación; comprueba la conexión');if(detalle.usdt)usdtMensaje('No se pudo completar la comprobación. El pago no debe repetirse; revisa el guardado y consulta el mismo hash.');}}
-  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();});
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();usdtProgramarPendiente();});
   return MERCADO_EN_CURSO;
 }
 async function mercadoP2POperar(detalle){
@@ -1404,6 +1442,7 @@ async function loadFarm() {
         copiaGuardar(snapshot()); mercadoLimpiarPendiente(uid);
         lastSavedKey = snapKey();
         setTimeout(() => { if (typeof torneoPodioCheck === "function") torneoPodioCheck(); },4000);
+        setTimeout(()=>{if(UID===uid)usdtConsultar(true);},0);
         return true;
       }
       // Cuenta verificada sin granja: inicio limpio. Nunca se sube una copia huérfana.
@@ -1590,7 +1629,7 @@ async function saveFarmReal(force) {
       // RLS ya impide el upsert directo. Un ACK necesita la versión real del servidor.
         const { data: r, error: fe } = await alfaInvocarGuardado(cuerpo);
         if(UID!==saveUid)return;
-        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { const sinCambiosEnVuelo=snapKey()===key; actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(sinCambiosEnVuelo)claveConfirmada=snapKey(); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); }
+        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { const sinCambiosEnVuelo=snapKey()===key; actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(sinCambiosEnVuelo)claveConfirmada=snapKey(); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); if(!USDT_OCUPADO)USDT_REINTENTO_AT=0; usdtProgramarPendiente(); }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el

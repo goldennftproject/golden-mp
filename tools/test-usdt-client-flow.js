@@ -1,22 +1,2 @@
-const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
-const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(process.cwd(),{'game/main.js':'','game/save.js':fs.readFileSync('public/game/save.js','utf8').replace('window.SAVE_READY = initSave();','')});
-const doc=new JSDOM(fs.readFileSync('public/index.html','utf8')).window.document;c.document=doc;c.$=id=>doc.getElementById(id);
-const run=s=>vm.runInContext(s,c),messages=[],calls=[];
-const o={id:'11111111-1111-4111-8111-111111111111',amount:'10.000001',expires_at:new Date(Date.now()+60000).toISOString()};
-run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;");run('USDT_ESTADO='+JSON.stringify({uid:'qa',deposits:true,destination:'0x'+'1'.repeat(40),orders:[o],history:[]}));
-c.renderUsdt();doc.getElementById('usdt-tx').value='0x'+'a'.repeat(64);
-c.usdtMensaje=t=>messages.push(t);c.toast=t=>messages.push(t);c.renderUsdt=()=>{};c.refreshHud=()=>{};c.isOpen=()=>false;c.mercadoBloquearPantalla=()=>()=>{};c.mercadoMarcarPendiente=()=>{};c.mercadoLimpiarPendiente=()=>{};c.copiaGuardar=()=>{};c.snapshot=()=>({});c.hydrate=()=>{};
-c.crypto=require('node:crypto').webcrypto;c.conTope=p=>p;c.usdtConsultar=async()=>{};
-c.saveFarm=async()=>run("SAVE_CONFIRMACIONES.set(UID,(SAVE_CONFIRMACIONES.get(UID)||0)+1);SAVE_BASES.set(UID,'v1');");
-c.SB_TEST={functions:{invoke:async(name,p)=>{calls.push({name,p});return {data:{ok:true,data:{golden:10.000001},cobro:10.000001,updated_at:'v2'}};}}};
-run('sb=SB_TEST');
-(async()=>{
- await c.usdtComprobar();
- assert.equal(calls.length,1,JSON.stringify(messages));
- assert.equal(calls[0].name,'usdt');assert.equal(calls[0].p.body.usdt.accion,'claim');assert.equal(calls[0].p.body.base,'v1');
- assert(messages.some(t=>t.includes('Depósito confirmado')),JSON.stringify(messages));
- messages.length=0;calls.length=0;c.saveFarm=async()=>{};
- await c.usdtComprobar();assert.equal(calls.length,0);assert(messages.some(t=>t.includes('guardado previo no se ha confirmado')),JSON.stringify(messages));
- messages.length=0;run("CARGA_OK=false;");await c.usdtComprobar();assert.equal(calls.length,0);assert(messages.some(t=>t.includes('sesión aún no está conectada')),JSON.stringify(messages));
- console.log('OK: authenticated client credit flow, explicit pre-save failure and explicit unloaded session feedback.');
-})().catch(e=>{console.error(e);process.exitCode=1;});
+// The complete client test now includes durable verification, retries and reconnection.
+require('./test-usdt-full-flow.js');
