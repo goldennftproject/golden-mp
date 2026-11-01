@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Reapertura de registro e ingreso — 01/11/2026
+
+Dirección autoriza reactivar registro e ingreso para todos. Se coordinan src/alpha-access.json gameOpen=true y golden_internal.game_access.game_open=true sin cambiar usuarios, granjas ni privilegios. Depósitos permanecen cerrados hasta autorización separada. La pausa reversible y sus pruebas se conservan.
+
+
 ## Alfa pospuesta: registro sin acceso al juego — 31/10/2026
 
 Dirección cierra temporalmente el acceso y mantiene el registro. El dominio oficial sirve sólo un formulario de registro/confirmación, sin Phaser ni granja. Las sesiones técnicas del enlace de confirmación no se persisten y se cierran localmente; no se bloquea crear ni confirmar cuentas en Auth. Las escrituras de granjas y mercado quedan rechazadas por disparadores del servidor mientras golden_internal.game_access.game_open=false. Depósitos cerrados, datos intactos y panel privado conservado. Para reabrir, actualizar expresamente el control DB y src/alpha-access.json de forma coordinada; los depósitos se deciden aparte. No borrar ni resetear cuentas al reabrir.

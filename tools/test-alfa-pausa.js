@@ -1,8 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),express=require('express'),{JSDOM}=require('jsdom');
-const {pausaRegistro}=require('../src/alpha-access');
+const {pausaRegistro}=require('../src/alpha-access');const access=require('../src/alpha-access.json'),previousOpen=access.gameOpen;access.gameOpen=false;
 (async()=>{
  const app=express();app.use(pausaRegistro);app.use((_,r)=>r.send('siguiente'));const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.on('listening',r));const base='http://127.0.0.1:'+server.address().port;
- try{for(const path of ['/','/index.html','/%69ndex.html']){const r=await fetch(base+path);const h=await r.text();assert(h.includes('La alfa se ha pospuesto'));assert(!h.includes('__REGISTRO_CONFIG__'));assert(!h.includes('phaser'));assert(!h.includes('game/main.js'));assert.equal(r.headers.get('cache-control'),'no-store');}assert.equal(await(await fetch(base+'/equipo/')).text(),'siguiente');}finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
+ try{for(const path of ['/','/index.html','/%69ndex.html']){const r=await fetch(base+path);const h=await r.text();assert(h.includes('La alfa se ha pospuesto'));assert(!h.includes('__REGISTRO_CONFIG__'));assert(!h.includes('phaser'));assert(!h.includes('game/main.js'));assert.equal(r.headers.get('cache-control'),'no-store');}assert.equal(await(await fetch(base+'/equipo/')).text(),'siguiente');access.gameOpen=true;assert.equal(await(await fetch(base+'/')).text(),'siguiente','la apertura devuelve el control al juego');}finally{access.gameOpen=previousOpen;server.closeAllConnections();await new Promise(r=>server.close(r));}
  const html=fs.readFileSync('public/registro-pausa.html','utf8'),source=fs.readFileSync('public/registro-pausa.js','utf8');
  for(const confirmed of [false,true]){
   const dom=new JSDOM(html.replace('__REGISTRO_CONFIG__','{}'),{url:'https://goldenfarm.onrender.com/'}),w=dom.window;let calls=[],signedOut=0;
