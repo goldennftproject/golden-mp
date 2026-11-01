@@ -21,7 +21,7 @@ const dom = new JSDOM("<html><body></body></html>");
 const oyentes = {};
 const ctx={console:{log(){},warn(){},error(){},info(){}},Math,Date:FakeDate,JSON,Object,Array,Number,String,Boolean,Set,Map,isNaN,isFinite,parseInt,parseFloat,
  performance:{now:()=>0},setTimeout:(f)=>{try{f()}catch(e){}return 0},setInterval:()=>0,clearInterval(){},clearTimeout(){},requestAnimationFrame:()=>0,
- document: dom.window.document, Image: dom.window.Image };
+ document: dom.window.document, Image: dom.window.Image, location:{hash:"",search:"",origin:"https://qa.invalid",pathname:"/"},URLSearchParams };
 ctx.window=ctx;ctx.globalThis=ctx;ctx.addEventListener=()=>{};ctx.removeEventListener=()=>{};
 ctx.localStorage={getItem:()=>null,setItem(){},removeItem(){}};
 ctx.Phaser={Scene:class{},Math:{Clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),Between:a=>a,Distance:{Between:()=>0}},BlendModes:{ADD:1},Geom:{Rectangle:class{}},Display:{Color:{}}};
