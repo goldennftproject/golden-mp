@@ -1954,9 +1954,20 @@
       <p>Al terminar la alfa se reinicia el progreso. Las compras permanentes se conservan; comprar VIP en alfa dará 30 días desde el lanzamiento, sin acumular renovaciones.</p>
       <button class="ghost sm" id="cfg-alfa-compras">Ver mis compras conservadas</button>
       <div id="cfg-alfa-compras-lista" aria-live="polite"></div>
-      <p>Sin depósitos ni retiros de USDT. Si encuentras un fallo, copia el informe y cuéntanos cómo ocurrió.</p>
+      <p>Depósitos USDT en BNB Smart Chain disponibles. Retiros desactivados. Si encuentras un fallo, copia el informe y cuéntanos cómo ocurrió.</p>
       <button class="ghost sm" id="cfg-alfa-copiar">Copiar informe técnico</button>
       <textarea id="cfg-alfa-informe" hidden readonly aria-label="Informe técnico de la alfa" style="width:100%;box-sizing:border-box;min-height:160px;margin-top:8px;font:12px monospace"></textarea>
+    </div>
+    <div class="cfgsec" id="cfg-referidos">
+      <h4>Invitar amigos</h4>
+      <p>Comparte tu enlace para invitar a otros jugadores.</p>
+      <button class="green sm" id="cfg-referido-ver">Ver mi enlace</button>
+      <div id="cfg-referido-resultado" hidden>
+        <label>Tu enlace de referido<input id="cfg-referido-link" readonly style="width:100%;box-sizing:border-box" aria-label="Tu enlace de referido"></label>
+        <button class="sm" id="cfg-referido-copiar">Copiar enlace</button>
+        <p id="cfg-referido-datos"></p>
+      </div>
+      <p id="cfg-referido-status" role="status"></p>
     </div>
     <div class="cfgsec">
       <h4>Cuenta</h4>

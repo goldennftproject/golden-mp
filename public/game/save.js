@@ -21,6 +21,29 @@ function mensajeEnlaceAcceso(hash='',search='') {
 }
 var ACCESO_ENLACE_ERROR = mensajeEnlaceAcceso(location.hash,location.search);
 
+// Remember invitation before Auth cleans the callback URL. Only sent on signup.
+function capturarReferido() {
+ try {
+  const raw = new URLSearchParams(location.search).get('ref');
+  if (raw !== null) {
+   const code = raw.trim().toUpperCase();
+   if (/^[A-F0-9]{16}$/.test(code)) localStorage.setItem('gf_referral_pending', JSON.stringify({code,at:Date.now()}));
+   else localStorage.removeItem('gf_referral_pending');
+  }
+  const pending = JSON.parse(localStorage.getItem('gf_referral_pending') || 'null');
+  return pending && /^[A-F0-9]{16}$/.test(pending.code) && Date.now()-pending.at >= 0 && Date.now()-pending.at < 30*86400000 ? pending.code : '';
+ } catch(e) { return ''; }
+}
+const REFERIDO_REGISTRO = capturarReferido();
+async function miReferido() {
+ const uid=UID;
+ if (!sb || !uid) throw new Error('Inicia sesión para ver tu enlace.');
+ const {data,error}=await conTope(sb.rpc('my_referral'),10000,'referidos');
+ if (UID!==uid) throw new Error('La cuenta ha cambiado.');
+ if (error || !data || !/^[A-F0-9]{16}$/.test(data.code)) throw new Error('No se pudo consultar el enlace.');
+ return {code:data.code,registered:Number(data.registered)||0,url:'https://goldenfarm.onrender.com/?ref='+data.code};
+}
+
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
 const SAVE_BASES = new Map(), SAVE_CONFLICTOS = new Set();
 const SAVE_CONFIRMACIONES = new Map();
@@ -1793,7 +1816,7 @@ async function crearCuentaConEmail(email, nick) {
       options: {
         emailRedirectTo: (typeof location !== "undefined" ? location.origin + location.pathname : undefined),
         shouldCreateUser: true,
-        data: { nick: n },
+        data: { nick: n, ...(REFERIDO_REGISTRO ? { referral_code: REFERIDO_REGISTRO } : {}) },
       },
     });
     if (error) return { error: error.message };
