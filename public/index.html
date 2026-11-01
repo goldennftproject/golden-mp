@@ -64,6 +64,8 @@
   .pill .k{color:#a9bd94;font-weight:600;font-size:12px}
   /* barra de Combate global (doc maestro 2/8): insignia + relleno dorado + XP */
   .cpill{gap:6px}
+  .hud-xp-numeros{display:flex;flex-direction:column;gap:1px;line-height:1.1}
+  .hud-xp-numeros small{font-size:10px;font-weight:500;color:#ffe4a6}
   .cpill #c-lvl{min-width:14px;text-align:center}
   .cbarw{width:78px;height:9px;background:rgba(0,0,0,.5);border:1px solid #241505;overflow:hidden;display:inline-block;image-rendering:pixelated}
   .cfill{display:block;height:100%;width:0%;background:linear-gradient(180deg,#ffe08a,#e0a63c 55%,#b97c17);transition:width .35s ease}
@@ -1616,7 +1618,7 @@
            único nivel del juego sin barra a la vista: la ventana de la Granja la tiene desde
            siempre, pero había que saber que existía para ir a buscarla. Clic: abre esa ventana,
            que es donde viven las tareas. -->
-      <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja · Nv.</span><b id="s-level">1</b><span class="k" id="s-level-max" hidden>/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k hud-xp-label" id="lvl-tipo">XP</span><span class="k" id="lvl-txt"></span></div>
+      <div class="pill cpill" id="lvlpill" role="button" tabindex="0" aria-label="Abrir Granja y tareas" aria-controls="ov-barn" style="cursor:pointer"><span class="k">Granja · Nv.</span><b id="s-level">1</b><span class="k" id="s-level-max" hidden>/25</span><span class="cbarw"><span class="cfill lvlf" id="lvl-fill"></span></span><span class="k hud-xp-label" id="lvl-tipo">XP</span><span class="hud-xp-numeros"><span class="k" id="lvl-txt"></span><small id="lvl-falta"></small></span></div>
       <div class="pill" data-mvp-hud><span class="k">Prestigio</span><b id="s-prestige">0</b></div>
       <button class="pill divisa-hud" data-panel="ov-banco" title="Plata: semillas, fabricación y obras. Clic para ver el Banco." aria-label="Plata: saldo y usos en el Banco"><img class="ric" src="assets/farm/coin_plata.png?a=4" alt=""><span class="k">Plata</span><b id="s-plata">0</b></button>
       <button class="pill divisa-hud" data-panel="ov-banco" title="Golden: VIP, Objetos de Granja y mejoras. Clic para ver el Banco." aria-label="Golden: saldo y usos en el Banco"><img class="ric" src="assets/farm/coin_esencia.png?a=4" alt=""><span class="k">Golden</span><b id="s-golden">0</b></button>
@@ -1624,7 +1626,7 @@
            un vistazo mientras peleás; el número sigue estando porque saber que te faltan 12 para
            llenarte es lo que decide si comés ahora o después. -->
       <div class="pill hppill" id="hppill" title="Vida"><span class="hpcor">❤</span><span class="k">Vida</span><span class="hpbarw"><span class="hpfill" id="hp-fill"></span></span><b id="s-hp">100/100</b><span class="k hpeta" id="hp-eta"></span></div>
-      <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los enemigos derrotados, sin importar el arma"><span class="k">Combate · Nv.</span><b id="c-lvl">1</b><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k">XP</span><span class="k" id="c-xp">0/100</span></div>
+      <div class="pill cpill" id="cbar" title="Nivel de Combate — suma la XP de todos los enemigos derrotados, sin importar el arma"><span class="k">Combate · Nv.</span><b id="c-lvl">1</b><span class="cbarw"><span class="cfill" id="c-fill"></span></span><span class="k">XP</span><span class="hud-xp-numeros"><span class="k" id="c-xp">0/100</span><small id="c-xp-falta"></small></span></div>
       <div class="pill" data-mvp-hud><span class="k">Semana</span><b id="s-week">1</b></div>
       <button class="btnpill" id="hud-sound" type="button" title="Silenciar sonido" aria-label="Silenciar sonido" aria-pressed="true" onclick="alternarSonido()"><span aria-hidden="true">♫</span></button>
       <button class="btnpill" id="menu-btn">☰ Menú</button>

@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{JSDOM}=require('jsdom');
+const doc=new JSDOM(fs.readFileSync('public/index.html','utf8')).window.document;
+const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(process.cwd(),{'game/main.js':''});
+c.document=doc;c.estadoDeCero();
+const levels=vm.runInContext('FARM_XP_LVLS',c);
+c.G.level=4;c.farmXpProductiva=()=>levels[4]+10;
+c.refreshFarmBar();
+assert.equal(doc.getElementById('lvl-falta').textContent,'Faltan '+c.fmt(levels[5]-levels[4]-10)+' XP');
+assert.match(doc.getElementById('lvlpill').title,/XP total:/);
+c.G.level=11;c.farmXpProductiva=()=>levels[12]+500;c.refreshFarmBar();
+assert.equal(doc.getElementById('lvl-falta').textContent,'XP completada');
+assert.equal(doc.getElementById('lvlpill').dataset.progreso,'tareas');
+c.G.level=25;c.refreshFarmBar();assert.equal(doc.getElementById('lvl-falta').textContent,'Nivel máximo');
+c.combatInfo=()=>({lvl:3,into:25,need:100});c.refreshCombatBar();
+assert.equal(doc.getElementById('c-xp-falta').textContent,'Faltan 75 XP');
+assert.equal(doc.getElementById('c-xp').textContent,'25/100');
+console.log('OK: XP actual, restante, tareas pendientes, nivel máximo y combate.');

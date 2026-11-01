@@ -2108,6 +2108,10 @@ function refreshCombatBar() {   // doc maestro 2/8: insignia de nivel + relleno 
   const ci = combatInfo();
   el.textContent = ci.lvl;
   setTxt("c-xp", fmt(ci.into) + "/" + fmt(ci.need));
+  const falta = Math.max(0, ci.need - ci.into);
+  setTxt("c-xp-falta", falta ? "Faltan " + fmt(falta) + " XP" : "XP completada");
+  const pill = document.getElementById("cbar");
+  if (pill) pill.title = "Combate · Nivel " + ci.lvl + " · " + fmt(ci.into) + " / " + fmt(ci.need) + " XP · Faltan " + fmt(falta) + " XP para subir";
   const f = document.getElementById("c-fill"); if (f) f.style.width = Math.min(100, ci.into / ci.need * 100).toFixed(1) + "%";
 }
 /* LA BARRA DE LA GRANJA EN EL HUD   (31/8, de los vídeos de referencia de dirección)
@@ -2129,12 +2133,15 @@ function refreshFarmBar() {
   if (sig > FARM_NIVEL_MAX) {
     f.style.width = "100%"; f.classList.remove("tareas");
     if (t) t.textContent = "MAX";
+    setTxt("lvl-falta", "Nivel máximo");
     if(tipo)tipo.textContent="";if(pill?.dataset)pill.dataset.progreso="max";
     if (pill) pill.title = "Nivel máximo de granja";
     return;
   }
   const desde = FARM_XP_LVLS[G.level] || 0, hasta = FARM_XP_LVLS[sig] || (desde + 1);
   const xp = Math.floor(farmXpProductiva());
+  const faltaXp = Math.max(0, hasta - xp);
+  setTxt("lvl-falta", faltaXp ? "Faltan " + fmt(faltaXp) + " XP" : "XP completada");
   const pctXp = Math.max(0, Math.min(100, (xp - desde) / Math.max(1, hasta - desde) * 100));
   const especialidad = farmEspecialidadCumple(sig);
   const tareas = especialidad ? [] : (typeof tareasDelNivel === "function") ? tareasDelNivel(sig) : [];
@@ -2153,7 +2160,7 @@ function refreshFarmBar() {
     /* el tooltip dice TODO lo que falta, porque es lo que uno viene a preguntarle a la barra.
        La XP se TOPA a la necesaria: con la XP de sobra y tareas pendientes, « 8k / 7.5k » se lee
        como un error de cuenta cuando en realidad es « esta parte ya está ». */
-    let tip = "Nivel " + sig + ": " + fmt(Math.min(hasta - desde, Math.max(0, xp - desde))) + " / " + fmt(hasta - desde) + " XP productiva (cultivo, tala y minería)";
+    let tip = "Nivel " + sig + ": " + fmt(Math.max(0, xp - desde)) + " / " + fmt(hasta - desde) + " XP productiva (cultivo, tala y minería) · Faltan " + fmt(faltaXp) + " XP · XP total: " + fmt(xp);
     if (tareas.length) {
       tip += " · tareas " + hechas + "/" + tareas.length;
       const pend = tareas.filter(x => tareaProgreso(x) < x[2]).slice(0, 2)
