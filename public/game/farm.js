@@ -2610,7 +2610,7 @@ class FarmScene extends Phaser.Scene {
     /* 22/9: la señal de borde (anclada) solo cuando la expansión YA se puede pagar — la misma
        regla que tenía la chapa en su sitio. Con el lote fuera de vista y sin poder pagar, el
        bosque se ve limpio, como antes del 22/9. */
-    const visible = !p.anclado || !!cta.puede;   // 22/9: como en SFL, la marca se ve siempre en su lote
+    const visible = !p.anclado || !!cta.puede || !!cta.obra;
     if (visible !== this._expCtaVisible) {
       this._expCtaVisible = visible;
       (this.expCartel || []).forEach(o => { try { o.setVisible(visible); } catch (e) {} });
@@ -4818,11 +4818,15 @@ class FarmScene extends Phaser.Scene {
      el centro que dice qué cuesta. Se ve el terreno antes de pagarlo, que es de lo que se trata. */
   dibujarExpansion() {
     const ex = (typeof expansionSiguiente === "function") ? expansionSiguiente() : null;
+    const obraActual = typeof expansionObra === "function" ? expansionObra() : null;
+    const obra = !!(ex && obraActual && obraActual.i === ex.i);
+    const tiempoObra = obra ? expansionObraTxt() : "";
     // FIRMA: el cartel se redibuja solo si cambió algo que se VE. Desde el 1/9 la chapa ya no
     // enseña materiales (eso es del recuadro), así que la firma se queda con lo que sí pinta:
     // el bloque, el nivel, y si el jugador ya puede pagar (el color y el latido).
     const firma = !ex ? "-" : [ex.n, G.level,
-      ((G.level || 1) >= ex.nivel && typeof canAfford === "function" && canAfford(ex.costo)) ? 1 : 0].join("/");
+      ((G.level || 1) >= ex.nivel && typeof canAfford === "function" && canAfford(ex.costo)) ? 1 : 0,
+      obra ? obraActual.hasta : "", tiempoObra].join("/");
     if (this.expFx && this._expFirma === firma) return;
     this._expFirma = firma;
     try { if (this._expCta && this._expCta.pulso && typeof this._expCta.pulso.stop === "function") this._expCta.pulso.stop(); } catch (e) {}
@@ -4841,8 +4845,8 @@ class FarmScene extends Phaser.Scene {
        que tenés, y el premio (árbol · roca · parcela). Sin nivel la chapa sale en PLATA y el
        clic explica qué falta; con nivel, la dorada de siempre. Los nodos del terreno siguen
        tapados hasta comprarla, exactamente igual. */
-    const puede = !falta && typeof canAfford === "function" && canAfford(ex.costo);
-    const col = falta ? 0xb9c4c9 : puede ? 0xffd54a : 0xd8b45a;
+    const puede = !obra && !falta && typeof canAfford === "function" && canAfford(ex.costo);
+    const col = obra ? 0xf6a43a : falta ? 0xb9c4c9 : puede ? 0xffd54a : 0xd8b45a;
 
     /* 18/8 (dirección, 2ª pasada): "no quiero que haya líneas de puntos grises... lo de que se
        puede desbloquear el lugar solo debe aparecer cuando pasó el cursor encima".
@@ -4852,13 +4856,13 @@ class FarmScene extends Phaser.Scene {
        Ojo: la zona NO puede ocultarse con setVisible(false) —Phaser deja de hacerle hit-test y no
        habría hover que encender—. Se apaga bajando el alfa a 0, que sigue siendo interactiva. */
     const zona = this.add.rectangle(x0 + w / 2, y0 + h / 2, w, h, col, 0)
-      .setDepth(-998).setStrokeStyle(2, col, 0);
+      .setDepth(-998).setStrokeStyle(2, col, obra ? 0.8 : 0);
     this.expFx.push(zona);
     zona.setInteractive({ useHandCursor: true });
     const estacas = [];   // se encienden y apagan con el cursor, igual que el resaltado
     const resaltar = (on) => {
-      zona.setFillStyle(col, on ? 0.34 : 0);
-      zona.setStrokeStyle(on ? 3 : 2, col, on ? 1 : 0);
+      zona.setFillStyle(col, on ? 0.34 : obra ? 0.12 : 0);
+      zona.setStrokeStyle(on ? 3 : 2, col, on || obra ? 1 : 0);
       estacas.forEach(o => { try { o.setAlpha(on ? 1 : 0.85); } catch (e) {} });
       if (this._expCta) this._expCta.resaltado = !!on;
       if (typeof this.actualizarCartelExpansion === "function") this.actualizarCartelExpansion();
@@ -4877,6 +4881,17 @@ class FarmScene extends Phaser.Scene {
        ven SIEMPRE, como en SFL — el lote queda marcado en reposo; el cursor encima suma el
        relleno. (Revierte el « en reposo el lote no se ve » del 18/8, por pedido con referencia.) */
     estacas.forEach(o => { o.setVisible(true); o.setAlpha(0.85); this.expFx.push(o); });
+    if (obra) {
+      zona.setFillStyle(col, 0.12);
+      // Barreras de obra: silueta y franjas distintas de las estacas disponibles.
+      for (const y of [y0, y0 + h]) {
+        for (let x = x0 + T / 2; x < x0 + w; x += T) {
+          this.expFx.push(this.add.rectangle(x, y - 5, T * 0.75, 7, 0xf6a43a, 1).setDepth(y + 3));
+          this.expFx.push(this.add.rectangle(x - T * 0.18, y - 5, T * 0.14, 7, 0x382718, 1).setDepth(y + 4));
+          this.expFx.push(this.add.rectangle(x + T * 0.18, y - 5, T * 0.14, 7, 0x382718, 1).setDepth(y + 4));
+        }
+      }
+    }
 
     /* 1/9 (dirección, tras ver el recuadro): « habría que quitar la información que hay al
        pasar el cursor… al cliquear te muestra la interfaz con todo, así que los datos del
@@ -4908,21 +4923,21 @@ class FarmScene extends Phaser.Scene {
        enorme ni invasivo ». La chapa de 172×48 con dos renglones se va. Queda la marca de SFL:
        un botón redondo chico con el martillo y, debajo, un rótulo de una palabra. Dorado cuando
        ya se puede pagar; plata con una ✖ cuando no. Toda la información vive en el recuadro. */
-    const CTA_W = 60, CTA_H = 48;
+    const CTA_W = obra ? 110 : 60, CTA_H = obra ? 62 : 48;
     const chapa = this.add.circle(cx, cy - 8, 13, 0x1d2a14, 0.88)
       .setStrokeStyle(2, col, 0.95).setDepth(D).setInteractive({ useHandCursor: true });
     this.expFx.push(chapa); this.expCartel.push(chapa);
-    { const t = this.add.text(cx, cy - 8, "🔨", { fontFamily: "system-ui", fontSize: "14px" })
+    { const t = this.add.text(cx, cy - 8, obra ? "⌛" : "🔨", { fontFamily: "system-ui", fontSize: "14px" })
         .setOrigin(0.5, 0.52).setDepth(D + 1);
       this.expFx.push(t); this.expCartel.push(t); }
-    { const t2 = this.add.text(cx, cy + 12, (puede ? "" : "✖ ") + "Expandir",
-        { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", color: puede ? "#ffe08a" : "#e9e9e9",
+    { const t2 = this.add.text(cx, cy + 12, obra ? "En construcción\n" + tiempoObra : (puede ? "" : "✖ ") + "Expandir",
+        { fontFamily: "system-ui", fontSize: "10px", fontStyle: "bold", align: "center", color: obra ? "#ffc875" : puede ? "#ffe08a" : "#e9e9e9",
           stroke: "#20301a", strokeThickness: 3 })
         .setOrigin(0.5, 0.5).setDepth(D + 1);
       this.expFx.push(t2); this.expCartel.push(t2); }
     this._expCta = { cx, cy, ancho: CTA_W, alto: CTA_H, chapa,
       titulo: this.expCartel[1], pista: this.expCartel[2], x: null, y: null,
-      escala: null, pulso: null, puede: !!puede, resaltado: false };
+      escala: null, pulso: null, puede: !!puede, obra, resaltado: false };
     // arranca OCULTO: solo se ve con el cursor encima. La ÚNICA excepción es cuando ya lo podés
     // pagar: ahí el cartel dorado se queda a la vista porque es una llamada a la acción, no un
     // aviso gris. Si te falta nivel o material, el bosque se ve limpio.

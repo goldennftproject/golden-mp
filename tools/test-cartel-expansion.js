@@ -175,4 +175,22 @@ console.log("\nY EL CÓDIGO NO SE QUEDÓ CON RAMAS MUERTAS");
 }
 
 console.log("\n" + (fallos ? "  ✗ " + fallos + " fallas\n" : "  ✓ la próxima expansión siempre se muestra, y la chapa invita — el recuadro cuenta\n"));
+{
+  const {reg, esc} = pintar(99, {plata:999999,madera:999999,piedra:999999});
+  const antes = esc._expFirma, cantidad = reg.length;
+  G.expObra = {i:0,n:1,desde:Date.now(),hasta:Date.now()+600000};
+  dibujar.call(esc);
+  const textos = reg.slice(cantidad).filter(o=>o.__tipo==='text').map(o=>o.texto||'');
+  ok('pagar redibuja sin cambiar nivel',esc._expFirma!==antes);
+  ok('obra muestra estado y tiempo, sin invitar a pagar',textos.some(t=>/En construcción\n.*min/.test(t))&&!textos.some(t=>/Expandir/.test(t)));
+  ok('obra no es una compra disponible',esc._expCta.obra&&!esc._expCta.puede);
+  ok('obra añade barreras',reg.length-cantidad>cantidad);
+  const firmaObra=esc._expFirma;
+  G.expObra.hasta-=60000;
+  dibujar.call(esc);
+  ok('actualiza el tiempo restante',esc._expFirma!==firmaObra);
+  delete G.expObra;
+  dibujar.call(esc);
+  ok('sin obra recupera señal normal',!esc._expCta.obra);
+}
 process.exit(fallos ? 1 : 0);
