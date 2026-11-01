@@ -104,7 +104,7 @@ async function usdtConsultar(force=false){
 async function usdtCrearSolicitud(){
  if(USDT_OCUPADO)return;const uid=UID,amount=Number(document.getElementById('usdt-amount')?.value);
  if(!Number.isSafeInteger(amount)||amount<1||amount>10000){usdtMensaje('Elige entre 1 y 10.000 Golden enteros');return;}
- USDT_OCUPADO=true;
+ USDT_OCUPADO=true;usdtMensaje('Preparando solicitud…');if(typeof renderUsdt==='function')renderUsdt();
  try{await usdtInvocar({accion:'create',amount});if(UID===uid){const select=document.getElementById('usdt-order');if(select)select.value='';await usdtConsultar(true);usdtMensaje('Solicitud preparada. Copia el importe exacto, incluidos todos los decimales.');}}
  catch(e){if(UID===uid)usdtMensaje(e.message);}
  finally{USDT_OCUPADO=false;if(typeof renderUsdt==='function')renderUsdt();}
@@ -124,7 +124,7 @@ async function usdtComprobar(){
  let tx=String(document.getElementById('usdt-tx')?.value||'').trim().toLowerCase();
  if(!order){usdtMensaje('Crea o selecciona una solicitud.');return;}
  if(tx&&!/^0x[0-9a-f]{64}$/.test(tx)){usdtMensaje('El identificador de transacción no es válido.');return;}
- USDT_OCUPADO=true;
+ USDT_OCUPADO=true;usdtMensaje('Comprobando el pago…');if(typeof renderUsdt==='function')renderUsdt();
  try{
   if(!tx){const found=await usdtInvocar({accion:'find',order});if(UID!==uid)return;if(found.pending){usdtMensaje(found.message);return;}tx=found.tx;const input=document.getElementById('usdt-tx');if(input)input.value=tx;}
   const result=await economiaSolicitar({usdt:{accion:'claim',order,tx}});
