@@ -1558,7 +1558,7 @@
 /* PC: los recursos permanentes comparten una fila; sólo los efectos temporales flotan. */
 @media(min-width:641px){
   #hudbar{flex-wrap:nowrap;justify-content:flex-start;gap:5px;padding:3px 8px;min-height:54px}
-  #hudbar .brand{order:0;flex:0 0 180px;min-width:0;margin-right:clamp(10px,2vw,32px)}
+  #hudbar .brand{order:0;flex:0 0 180px;min-width:0}
   #hudbar .hud{display:contents}
   #hudbar .pill,#hudbar .btnpill{flex:0 0 auto;min-width:max-content;padding:1px 5px;gap:4px;font-size:12px}
   #hudbar .pill .k{font-size:12px}
@@ -1567,7 +1567,8 @@
   #hudbar .hud-xp-label,#hudbar .hpeta{display:none}
   #hudbar #lvlpill{order:1;margin-left:auto}#hudbar #energia-granja-pill{order:2}
   #hudbar .divisa-hud{order:3}#hudbar #hppill{order:4}#hudbar #cbar{order:5}
-  #hudbar #stampill{order:6}#hudbar #hud-sound{order:7;margin-left:0;flex-shrink:0}#hudbar #menu-btn{order:8;margin-left:0;flex-shrink:0}
+  /* Márgenes iguales a ambos lados del grupo de datos; música y menú quedan a la derecha. */
+  #hudbar #stampill{order:6}#hudbar #hud-sound{order:7;margin-left:auto;flex-shrink:0}#hudbar #menu-btn{order:8;margin-left:0;flex-shrink:0}
   #hudbar #buffpill{max-width:calc(100vw - 16px);flex-wrap:wrap;pointer-events:auto}
 }
 @media(min-width:641px) and (max-width:1190px){
