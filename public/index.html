@@ -64,8 +64,8 @@
   .pill .k{color:#a9bd94;font-weight:600;font-size:12px}
   /* barra de Combate global (doc maestro 2/8): insignia + relleno dorado + XP */
   .cpill{gap:6px}
-  .hud-xp-numeros{display:flex;flex-direction:column;gap:1px;line-height:1.1}
-  .hud-xp-numeros small{font-size:10px;font-weight:500;color:#ffe4a6}
+  .hud-xp-numeros{display:inline-flex;align-items:center}
+  .hud-xp-numeros small{display:none} /* La XP restante se consulta en el tooltip, sin elevar el HUD. */
   .cpill #c-lvl{min-width:14px;text-align:center}
   .cbarw{width:78px;height:9px;background:rgba(0,0,0,.5);border:1px solid #241505;overflow:hidden;display:inline-block;image-rendering:pixelated}
   .cfill{display:block;height:100%;width:0%;background:linear-gradient(180deg,#ffe08a,#e0a63c 55%,#b97c17);transition:width .35s ease}
