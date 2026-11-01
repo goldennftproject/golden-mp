@@ -2,7 +2,7 @@
 Cada cuenta existente y nueva tiene un codigo unico permanente, generado en el servidor.
 En Configuracion > Invitar amigos se consulta y copia el enlace oficial.
 El parametro ref se conserva hasta 30 dias en este navegador y viaja en el alta por correo.
-Un trigger de Auth fija el invitador al crear la cuenta: los cambios posteriores de metadatos no lo modifican.
+Un trigger de Auth fija el invitador al crear la cuenta. Si no se uso enlace, se puede asignar manualmente una sola vez mediante set_my_referrer. Los cambios posteriores de metadatos no lo modifican. La asignacion manual rechaza autorreferencias, sustituciones y ciclos, serializando las peticiones concurrentes.
 Codigos invalidos no bloquean el registro. Las cuentas existentes no reciben invitador retroactivamente.
 El contador propio solo incluye invitados con correo confirmado. No revela correos ni identificadores de los invitados.
 Sin recompensas, comisiones, credito Golden ni cambios de economia.

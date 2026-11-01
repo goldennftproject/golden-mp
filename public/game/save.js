@@ -35,13 +35,14 @@ function capturarReferido() {
  } catch(e) { return ''; }
 }
 const REFERIDO_REGISTRO = capturarReferido();
-async function miReferido() {
+async function miReferido(codigo) {
  const uid=UID;
  if (!sb || !uid) throw new Error('Inicia sesión para ver tu enlace.');
- const {data,error}=await conTope(sb.rpc('my_referral'),10000,'referidos');
+ const {data,error}=await conTope((codigo ? sb.rpc('set_my_referrer',{referral_code:codigo}) : sb.rpc('my_referral')),10000,'referidos');
  if (UID!==uid) throw new Error('La cuenta ha cambiado.');
- if (error || !data || !/^[A-F0-9]{16}$/.test(data.code)) throw new Error('No se pudo consultar el enlace.');
- return {code:data.code,registered:Number(data.registered)||0,url:'https://goldenfarm.onrender.com/?ref='+data.code};
+ if (error) throw new Error(error.message || 'No se pudo consultar el enlace.');
+ if (!data || !/^[A-F0-9]{16}$/.test(data.code)) throw new Error('No se pudo consultar el enlace.');
+ return {inviter:data.inviter_code||null,code:data.code,registered:Number(data.registered)||0,url:'https://goldenfarm.onrender.com/?ref='+data.code};
 }
 
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;

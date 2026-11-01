@@ -8,7 +8,7 @@ assert.equal(doc.getElementById('banco-canjear').closest('details'),null);assert
 assert.equal(doc.querySelectorAll('#gmenu .key').length,0);
 for(const id of ['gm-cob','gm-cam','gm-log','gm-mis','gm-alb'])assert.ok(doc.getElementById(id).classList.contains('menu-badge'));
 const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.js':''});c.document=doc;c.refreshArtefactos();
-assert.equal(doc.querySelectorAll('#objetos-productores .resumen-menu>span').length,3);assert.ok(doc.querySelector('#objetos-productores details').textContent.includes('puede variar'));
+assert.equal(doc.querySelectorAll('#objetos-productores .resumen-menu>span').length,3);assert.ok(doc.querySelector('#objetos-productores details').textContent.includes('Plata → Golden está desactivado'));
 for(const b of doc.querySelectorAll('[data-artefacto-comprar],[data-artefacto-cobrar]'))assert.equal(b.closest('details'),null,'acciones fuera de la ayuda');
 assert.ok(!doc.querySelector('#ov-cobertizo').textContent.includes('fabricar equipo: 2'));
 console.log('OK: 20 destinos conservados y acceso a cultivos añadido, iconos, ayudas, grupos, canje y acciones a la vista; condiciones completas disponibles.');

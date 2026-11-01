@@ -5859,19 +5859,29 @@ async function copiarInformeAlfa(){
 }
 /* ---- configuración ---- */
 function prepararReferidos() {
- const ver=$('cfg-referido-ver'),copiar=$('cfg-referido-copiar'),estado=$('cfg-referido-status'),box=$('cfg-referido-resultado'),input=$('cfg-referido-link');
- if (!ver || !copiar || !estado || !box || !input) return;
- box.hidden=true; input.value=''; estado.textContent=''; ver.disabled=false;
+ const ver=$('cfg-referido-ver'),copiar=$('cfg-referido-copiar'),estado=$('cfg-referido-status'),box=$('cfg-referido-resultado'),input=$('cfg-referido-link'),asignar=$('cfg-referido-asignar'),codigo=$('cfg-referido-codigo'),manual=$('cfg-referido-manual');
+ if (!ver || !copiar || !estado || !box || !input || !asignar || !codigo || !manual) return;
+ box.hidden=true; manual.hidden=true; input.value=''; codigo.value=''; estado.textContent=''; ver.disabled=false; asignar.disabled=false;
+ const mostrar=r=>{
+  input.value=r.url; box.hidden=false;
+  $('cfg-referido-datos').textContent='ID: '+r.code+' · Registros confirmados: '+r.registered;
+  $('cfg-referido-invitador').textContent=r.inviter?'Tu invitador: '+r.inviter:'Todavía no tienes invitador.';
+  manual.hidden=!!r.inviter;
+ };
  ver.onclick=async()=>{
   ver.disabled=true; estado.textContent='Consultando…'; box.hidden=true;
-  try {
-   const r=await miReferido();
-   if (!ver.isConnected) return;
-   input.value=r.url; box.hidden=false;
-   $('cfg-referido-datos').textContent='ID: '+r.code+' · Registros confirmados: '+r.registered;
-   estado.textContent='';
-  } catch(e){estado.textContent=e.message||'No se pudo consultar. Inténtalo de nuevo.';}
+  try {const r=await miReferido();if(!ver.isConnected)return;mostrar(r);estado.textContent='';}
+  catch(e){estado.textContent=e.message||'No se pudo consultar. Inténtalo de nuevo.';}
   finally {ver.disabled=false;}
+ };
+ asignar.onclick=async()=>{
+  const code=codigo.value.trim().toUpperCase();
+  if(!/^[A-F0-9]{16}$/.test(code)){estado.textContent='Introduce un código de 16 letras y números.';return;}
+  if(!confirm('¿Asignar este código como tu invitador? No podrás cambiarlo después.'))return;
+  asignar.disabled=true;ver.disabled=true;estado.textContent='Guardando referido…';
+  try {const r=await miReferido(code);if(!asignar.isConnected)return;mostrar(r);estado.textContent='Referido asignado.';}
+  catch(e){estado.textContent=e.message||'No se pudo guardar. Inténtalo de nuevo.';}
+  finally{asignar.disabled=false;ver.disabled=false;}
  };
  copiar.onclick=async()=>{
   if (!input.value) return;
