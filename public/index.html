@@ -1951,6 +1951,25 @@
     <div class="lbnote" id="lb-note"></div>
   </div></div>
 
+  <div class="ov" id="ov-perfil"><div class="card" style="width:min(440px,94%)">
+    <button class="close" data-close="ov-perfil" aria-label="Cerrar ventana">×</button>
+    <h3>Mi perfil</h3>
+    <div class="cfgsec">
+      <h4>Nombre de la granja</h4>
+      <p id="perfil-nombre-actual" style="font-size:22px;font-weight:800;overflow-wrap:anywhere">—</p>
+      <label for="perfil-nombre">Nuevo nombre</label>
+      <input id="perfil-nombre" type="text" maxlength="24" autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box" aria-describedby="perfil-nombre-ayuda">
+      <p class="sub" id="perfil-nombre-ayuda">De 3 a 24 caracteres. Letras, números, espacios, punto, guion o guion bajo.</p>
+      <button class="green" id="perfil-guardar">Guardar nombre</button>
+      <p id="perfil-status" role="status" style="min-height:36px">Cambiar el nombre no altera tu progreso ni tus compras.</p>
+    </div>
+    <div class="cfgsec">
+      <h4>Discord</h4>
+      <p id="perfil-discord">Consultando…</p>
+      <button class="ghost sm" id="perfil-discord-gestionar">Vincular Discord</button>
+    </div>
+  </div></div>
+
   <div class="ov" id="ov-config"><div class="card" style="width:min(480px,94%)">
     <button class="close" data-close="ov-config" aria-label="Cerrar ventana">×</button>
     <h3>Configuración</h3>
@@ -2295,6 +2314,7 @@
   <div class="gmenu collapsed" id="gmenu">
     <div class="gmitems" role="navigation" aria-label="Menús del juego">
       <div class="menu-seccion">Mi granja</div>
+      <button class="gmi" title="Ver tu nombre, cambiarlo y gestionar Discord." data-panel="ov-perfil"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></span><span class="menu-label">Mi perfil</span></button>
       <button class="gmi" title="Objetos, semillas y materiales que llevas." data-panel="ov-inv"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8V6a6 6 0 0 1 12 0v2 M4 8h16v13H4z M8 12h8v5H8z"/></svg></span><span class="menu-label">Inventario</span></button>
       <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7 M5 9v12h14V9 M9 21v-7h6v7"/></svg></span><span class="menu-label">Cobertizo</span><b class="menu-badge" id="gm-cob"></b></button>
       <button class="gmi" title="Elegir armas, armaduras y herramientas." data-panel="ov-equip"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 18 M19 3L5 21 M3 17l4 4 M17 21l4-4"/></svg></span><span class="menu-label">Equipo</span></button>

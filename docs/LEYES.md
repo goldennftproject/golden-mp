@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Mi perfil y cambio de nombre — 02/11/2026
+
+Dirección autoriza: «hazlo, cambiar nombre no debe afectar en nada». Mi perfil permite consultar y cambiar gratuitamente el nombre visible de la granja y ver Discord por separado. El nombre se confirma en el servidor por UID y se protege contra guardados antiguos; no cambia identidad, progreso, compras, saldos, VIP, energía, comercio, referidos, Discord, nivel, XP ni posición del ranking. No se edita el snapshot ni su versión de guardado. Los permisos del equipo siguen por UID. No se reescriben mensajes ni clasificaciones históricas. Ver MI-PERFIL-20261102.md.
+
 ## Vinculación de Discord — 01/11/2026
 
 Dirección autoriza: «Y bueno, añade esa posibilidad entonces». Configuración permite vincular el perfil de Discord mediante un código de un solo uso, comprobación por el bot oficial en el servidor y confirmación final en la sesión verificada del juego. Una granja por Discord y un Discord por granja; no se sustituye una vinculación existente ni se vincula por nombre o transacción pegada. El código caduca, sólo se almacena su hash y no se anuncia públicamente. El bot no recibe acceso directo a la base de datos ni nuevos permisos de roles. Depósitos confirmados permiten identificar elegibilidad para el futuro reconocimiento de Fundador; no hay asignación automática de roles, premios ni cambios de saldo, progreso, retiros o estudio económico. Ver DISCORD-VINCULACION-20261101.md.

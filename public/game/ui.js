@@ -97,7 +97,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-cos": () => refreshCosmeticos(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
-  "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb() };
+  "ov-perfil": () => refreshPerfil(), "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb() };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
 const OV_SFX = { "ov-pedidos": "shop", "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-paquete": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
@@ -5937,6 +5937,40 @@ function prepararReferidos() {
   catch(e){input.focus();input.select();estado.textContent='Selecciona y copia el enlace.';}
  };
 }
+let PERFIL_SOLICITUD=0;
+function refreshPerfil() {
+  const actual=$('perfil-nombre-actual'),input=$('perfil-nombre'),guardar=$('perfil-guardar'),estado=$('perfil-status'),discord=$('perfil-discord'),gestionar=$('perfil-discord-gestionar');
+  if(!input||!guardar||!estado)return;
+  const uid=typeof UID!=='undefined'?UID:null,peticion=++PERFIL_SOLICITUD;
+  const inicial=window.NICK||'Granjero';actual.textContent=inicial;input.value=inicial;
+  let ocupado=false;
+  const operar=async action=>{
+    if(ocupado)return;ocupado=true;guardar.disabled=true;
+    const nombre=input.value;
+    estado.textContent=action==='rename'?'Guardando nombre…':'Consultando perfil…';
+    try{
+      if(typeof sb==='undefined'||!sb||!uid||!CARGA_OK||SOLO_LOCAL)throw new Error('Entra con el correo de tu granja y espera a que cargue.');
+      const {data,error}=await conTope(sb.functions.invoke('perfil',{body:{action,account:uid,...(action==='rename'?{name:nombre}:{})}}),15000,'perfil');
+      if(UID!==uid||PERFIL_SOLICITUD!==peticion)return;
+      if(error){let msg;try{msg=(await error.context.json()).error;}catch{}throw new Error(msg||'No se pudo confirmar. Vuelve a abrir Mi perfil para consultar el nombre guardado.');}
+      if(!data?.ok||typeof data.name!=='string')throw new Error('No se pudo confirmar el perfil. Vuelve a consultarlo.');
+      window.NICK=data.name;actual.textContent=data.name;
+      if(action==='rename'||input.value===inicial)input.value=data.name;
+      discord.textContent=data.discord_linked?'Vinculado: '+data.discord_name:'Sin vincular';
+      gestionar.textContent=data.discord_linked?'Gestionar Discord':'Vincular Discord';
+      if(action==='rename'){
+        try{if(typeof copiaGuardar==='function')copiaGuardar(snapshot());}catch(e){console.warn('No se pudo actualizar la copia local del nombre');}
+        if(typeof lbFarmData!=='undefined'){lbFarmData=null;lbFarmFetchedAt=0;}
+        estado.textContent='Nombre actualizado. Tu progreso y tus compras se mantienen.';
+      }else estado.textContent='El nombre de Discord y el de la granja son independientes.';
+    }catch(e){if(UID===uid&&PERFIL_SOLICITUD===peticion)estado.textContent=e.message;}
+    finally{ocupado=false;if(UID===uid&&PERFIL_SOLICITUD===peticion)guardar.disabled=false;}
+  };
+  guardar.onclick=()=>operar('rename');
+  input.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();operar('rename');}};
+  gestionar.onclick=()=>{closeOv('ov-perfil');openOv('ov-config');const box=$('cfg-discord');if(box?.scrollIntoView)box.scrollIntoView({block:'center'});};
+  operar('state');
+}
 function prepararDiscord() {
   const crear=$('cfg-discord-create'),ver=$('cfg-discord-state'),confirmar=$('cfg-discord-confirm'),
     estado=$('cfg-discord-status'),caja=$('cfg-discord-code-box'),campo=$('cfg-discord-code'),copiar=$('cfg-discord-copy');
@@ -7256,7 +7290,7 @@ function refreshCosmeticos() {
 (function blindarPaneles() {
   const paneles = ["refreshObjetivos","refreshInv","refreshSkills","refreshEquip","refreshForge","refreshMarket","refreshBarn",
     "refreshCooking","refreshHorno","refreshAltar","refreshEstablo","refreshCurtiduria","refreshOfrendas",
-    "refreshIncursion","refreshP2P","refreshCosmeticos","refreshPass","refreshChest","refreshConfig",
+    "refreshIncursion","refreshP2P","refreshCosmeticos","refreshPass","refreshChest","refreshPerfil","refreshConfig",
     "refreshLb","refreshDaily","refreshSeedShop","refreshHotbar","refreshStam"];
   paneles.forEach(nombre => {
     const f = window[nombre];
