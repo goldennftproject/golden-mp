@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Dos nodos incluidos con VIP — 02/11/2026
+
+Dirección traslada la aclaración del diseñador: «Mantener la capacidad actual y añadir los dos [...] Nodos». Se conservan +25% de capacidad (mínimo 2 cupos), precio y duración. Se añaden dos elecciones gratuitas de nodos desbloqueados en el Cobertizo, una sola vez por cuenta, también reconocidas para VIP previamente registrado; renovar no repite. Los vales de expansión siguen separados. Nivel, terreno y cupos siguen siendo necesarios. Al vencer se conserva la propiedad y sólo se pausa el exceso por la regla existente. No se cobra por la entrega ni se alteran saldos, otras ventajas o el estudio económico. Ver VIP-DOS-NODOS-20261102.md.
+
 ## Mi perfil y cambio de nombre — 02/11/2026
 
 Dirección autoriza: «hazlo, cambiar nombre no debe afectar en nada». Mi perfil permite consultar y cambiar gratuitamente el nombre visible de la granja y ver Discord por separado. El nombre se confirma en el servidor por UID y se protege contra guardados antiguos; no cambia identidad, progreso, compras, saldos, VIP, energía, comercio, referidos, Discord, nivel, XP ni posición del ranking. No se edita el snapshot ni su versión de guardado. Los permisos del equipo siguen por UID. No se reescriben mensajes ni clasificaciones históricas. Ver MI-PERFIL-20261102.md.

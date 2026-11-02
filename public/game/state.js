@@ -2738,6 +2738,10 @@ function recalcFarmLevelInterno() {
 function produccionClave(o) { return o && Number.isInteger(o.i) ? (o.type === "plot" ? "p:" : "n:") + o.i : ""; }
 var PRODUCCION_VIP_PRECIO = 10, PRODUCCION_VIP_DIAS = 30, PRODUCCION_VIP_CUPOS = 2, PRODUCCION_HIDRATANDO = false;
 function produccionVipCupos() { return Math.max(PRODUCCION_VIP_CUPOS,Math.ceil(((G.produccion && G.produccion.base || 5)+(G.expansiones||0))*.25)); }
+function produccionVipNodosInit() {
+  const p=G.produccion;
+  if(p && p.vipHasta>0 && p.vipNodosV!==1){p.vipNodos=2;p.vipNodosV=1;}
+}
 function produccionVipActivo() { return !!(G.produccion && G.produccion.vipHasta > nowMs()); }
 function produccionOrden(clave) { const p = G.produccion; p.orden = (p.orden || []).filter(k => k !== clave); p.orden.push(clave); }
 function produccionPausarEn(item, t, sinEscena) {
@@ -2776,6 +2780,7 @@ function produccionVipComprar() {
   G.golden -= PRODUCCION_VIP_PRECIO;
   G.produccion.vipHasta = nowMs() + PRODUCCION_VIP_DIAS * 86400000;
   G.produccion.vipAplicado = true;
+  produccionVipNodosInit();
   if (G.pass) G.pass.vip = true;
   log("VIP activado por 30 días: +25% de capacidad (mínimo 2 cupos). " + produccionVipPaseTexto(),"gold");
   refreshCobertizo(); refreshHud(); if (typeof saveFarm === "function") saveFarm(true);
@@ -2805,6 +2810,7 @@ function produccionUsados() { produccionVipTick(); return produccionItems().filt
 function produccionHayCupo() { return !G.produccion || produccionUsados() < produccionCapacidad(); }
 function produccionMigrar() {
   if (G.produccion) {
+    produccionVipNodosInit();
     if (G.produccion.valesV !== 2) {
       G.produccion.vale = Math.min(16,Math.max(0,G.produccion.vale||0)+Math.max(0,(G.expansiones||0)-1));
       G.produccion.valesV = 2;
@@ -2866,9 +2872,10 @@ function produccionComprar(tipo) {
   let nuevaClave, confirmacion;
   if (tipo === "plot") {
     if ((G.plotsOwned || 3) >= PLOT_MAX) { toast("Ya alcanzaste el máximo de parcelas."); return false; }
-    const gratis = G.produccion.vale > 0, costo = 20;
+    const valeBasico=G.produccion.vale>0;
+    const gratis = valeBasico || G.produccion.vipNodos>0, costo = 20;
     if (!gratis && G.plata < costo) { toast("Te faltan " + costo + " de plata."); return false; }
-    if (gratis) G.produccion.vale--; else G.plata -= costo;
+    if (valeBasico) G.produccion.vale--; else if(gratis) G.produccion.vipNodos--; else G.plata -= costo;
     confirmacion = "Parcela " + (gratis ? "canjeada" : "comprada por " + costo + " de plata");
     nuevaClave = "p:" + G.plotsOwned;
     G.plotsOwned++; G.plotsCompradas = (G.plotsCompradas || 0) + (gratis ? 0 : 1);
@@ -2882,9 +2889,10 @@ function produccionComprar(tipo) {
     const col = lp ? Math.floor(lp.cx / GF.TILE - (base.wCells || 1) / 2) : base.leftCol;
     const row = (lp ? Math.round(lp.by / GF.TILE) : base.baseRow) - 1;
     for (let c = col; c < col + (base.wCells || 1); c++) if (GF.celdaOcupada && GF.celdaOcupada(c, row)) { toast("El emplazamiento está ocupado. Mueve ese objeto en modo edición antes de comprar."); return false; }
-    const gratis = G.produccion.vale > 0 && (tipo === "tree" || tipo === "rock");
+    const valeBasico=G.produccion.vale>0 && (tipo === "tree" || tipo === "rock");
+    const gratis = valeBasico || G.produccion.vipNodos>0;
     if (!gratis && G.plata < def.precio) { toast("Te falta plata para ese nodo."); return false; }
-    if (gratis) G.produccion.vale--; else G.plata -= def.precio;
+    if (valeBasico) G.produccion.vale--; else if(gratis) G.produccion.vipNodos--; else G.plata -= def.precio;
     const nombre = tipo === "tree" ? "Árbol" : tipo === "rock" ? "Roca" : "Veta de " + tipo;
     confirmacion = (gratis ? "Canje: " : "Compra: ") + nombre + (gratis ? "" : " · " + def.precio + " de plata") + ". Primer ciclo iniciado";
     G.produccion.nodos[i] = true;

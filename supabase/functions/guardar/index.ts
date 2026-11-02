@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 5;        // Golden conservado, VIP pagado y capacidad heredada inmutable
+const VERSION = 6;        // Dos elecciones VIP por cuenta; capacidad y economía conservadas.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -463,6 +463,14 @@ function protegerEconomia(prev, next, ahora) {
     // La vieja migración puede entregar parcelas de expansiones pendientes, nunca miles de cupos.
     if (!Number.isSafeInteger(n.base) || (p || !prev ? n.base!==base : n.base<5 || n.base>base+num(antes.expansiones))) errores.push("Capacidad base no autorizada");
     const finAnterior = num(p && p.vipHasta), fin = num(n.vipHasta);
+    // Compatibilidad con pestañas anteriores: omitir los campos no borra ni repone el regalo.
+    if(p?.vipNodosV===1){if(n.vipNodosV===undefined)n.vipNodosV=1;if(n.vipNodos===undefined)n.vipNodos=p.vipNodos;}
+    const regaloVip=p?.vipNodosV!==1&&n.vipNodosV===1&&fin>0?2:0;
+    const gratisVip=num(p?.vipNodos)+regaloVip-num(n.vipNodos);
+    if((n.vipNodosV!==undefined&&n.vipNodosV!==1)||
+      (n.vipNodosV===1&&(!Number.isSafeInteger(n.vipNodos)||n.vipNodos<0||n.vipNodos>2||fin<=0))||
+      (n.vipNodosV!==1&&num(n.vipNodos)!==0)||!Number.isInteger(gratisVip)||gratisVip<0||gratisVip>2)
+      errores.push('Regalo de nodos VIP no autorizado');
     if (fin !== finAnterior) {
       const migracion = (!p || p.vipUnico!==1) && antes.pass && antes.pass.vip;
       if ((!migracion && finAnterior > ahora) || Math.abs(fin - (ahora + VIP_MS)) > 300000) errores.push("Vencimiento VIP no autorizado");
@@ -505,12 +513,10 @@ function protegerEconomia(prev, next, ahora) {
         if ((expNodo!=null && expNodo>=expN) || num(next.level)<NODO_COMPRA[t][1]) errores.push("Nodo sin desbloquear");
         gasto += NODO_COMPRA[t][0];
       }
-      if (gratis) {
-        const parcelas=Math.max(0,plotNuevos-fichas),basicos=nuevos.filter(o=>o[1]==='tree'||o[1]==='rock').length;
-        if(gratis>parcelas+basicos)errores.push("Vale consumido sin nodo básico");
-        const gratisParcelas=Math.min(gratis,parcelas);
-        gasto-=gratisParcelas*20+Math.min(Math.max(0,gratis-gratisParcelas),basicos)*30;
-      }
+      const canjes=[...Array.from({length:Math.min(1000,Math.max(0,plotNuevos-fichas))},()=>({precio:20,basico:true})),
+        ...nuevos.map(o=>({precio:NODO_COMPRA[o[1]][0],basico:o[1]==='tree'||o[1]==='rock'}))].sort((a,b)=>b.precio-a.precio);
+      for(let j=0;j<gratis;j++){const i=canjes.findIndex(c=>c.basico);if(i<0){errores.push('Vale consumido sin nodo básico');break;}gasto-=canjes.splice(i,1)[0].precio;}
+      for(let j=0;j<gratisVip;j++){if(!canjes.length){errores.push('Regalo VIP consumido sin nodo');break;}gasto-=canjes.shift().precio;}
       const activos = poseidos.filter(o=>!n.pausas?.['n:'+o[0]]).length+Array.from({length:Math.min(1000,num(next.plotsOwned))},(_,i)=>i).filter(i=>!n.pausas?.['p:'+i]).length;
       if (activos>n.base+expN+(fin>ahora?Math.max(2,Math.ceil((n.base+expN)*.25)):0)) errores.push("Producción activa supera la capacidad");
       // Emisión simultánea legítima (pedidos, cosecha) puede financiar compras: el techo horario

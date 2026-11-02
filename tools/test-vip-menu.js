@@ -5,11 +5,11 @@ const doc=new JSDOM(fs.readFileSync(path.resolve(__dirname,'../public/index.html
 ctx.isOpen=id=>doc.getElementById(id)?.classList.contains('show');
 assert.ok(doc.querySelector('.gmi[data-panel="ov-vip"]'));
 ctx.G.golden=20;ctx.openOv('ov-vip');assert.ok(doc.getElementById('ov-vip').classList.contains('show'));
-assert.equal(doc.querySelectorAll('#vip-info tbody tr').length,8);
-const text=doc.getElementById('vip-info').textContent;assert.match(text,/Una sola membresía/);assert.match(text,/USDT desactivados/);assert.match(text,/10%/);assert.match(text,/7%/);
+assert.equal(doc.querySelectorAll('#vip-info tbody tr').length,9);
+const text=doc.getElementById('vip-info').textContent;assert.match(text,/Una sola membresía/);assert.match(text,/2 a elegir, una sola vez por cuenta/);assert.match(text,/Retiros desactivados/);assert.match(text,/10%/);assert.match(text,/7%/);
 let confirm,compras=0;ctx.askConfirm=(t,fn)=>{confirm={t,fn};};ctx.passBuyVip=()=>{compras++;ctx.G.golden-=10;ctx.G.produccion.vipHasta=Date.now()+30*86400000;return true;};
 doc.getElementById('vip-comprar').click();assert.equal(compras,0,'abrir confirmación no cobra');assert.match(confirm.t,/10 \$Golden/);confirm.fn();
 assert.equal(compras,1);assert.equal(ctx.G.golden,10);assert.equal(doc.getElementById('vip-comprar').disabled,true);assert.match(doc.getElementById('vip-info').textContent,/VIP activo hasta/);
-ctx.G.produccion.vipHasta=0;ctx.G.golden=0;ctx.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,true);assert.match(doc.getElementById('vip-info').textContent,/Te faltan 10 Golden/);
-ctx.G.golden=4;ctx.refreshVip();assert.match(doc.getElementById('vip-info').textContent,/Te faltan 6 Golden/);assert.equal(doc.getElementById('vip-comprar').disabled,true);
+ctx.G.produccion.vipHasta=0;ctx.G.golden=0;ctx.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,false);assert.equal(doc.getElementById('vip-comprar').textContent,'Recargar Golden');assert.match(doc.getElementById('vip-info').textContent,/Te faltan 10 Golden/);
+ctx.G.golden=4;ctx.refreshVip();assert.match(doc.getElementById('vip-info').textContent,/Te faltan 6 Golden/);assert.equal(doc.getElementById('vip-comprar').textContent,'Recargar Golden');
 assert.equal(ctx.GF.esOcultoMvp('ov-vip'),false);console.log('OK: menú VIP visible, comparación, confirmación compartida sin cobro al abrir, activo/vencido y saldo insuficiente.');

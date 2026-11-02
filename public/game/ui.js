@@ -2609,11 +2609,12 @@ function refreshProduccionGranja() {
   h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Sin VIP · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
     '<button class="green sm" id="prod-vip-comprar" ' + (vipGranja || G.golden < PRODUCCION_VIP_PRECIO ? 'disabled' : '') + '>' + (vipGranja ? 'VIP activo' : 'Comprar · ' + PRODUCCION_VIP_PRECIO + ' $Golden') + '</button></div>' +
     '<details class="ayuda-menu"><summary>Cómo funcionan los cupos y el VIP</summary><p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p><p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Sin VIP, sin borrar nada. Sin cobro externo ni canje por USDT.</p></details>';
+  if(G.produccion.vipNodos>0)h+='<p class="verde">VIP: '+G.produccion.vipNodos+' nodos incluidos a elegir. Una sola entrega; respeta nivel, terreno y cupos.</p>';
   if (G.produccion.vale) h += '<p class="verde">Tienes '+G.produccion.vale+' vale(s) de expansión: cada uno permite elegir gratis un árbol, una roca o una parcela. Elegir una opción consume un vale; las otras no se entregan automáticamente.</p>';
-  h += '<details id="prod-elegir"><summary>'+(G.produccion.vale?'Elegir nodo gratuito · árbol, roca o parcela':'Comprar producción · elegir especialidad')+'</summary><div class="fbtns">';
+  h += '<details id="prod-elegir"><summary>'+(G.produccion.vipNodos>0?'Elegir nodos incluidos del VIP':G.produccion.vale?'Elegir nodo gratuito · árbol, roca o parcela':'Comprar producción · elegir especialidad')+'</summary><div class="fbtns">';
   const tipos = { plot: ["Parcela", 20, 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
   for (const k in tipos) {
-    const d = tipos[k], gratis = G.produccion.vale && ["plot", "tree", "rock"].includes(k);
+    const d = tipos[k], gratis = (G.produccion.vale && ["plot", "tree", "rock"].includes(k)) || G.produccion.vipNodos>0;
     const motivo=G.level<d[2]?'Requiere granja nivel '+d[2]:!libres?'Sin cupos: pausa un nodo o expande':!gratis&&G.plata<d[1]?'Faltan '+fmtPlata(d[1]-G.plata)+' Plata':k==='plot'&&(G.plotsOwned||3)>=PLOT_MAX?'Máximo de parcelas alcanzado':k!=='plot'&&produccionEmplazamiento(k)<0?'Sin emplazamiento: libera terreno o expande':'';
     h += '<div class="eleccion-nodo"><button class="green sm" data-prod-buy="' + k + '" aria-describedby="prod-motivo-'+k+'" title="'+escapeHtml(motivo||'Activar '+d[0]+' · ocupa 1 cupo')+'" ' + (motivo ? 'disabled' : '') + '>' + d[0] + ' · ' + (gratis ? 'incluido' : d[1] + ' plata') + ' · niv. ' + d[2] + '</button><small class="motivo-accion" id="prod-motivo-'+k+'">'+escapeHtml(motivo||'Ocupa 1 cupo')+'</small></div>';
   }
@@ -2623,7 +2624,7 @@ function refreshProduccionGranja() {
     h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (pausa ? ' · pausada' : ' · activa') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" ' + (pausa && !libres ? 'disabled' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
   }
   cont.innerHTML = h + '</div></details><hr>';
-  Array.from(cont.querySelectorAll("details:not(.ayuda-menu)")).forEach((d, i) => d.open = !!abiertos[i] || (i===0 && G.produccion.vale>0));
+  Array.from(cont.querySelectorAll("details:not(.ayuda-menu)")).forEach((d, i) => d.open = !!abiertos[i] || (i===0 && (G.produccion.vale>0||G.produccion.vipNodos>0)));
   cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => produccionComprar(b.dataset.prodBuy));
   cont.querySelectorAll("[data-prod-pause]").forEach(b => b.onclick = () => produccionAlternar(b.dataset.prodPause));
   const comprarVip = $("prod-vip-comprar");
@@ -2821,22 +2822,23 @@ function refreshVip() {
     ['Energía de granja','50','100'],
     ['Cocina, nodos y expansiones','Tiempo normal','10% menos de tiempo'],
     ['Capacidad productiva','Capacidad base + expansiones','25% extra (mínimo 2 cupos)'],
+    ['Nodos incluidos','No','2 a elegir, una sola vez por cuenta'],
     ['Fabricación','De uno en uno','En lotes'],
     ['Anuncios de venta','Uno por día UTC','Diez por día UTC'],
     ['Comisión P2P nueva',G.infraestructura?.mercado?'8%':'10%',G.infraestructura?.mercado?'5%':'7%'],
     ['Objetos de Granja','Un objeto activo','Sin límite; admite duplicados'],
     ['Visitas y semillas','No incluidas','Resumen de granjas; hasta 3 semillas/día']
   ];
-  box.innerHTML='<div class="vip-presentacion"><div class="vip-ilustracion"><img src="assets/ui/shop-vip-v1.webp" alt="Corona con trigo y parcelas" width="256" height="256"></div><div class="vip-propuesta"><span class="vip-etiqueta">UNA MEMBRESÍA · 30 DÍAS</span><h4>Más posibilidades para tu granja</h4><ul class="vip-beneficios"><li>⚡ <b>100 de energía</b> <small>Sin VIP: 50</small></li><li>▦ <b>+25% de cupos</b> <small>mínimo 2 extra</small></li><li>×5 <b>Fabricación en lotes</b></li></ul><div class="vip-precio"><b>'+precio+' Golden</b><small>por 30 días</small></div><button class="green" id="vip-comprar" '+(activo||G.golden<precio?'disabled':'')+'>'+(activo?'VIP activo':'Activar VIP')+'</button><p class="vip-saldo">Tu saldo: '+fmtGolden(G.golden)+' Golden'+(!activo&&G.golden<precio?' · Te faltan '+fmtGolden(precio-G.golden)+' Golden':'')+'</p></div></div><p class="sub">'+(activo?'VIP activo hasta '+escapeHtml(new Date(G.produccion.vipHasta).toLocaleString('es-UY')):'Una sola membresía para todos los beneficios. Los nodos extra se compran aparte.')+'</p>'+
+  box.innerHTML='<div class="vip-presentacion"><div class="vip-ilustracion"><img src="assets/ui/shop-vip-v1.webp" alt="Corona con trigo y parcelas" width="256" height="256"></div><div class="vip-propuesta"><span class="vip-etiqueta">UNA MEMBRESÍA · 30 DÍAS</span><h4>Más posibilidades para tu granja</h4><ul class="vip-beneficios"><li>⚡ <b>100 de energía</b> <small>Sin VIP: 50</small></li><li>▦ <b>+25% de cupos</b> <small>mínimo 2 extra</small></li><li>🌱 <b>2 nodos a elegir</b> <small>una sola vez</small></li><li>×5 <b>Fabricación en lotes</b></li></ul><div class="vip-precio"><b>'+precio+' Golden</b><small>por 30 días</small></div><button class="green" id="vip-comprar" '+(activo||G.golden<precio?'disabled':'')+'>'+(activo?'VIP activo':'Activar VIP')+'</button><p class="vip-saldo">Tu saldo: '+fmtGolden(G.golden)+' Golden'+(!activo&&G.golden<precio?' · Te faltan '+fmtGolden(precio-G.golden)+' Golden':'')+'</p></div></div><p class="sub">'+(activo?'VIP activo hasta '+escapeHtml(new Date(G.produccion.vipHasta).toLocaleString('es-UY')):'Una sola membresía. Incluye dos nodos a elegir en el Cobertizo, una sola vez por cuenta.')+'</p>'+
     '<details class="ayuda-menu"><summary>Comparar todas las ventajas · Sin VIP / VIP</summary><div style="overflow-x:auto;margin-top:12px"><table class="comparativa-vip" style="width:100%;border-collapse:collapse;text-align:left"><thead><tr><th scope="col">Beneficio</th><th scope="col">Sin VIP</th><th scope="col">VIP</th></tr></thead><tbody>'+filas.map(f=>'<tr>'+f.map(c=>'<td style="padding:8px 5px;border-top:1px solid #ffffff33">'+escapeHtml(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>'+
-    '<details class="ayuda-menu"><summary>Duración y condiciones</summary><p class="sub">La energía se recupera en 4 horas. El combate no cambia. Los nodos adicionales se compran aparte. Al vencer, conservas los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Sin VIP se pausa, sin borrar nada.</p></details>'+
+    '<details class="ayuda-menu"><summary>Duración y condiciones</summary><p class="sub">La energía se recupera en 4 horas. El combate no cambia. Dos nodos gratuitos a elegir, una sola vez por cuenta; renovar no repite el regalo. Los demás se compran aparte. Al vencer, conservas los Objetos de Granja comprados y sus cobros; la producción que exceda la capacidad Sin VIP se pausa, sin borrar nada.</p></details>'+
     '<p class="sub">El pase está desactivado. Esta compra utiliza Golden. Para recargar con USDT en BNB Smart Chain, abre el Banco. Retiros desactivados.</p><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="vip-actividad" aria-live="polite"></div></details>';
   actividadGranjaRefrescar();
   $('vip-comprar').onclick=confirmarCompraVip;
   ofrecerRecargaGolden($('vip-comprar'),precio,activo);
 }
 function confirmarCompraVip() {
-  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos)? ' + produccionVipPaseTexto() + ' Los nodos adicionales se compran por separado.', () => {const r=passBuyVip();if(isOpen('ov-vip'))refreshVip();return r;}, {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
+  askConfirm('¿Gastar ' + PRODUCCION_VIP_PRECIO + ' $Golden para activar el VIP por 30 días, con +25% de capacidad (mínimo dos cupos)? ' + produccionVipPaseTexto() + ' Incluye dos nodos gratuitos a elegir en el Cobertizo, una sola vez por cuenta.', () => {const r=passBuyVip();if(isOpen('ov-vip'))refreshVip();return r;}, {title:'VIP · 30 días',yes:'Comprar VIP',yesClass:'green',no:'Cancelar'});
 }
 // el contadorcito del menú, sin abrir el panel (lo llaman el baúl, el nivel y la expansión)
 function syncCobertizo() {

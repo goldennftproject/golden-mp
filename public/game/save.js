@@ -694,6 +694,7 @@ function hydrate(d) {
     const p = d.produccion;
     G.produccion = { v: 1, base: p.base, nodos: {}, pausas: {}, vale: Number.isSafeInteger(p.vale) ? Math.max(0, Math.min(16, p.vale)) : 0, valesV:p.valesV===2?2:0 };
     G.produccion.vipHasta = Number.isSafeInteger(p.vipHasta) && p.vipHasta >= 0 ? p.vipHasta : 0;
+    if(p.vipNodosV===1){G.produccion.vipNodosV=1;G.produccion.vipNodos=Number.isSafeInteger(p.vipNodos)?Math.max(0,Math.min(2,p.vipNodos)):0;}
     G.produccion.vipAplicado = p.vipAplicado === true && G.produccion.vipHasta > 0;
     G.produccion.vipUnico = 1;
     G.produccion.orden = Array.isArray(p.orden) ? [...new Set(p.orden.filter(k => typeof k === "string" && /^[np]:\d+$/.test(k)))].slice(-300) : [];

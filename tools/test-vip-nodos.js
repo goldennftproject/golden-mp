@@ -1,0 +1,20 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{JSDOM}=require('jsdom');
+const repo=path.resolve(__dirname,'..'),{ctx:c}=require('./arrancar-el-juego.contexto').arrancar(repo,{'game/main.js':''});
+let clock=1800000000000;c.nowMs=()=>clock;for(const n of ['toast','log','saveFarm','refreshHud','refreshCobertizo'])c[n]=()=>{};
+const source=fs.readFileSync('supabase/functions/guardar/index.ts','utf8'),s={Math,Number,Array,Object,Set,Date,isFinite,JSON};vm.createContext(s);vm.runInContext(source.slice(source.indexOf('const VERSION ='),source.indexOf('/* === FIN REGLAS === */')),s);
+const snap=()=>JSON.parse(JSON.stringify(c.snapshot())),check=(a,b)=>Array.from(s.protegerEconomia(structuredClone(a),structuredClone(b),clock));
+c.estadoDeCero();c.G.golden=10;c.G.plata=0;let before=snap();assert.equal(c.produccionVipComprar(),true);let after=snap();assert.equal(c.G.produccion.vipNodos,2);assert.equal(c.produccionCapacidad(),7);assert.equal(c.G.golden,0);assert.deepEqual(check(before,after),[]);
+for(let i=0;i<2;i++){before=snap();assert.equal(c.produccionComprar('plot'),true);assert.equal(c.G.plata,0);assert.deepEqual(check(before,snap()),[]);}
+assert.equal(c.G.produccion.vipNodos,0);const saved=snap();c.hydrate(saved);assert.equal(c.G.produccion.vipNodos,0,'F5 no vuelve a dar nodos');
+let forged=snap();forged.produccion.vipNodos=1;assert(check(saved,forged).some(e=>e.includes('VIP')));
+let oldClient=snap();delete oldClient.produccion.vipNodos;delete oldClient.produccion.vipNodosV;assert.equal(s.protegerEconomia(structuredClone(saved),oldClient,clock).length,0);assert.equal(oldClient.produccion.vipNodos,0);assert.equal(oldClient.produccion.vipNodosV,1);
+clock+=31*86400000;c.produccionVipTick(true);assert.equal(c.produccionCapacidad(),5);assert.equal(c.G.produccion.vipNodos,0);c.G.golden=10;before=snap();assert.equal(c.produccionVipComprar(),true);assert.equal(c.G.produccion.vipNodos,0,'renovar no repite regalo');assert.deepEqual(check(before,snap()),[]);
+c.estadoDeCero();c.G.produccion.vipHasta=clock+86400000;c.G.produccion.vipAplicado=true;before=snap();c.hydrate(before);assert.equal(c.G.produccion.vipNodos,2,'VIP anterior recibe regalo');assert.deepEqual(check(before,snap()),[]);c.hydrate(snap());assert.equal(c.G.produccion.vipNodos,2);
+c.estadoDeCero();before=snap();forged=snap();forged.produccion.vipNodos=2;forged.produccion.vipNodosV=1;assert(check(before,forged).some(e=>e.includes('VIP')),'Free no obtiene regalo');
+c.estadoDeCero();c.G.level=25;c.G.expansiones=16;c.GF.aplicarTerreno(16);c.G.produccion.vipHasta=clock+86400000;c.G.produccion.vipAplicado=true;c.produccionVipNodosInit();before=snap();assert.equal(c.produccionComprar('bronce'),true,'VIP puede elegir mineral desbloqueado');assert.equal(c.G.produccion.vipNodos,1);assert.deepEqual(check(before,snap()),[]);
+const half=snap();c.hydrate(half);assert.equal(c.G.produccion.vipNodos,1);const legacy=snap();delete legacy.produccion.vipNodos;delete legacy.produccion.vipNodosV;assert.equal(s.protegerEconomia(half,legacy,clock).length,0);assert.equal(legacy.produccion.vipNodos,1);
+const missing=snap();missing.produccion.vipNodos=0;assert(check(snap(),missing).some(e=>e.includes('sin nodo')));
+const d=new JSDOM(fs.readFileSync('public/index.html','utf8')).window.document;c.document=d;
+c.refreshProduccionGranja();assert.match(d.querySelector('[data-prod-buy=bronce]').textContent,/incluido/);assert.equal(d.getElementById('prod-elegir').open,true);
+console.log('OK: capacidad sin cambios, dos elecciones, minerales, VIP anterior, F5, renovación, expiración, Free rechazado y pestañas antiguas.');
