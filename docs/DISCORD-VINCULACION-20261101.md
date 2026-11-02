@@ -39,3 +39,9 @@ confirmación, unicidad, código no reemplazable, aislamiento de privilegios). S
 residuales, 19 cuentas y 2 depósitos preservados en esa comprobación. Prueba con bot real:
 comando registrado, identidad de bot y miembro verificadas; código ficticio rechazado.
 La vinculación real de un jugador requiere su confirmación en ambas interfaces.
+
+Validación adicional: la consulta publicada detectó una lectura redundante de auth.users
+que service_role no podía realizar. Se retiró esa lectura sin conceder privilegios: Auth
+se verifica en la Edge Function. La suite SQL completa se repitió como service_role y pasó.
+Ante la terminal sin salida, se cancelaron sus sesiones y se comprobó HEAD y ausencia
+de index.lock; Git directo mediante execFile en el runtime Node completó la publicación.

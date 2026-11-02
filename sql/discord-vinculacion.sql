@@ -31,7 +31,7 @@ begin
   update golden_internal.discord_challenges set discord_id=p_discord,discord_name=p_name where user_id=c.user_id;
   return jsonb_build_object('ok',true,'pending',true);
  end if;
- if p_user is null or not exists(select 1 from auth.users where id=p_user and email_confirmed_at is not null and coalesce(is_anonymous,false)=false) then raise exception 'Entra con el correo verificado de tu granja'; end if;
+ if p_user is null then raise exception 'Sesión verificada requerida'; end if;
  -- Serializa generación y confirmación por cuenta, incluso desde varias pestañas.
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text,721));
  select * into l from golden_internal.discord_links where user_id=p_user;

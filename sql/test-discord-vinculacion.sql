@@ -3,6 +3,7 @@ do $test$
 declare u uuid:=gen_random_uuid();v uuid:=gen_random_uuid();r jsonb;h text:=repeat('a',64);h2 text:=repeat('b',64);did text:='1999999999999999999';
 begin
  insert into auth.users(id,email,email_confirmed_at,is_anonymous) values(u,'discord-qa-'||u||'@example.invalid',now(),false),(v,'discord-qa-'||v||'@example.invalid',now(),false);
+ execute 'set local role service_role';
  r:=public.discord_link_action(u,'create',h);assert not (r->>'linked')::boolean;
  begin perform public.discord_link_action(u,'create',h2);raise exception 'test rate failed';exception when raise_exception then if sqlerrm='test rate failed' then raise;end if;end;
  begin perform public.discord_link_action(u,'confirm');raise exception 'test early confirm failed';exception when raise_exception then if sqlerrm='test early confirm failed' then raise;end if;end;
