@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Vinculación de Discord — 01/11/2026
+
+Dirección autoriza: «Y bueno, añade esa posibilidad entonces». Configuración permite vincular el perfil de Discord mediante un código de un solo uso, comprobación por el bot oficial en el servidor y confirmación final en la sesión verificada del juego. Una granja por Discord y un Discord por granja; no se sustituye una vinculación existente ni se vincula por nombre o transacción pegada. El código caduca, sólo se almacena su hash y no se anuncia públicamente. El bot no recibe acceso directo a la base de datos ni nuevos permisos de roles. Depósitos confirmados permiten identificar elegibilidad para el futuro reconocimiento de Fundador; no hay asignación automática de roles, premios ni cambios de saldo, progreso, retiros o estudio económico. Ver DISCORD-VINCULACION-20261101.md.
+
 ## Depositos resistentes a fallos de guardado — 01/11/2026
 
 Dirección autoriza: «Bueno, prueba tú todo el flujo de depósito y corrige lo que haga falta para que los próximos se acrediten sin tener que intervenir manualmente». Primero se conserva un recibo verificado por dos RPC, sin exigir un guardado nuevo. La aplicación del Golden mantiene CAS e idempotencia y se reanuda tras sincronizar o volver a entrar. No se acreditan pagos sin verificar ni se modifican recursos/progreso. No se ejecutan nuevas transferencias reales de prueba, no se activan retiros ni Plata → Golden y no cambia el estudio económico.

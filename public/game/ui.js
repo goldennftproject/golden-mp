@@ -5937,7 +5937,43 @@ function prepararReferidos() {
   catch(e){input.focus();input.select();estado.textContent='Selecciona y copia el enlace.';}
  };
 }
+function prepararDiscord() {
+  const crear=$('cfg-discord-create'),ver=$('cfg-discord-state'),confirmar=$('cfg-discord-confirm'),
+    estado=$('cfg-discord-status'),caja=$('cfg-discord-code-box'),campo=$('cfg-discord-code'),copiar=$('cfg-discord-copy');
+  if(!crear||!ver||!confirmar||!estado)return;
+  const cuenta=typeof UID!=='undefined'?UID:null;
+  if(campo?.dataset.cuenta!==cuenta){if(campo){campo.value='';campo.dataset.cuenta=cuenta||'';}if(caja)caja.hidden=true;}
+  let ocupado=false;
+  const operar=async action=>{
+    if(ocupado)return;
+    ocupado=true;crear.disabled=ver.disabled=confirmar.disabled=true;
+    estado.textContent='Consultando Discord…';
+    try{
+      if(typeof sb==='undefined'||!sb||!cuenta||!CARGA_OK||SOLO_LOCAL)throw new Error('Entra con el correo de tu granja y espera a que cargue.');
+      const {data,error}=await conTope(sb.functions.invoke('discord-link',{body:{action,account:cuenta}}),15000,'Discord');
+      if(UID!==cuenta)return;
+      if(error){let msg;try{msg=(await error.context.json()).error;}catch{}throw new Error(msg||'No se pudo consultar Discord. Reintenta con conexión.');}
+      if(!data?.ok)throw new Error(data?.error||'No se pudo confirmar la vinculación.');
+      crear.hidden=!!data.linked;confirmar.hidden=!data.pending||!!data.linked;
+      if(data.linked){
+        estado.textContent='Discord vinculado: '+data.name+'.'+(data.founder_eligible?' Tu cuenta tiene un depósito confirmado; cumple la condición de Fundador de la Alfa.':'');
+        if(caja)caja.hidden=true;if(campo)campo.value='';
+      }else if(data.pending){
+        estado.textContent='Perfil identificado: '+data.name+'. Comprueba que es tuyo y pulsa Confirmar mi Discord.';
+      }else{
+        estado.textContent=data.code?'Código preparado. Úsalo con el bot en Discord y vuelve para confirmar.':'Discord todavía no vinculado.';
+        if(data.code&&campo){campo.value=data.code;campo.dataset.cuenta=cuenta;caja.hidden=false;}
+        if(!data.expires_at&&caja)caja.hidden=true;
+      }
+    }catch(e){if(UID===cuenta)estado.textContent=e.message;}
+    finally{ocupado=false;if(UID===cuenta)crear.disabled=ver.disabled=confirmar.disabled=false;}
+  };
+  crear.onclick=()=>operar('create');ver.onclick=()=>operar('state');confirmar.onclick=()=>operar('confirm');
+  if(copiar)copiar.onclick=async()=>{if(!campo?.value)return;try{await navigator.clipboard.writeText(campo.value);estado.textContent='Código copiado. Usa /vincular en Discord y pégalo en la opción codigo.';}catch{campo.focus();campo.select();estado.textContent='Selecciona y copia el código.';}};
+  operar('state');
+}
 function refreshConfig() {
+  prepararDiscord();
   prepararReferidos();
   if(typeof equipoAcceso==='function')equipoAcceso();
   const informe=$('cfg-alfa-copiar');if(informe)informe.onclick=copiarInformeAlfa;

@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{JSDOM}=require('jsdom');
+const doc=new JSDOM(fs.readFileSync('public/index.html','utf8')).window.document;
+const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(process.cwd(),{'game/main.js':''});
+(async()=>{
+ await c.SAVE_READY;c.document=doc;c.estadoDeCero();
+ const uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';let result={ok:true,linked:false},calls=[];
+ c.testSb={functions:{invoke:async(name,{body})=>{calls.push(body);return {data:result};}}};
+ vm.runInContext("sb=testSb;UID='"+uid+"';CARGA_OK=true;SOLO_LOCAL=false",c);
+ const tick=()=>new Promise(r=>setImmediate(r));
+ c.prepararDiscord();await tick();assert.equal(calls.at(-1).action,'state');
+ result={ok:true,linked:false,code:'GF-'+('A'.repeat(32)),expires_at:'future'};
+ doc.getElementById('cfg-discord-create').click();await tick();
+ assert.equal(doc.getElementById('cfg-discord-code').value,'GF-'+('A'.repeat(32)));
+ assert.equal(doc.getElementById('cfg-discord-code-box').hidden,false);
+ result={ok:true,pending:true,name:'Tester (@tester)'};
+ doc.getElementById('cfg-discord-state').click();await tick();assert.equal(doc.getElementById('cfg-discord-confirm').hidden,false);assert.match(doc.getElementById('cfg-discord-status').textContent,/@tester/);
+ result={ok:true,linked:true,name:'Tester (@tester)',founder_eligible:true};
+ doc.getElementById('cfg-discord-confirm').click();await tick();assert.equal(calls.at(-1).action,'confirm');assert.equal(doc.getElementById('cfg-discord-code').value,'');assert.match(doc.getElementById('cfg-discord-status').textContent,/depósito confirmado/);
+ console.log('OK: crear comando, comprobar perfil, confirmación explícita y limpieza del código.');
+})().catch(e=>{console.error(e);process.exitCode=1;});
