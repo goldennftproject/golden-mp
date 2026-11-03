@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "title": "Golden Farm estrena aspecto en PC",
+      "date": "2026-11-03",
+      "alt": "Capturas de Golden Farm con su aspecto renovado: edificios, árboles, parcelas, HUD, Tienda y Mercado.",
+      "image": "/news/golden-farm-actualizacion-visual.jpg",
+      "content": "**Golden Farm estrena aspecto en PC**\n\n- Nuevas imágenes para edificios, árboles, minerales y parcelas.\n- HUD más claro y menús renovados, incluidos el Mercado y la Tienda.\n- Objetivos con imágenes y controles para ajustar la vista.\n- Iluminación suave y ciclo de día, tarde y noche.\n- En la Zona Negra, Tienda y Misiones ocupan menos espacio.\n\n**Tu progreso y tus compras se mantienen.**\n\nPuedes volver al aspecto anterior en **Menú → Configuración → Aspecto → Clásico**. También puedes elegir **Día fijo**.\n\nPara ver los cambios: guarda con el disquete, espera ✓ y actualiza desde el aviso del juego.\n\n🎮 https://goldenfarm.onrender.com/",
+      "id": "2026-11-03-aspecto-renovado",
+      "discordUrl": "https://discord.com/channels/1564640221063024763/1564643673889841243/1567313982996357201"
+    },
+    {
+      "title": "Nodos con Golden: más producción sin expandir",
+      "date": "2026-11-03",
+      "alt": "Árbol y roca: 1, 1,5 y 2 Golden; bronce: 2,5, 3,5 y 5 Golden. Máximo tres de cada tipo. Cada nodo incluye cupo propio y necesita espacio libre.",
+      "image": "/news/golden-farm-nodos-golden.jpg",
+      "content": "**Nodos con Golden: más producción sin expandir**\n\nYa puedes comprar **árboles, rocas y nodos de bronce** con Golden. Cada compra incluye **un cupo reservado para ese nodo**, aunque tengas llenos los cupos normales.\n\n**Dónde:** Tienda → Mejoras → Nodos + cupo propio.\n**Para colocarlo:** Cobertizo → Elegir celda → un lugar con espacio libre en tu terreno. No necesitas comprar una expansión.\n\n**Precios de la 1.ª / 2.ª / 3.ª compra de cada tipo:**\n- Árbol: **1 / 1,5 / 2 Golden**.\n- Roca: **1 / 1,5 / 2 Golden**.\n- Bronce: **2,5 / 3,5 / 5 Golden**.\n\nHasta **3 de cada tipo**. El bronce requiere **nivel 3 para colocarlo**.\n\nSe mantienen la compra con Plata y los nodos gratuitos de expansión y VIP. Los nodos comprados con Golden durante la alfa se conservan para el lanzamiento.\n\n🎮 https://goldenfarm.onrender.com/",
+      "id": "2026-11-03-nodos-golden",
+      "discordUrl": "https://discord.com/channels/1564640221063024763/1564643673889841243/1567314000516227193"
+    }
+  ],
+  "version": 1
+}

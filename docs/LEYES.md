@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Noticias compartidas entre juego y Discord — 03/11/2026
+
+Dirección aprueba los dos anuncios e imágenes revisados y pide leer las mismas noticias dentro del juego. Menú → Noticias incorpora lista, imagen ampliable, texto legible y marca local de novedades; sin apertura automática ni escrituras de partida o consultas a Supabase. Los textos e imágenes de public/news/index.json coinciden con los dos mensajes verificados de #anuncios. No se publican nuevos mensajes de Discord sin su vista previa y autorización. Se conservan ambos estilos, guardado y sistemas pausados. Ver NOTICIAS-JUEGO-DISCORD-20261103.md.
+
 ## Nodos con Golden y cupo propio — 03/11/2026
 
 Dirección conserva las compras con Plata y aprueba compras sin expansión de árbol/roca (1, 1,5 y 2 Golden) y bronce (2,5, 3,5 y 5), tres por tipo y máximo histórico de doce por cuenta. Cada derecho incluye un cupo reservado y se coloca en terreno abierto libre, sin ampliar terreno ni gastar regalos VIP/expansión. Servidor calcula precios, registra derechos permanentes y valida colocación/relojes. Retiros y estudio económico no cambian. Despliegue compatible y activación autorizados expresamente por dirección tras revisión automática; las veinte cuentas existentes pasan auditoría de compatibilidad en memoria sin modificar sus datos. Ver NODOS-GOLDEN-20261103.md.

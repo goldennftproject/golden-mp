@@ -98,6 +98,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
   "ov-perfil": () => refreshPerfil(), "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb() };
+OV_REFRESH["ov-noticias"] = () => { if (window.GoldenNews) window.GoldenNews.open(); };
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
 const OV_SFX = { "ov-pedidos": "shop", "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-paquete": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
@@ -217,6 +218,7 @@ function refrescarGuiaTrasCerrarOv(cerro) {
   tutoHighlight();
 }
 function closeOv(id) {
+  if (id === "ov-noticias" && window.GoldenNews) window.GoldenNews.closeImage();
   /* 8/9: cerrar la puerta de la Zona por la × devuelve todo a la granja, igual que « Volver ».
      Dejar el contenedor cargado sería más « fiel » (en Tibia preparás la mochila y te vas cuando
      querés), pero acá el jugador vería desaparecer media bolsa sin entender a dónde fue. Una sola
