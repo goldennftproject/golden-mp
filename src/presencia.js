@@ -7,4 +7,12 @@ function jugadorPresencia(valor) {
 function contarJugadores(clientes) {
   return new Set(Array.from(clientes, c => c.jugador).filter(Boolean)).size;
 }
-module.exports = {jugadorPresencia, contarJugadores};
+function nombrePresencia(valor) {
+  return typeof valor === 'string' ? valor.normalize('NFC').replace(/[\p{Cc}\p{Cf}]/gu, '').trim().slice(0, 24) || 'Granjero' : 'Granjero';
+}
+function listarJugadores(clientes) {
+  const unicos = new Map();
+  for (const c of clientes) if (c.jugador) unicos.set(c.jugador, nombrePresencia(c.nombre));
+  return Array.from(unicos.values()).sort((a,b)=>a.localeCompare(b,'es'));
+}
+module.exports = {jugadorPresencia, contarJugadores, nombrePresencia, listarJugadores};

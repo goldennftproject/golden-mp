@@ -5,6 +5,7 @@
 (function () {
   let current = null, shown = false, burstUntil = 0, timer = null;
   let presenciaStream = null, presenciaId = null;
+  let presenciaNombre = null;
   function cuentaPresencia() {
     return typeof UID !== 'undefined' && UID && typeof CARGA_OK !== 'undefined' && CARGA_OK &&
       typeof SOLO_LOCAL !== 'undefined' && !SOLO_LOCAL ? UID : '';
@@ -14,15 +15,17 @@
   function listen() {
     if (!window.EventSource) return;   // navegador viejísimo: queda el sondeo
     const id = cuentaPresencia();
-    if (presenciaStream && presenciaId === id) return;
+    const nombre = id && typeof NICK !== 'undefined' ? NICK : '';
+    if (presenciaStream && presenciaId === id && presenciaNombre === nombre) return;
     if (presenciaStream) presenciaStream.close();
-    presenciaId = id;
+    presenciaId = id; presenciaNombre = nombre;
     try {
-      const es = presenciaStream = new EventSource('/events' + (id ? '?player=' + encodeURIComponent(id) : ''));
+      const es = presenciaStream = new EventSource('/events' + (id ? '?player=' + encodeURIComponent(id) + (nombre ? '&name=' + encodeURIComponent(nombre) : '') : ''));
       es.onmessage = (ev) => {
         try {
-          const { v, players } = JSON.parse(ev.data);
+          const { v, players, names } = JSON.parse(ev.data);
           if (Number.isInteger(players) && players >= 0) { const el = document.getElementById("s-online"); if (el) el.textContent = players; }
+          if (window.actualizarListaOnline) window.actualizarListaOnline(Array.isArray(names) ? names : null);
           if (!v) return;
           window.__gfServerVersion=v;
           if (current === null) { current = v; anotar("canal en vivo: versión inicial " + v.slice(0, 7)); return; }   // versión con la que cargaste
@@ -30,7 +33,7 @@
         } catch (e) {}
       };
       // si el stream muere, EventSource se reconecta solo (retry: 3s); no hay que hacer nada
-      es.onerror = () => { const el = document.getElementById('s-online'); if (el) el.textContent = '—'; };
+      es.onerror = () => { if (window.actualizarListaOnline) window.actualizarListaOnline(null); const el = document.getElementById('s-online'); if (el) el.textContent = '—'; };
     } catch (e) { presenciaStream = null; }
   }
 

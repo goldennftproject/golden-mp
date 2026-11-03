@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {JSDOM}=require('jsdom');
+const {listarJugadores,nombrePresencia}=require('../src/presencia');
+assert.deepEqual(listarJugadores([{jugador:'a',nombre:'Zeta'},{jugador:'a',nombre:'Ana'},{jugador:'b',nombre:'Beto'},{jugador:null,nombre:'Oculto'}]),['Ana','Beto']);
+assert.equal(nombrePresencia('A\u0000B'),'AB');
+const dom=new JSDOM('<button id="jugadores-online"></button><section id="lista-online" hidden><ul id="lista-online-nombres"></ul></section>',{runScripts:'outside-only'});
+const w=dom.window;w.eval(fs.readFileSync('public/game/presencia-ui.js','utf8'));
+w.actualizarListaOnline(['<img src=x onerror=alert(1)>','Ana']);
+assert.equal(w.document.querySelectorAll('li').length,2);assert.equal(w.document.querySelector('img'),null);
+w.document.querySelector('button').click();assert.equal(w.document.querySelector('section').hidden,false);
+w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(w.document.querySelector('section').hidden,true);
+w.actualizarListaOnline([]);assert.match(w.document.querySelector('ul').textContent,/No hay/);
+w.actualizarListaOnline(null);assert.match(w.document.querySelector('ul').textContent,/Reconectando/);
+console.log('OK: lista deduplicada, nombres seguros, apertura, Escape, vacio y desconexion');

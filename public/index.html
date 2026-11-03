@@ -55,6 +55,11 @@
   #gm-guardado:empty{display:none}
   #gm-guardado{position:absolute;right:0;bottom:54px;width:260px;max-width:calc(100vw - 32px);box-sizing:border-box;padding:8px 12px;border:1px solid #c9b88c;border-radius:8px;background:#302b20;color:#fff4ce;font-size:12px;pointer-events:none}
   #jugadores-online{gap:5px;font-size:12px;white-space:nowrap}
+  #jugadores-online{cursor:pointer}
+  #lista-online{position:fixed;top:62px;left:12px;width:240px;max-height:60vh;overflow:auto;padding:14px;background:#fff0cd;color:#382511;border:3px solid #87502b;border-radius:8px;box-shadow:0 5px 18px #0008;z-index:20}
+  #lista-online[hidden]{display:none}
+  #lista-online ul{list-style:none;padding:0;margin:8px 0 0}
+  #lista-online li{padding:7px 0;border-top:1px solid #c7ad7e;overflow-wrap:anywhere}
   .presencia-punto{width:7px;height:7px;border-radius:50%;background:#9cdd6a;box-shadow:0 0 3px #18280e}
   .brand h1{margin:0;font-size:20px;letter-spacing:2px;color:var(--gold);font-weight:800}
   .hud{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
@@ -1613,7 +1618,7 @@
 
   <div class="hudbar" id="hudbar">
     <div class="brand" style="display:flex;align-items:center;gap:12px"><h1><img class="gf-logo" src="assets/golden-farm-alpha-v1.png" alt="Golden Farm · Alpha" width="1974" height="797"></h1>
-      <div class="pill" id="jugadores-online" title="Cuentas conectadas al juego. Varias pestañas de una cuenta cuentan una sola vez."><span class="presencia-punto" aria-hidden="true"></span><span class="k">En línea</span><b id="s-online">—</b></div>
+      <button type="button" class="pill" id="jugadores-online" aria-expanded="false" aria-controls="lista-online" title="Cuentas conectadas al juego. Varias pestañas de una cuenta cuentan una sola vez."><span class="presencia-punto" aria-hidden="true"></span><span class="k">En línea</span><b id="s-online">—</b><span aria-hidden="true">▾</span></button><section id="lista-online" hidden aria-label="Jugadores conectados"><strong>Jugadores en línea</strong><ul id="lista-online-nombres"></ul></section>
       <!-- 14/9: el botón de PRUEBAS y el modo testeo se eliminaron (portero en modo rechazo) -->
     </div>
     <div class="hud">
@@ -2542,5 +2547,6 @@
     next(0);
   })();
   </script>
+<script src="/game/presencia-ui.js" defer></script>
 </body>
 </html>
