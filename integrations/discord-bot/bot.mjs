@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ChannelType, PermissionFlagsBits, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from 'discord.js';
 import { readFileSync } from 'node:fs';
 import { GUILD_ID, APP_ID, GAME_URL, permitted, reportText } from './policy.mjs';
+import { handleLinkCommand } from './link-command.mjs';
 
 const GAME_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc3BrZGFsamV1bGVxcWRva2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDk5NTMsImV4cCI6MjEwNDk4NTk1M30.HRtJ0kEX6kxAZl2uUhNur2czVmbwCl2jtEcM50p0EsA';
 
@@ -44,17 +45,12 @@ client.on('interactionCreate', async i => {
     if (!permitted(i, i.commandName === 'preparar-servidor')) return await i.reply({ content: 'Esta acción no está disponible aquí o requiere Gestionar servidor.', flags: MessageFlags.Ephemeral });
     if (i.isChatInputCommand()) {
       if(i.commandName==='vincular'){
-        await i.deferReply({flags:MessageFlags.Ephemeral});
-        const code=i.options.getString('codigo',true).trim().toUpperCase();
-        if(!/^GF-[A-F0-9]{32}$/.test(code))return await i.editReply('Código inválido. Genera uno en Configuración → Discord dentro del juego.');
-        const previous=cooldowns.get('link:'+i.user.id)||0;
-        if(Date.now()-previous<10000)return await i.editReply('Espera unos segundos antes de volver a comprobar.');
-        cooldowns.set('link:'+i.user.id,Date.now());
-        const result=await fetch('https://ulspkdaljeuleqqdokfk.supabase.co/functions/v1/discord-link',{
-          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+GAME_ANON_KEY,'x-discord-bot-token':token},
-          body:JSON.stringify({action:'claim',code,discord_id:i.user.id}),signal:AbortSignal.timeout(15000)});
-        const body=await result.json();
-        return await i.editReply(result.ok&&body.ok?'Discord identificado. Vuelve a Configuración → Discord en Golden Farm, pulsa Comprobar vinculación y confirma que aparece tu perfil. Esto no cambia tu saldo ni tu progreso.':body.error||'No se pudo comprobar. Vuelve a intentarlo.');
+        return await handleLinkCommand(i,{cooldowns,ephemeral:MessageFlags.Ephemeral,claim:async(code,discordId)=>{
+          const result=await fetch('https://ulspkdaljeuleqqdokfk.supabase.co/functions/v1/discord-link',{
+            method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+GAME_ANON_KEY,'x-discord-bot-token':token},
+            body:JSON.stringify({action:'claim',code,discord_id:discordId}),signal:AbortSignal.timeout(15000)});
+          return {ok:result.ok,body:await result.json()};
+        }});
       }
       if (i.commandName === 'preparar-servidor') {
         await i.deferReply({ flags: MessageFlags.Ephemeral });
@@ -93,7 +89,11 @@ client.on('interactionCreate', async i => {
     try { if (i.deferred) await i.editReply({content:payload.content}); else if (!i.replied) await i.reply(payload); } catch {}
   }
 });
-client.once('clientReady', () => console.log('Golden Farm conectado. Vinculación por comando privado; sin lectura de mensajes generales ni acceso directo a la base de datos.'));
+client.once('clientReady', () => console.log(new Date().toISOString()+' Golden Farm READY · vinculación privada · pid '+process.pid));
+client.on('error',error=>console.error(new Date().toISOString()+' Discord gateway error '+String(error?.code||error?.name||'unknown')));
+client.on('shardDisconnect',event=>console.warn(new Date().toISOString()+' Discord gateway desconectado '+event.code));
+client.on('shardReconnecting',()=>console.log(new Date().toISOString()+' Discord gateway reconectando'));
+const heartbeat=setInterval(()=>console.log(new Date().toISOString()+' Golden Farm '+(client.isReady()?'READY':'reconectando')+' · pid '+process.pid),300000);heartbeat.unref();
 await new REST({ version: '10' }).setToken(token).put(Routes.applicationGuildCommands(APP_ID, GUILD_ID), { body: commands });
 await client.login(token);
 for (const signal of ['SIGINT','SIGTERM']) process.on(signal, () => { client.destroy(); process.exit(0); });

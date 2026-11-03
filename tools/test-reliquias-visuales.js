@@ -24,7 +24,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
  assert.equal(box.querySelectorAll('.reliquia-arte').length,8,'siete modelos más un duplicado');
  const artwork=[...box.querySelectorAll('.reliquia-arte')].map(i=>i.getAttribute('src'));
- for(const key of ['gallinero','huerto','establo','tractor','granero','molino','invernadero'])assert(artwork.includes('assets/visual-v2/ui/reliquias/'+key+'.png?v=3'),key+' tiene ilustración');
+ for(const key of ['gallinero','huerto','establo','tractor','granero','molino','invernadero'])assert(artwork.includes('assets/visual-v2/ui/reliquias/'+key+'.png?v=4'),key+' tiene ilustración');
  assert.equal(artwork.filter(s=>s.includes('/gallinero.')).length,2,'duplicados reutilizan ilustración sin cambiar su id');
  buttons.forEach((b,i)=>{assert.equal(box.querySelectorAll('button')[i],b,'identidad del botón');assert.deepEqual(snapshot(b),properties[i]);});
  assert.equal(box.querySelector('.objeto-nombre>span'),emoji,'se conserva el nodo de emoji original');

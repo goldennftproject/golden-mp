@@ -23,7 +23,7 @@ def frame_image(image, frame):
 def check_atlas(root, folder):
     mapping = json.loads((folder / 'atlas.json').read_text(encoding='utf-8'))
     image = Image.open(folder / 'atlas.png').convert('RGBA')
-    assert mapping['version'] == 3, 'Expanded atlas must declare version 3'
+    assert mapping['version'] == builder.VERSION, 'Expanded atlas must match the current packer version'
     assert image.width <= 2048, 'Atlas exceeds the supported width'
     boxes = []
     for key, frame in mapping['frames'].items():

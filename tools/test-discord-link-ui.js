@@ -9,6 +9,12 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(process.cwd(),{'g
  vm.runInContext("sb=testSb;UID='"+uid+"';CARGA_OK=true;SOLO_LOCAL=false",c);
  const tick=()=>new Promise(r=>setImmediate(r));
  c.prepararDiscord();await tick();assert.equal(calls.at(-1).action,'state');
+ const join=doc.getElementById('cfg-discord-invite'),channel=doc.getElementById('cfg-discord-channel');
+ assert.equal(join.href,'https://discord.gg/fQZn9Bsvkd','Primero permite entrar al servidor por invitación permanente');
+ assert.equal(channel.href,'https://discord.com/channels/1564640221063024763/1564640914687664189','Después abre un canal concreto, no un destino incompleto');
+ assert.equal(join.target,'_blank');assert.equal(channel.rel,'noopener noreferrer');
+ const callsBeforeLinks=calls.length,stateBeforeLinks=JSON.stringify(c.G);
+ c.prepararEnlacesDiscord();c.prepararEnlacesDiscord();assert.equal(doc.querySelectorAll('#cfg-discord-channel').length,1,'No duplica enlaces al reabrir');assert.equal(calls.length,callsBeforeLinks,'Preparar enlaces no crea ni confirma códigos');assert.equal(JSON.stringify(c.G),stateBeforeLinks,'Enlaces no modifican progreso');
  result={ok:true,linked:false,code:'GF-'+('A'.repeat(32)),expires_at:'future'};
  doc.getElementById('cfg-discord-create').click();await tick();
  assert.equal(doc.getElementById('cfg-discord-code').value,'GF-'+('A'.repeat(32)));

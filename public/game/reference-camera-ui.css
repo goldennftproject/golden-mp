@@ -1,0 +1,11 @@
+/* Sólo Renovado en PC; queda libre el disquete y el borde inferior de la hotbar. */
+#reference-camera-controls{display:none}
+@media(min-width:900px){
+ .visual-v2 #reference-camera-controls{position:fixed;right:18px;bottom:126px;display:flex;flex-direction:column;gap:5px;z-index:24}
+ .visual-v2 #reference-camera-controls[hidden]{display:none!important}
+ .visual-v2 #reference-camera-controls button{display:grid;place-items:center;width:36px;height:34px;padding:3px;border:2px solid #c4a065;border-radius:5px;background:linear-gradient(#6d4a2b,#49321f);color:#fff1c9;box-shadow:inset 0 1px #bd9055,0 2px #2a2115;cursor:pointer;font:800 26px/1 Georgia,serif;text-shadow:0 1px #281d13}
+ .visual-v2 #reference-camera-controls button:hover{filter:brightness(1.16)}
+ .visual-v2 #reference-camera-controls button:focus-visible{outline:3px solid #ffe19a;outline-offset:2px}
+ .visual-v2 #reference-camera-controls button[aria-pressed="true"]{background:linear-gradient(#5d7e3e,#3d5b29);border-color:#d5c086}
+ .visual-v2 #reference-camera-controls svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+}

@@ -5973,7 +5973,20 @@ function refreshPerfil() {
   gestionar.onclick=()=>{closeOv('ov-perfil');openOv('ov-config');const box=$('cfg-discord');if(box?.scrollIntoView)box.scrollIntoView({block:'center'});};
   operar('state');
 }
+function prepararEnlacesDiscord() {
+  const caja=$('cfg-discord-code-box');if(!caja)return;
+  // Una ruta /channels no permite entrar a quien aún no pertenece al servidor.
+  // Invitación existente y permanente verificada el 03/11/2026; no se crea acceso nuevo.
+  const entrar=$('cfg-discord-invite')||caja.querySelector('a');
+  if(entrar){entrar.id='cfg-discord-invite';entrar.href='https://discord.gg/fQZn9Bsvkd';entrar.textContent='Entrar al Discord de Golden Farm';entrar.target='_blank';entrar.rel='noopener noreferrer';}
+  let canal=$('cfg-discord-channel');
+  if(!canal&&entrar){canal=document.createElement('a');canal.id='cfg-discord-channel';canal.style.marginLeft='10px';entrar.after(canal);}
+  if(canal){canal.href='https://discord.com/channels/1564640221063024763/1564640914687664189';canal.textContent='Abrir #empieza-aquí';canal.target='_blank';canal.rel='noopener noreferrer';canal.title='Después de entrar al servidor, usa /vincular en este canal.';}
+  const paso=caja.querySelector('p');
+  if(paso)paso.textContent='1. Entra al servidor y abre #empieza-aquí. Usa /vincular y pega este código en la opción codigo. Caduca en 10 minutos.';
+}
 function prepararDiscord() {
+  prepararEnlacesDiscord();
   const crear=$('cfg-discord-create'),ver=$('cfg-discord-state'),confirmar=$('cfg-discord-confirm'),
     estado=$('cfg-discord-status'),caja=$('cfg-discord-code-box'),campo=$('cfg-discord-code'),copiar=$('cfg-discord-copy');
   if(!crear||!ver||!confirmar||!estado)return;

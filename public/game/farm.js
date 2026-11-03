@@ -702,6 +702,7 @@ class FarmScene extends Phaser.Scene {
           if (!this.hold || GF.uiOpen || !pt.isDown || pt.rightButtonDown()) return;
           if (!this.hold.active && Math.hypot(pt.x - this.hold.sx, pt.y - this.hold.sy) < 10) return;
           this.hold.active = true;
+          this._referenceCameraManual = true;
           const c = this.cameras.main, z = c.zoom || 1;
           const dx = (this.hold.px == null ? pt.x : this.hold.px) - pt.x;
           const dy = (this.hold.py == null ? pt.y : this.hold.py) - pt.y;
@@ -732,6 +733,7 @@ class FarmScene extends Phaser.Scene {
         if (this.hold && pt.isDown && !pt.rightButtonDown() &&
             (this.hold.active || Math.hypot(pt.x - this.hold.sx, pt.y - this.hold.sy) >= 8)) {
           this.hold.active = true;
+          this._referenceCameraManual = true;
           const c = this.cameras.main, z = c.zoom || 1;
           const dx = this.hold.px - pt.x, dy = this.hold.py - pt.y;
           this.hold.px = pt.x; this.hold.py = pt.y;
@@ -1045,7 +1047,10 @@ class FarmScene extends Phaser.Scene {
        El zoom se restaura ANTES de fitCamera porque fitCamera lo deriva de zoomUser. */
     const _ct = GF._camTras; GF._camTras = null;
     this.zoomUser = (_ct && _ct.zoomUser) || 1;
-    this.fitCamera();
+    this._referenceCameraManual = !!_ct;
+    this._referenceFramingActive = false;
+    this._referenceOverview = false;
+    this.fitCamera(!!_ct);
     this.actualizarCartelExpansion();
     if (_ct) {
       try {
@@ -1077,6 +1082,9 @@ class FarmScene extends Phaser.Scene {
     });
     // rueda del mouse: acercar/alejar la cámara de la granja
     this.input.on("wheel", (ptr, over, dx, dy) => {
+      // La rueda de un panel HTML nunca desplaza el mundo que tiene debajo.
+      if (GF.uiOpen || (typeof clicDeInterfaz === "function" && clicDeInterfaz(ptr))) return;
+      this._referenceCameraManual = true;
       if (GF.CAM_PAN) this.cancelarCamaraGuia(true);   // rueda = decisión explícita de encuadre
       if (GF.CAM_PAN && (ptr.event.ctrlKey || ptr.event.shiftKey)) {   // Ctrl/Shift + rueda = acercar o alejar
         // el mínimo lo calcula fitCamera a partir de lo que mide el mapa y la ventana:
@@ -1084,7 +1092,7 @@ class FarmScene extends Phaser.Scene {
         // de navegador. El 0,6 fijo de antes se lo impedía.
         const uMin = this.zoomUserMin != null ? this.zoomUserMin : 0.6;
         this.zoomUser = Phaser.Math.Clamp((this.zoomUser || 1) * (dy > 0 ? 0.92 : 1.08), uMin, 2.4);
-        this.fitCamera(); return;
+        this.fitCamera(true); return;
       }
       if (GF.CAM_PAN) {   // SFL: la rueda DESPLAZA la granja
         this.cameras.main.scrollY += dy * 0.6;   // el recorte lo hace setBounds, no nosotros
@@ -1106,6 +1114,7 @@ class FarmScene extends Phaser.Scene {
 
     // La granja YA está dibujada: recién ahora se saca la pantalla de carga y se abren las
     // ventanas que esperaban (cofre diario). Todo aparece junto, no una cosa antes que la otra.
+    if (typeof window !== "undefined" && window.GoldenReferenceWorld) window.GoldenReferenceWorld.attach(this);
     if (typeof juegoListo === "function") this.time.delayedCall(60, juegoListo);
   }
 
@@ -1145,6 +1154,7 @@ class FarmScene extends Phaser.Scene {
   // desplazado ±336, así que el que cruza un borde reaparece por el otro. Después se estira en
   // un tileSprite enorme por debajo de todo. Coste: una textura de 336x336, una sola vez.
   fondoBosque(anchoT, altoT, eMin, eMax) {
+    const F = (typeof window !== "undefined" && window.GoldenReferenceWorld) ? window.GoldenReferenceWorld.forestStyle(GF) : GF;
     const T = GF.TILE, P = T * 8, clave = "bosque_mosaico";
     if (!this.textures.exists(clave)) {
       const tex = this.textures.createCanvas(clave, P, P);
@@ -1160,7 +1170,7 @@ class FarmScene extends Phaser.Scene {
         g.fillStyle = "#328032"; g.fillRect(0, 0, P, P);
       }
       const src = this.textures.get("tree").getSourceImage();
-      const LEYES = String(GF.BOSQUE_LEYES || "cv");
+      const LEYES = String(F.BOSQUE_LEYES || "cv");
       const ANCLA = {
         c: (c, r) => [(c + 0.5) * T, (r + 1) * T],
         x: (c, r) => [c * T, r * T],
@@ -1168,17 +1178,21 @@ class FarmScene extends Phaser.Scene {
       };
       let sem = 987654321;   // semilla propia: el mosaico es siempre el mismo
       const az = () => { sem = (sem * 1664525 + 1013904223) % 4294967296; return sem / 4294967296; };
-      const DENS = GF.BOSQUE_DENSIDAD || {}, JF = GF.BOSQUE_JITTER_FONDO || 0;
+      const DENS = F.BOSQUE_DENSIDAD || {}, JF = F.BOSQUE_JITTER_FONDO || 0;
+      const CADA = Math.max(1, F.BOSQUE_FILA_CADA || 1);
       const n = P / T, lista = [];
-      for (let r = -2; r < n + 2; r++)
-        for (let c = -2; c < n + 2; c++)
+      const inicio = F._referenceForest ? 0 : -2, fin = F._referenceForest ? n : n + 2;
+      for (let r = inicio; r < fin; r++) {
+        if (((r % CADA) + CADA) % CADA !== 0) continue;
+        for (let c = inicio; c < fin; c++)
           for (const ley of LEYES) {
             const f = ANCLA[ley]; if (!f) continue;
             const a = f(c, r);
-            const esc = eMin + az() * (eMax - eMin);
-            const dx = Math.round((az() * 2 - 1) * JF), dy = Math.round((az() * 2 - 1) * JF);
-            const flip = az() < 0.45;
-            if (az() > (DENS[ley] != null ? DENS[ley] : 1)) continue;
+            const sample = F._referenceForest ? window.GoldenReferenceWorld.forestSample(c, r, ley) : null;
+            const esc = eMin + (sample ? sample.scale : az()) * (eMax - eMin);
+            const dx = Math.round(((sample ? sample.rx : az()) * 2 - 1) * JF), dy = Math.round(((sample ? sample.ry : az()) * 2 - 1) * JF);
+            const flip = sample ? sample.flip : az() < 0.45;
+            if ((sample ? sample.rd : az()) > (DENS[ley] != null ? DENS[ley] : 1)) continue;
             const w = anchoT * esc, h = altoT * esc;
             // ENVOLTURA: cada árbol entra también desplazado ±P, para que el que cruza un borde
             // reaparezca por el otro y el mosaico no tenga costura.
@@ -1193,6 +1207,7 @@ class FarmScene extends Phaser.Scene {
               lista.push([base2, px2, w, h, flip]);
             }
           }
+      }
       lista.sort((p, q) => p[0] - q[0]);   // por la base YA desplazada, igual que el resto del juego
       for (const [base, px, w, h, flip] of lista) {
         const y = base - h;
@@ -1207,7 +1222,7 @@ class FarmScene extends Phaser.Scene {
     const cx = (L.x1 + L.x2) / 2, cy = (L.y1 + L.y2) / 2;
     if (this.mosaicoTS) { try { this.mosaicoTS.destroy(); } catch (e) {} }
     const ts = this.mosaicoTS = this.add.tileSprite(cx, cy, LADO, LADO, clave)
-      .setDepth((GF.BOSQUE_DEPTH || -999) - 2);   // debajo del pasto y del anillo
+      .setDepth((F.BOSQUE_DEPTH || -999) - 2);   // debajo del pasto y del anillo
     // ALINEAR el mosaico con la retícula del mundo. Si no, el patrón arranca donde caiga el
     // borde del tileSprite y se ve una costura contra el anillo por mucho que el dibujo sea
     // correcto. Como el mosaico mide 8 celdas justas, cualquier múltiplo de 42 encaja: basta
@@ -1242,8 +1257,133 @@ class FarmScene extends Phaser.Scene {
     return Math.max(GF.TILE * 3, Math.round(m));   // nunca menos de 3 celdas: si no, se ve el vacío
   }
 
-  fitCamera() {
+  referenceFramingEnabled() {
+    return !!(GF.CAM_PAN && this.scale && this.scale.width >= 900 &&
+      typeof window !== "undefined" && window.GoldenVisual?.isEnabled());
+  }
+
+  // El contenido real decide el encuadre. No se inventan edificios ni se estiran celdas para
+  // copiar la ilustración: sólo se retira el bosque/margen que separaba al jugador de su granja.
+  referenceContentBounds(forceTerrain) {
+    const T = GF.TILE || 42, points = [];
+    const add = (sprite, x, y, width, height) => {
+      if (!sprite || sprite.visible === false || sprite.active === false || !Number.isFinite(x) || !Number.isFinite(y)) return;
+      const w = Math.max(T * .35, Number(width) || Number(sprite.displayWidth) || T);
+      const h = Math.max(T * .35, Number(height) || Number(sprite.displayHeight) || T);
+      points.push({ left: x - w / 2, right: x + w / 2, top: y - h, bottom: y });
+    };
+    for (const o of this.objs || []) if (!o.oculto) add(o.sprite, o.cx, o.by);
+    for (const p of this.plots || []) if (p.state !== "locked" && !p.oculto) {
+      const sprite = p.ground || p.soil || p.base || p.spr;
+      add(sprite, p.cx, p.by + T / 2, T, Math.max(T, Number(p.spr?.displayHeight) || 0));
+    }
+    if (this.portal) add(this.portal.sprite || this.portal.spr, this.portal.cx, this.portal.by);
+    if (this.hero) add(this.hero, this.hero.x, this.hero.y);
+    const air = T * .42;
+    const bounds = points.length
+      ? { left: Math.min(...points.map(p => p.left)) - air, right: Math.max(...points.map(p => p.right)) + air,
+          top: Math.min(...points.map(p => p.top)) - air, bottom: Math.max(...points.map(p => p.bottom)) + air }
+      : { left: GF.ORIG_X, right: GF.ORIG_X + GF.WORLD_W, top: GF.ORIG_Y, bottom: GF.ORIG_Y + GF.WORLD_H };
+    // En el arranque también debe leerse el cercado entero: el portal no marca el último
+    // píxel de la granja. Las granjas expandidas mantienen el criterio de contenido visible.
+    if (forceTerrain || !(GF.expOwned > 0)) {
+      const rim = T * .12;
+      bounds.left = Math.min(bounds.left, GF.ORIG_X - rim);
+      bounds.right = Math.max(bounds.right, GF.ORIG_X + GF.WORLD_W + rim);
+      bounds.top = Math.min(bounds.top, GF.ORIG_Y - rim);
+      bounds.bottom = Math.max(bounds.bottom, GF.ORIG_Y + GF.WORLD_H + rim);
+    }
+    return bounds;
+  }
+
+  referenceCoreBounds() {
+    const T = GF.TILE || 42, anchor = (this.objs || []).find(o => o.type === "market" && !o.oculto) ||
+      (this.objs || []).find(o => o.type === "barn" && !o.oculto) || { cx: GF.ORIG_X + GF.WORLD_W / 2, by: GF.ORIG_Y + GF.WORLD_H / 2 };
+    const points = [], ignored = new Set(["portal", "dummy", "excav", "fish", "boya", "lonja", "lombricario"]);
+    const add = (sprite, x, y, width, height) => {
+      if (!sprite || sprite.visible === false || sprite.active === false || !Number.isFinite(x) || !Number.isFinite(y)) return;
+      const w = Math.max(T * .35, Number(width) || Number(sprite.displayWidth) || T), h = Math.max(T * .35, Number(height) || Number(sprite.displayHeight) || T);
+      points.push({ left: x - w / 2, right: x + w / 2, top: y - h, bottom: y });
+    };
+    for (const o of this.objs || []) if (!o.oculto && !ignored.has(o.type) && Math.hypot(o.cx - anchor.cx, o.by - anchor.by) <= T * 5.5) add(o.sprite, o.cx, o.by);
+    for (const p of this.plots || []) if (p.state !== "locked" && !p.oculto && Math.hypot(p.cx - anchor.cx, p.by - anchor.by) <= T * 5.5) {
+      add(p.ground || p.spr, p.cx, p.by + T / 2, T, Math.max(T, Number(p.spr?.displayHeight) || 0));
+    }
+    if (this.hero && Math.hypot(this.hero.x - anchor.cx, this.hero.y - anchor.by) <= T * 5.5) add(this.hero, this.hero.x, this.hero.y);
+    if (!points.length) return this.referenceContentBounds();
+    const air = T * .38;
+    return { left: Math.min(...points.map(p => p.left)) - air, right: Math.max(...points.map(p => p.right)) + air,
+      top: Math.min(...points.map(p => p.top)) - air, bottom: Math.max(...points.map(p => p.bottom)) + air };
+  }
+
+  setReferenceOverview(on) {
+    if (!this.referenceFramingEnabled()) return false;
+    this._referenceOverview = !!on;
+    this._referenceCameraManual = false;
+    this.zoomUser = 1;
+    this.fitCamera();
+    return true;
+  }
+
+  stepReferenceZoom(direction) {
+    if (!this.referenceFramingEnabled() || !Number.isFinite(direction) || !direction) return false;
+    const c = this.cameras.main, L = this.camLim || this.limiteVista();
+    const min = Math.min(this.scale.width / (L.x2 - L.x1), this.scale.height / (L.y2 - L.y1));
+    const base = this._referenceBaseZoom || c.zoom || 1;
+    const max = Math.max(base * 2.4, c.zoom), zoom = Phaser.Math.Clamp(c.zoom * (direction > 0 ? 1.12 : 1 / 1.12), min, max);
+    this._referenceCameraManual = true;
+    this.zoomUser = zoom / base;
+    c.setZoom(zoom);
+    this._expCtaSafe = null;
+    return true;
+  }
+
+  refreshReferenceFraming() {
+    if (!this.scale || !this.cameras?.main) return false;
+    this._expCtaSafe = null;
+    this.fitCamera();
+    return true;
+  }
+
+  fitCamera(manualZoom) {
     const cw = this.scale.width, ch = this.scale.height;
+    if (this.referenceFramingEnabled()) {
+      const close = ch <= 740 && !this._referenceOverview;
+      const c = this.cameras.main, safe = this.zonaSeguraCamaraGuia(), bounds = close ? this.referenceCoreBounds() : this.referenceContentBounds(this._referenceOverview);
+      const L = this.camLim || this.limiteVista();
+      const zMin = Math.min(cw / (L.x2 - L.x1), ch / (L.y2 - L.y1));
+      const fit = Math.min((safe.right - safe.left) / Math.max(GF.TILE * 2, bounds.right - bounds.left),
+        (safe.bottom - safe.top) / Math.max(GF.TILE * 2, bounds.bottom - bounds.top));
+      const z = Math.max(zMin, close ? Math.max(1.05, Math.min(1.14, fit)) : fit);
+      this._referenceBaseZoom = z;
+      this.zoomUserMin = zMin / z;
+      // Un resize o abrir/cerrar Mercado conserva el zoom y scroll elegidos por el jugador.
+      // Sólo la rueda explícita aplica un nuevo multiplicador sobre la escala de trabajo.
+      if (this._referenceCameraManual && manualZoom !== true && Number.isFinite(c.zoom) && c.zoom > 0) {
+        const current = Math.max(zMin, c.zoom);
+        this.zoomUser = current / z; c.setZoom(current);
+      } else {
+        this.zoomUser = Phaser.Math.Clamp(this.zoomUser || 1, this.zoomUserMin, 2.4);
+        c.setZoom(Math.max(zMin, z * this.zoomUser));
+      }
+      if (!this._referenceCameraManual) {
+        const x = (bounds.left + bounds.right) / 2, y = (bounds.top + bounds.bottom) / 2;
+        const dx = (safe.left + safe.right) / 2 - ((c.x || 0) + cw / 2);
+        const dy = (safe.top + safe.bottom) / 2 - ((c.y || 0) + ch / 2);
+        c.centerOn(x - dx / c.zoom, y - dy / c.zoom);
+      }
+      this._referenceFramingActive = true;
+      return;
+    }
+    const keepManualZoom = this._referenceFramingActive && this._referenceCameraManual && manualZoom !== true;
+    const manualActualZoom = this.cameras.main.zoom;
+    if (this._referenceFramingActive) {
+      this._referenceFramingActive = false;
+      if (!this._referenceCameraManual) {
+        this.zoomUser = 1;
+        this.cameras.main.centerOn(GF.ORIG_X + GF.WORLD_W / 2, GF.ORIG_Y + GF.WORLD_H / 2);
+      }
+    }
     if (GF.CAM_PAN) {
       // vista tipo SFL: se ve TODA la granja con su bosque alrededor, y queda margen para arrastrar.
       const m = Math.round(this.margenBosque("y") * 0.6);
@@ -1261,6 +1401,12 @@ class FarmScene extends Phaser.Scene {
       // sobrara un poco, se lee como bosque lejano y no como un panel liso.
       const L = this.camLim || this.limiteVista();
       const zMin = Math.min(cw / (L.x2 - L.x1), ch / (L.y2 - L.y1));
+      if (keepManualZoom && Number.isFinite(manualActualZoom) && manualActualZoom > 0) {
+        this.zoomUserMin = zMin / z;
+        this.zoomUser = Math.max(zMin, manualActualZoom) / z;
+        this.cameras.main.setZoom(Math.max(zMin, manualActualZoom));
+        return;
+      }
       // TOPES DEL JUGADOR, DERIVADOS. Antes la rueda recortaba a [0,6 … 2,2] a secas, y ahí
       // estaba el otro fallo: con el navegador al 25% el zoom base sube a ~5, el 0,6 dejaba el
       // mínimo alcanzable en ~3 y el tope duro de 2,2 lo pisaba. Resultado: el jugador NUNCA
@@ -2545,6 +2691,19 @@ class FarmScene extends Phaser.Scene {
     };
     reserva(".hudbar"); reserva("#hud-flot"); reserva("#tuto"); reserva("#hotwrap");
     reserva("#prompt", "show"); reserva("#toast", "show");
+    if (this.referenceFramingEnabled()) {
+      // Tienda y Mercado son columnas reales, medidas contra el mismo canvas que recibe clics.
+      const column = (selector, side) => {
+        let el = null, r = null;
+        try { el = document.querySelector(selector); r = el && el.getBoundingClientRect(); } catch (e) {}
+        if (!r || !r.width || !r.height) return;
+        const left = ox + (r.left - cr.left) * sx, right = ox + (r.right - cr.left) * sx;
+        if (side === "left" && right < ox + w * .5) area.left = Math.max(area.left, right + gap);
+        if (side === "right" && left > ox + w * .35) area.right = Math.min(area.right, left - gap);
+      };
+      column("#compras-accesos", "left");
+      column("#ov-market.show>.card:not(.movida)", "right");
+    }
     if (area.right - area.left < 80) { area.left = ox + w * 0.16; area.right = ox + w * 0.84; }
     if (area.bottom - area.top < 90) { area.top = oy + h * 0.22; area.bottom = oy + h * 0.78; }
     return area;
@@ -5284,6 +5443,8 @@ class FarmScene extends Phaser.Scene {
         if (this.textures.exists("bosque_mosaico")) this.textures.remove("bosque_mosaico");
         this.dibujarBosque();
       }
+      this.refreshReferenceFraming();
+      if (typeof window !== "undefined" && window.GoldenReferenceWorld) window.GoldenReferenceWorld.refresh(this);
       return true;
     } catch (e) {
       console.warn("[aspecto] no se pudieron rehacer los fondos:", e);
@@ -5402,6 +5563,7 @@ class FarmScene extends Phaser.Scene {
         }
       }
     this.decoG = deco;
+    if (typeof window !== "undefined" && window.GoldenReferenceWorld) window.GoldenReferenceWorld.refresh(this);
   }
   dibujarGrilla() {
     if (this.gridG) { try { this.gridG.destroy(); } catch (e) {} this.gridG = null; }
@@ -5475,6 +5637,7 @@ class FarmScene extends Phaser.Scene {
       if (this.syncNodos) this.syncNodos();
       this.dibujarExpansion();                // el cartel salta al bloque siguiente
       try { this.refreshPlotLocks(); } catch (e) {}
+      if (typeof window !== "undefined" && window.GoldenReferenceWorld) window.GoldenReferenceWorld.refresh(this);
       this.camLim = this.limiteVista();
       this.cameras.main.setBounds(this.camLim.x1, this.camLim.y1,
         this.camLim.x2 - this.camLim.x1, this.camLim.y2 - this.camLim.y1);
@@ -5516,13 +5679,14 @@ class FarmScene extends Phaser.Scene {
   }
   dibujarBosque() {
     if (!this.textures.exists("tree")) return;
+    const F = (typeof window !== "undefined" && window.GoldenReferenceWorld) ? window.GoldenReferenceWorld.forestStyle(GF) : GF;
     const t0 = performance.now();
     const T = GF.TILE, W = GF.WORLD_W, H = GF.WORLD_H;
     // 17/8: el anillo DIBUJADO se recorta a unas pocas celdas. Más allá no hace falta: el
     // mosaico usa las mismas leyes y se ve igual, pero no cuesta memoria porque se repite.
     // El renderTexture cubría el mapa entero (1600x1600 = 9,8 MB) para dibujar árboles que
     // el mosaico puede repetir gratis.
-    const CEL = GF.BOSQUE_RT_CELDAS || 7;
+    const CEL = F.BOSQUE_RT_CELDAS || 7;
     const MX = Math.min(this.margenBosque("x"), CEL * T);
     const MY = Math.min(this.margenBosque("y"), CEL * T);
     // 18/8: el anillo se ancla al ORIGEN del terreno. Estaba clavado en (0,0), así que en cuanto
@@ -5531,7 +5695,7 @@ class FarmScene extends Phaser.Scene {
     // árboles fuera del límite de cámara. Y el "no pintar sobre el mundo" protegía el rectángulo
     // viejo, así que el suelo de bosque tapaba las florcitas del terreno recién comprado.
     const RX0 = GF.ORIG_X - MX, RY0 = GF.ORIG_Y - MY;
-    const rt = this.add.renderTexture(RX0, RY0, W + 2 * MX, H + 2 * MY).setOrigin(0, 0).setDepth(GF.BOSQUE_DEPTH || -999);
+    const rt = this.add.renderTexture(RX0, RY0, W + 2 * MX, H + 2 * MY).setOrigin(0, 0).setDepth(F.BOSQUE_DEPTH || -999);
     // suelo de bosque: pasto por debajo, para que no asome el mar entre los troncos
     const pastos = ["grass_a", "grass_b", "grass_c"].filter(k => this.textures.exists(k));
     if (pastos.length) {
@@ -5554,17 +5718,17 @@ class FarmScene extends Phaser.Scene {
       g.destroy();
     }
     // los árboles: se ordenan por dónde APOYAN, para que los de adelante tapen a los de atrás
-    const paso = Math.max(8, T * (GF.BOSQUE_PASO || 0.6));
-    const pasoY = Math.max(8, paso * (GF.BOSQUE_FILAS || 0.74));
+    const paso = Math.max(8, T * (F.BOSQUE_PASO || 0.6));
+    const pasoY = Math.max(8, paso * (F.BOSQUE_FILAS || 0.74));
     // DESORDEN separado por eje (17/8). El horizontal es el que abre rendijas entre troncos
     // —el tronco mide 25 px y con ±8 px dos vecinos podían quedar a 41 px— y por ahí asomaba
     // la fila de atrás. El vertical puede seguir alto sin romper nada, así que van por separado.
-    const JX = GF.BOSQUE_JITTER_X != null ? GF.BOSQUE_JITTER_X : (GF.BOSQUE_JITTER || 8);
-    const JY = GF.BOSQUE_JITTER_Y != null ? GF.BOSQUE_JITTER_Y : (GF.BOSQUE_JITTER || 8);
+    const JX = F.BOSQUE_JITTER_X != null ? F.BOSQUE_JITTER_X : (F.BOSQUE_JITTER || 8);
+    const JY = F.BOSQUE_JITTER_Y != null ? F.BOSQUE_JITTER_Y : (F.BOSQUE_JITTER || 8);
     // TRABA (17/8, dirección: "con dos a los costados del que está más adelantado ya cubrís").
     // Las filas alternas se corren media columna, así el árbol de atrás cae en el HUECO de los
     // dos de adelante en vez de justo detrás de uno. Cubrir a lo ancho en vez de apilar en fondo.
-    const TRABA = GF.BOSQUE_TRABA != null ? GF.BOSQUE_TRABA : 0.5;
+    const TRABA = F.BOSQUE_TRABA != null ? F.BOSQUE_TRABA : 0.5;
     let semilla = 20250816;                       // azar estable: el bosque es el MISMO cada partida
     const az = () => { semilla = (semilla * 1664525 + 1013904223) % 4294967296; return semilla / 4294967296; };
     /* 18/8 — LA MÉTRICA ELÍPTICA DEL CLARO SE FUE.
@@ -5577,8 +5741,8 @@ class FarmScene extends Phaser.Scene {
        sprite para que el bosque no vuelva a tener árboles más grandes que los de la granja. */
     const tw = this.textures.get("tree").getSourceImage();
     const anchoT = (tw && tw.width) || T, altoT = (tw && tw.height) || T * 2;
-    const escBase = (GF.BOSQUE_TAM || 2) * T / anchoT;
-    const VAR = GF.BOSQUE_ESC_VAR != null ? GF.BOSQUE_ESC_VAR : 0.15;
+    const escBase = (F.BOSQUE_TAM || 2) * T / anchoT;
+    const VAR = F.BOSQUE_ESC_VAR != null ? F.BOSQUE_ESC_VAR : 0.15;
     const eMin = escBase * (1 - VAR), eMax = escBase * (1 + VAR);
     const altoS = altoT * escBase;   // alto DIBUJADO: manda para decidir en qué celda apoya
     // ================= LAS TRES LEYES DE COLOCACIÓN (17/8, dirección) =================
@@ -5597,7 +5761,7 @@ class FarmScene extends Phaser.Scene {
     // la cuadrícula del juego. Cada ley cubre los huecos que dejan las otras: eso es lo que
     // buscábamos con la traba y el jitter, pero ahora es exacto y no hay nada que adivinar.
     // Qué leyes se usan sale de GF.BOSQUE_LEYES (por ejemplo "cxv", "xv", "c").
-    const LEYES = String(GF.BOSQUE_LEYES || "cxv");
+    const LEYES = String(F.BOSQUE_LEYES || "cxv");
     const ANCLA = {
       c: (col, row) => [(col + 0.5) * T, (row + 1) * T],
       x: (col, row) => [col * T, row * T],
@@ -5606,10 +5770,10 @@ class FarmScene extends Phaser.Scene {
     // CADA CUÁNTAS FILAS se planta. Las leyes ponen un ancla en TODAS las filas, y con el árbol
     // midiendo 88 px de alto y las filas a 42, el de atrás asoma siempre por los huecos entre
     // troncos: la masa sale al 100% de tronco, una pared. Saltando filas se recupera el aire.
-    const CADA = Math.max(1, GF.BOSQUE_FILA_CADA || 1);
-    const DENS = GF.BOSQUE_DENSIDAD || { c: 1, x: 0.69, v: 0.84 };
-    const FRENTE = GF.BOSQUE_FRENTE_SOLIDO != null ? GF.BOSQUE_FRENTE_SOLIDO : 1.5;
-    const JFONDO = GF.BOSQUE_JITTER_FONDO || 0;   // desorden SOLO en el interior del bosque
+    const CADA = Math.max(1, F.BOSQUE_FILA_CADA || 1);
+    const DENS = F.BOSQUE_DENSIDAD || { c: 1, x: 0.69, v: 0.84 };
+    const FRENTE = F.BOSQUE_FRENTE_SOLIDO != null ? F.BOSQUE_FRENTE_SOLIDO : 1.5;
+    const JFONDO = F.BOSQUE_JITTER_FONDO || 0;   // desorden SOLO en el interior del bosque
     const cIni = Math.floor(RX0 / T) - 1, cFin = Math.ceil((GF.ORIG_X + W + MX) / T) + 1;
     const rIni = Math.floor(RY0 / T) - 1, rFin = Math.ceil((GF.ORIG_Y + H + MY) / T) + 1;
     const lista = [];
@@ -5622,9 +5786,10 @@ class FarmScene extends Phaser.Scene {
           const a = f(col, row);
           // jitter opcional: con las leyes puestas suele ir en 0, pero se deja por si se
           // quiere ensuciar un poco el patrón sin cambiar de sistema.
-          const esc = eMin + az() * (eMax - eMin);
-          const flip = az() < 0.45;
-          const rx = az(), ry = az(), rd = az();   // se sacan SIEMPRE, para que el azar no baile
+          const sample = F._referenceForest ? window.GoldenReferenceWorld.forestSample(col, row, ley) : null;
+          const esc = eMin + (sample ? sample.scale : az()) * (eMax - eMin);
+          const flip = sample ? sample.flip : az() < 0.45;
+          const rx = sample ? sample.rx : az(), ry = sample ? sample.ry : az(), rd = sample ? sample.rd : az();   // azar estable por ancla en ambos fondos
           // Primero hay que saber si el anclaje cae en el frente o en el fondo, porque de eso
           // depende cuánto desorden se le permite. Se mide sobre el anclaje SIN mover.
           /* 18/8 — EL CLARO YA NO ES UNA ELIPSE, ES EL TERRENO QUE TENÉS.

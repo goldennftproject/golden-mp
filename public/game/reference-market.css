@@ -1,0 +1,69 @@
+/* Mercado de la referencia, sobre los mismos controles y sólo en Renovado de PC. */
+@media(min-width:900px){
+ .visual-v2 #ov-market.reference-market #seed-shop{display:flex;flex-direction:column}
+ .visual-v2 #ov-market.reference-market #seed-shop>.shophead{order:0}
+ .visual-v2 #ov-market.reference-market #seed-shop>.ref-seed-row{order:1}
+ .visual-v2 #ov-market.reference-market #seed-shop>#semillas-futuras{order:2}
+ .visual-v2 #ov-market.reference-market #seed-shop>#packs-shop{order:3}
+ .visual-v2 #ov-market.reference-market #seed-shop>.ayuda-menu:not(#semillas-futuras){order:4}
+ .visual-v2 #ov-market.reference-market{background:transparent;backdrop-filter:none;pointer-events:none;padding:0}
+ .visual-v2 #ov-market.reference-market>.card{pointer-events:auto;position:fixed;top:128px;right:18px;left:auto;bottom:auto;box-sizing:border-box;width:460px!important;max-height:calc(100dvh - 225px);padding:16px;border:14px solid #8a572f;border-image:url('../assets/visual-v2/skin/parchment-frame.png?v=4') 32 fill / 14px / 0 stretch;background:#f6e6bf;border-radius:0;box-shadow:0 7px 14px #17210e80;overflow:auto;scrollbar-width:thin;scrollbar-color:#9a6b36 #e5cba0}
+ .visual-v2 #ov-market.reference-market>.card.movida{right:auto}
+ .visual-v2 #ov-market.reference-market>.card>h3{position:relative;margin:-13px -13px 14px;padding:43px 30px 11px;min-height:85px;box-sizing:border-box;background:#694020;border:9px solid #9e6b35;border-image:url('../assets/visual-v2/skin/wood-frame.png?v=4') 32 fill / 9px / 0 stretch;border-radius:0;color:#fff0c4;font:700 28px Georgia,serif;text-align:center;text-shadow:2px 2px #3b2518;letter-spacing:0;line-height:1.05}
+ .visual-v2 #ov-market.reference-market>.card>h3::before{content:'';position:absolute;left:-9px;right:-9px;top:-9px;height:42px;background:url('../assets/visual-v2/skin/awning.png?v=4') center top / 100% 100% no-repeat;pointer-events:none}
+ .visual-v2 #ov-market.reference-market .ref-market-mark{margin-right:10px;font:32px Georgia,serif;color:#edce7f;vertical-align:middle}
+ .visual-v2 #ov-market.reference-market .close{position:absolute;z-index:5;top:52px;right:20px;width:32px;height:32px;background:#a74427!important;color:#fff2d6;border:3px solid #edc583!important;box-shadow:0 2px #492819!important;border-radius:4px}
+ .visual-v2 #ov-market.reference-market .shoptabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 0 14px}
+ .visual-v2 #ov-market.reference-market .shoptab{min-height:41px;padding:7px 5px!important;border:3px solid #b68b50!important;border-radius:3px!important;background:#ead1a3!important;color:#4f341e!important;font-size:16px;font-weight:800;box-shadow:inset 0 1px #fff2cf!important}
+ .visual-v2 #ov-market.reference-market .shoptab[data-shop='deco'],.visual-v2 #ov-market.reference-market .shoptab[data-shop='nft']{min-height:30px;font-size:12px;padding:4px 5px!important}
+ .visual-v2 #ov-market.reference-market .shoptab.active{background:#466727!important;color:#fff2d5!important;border-color:#65823c!important;text-shadow:0 1px #31491d!important}
+ .visual-v2 #ov-market.reference-market #shop-buy>.info{font-size:12px;padding:6px 8px;margin-bottom:9px;text-align:center;background:#ecdbb8;border:0;box-shadow:none}
+ .visual-v2 #ov-market.reference-market .shophead{font-size:11px!important;min-height:0;margin:7px 0!important;padding:3px 0!important;text-align:center;color:#6b5436!important}
+ .visual-v2 #ov-market.reference-market #seed-shop>.ref-seed-row{display:grid;grid-template-columns:86px minmax(0,1fr) 140px;grid-template-areas:'image name quantity' 'image price buy' 'description description description';gap:6px 10px;align-items:center;min-height:126px;padding:11px;border:4px double #c39c61;border-radius:3px;background:#f7e7c8;box-shadow:inset 0 0 0 2px #fffae7;margin-bottom:11px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>.mimg{grid-area:image;width:82px;height:82px;background:transparent;border:0;box-shadow:none;display:grid;place-items:center}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>.mimg img{width:80px;height:80px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 3px #6b432433)}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>.minfo{display:contents}
+ .visual-v2 #ov-market.reference-market .ref-seed-row .mnm{grid-area:name;font-size:19px;font-weight:850;color:#352714;line-height:1.15;overflow-wrap:normal}
+ .visual-v2 #ov-market.reference-market .ref-seed-row .seedlv{display:inline-block;font-size:10px;white-space:nowrap;color:#7c6647;background:#e9d5ac;border:1px solid #ccb17a;border-radius:3px;padding:1px 3px;vertical-align:middle}
+ .visual-v2 #ov-market.reference-market .ref-seed-row .mds:not(.compra-total){grid-area:description;font-size:11px;line-height:1.2;color:#755e3e;border-top:1px solid #dcc39a;padding-top:5px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row .compra-total{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+ .visual-v2 #ov-market.reference-market .ref-price{grid-area:price;display:flex;align-items:center;gap:5px;min-width:0;color:#49331f;font-size:16px;font-weight:750;line-height:1.15}
+ .visual-v2 #ov-market.reference-market .ref-price img{width:24px;height:24px;object-fit:contain;image-rendering:pixelated;flex-shrink:0}
+ .visual-v2 #ov-market.reference-market .ref-quantity{grid-area:quantity;display:grid;grid-template-columns:32px minmax(28px,1fr) 32px;gap:0;align-items:stretch;height:33px;border:2px solid #8b6335;border-radius:2px;background:#f9eaca;overflow:hidden}
+ .visual-v2 #ov-market.reference-market .ref-quantity>input{grid-column:auto;grid-row:auto;box-sizing:border-box;width:100%;min-width:0;max-width:none;border:0;border-radius:0;padding:2px;text-align:center;font:750 17px system-ui;color:#513820;background:#fff1d0;box-shadow:none;appearance:textfield;-moz-appearance:textfield}
+ .visual-v2 #ov-market.reference-market .ref-quantity>input::-webkit-inner-spin-button,.visual-v2 #ov-market.reference-market .ref-quantity>input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+ .visual-v2 #ov-market.reference-market .ref-step{min-height:0;width:auto;padding:0!important;border:0!important;border-radius:0;background:#ecd3a5!important;color:#694624!important;font:800 24px/1 system-ui;box-shadow:none!important;text-shadow:none!important}
+ .visual-v2 #ov-market.reference-market .ref-step:disabled{background:#e5d6b9!important;color:#a18b67!important;filter:none!important}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>[data-buy]{grid-area:buy;grid-column:3;grid-row:2;box-sizing:border-box;width:100%;min-height:40px;padding:5px 10px;border:3px solid #34521e;border-image:url('../assets/visual-v2/skin/green-frame.png?v=4') 32 fill / 5px / 0 stretch;border-radius:3px;background:#496e29;color:#fff5da;font-size:17px;font-weight:800;text-shadow:0 1px #2c431d;box-shadow:inset 0 0 0 1px #98ae63,0 2px #3b4c25}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>[data-buy]:disabled{border-image:none;background:#ded2b3!important;border-color:#bdac89;color:#65573f!important}
+ .visual-v2 #ov-market.reference-market .ref-market-footer{position:sticky;bottom:-14px;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 5px 3px;margin-top:12px;border-top:1px solid #c5a773;color:#5e452a;background:#f1dfba;font-size:14px;font-weight:700}
+ .visual-v2 #ov-market.reference-market .ref-market-footer[hidden]{display:none}
+ .visual-v2 #ov-market.reference-market .ref-market-footer img{width:25px;height:25px;object-fit:contain;image-rendering:pixelated}
+ .visual-v2 #ov-market.reference-market .ayuda-menu{font-size:12px;background:#eddbb7;border:1px solid #ccb181;border-radius:3px;padding:7px;margin:9px 0}
+}
+@media(min-width:1250px) and (max-width:1499px){
+ .visual-v2 #ov-market.reference-market>.card{width:410px!important}
+ .visual-v2 #ov-market.reference-market #seed-shop>.ref-seed-row{grid-template-columns:72px minmax(0,1fr) 124px;gap:5px 8px;padding:9px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>.mimg{width:70px;height:74px}.visual-v2 #ov-market.reference-market .ref-seed-row>.mimg img{width:70px;height:72px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row .mnm{font-size:18px}.visual-v2 #ov-market.reference-market .ref-price{font-size:14px}.visual-v2 #ov-market.reference-market .ref-quantity{grid-template-columns:28px minmax(28px,1fr) 28px}
+}
+@media(min-width:900px) and (max-width:1249px){
+ .visual-v2 #ov-market.reference-market>.card{width:370px!important;right:10px;padding:12px;border-width:12px;top:122px;max-height:calc(100dvh - 215px)}
+ .visual-v2 #ov-market.reference-market #seed-shop>.ref-seed-row{grid-template-columns:64px minmax(0,1fr) 110px;gap:5px 6px;padding:8px;min-height:120px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>.mimg{width:62px;height:68px}.visual-v2 #ov-market.reference-market .ref-seed-row>.mimg img{width:62px;height:66px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row .mnm{font-size:16px}.visual-v2 #ov-market.reference-market .ref-price{font-size:13px}.visual-v2 #ov-market.reference-market .ref-price img{width:20px;height:20px}.visual-v2 #ov-market.reference-market .ref-quantity{grid-template-columns:27px minmax(24px,1fr) 27px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>[data-buy]{font-size:15px;padding:5px;min-height:36px}
+ .visual-v2 #ov-market.reference-market .shoptab{font-size:15px}
+}
+@media(min-width:900px) and (max-height:740px){
+ .visual-v2 #ov-market.reference-market>.card{top:108px;max-height:calc(100dvh - 190px)}
+ .visual-v2 #ov-market.reference-market>.card>h3{min-height:60px;padding-top:28px;font-size:24px;margin-bottom:9px}
+ .visual-v2 #ov-market.reference-market>.card>h3::before{height:27px}.visual-v2 #ov-market.reference-market .close{top:35px}
+ .visual-v2 #ov-market.reference-market .shoptabs{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:8px}
+ .visual-v2 #ov-market.reference-market .shoptab,.visual-v2 #ov-market.reference-market .shoptab[data-shop='deco'],.visual-v2 #ov-market.reference-market .shoptab[data-shop='nft']{min-height:32px;padding:5px 2px!important;font-size:12px}
+ .visual-v2 #ov-market.reference-market #shop-buy>.info,.visual-v2 #ov-market.reference-market .ref-market-footer{display:none}
+ .visual-v2 #ov-market.reference-market .shophead{margin:4px 0!important}
+ .visual-v2 #ov-market.reference-market #seed-shop>.ref-seed-row{min-height:112px;padding-top:7px;padding-bottom:7px;gap:4px 8px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row .mds:not(.compra-total){font-size:10px;padding-top:3px}
+ .visual-v2 #ov-market.reference-market .ref-seed-row>[data-buy]{min-height:35px;font-size:16px}
+}

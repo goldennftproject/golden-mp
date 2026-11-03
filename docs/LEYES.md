@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Composición de la maqueta en el juego real — 03/11/2026
+
+Dirección autoriza acercar la composición real a la maqueta. Aspecto Renovado incorpora marcos ilustrados, logo apilado, HUD agrupado con XP, Tienda con toldo, objetivo contextual, Mercado lateral y controles de cantidad conservando los originales. Cámara y controles de vista se adaptan al espacio real sin cambiar el terreno; pradera y bosque se refinan sólo visualmente. Clásico restaura la presentación anterior. Se mantienen progreso, guardado, economía, ocupación y sistemas pausados. No se añaden edificios, parcelas ni personajes ficticios para reproducir la ilustración. Se atienden además los reportes de vinculación de Discord: invitación válida, respuesta temprana y arranque del bot, sin enviar mensajes ni vincular jugadores. Ver COMPOSICION-REFERENCIA-20261103.md y DISCORD-VINCULACION-20261101.md.
+
 ## Transformación del conjunto visual — 03/11/2026
 
 Dirección pide continuar la transformación completa, incluidos árboles, minerales, parcelas y accesos de Tienda. Se extiende el aspecto Renovado con estados coherentes de recursos/cultivos, entorno y decoración, manteniendo lienzos, animaciones, huellas y reglas. Las imágenes clásicas y los diez edificios renovados aprobados se preservan. Las copas y fondos compuestos se actualizan al alternar; la invalidación pendiente se aplica al volver del Bosque. Las visitas comparten manifiesto y respaldo clásico. Se incorporan ilustraciones a los accesos, manteniendo botones, identidad y eventos. No se modifican economía, progreso, cuentas ni los sistemas pausados. Ver TRANSFORMACION-VISUAL-20261103.md.

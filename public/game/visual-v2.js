@@ -3,7 +3,7 @@
 (function(root){
  'use strict';
  const PREF='gf_visual_v2', originals=new Map(), variants=new Map(), effectAnchors=new Map();
- const VERSION=3, UI_KEYS=new Set(['vip','objetos','mejoras','suministros']);
+ const VERSION=4, UI_KEYS=new Set(['vip','objetos','mejoras','suministros']);
  const RELIC_ART={cobre:'gallinero',plata:'huerto',jade:'establo',oro:'tractor',granero:'granero',rubi:'molino',corona:'invernadero'};
  let enabled=true,manager=null,ready=false,loading=null,assetAtlas=null,compositesDirty=false;
  try{enabled=root.localStorage.getItem(PREF)!=='classic';}catch(_){}

@@ -1,0 +1,81 @@
+/* Enlarged reference HUD. No original node or action is replaced; Clásico uses its existing CSS. */
+@media(min-width:900px){
+ .visual-v2 #hudbar.reference-hud{--ref-hud-label:17px;--ref-hud-number:20px;top:8px;left:12px;right:12px;min-height:84px;box-sizing:border-box;padding:2px 12px;gap:0;flex-wrap:nowrap;overflow:visible;background:#674328;border:10px solid transparent;border-image:url('../assets/visual-v2/skin/wood-frame.png?v=4') 32 fill stretch;border-radius:0;box-shadow:0 4px 0 #291c12,0 6px 9px #10180b55;justify-content:space-between}
+ .visual-v2 #hudbar.reference-hud .hud{display:contents}
+ .visual-v2 #hudbar.reference-hud .brand{order:0;flex:0 0 304px;gap:12px!important;align-items:center}
+ .visual-v2 #hudbar.reference-hud .brand h1:has(.gf-logo){width:182px;height:56px;overflow:visible}
+ .visual-v2 #hudbar.reference-hud .brand .gf-logo{width:184px;height:90px;object-fit:contain}
+ .visual-v2 #loading .loading-brand{width:min(420px,70vw);height:min(240px,40vw);overflow:visible}
+ .visual-v2 #loading .loading-brand .gf-logo{position:static;width:100%;height:100%;object-fit:contain;transform:none}
+ .visual-v2 #hudbar.reference-hud #jugadores-online{padding:6px 8px;font-size:14px;min-height:32px;gap:5px;border:1px solid #caa368!important;background:#302014;color:#fff0d0;box-shadow:inset 0 1px #8b6039,0 2px #2b1e13}
+ .visual-v2 #hudbar.reference-hud #jugadores-online .k{font-size:13px}
+ .visual-v2 #hudbar.reference-hud .pill{position:relative;flex:0 1 auto;box-sizing:border-box;min-height:57px;font-size:var(--ref-hud-number);line-height:1.15;padding:4px 11px 4px 46px;gap:4px;border:0!important;border-image:none!important;background:transparent;color:#fff3d7;text-shadow:0 2px #342014;white-space:nowrap}
+ .visual-v2 #hudbar.reference-hud .pill:not(#jugadores-online){box-shadow:inset 1px 0 #d6b17088}
+ .visual-v2 #hudbar.reference-hud .pill .k{color:#fff0d0;font-size:var(--ref-hud-label);font-weight:750}
+ .visual-v2 #hudbar.reference-hud .refhud-icon{position:absolute;left:6px;top:50%;transform:translateY(-50%);width:35px;height:40px;pointer-events:none;filter:drop-shadow(0 2px 0 #2b1b12)}
+ .visual-v2 #hudbar.reference-hud .refhud-icon svg{display:block;width:100%;height:100%}
+ .visual-v2 #hudbar.reference-hud #lvlpill{order:1;width:190px;display:block!important;align-self:center;padding-top:3px}
+ .visual-v2 #hudbar.reference-hud #lvlpill>.k:first-child,.visual-v2 #hudbar.reference-hud #cbar>.k:first-child{display:inline;font-size:var(--ref-hud-label)}
+ .visual-v2 #hudbar.reference-hud #s-level,.visual-v2 #hudbar.reference-hud #c-lvl{font-size:var(--ref-hud-number);display:inline}
+ .visual-v2 #hudbar.reference-hud #lvlpill .cbarw,.visual-v2 #hudbar.reference-hud #cbar .cbarw{display:block!important;position:absolute;left:46px;right:10px;bottom:5px;width:auto;min-width:0;height:17px;box-sizing:border-box;border:2px solid #e4c58b;border-radius:8px;background:#281b10;box-shadow:inset 0 1px 2px #0008;overflow:hidden}
+ .visual-v2 #hudbar.reference-hud #lvl-fill{background:linear-gradient(#9fda59,#487c2a)}
+ .visual-v2 #hudbar.reference-hud #lvl-fill.tareas{background:linear-gradient(#f0ce72,#ad762e)}
+ .visual-v2 #hudbar.reference-hud #lvl-tipo{display:block!important;position:absolute;left:51px;bottom:7px;padding:0 2px;border-radius:3px;background:#332517e6;font-size:10px;line-height:12px;color:#fffce2;z-index:1;pointer-events:none;text-shadow:0 1px #2a3218}
+ .visual-v2 #hudbar.reference-hud .hud-xp-numeros{display:block!important;position:absolute;right:15px;bottom:7px;padding:0 3px;border-radius:3px;background:#332517e6;line-height:12px;font-size:11px;color:#fffce3;z-index:1;pointer-events:none;text-shadow:0 1px #2a2618}
+ .visual-v2 #hudbar.reference-hud .hud-xp-numeros>.k{font-size:11px;line-height:12px;color:#fffce3}
+ .visual-v2 #hudbar.reference-hud .hud-xp-numeros small{display:none}
+ .visual-v2 #hudbar.reference-hud #energia-granja-pill,.visual-v2 #hudbar.reference-hud #stampill{order:2;width:202px;display:block;align-self:center;padding-top:3px}
+ .visual-v2 #hudbar.reference-hud #energia-granja-pill[style*="display: none"],.visual-v2 #hudbar.reference-hud #stampill[style*="display: none"]{display:none}
+ .visual-v2 #hudbar.reference-hud #energia-granja-pill>.k:first-child,.visual-v2 #hudbar.reference-hud #stampill>.k:first-child{display:none}
+ .visual-v2 #hudbar.reference-hud .refhud-label{display:block;position:absolute;left:46px;top:4px;font-size:var(--ref-hud-label);font-weight:800;color:#fff3d7}
+ .visual-v2 #hudbar.reference-hud #s-energia-granja,.visual-v2 #hudbar.reference-hud #s-stam{position:absolute;right:10px;top:5px;font-size:var(--ref-hud-number);font-weight:800;color:#fff3d7}
+ .visual-v2 #hudbar.reference-hud #energia-granja-pill .cbarw,.visual-v2 #hudbar.reference-hud #stampill .cbarw{display:block;position:absolute;left:46px;right:10px;bottom:7px;width:auto;min-width:0;height:13px;border:1px solid #dabf85;border-radius:5px;background:#2a1d13;overflow:hidden}
+ .visual-v2 #hudbar.reference-hud #energia-granja-pill:has(#energia-granja-eta:not([hidden])) .cbarw{right:70px}
+ .visual-v2 #hudbar.reference-hud #energia-granja-eta:not([hidden]){position:absolute;right:9px;bottom:5px;display:block;font-size:11px;line-height:15px;color:#ffe9ad;font-weight:800;font-variant-numeric:tabular-nums;text-shadow:0 1px #372719}
+ .visual-v2 #hudbar.reference-hud #energia-granja-eta[hidden]{display:none!important}
+ .visual-v2 #hudbar.reference-hud .divisa-hud{order:3;width:110px;display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:24px 24px;padding:4px 10px 4px 10px;column-gap:6px;row-gap:0;text-align:left;align-items:center}
+ .visual-v2 #hudbar.reference-hud .divisa-hud .ric{grid-column:1;grid-row:1/3;width:33px;height:33px;image-rendering:pixelated;filter:drop-shadow(0 2px #241b12)}
+ .visual-v2 #hudbar.reference-hud .divisa-hud .k{grid-column:2;grid-row:1;font-size:var(--ref-hud-label)}
+ .visual-v2 #hudbar.reference-hud .divisa-hud b{grid-column:2;grid-row:2;font-size:var(--ref-hud-number);font-variant-numeric:tabular-nums}
+ .visual-v2 #hudbar.reference-hud .divisa-hud.refhud-long b{font-size:13px}
+ .visual-v2 #hudbar.reference-hud #hppill{order:4;width:156px;display:block;padding-top:4px}
+ .visual-v2 #hudbar.reference-hud #hppill .hpcor,.visual-v2 #hudbar.reference-hud #hppill .hpeta{display:none}
+ .visual-v2 #hudbar.reference-hud #hppill>.k{position:absolute;left:46px;top:4px}
+ .visual-v2 #hudbar.reference-hud #s-hp{position:absolute;right:10px;bottom:7px;padding:0 3px;border-radius:3px;background:#332517d9;font-size:16px;z-index:1;line-height:15px;text-shadow:0 1px #3e1610}
+ .visual-v2 #hudbar.reference-hud #hppill .hpbarw{display:block;position:absolute;left:46px;right:10px;bottom:5px;width:auto;min-width:0;height:19px;border:1px solid #d8b784;border-radius:4px;background:#2c1815;overflow:hidden}
+ .visual-v2 #hudbar.reference-hud #cbar{order:5;width:184px;display:block;padding-top:4px}
+ .visual-v2 #hudbar.reference-hud #cbar>.k:nth-of-type(3){display:none}
+ .visual-v2 #hudbar.reference-hud #cbar .cfill{background:linear-gradient(#f5d383,#a77a35)}
+ .visual-v2 #hudbar.reference-hud #hud-sound,.visual-v2 #hudbar.reference-hud #menu-btn{flex:0 0 auto;min-height:42px;background:#4b6d2e;border:3px solid #d8c291!important;border-image:none!important;border-radius:5px;box-shadow:inset 0 1px #abc56c,0 3px #26391e;color:#fff6de;font-size:17px;text-shadow:0 2px #213219;align-self:center;box-sizing:border-box}
+ .visual-v2 #hudbar.reference-hud #hud-sound{order:7;width:43px;min-width:43px;padding:3px;margin-left:auto}
+ .visual-v2 #hudbar.reference-hud #menu-btn{order:8;min-width:87px;padding:4px 8px;margin-left:7px}
+ .visual-v2 #hudbar.reference-hud #lista-online{top:100px;left:22px;font-size:15px}
+ .visual-v2 #hudbar.reference-hud #hud-flot{right:10px;top:calc(100% + 7px)}
+ .visual-v2 #hudbar.reference-hud #buffpill{font-size:13px;min-height:30px;padding:4px 9px;background:#593c22;border:1px solid #c8a15f!important;border-radius:5px;box-shadow:0 2px #2c2115}
+}
+@media(min-width:1100px) and (max-width:1499px){
+ .visual-v2 #hudbar.reference-hud{--ref-hud-label:14px;--ref-hud-number:17px;left:8px;right:8px;padding:4px 7px;min-height:76px;border-width:9px}
+ .visual-v2 #hudbar.reference-hud .brand{flex-basis:254px;gap:7px!important}
+ .visual-v2 #hudbar.reference-hud .brand h1:has(.gf-logo){width:152px;height:56px}.visual-v2 #hudbar.reference-hud .brand .gf-logo{width:152px;height:76px}
+ .visual-v2 #hudbar.reference-hud #jugadores-online{font-size:12px;padding:4px 6px;min-height:29px}.visual-v2 #hudbar.reference-hud #jugadores-online .k{font-size:11px}
+ .visual-v2 #hudbar.reference-hud #lvlpill{width:164px}.visual-v2 #hudbar.reference-hud #energia-granja-pill,.visual-v2 #hudbar.reference-hud #stampill{width:174px}.visual-v2 #hudbar.reference-hud .divisa-hud{width:93px;grid-template-columns:28px minmax(0,1fr);column-gap:4px;padding-left:7px;padding-right:7px}.visual-v2 #hudbar.reference-hud .divisa-hud .ric{width:27px;height:27px}.visual-v2 #hudbar.reference-hud #hppill{width:137px}.visual-v2 #hudbar.reference-hud #cbar{width:161px}.visual-v2 #hudbar.reference-hud #hud-sound{width:37px;min-width:37px;margin-left:auto}.visual-v2 #hudbar.reference-hud #menu-btn{min-width:76px;margin-left:5px;font-size:15px}
+}
+@media(min-width:900px) and (max-width:1099px){
+ .visual-v2 #hudbar.reference-hud{--ref-hud-label:11px;--ref-hud-number:13px;left:5px;right:5px;padding:3px 4px;min-height:70px;border-width:7px}
+ .visual-v2 #hudbar.reference-hud .brand{flex-basis:174px;gap:3px!important}.visual-v2 #hudbar.reference-hud .brand h1:has(.gf-logo){width:100px;height:46px}.visual-v2 #hudbar.reference-hud .brand .gf-logo{width:100px;height:56px}
+ .visual-v2 #hudbar.reference-hud #jugadores-online{font-size:10px;padding:3px;gap:2px;min-height:25px}.visual-v2 #hudbar.reference-hud #jugadores-online .k{font-size:10px}.visual-v2 #hudbar.reference-hud #jugadores-online .presencia-punto{width:5px;height:5px}
+ .visual-v2 #hudbar.reference-hud .pill{min-height:49px;padding-left:27px;padding-right:5px}.visual-v2 #hudbar.reference-hud .refhud-icon{left:3px;width:21px;height:29px}.visual-v2 #hudbar.reference-hud #lvlpill{width:120px}.visual-v2 #hudbar.reference-hud #energia-granja-pill,.visual-v2 #hudbar.reference-hud #stampill{width:122px}.visual-v2 #hudbar.reference-hud #lvlpill .cbarw,.visual-v2 #hudbar.reference-hud #cbar .cbarw{left:27px;right:5px;height:15px;bottom:5px}.visual-v2 #hudbar.reference-hud #lvl-tipo{left:31px;bottom:7px;font-size:8px;line-height:10px}.visual-v2 #hudbar.reference-hud .hud-xp-numeros{right:8px;bottom:7px;line-height:10px}.visual-v2 #hudbar.reference-hud .hud-xp-numeros>.k{font-size:9px;line-height:10px}
+ .visual-v2 #hudbar.reference-hud .refhud-label{left:27px;top:3px}.visual-v2 #hudbar.reference-hud #s-energia-granja,.visual-v2 #hudbar.reference-hud #s-stam{right:5px;top:3px}.visual-v2 #hudbar.reference-hud #energia-granja-pill .cbarw,.visual-v2 #hudbar.reference-hud #stampill .cbarw{left:27px;right:5px;height:10px;bottom:8px}.visual-v2 #hudbar.reference-hud #energia-granja-pill:has(#energia-granja-eta:not([hidden])) .cbarw{right:58px}.visual-v2 #hudbar.reference-hud #energia-granja-eta:not([hidden]){font-size:9px;right:5px;bottom:5px}
+ .visual-v2 #hudbar.reference-hud .divisa-hud{width:62px;grid-template-columns:20px minmax(0,1fr);column-gap:3px;grid-template-rows:20px 20px;padding:4px}.visual-v2 #hudbar.reference-hud .divisa-hud .ric{width:20px;height:20px}.visual-v2 #hudbar.reference-hud .divisa-hud.refhud-long b{font-size:10px}.visual-v2 #hudbar.reference-hud #hppill{width:96px}.visual-v2 #hudbar.reference-hud #hppill>.k{left:27px}.visual-v2 #hudbar.reference-hud #hppill .hpbarw{left:27px;right:5px;height:16px;bottom:5px}.visual-v2 #hudbar.reference-hud #s-hp{font-size:12px;right:8px;bottom:7px;line-height:12px}.visual-v2 #hudbar.reference-hud #cbar{width:110px}.visual-v2 #hudbar.reference-hud #hud-sound,.visual-v2 #hudbar.reference-hud #menu-btn{font-size:12px;min-height:33px;border-width:2px!important}.visual-v2 #hudbar.reference-hud #hud-sound{width:29px;min-width:29px;margin-left:auto}.visual-v2 #hudbar.reference-hud #hud-sound span{font-size:20px}.visual-v2 #hudbar.reference-hud #menu-btn{min-width:60px;margin-left:3px;padding:3px}.visual-v2 #hudbar.reference-hud #lista-online{top:80px}
+}
+@media(min-width:1500px){
+ .visual-v2 #hudbar.reference-hud{--ref-hud-label:18px;--ref-hud-number:22px}
+ .visual-v2 #hudbar.reference-hud #lvlpill{width:220px}
+ .visual-v2 #hudbar.reference-hud #energia-granja-pill,.visual-v2 #hudbar.reference-hud #stampill{width:210px}
+ .visual-v2 #hudbar.reference-hud .divisa-hud{width:132px}
+ .visual-v2 #hudbar.reference-hud #hppill{width:170px}
+ .visual-v2 #hudbar.reference-hud #cbar{width:195px}
+ .visual-v2 #hudbar.reference-hud #lvlpill .cbarw,.visual-v2 #hudbar.reference-hud #cbar .cbarw{height:20px;bottom:4px}
+ .visual-v2 #hudbar.reference-hud #lvl-tipo{font-size:11px;line-height:14px;bottom:7px}
+ .visual-v2 #hudbar.reference-hud .hud-xp-numeros,.visual-v2 #hudbar.reference-hud .hud-xp-numeros>.k{font-size:13px;line-height:14px}
+}
