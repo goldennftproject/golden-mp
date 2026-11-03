@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),{JSDOM}=require('jsdom');
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'public/index.html'),'utf8'),doc=new JSDOM(html).window.document;
-const menus=[...doc.querySelectorAll('#gmenu .gmi[data-panel]')];assert.equal(menus.length,21);assert.equal(new Set(menus.map(b=>b.dataset.panel)).size,21);assert.ok(doc.querySelector('#gmenu [data-panel="ov-market"]'));assert.ok(doc.querySelector('#gmenu [data-panel="ov-p2p"]'));
+const menus=[...doc.querySelectorAll('#gmenu .gmi[data-panel]')];assert.equal(menus.length,22);assert.equal(new Set(menus.map(b=>b.dataset.panel)).size,22);assert.ok(doc.querySelector('#gmenu [data-panel="ov-market"]'));assert.ok(doc.querySelector('#gmenu [data-panel="ov-p2p"]'));
 for(const b of menus){assert.ok(doc.getElementById(b.dataset.panel));assert.ok(b.title);assert.ok(b.querySelector('.menu-icon svg path').getAttribute('d'));assert.ok(b.querySelector('.menu-label').textContent.trim());}
 assert.equal(doc.querySelectorAll('#gmenu .menu-seccion').length,5);assert.ok(doc.querySelector('[data-panel="ov-skills"]').textContent.includes('Habilidades'));
 assert.equal(doc.getElementById('banco-canjear').closest('details'),null);assert.ok(doc.getElementById('banco-actividad').closest('details'));assert.ok(doc.getElementById('gm-fijar'));assert.ok(doc.getElementById('guardado-manual'));

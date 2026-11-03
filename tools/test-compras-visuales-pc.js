@@ -5,8 +5,8 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.
 (async()=>{
  await c.SAVE_READY;c.document=doc;c.estadoDeCero();c.innerWidth=1360;
  doc.defaultView.HTMLElement.prototype.scrollIntoView=function(){};
- c.G.golden=0;c.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,true);assert.match(doc.getElementById('vip-info').textContent,/100 de energía/);assert.match(doc.getElementById('vip-info').textContent,/25% de cupos/);assert.match(doc.getElementById('vip-info').textContent,/10 Golden/);
- c.G.golden=20;c.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,false);
+ c.G.golden=0;c.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,false);assert.equal(doc.getElementById('vip-comprar').textContent,'Recargar Golden');assert.match(doc.getElementById('vip-info').textContent,/100 de energía/);assert.match(doc.getElementById('vip-info').textContent,/25% de cupos/);assert.match(doc.getElementById('vip-info').textContent,/10 Golden/);
+ c.G.golden=20;c.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,false);assert.equal(doc.getElementById('vip-comprar').textContent,'Activar VIP');
  c.G.produccion.vipHasta=Date.now()+86400000;c.refreshVip();assert.equal(doc.getElementById('vip-comprar').disabled,true);assert.equal(doc.getElementById('vip-comprar').textContent,'VIP activo');c.G.produccion.vipHasta=0;
  c.refreshTienda();assert.ok(doc.querySelector('.tienda-saldos img[src*=coin_esencia]'),'Golden conserva su icono propio');assert.equal(doc.querySelectorAll('.tienda-producto').length,4);assert.equal(doc.querySelector('[data-tienda="animales"]').disabled,true);
  for(const img of doc.querySelectorAll('#tienda-catalogo img[src^="assets/ui/shop-"]'))assert.ok(fs.existsSync(root+'/public/'+img.getAttribute('src')),'ilustración presente');

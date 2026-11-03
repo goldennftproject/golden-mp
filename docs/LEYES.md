@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Revisión de menús tras la transformación — 03/11/2026
+
+Dirección pide comprobar los menús y el estado de Discord. Se corrigen recortes de cantidad/cierre/signos en Mercado, marco indebido de subtítulos, contraste de Cocina y Viaje, Cancelar de la cola y barras horizontales de Viaje/Tablón. Renovado PC conserva controles, datos y reglas; Clásico/móvil y sistemas pausados permanecen. Auditoría local de 32 ventanas en cuatro resoluciones, más pruebas de estilos y renderers. Discord se verifica activo sin enviar mensajes ni vincular cuentas. Ver AUDITORIA-MENUS-20261103.md.
+
 ## Fidelidad a los recortes del concepto — 03/11/2026
 
 Dirección aporta comparativas de árbol, Mercado, HUD, Tienda y parcelas para acercar Renovado a la imagen aprobada. Se sustituye la familia del árbol y la tierra con surcos por terrones; se conservan pies, escala, huellas y plantas. HUD compacto, cabecera de Mercado menor, ilustraciones de los mismos productos y marcos más próximos a las referencias. Controles, funciones, precios, tiempos, energía, progreso y guardado permanecen. Clásico restaura los originales y móvil conserva su comportamiento. Atlas opcional v5 con sólo nueve marcos modificados; los otros ochenta y los edificios aprobados se preservan. Ver FIDELIDAD-CONCEPTO-20261103.md.
