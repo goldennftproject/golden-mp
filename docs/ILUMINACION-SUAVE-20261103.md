@@ -21,3 +21,7 @@ Prueba local en Chrome con Phaser WebGL real: comparación de sprites y mapa de 
 El control de Chrome se detuvo por no poder verificar con confianza la dirección de la ventana. Pendiente: revisión visual del bosque después de la transición, visita completa en navegador y medición comparativa de FPS en primer plano. No se afirma haber terminado esas tres verificaciones. Las pruebas locales no escribieron en Supabase y no se crean rutas de test públicas.
 
 Fuentes técnicas: https://github.com/phaserjs/phaser/blob/v3.80.1/src/renderer/webgl/pipelines/LightPipeline.js y https://docs.phaser.io/phaser/concepts/gameobjects/light
+
+## Corrección de continuidad del bosque
+
+El primer pase sí alcanzaba una Image auxiliar creada por dibujarBosque para hornear el anillo cercano en RenderTexture. El mosaico lejano, compuesto en Canvas con el PNG original, no recibía ese pase y aparecía una frontera rectangular. Se excluye explícitamente la fuente auxiliar antes del batch; ambos fondos vuelven a componer el mismo color original. La exclusión persiste frente al interruptor de iluminación. Se mantiene el efecto en nodos y edificios jugables. No se cambian límites de expansiones, terreno ni arte.

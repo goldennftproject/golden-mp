@@ -18,6 +18,9 @@ const scene={game:{renderer:{type:2,pipelines:{has:()=>false,add:()=>{}}}},child
 assert.equal(api.attach(scene),true);assert.equal(sprite.pipeline.name,'GoldenRelief');
 api.setEnabled(false);assert.equal(sprite.pipeline.name,'MultiPipeline');
 api.setEnabled(true);assert.equal(sprite.pipeline.name,'GoldenRelief');
+api.exclude(sprite);assert.equal(sprite.pipeline.name,'MultiPipeline','fuente de fondo usa el color original');
+assert(!api.eligible(sprite),'fuente horneada queda excluida');
+api.setEnabled(false);api.setEnabled(true);assert.equal(sprite.pipeline.name,'MultiPipeline','cambiar el modo no vuelve a iluminar el fondo');
 scene.events.emit('shutdown');assert.equal(scene.events.listenerCount('add'),0);
 assert.equal(api.attach({game:{renderer:{type:1}}}),false,'Canvas conserva aspecto sprite');
 console.log('OK: escenas, preferencia reversible, limpieza al salir y fallback Canvas');

@@ -5655,6 +5655,9 @@ class FarmScene extends Phaser.Scene {
     // del juego ordena por baseRow y no por el techo del sprite.
     lista.sort((a, b) => (a[0] + altoT * a[2]) - (b[0] + altoT * b[2]));
     const t = this.add.image(0, 0, "tree").setOrigin(0, 0).setVisible(false);
+    // El mosaico lejano dibuja el PNG original en Canvas. Hornear aquí luz adicional
+    // marcaba el rectángulo del anillo; ambos fondos deben usar el mismo color fuente.
+    if (window.GoldenLighting) GoldenLighting.exclude(t);
     const usarLote = typeof rt.beginDraw === "function";   // Phaser 3.50+: dibujar en lote es mucho más rápido
     if (usarLote) rt.beginDraw();
     // COPA y TRONCO se dibujan POR SEPARADO, cada uno con su tratamiento (16/8, dirección):

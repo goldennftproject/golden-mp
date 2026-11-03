@@ -72,7 +72,13 @@
       vec3 light=min(vec3(1.12),vec3(.56,.58,.60)+vec3(1.,.97,.90)*.58*diffuse);
       gl_FragColor=vec4(color.rgb*light,color.a);
     }`;
-  function eligible(o){return o&&(o.type==='Image'||o.type==='Sprite')&&o.texture&&!/^(?:__|grass|isla|portal|plano_|.*marker|.*icon|.*senal)/.test(o.texture.key);}
+  function eligible(o){return o&&!o._gfReliefExcluded&&(o.type==='Image'||o.type==='Sprite')&&o.texture&&!/^(?:__|grass|isla|portal|plano_|.*marker|.*icon|.*senal)/.test(o.texture.key);}
+  // Fuentes auxiliares horneadas en fondos: deben coincidir con su mosaico Canvas sin luz.
+  function exclude(o){
+    if(!o)return;
+    o._gfReliefExcluded=true;
+    if(o._gfRelief){o.resetPipeline();delete o._gfRelief;}
+  }
   function apply(o){
     if(!eligible(o)||!o.setPipeline)return;
     if(enabled){if(o.pipeline?.name===PIPELINE||o.pipeline?.name==='MultiPipeline'){if(o.texture.getSourceImage)normalTexture(o.texture);o.setPipeline(PIPELINE);o._gfRelief=true;}}
@@ -116,7 +122,7 @@
   }
   function setEnabled(on){enabled=!!on;try{root.localStorage.setItem(PREF,enabled?'on':'off');}catch(_){}for(const scene of scenes)scene.children.list.forEach(tree);sync();}
   function sync(){const b=root.document?.getElementById('cfg-relief');if(b){b.disabled=!compatible;b.textContent='Iluminación: '+(!compatible?'Original (compatibilidad)':enabled?'Suave':'Original');b.setAttribute('aria-pressed',String(enabled&&compatible));}}
-  const api={attach,setEnabled,isEnabled:()=>enabled&&compatible,normals,shadeImage,eligible,stats};
+  const api={attach,exclude,setEnabled,isEnabled:()=>enabled&&compatible,normals,shadeImage,eligible,stats};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(root.document){root.GoldenLighting=api;const b=root.document.getElementById('cfg-relief');if(b)b.addEventListener('click',()=>setEnabled(!enabled));sync();}
 })(typeof window==='undefined'?globalThis:window);
