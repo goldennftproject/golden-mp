@@ -10,7 +10,7 @@ function visitaAbrir(granja) {
   const uid = UID, destino = granja.id;
   const visitas = typeof G !== 'undefined' ? G.visitas : null;
   const dia = new Date().toISOString().slice(0,10), ids = visitas?.dia === dia && Array.isArray(visitas.ids) ? visitas.ids : [];
-  const vista = {...granja,cicloVisual:!!window.GoldenLighting?.isCycleEnabled(),iluminacionSuave:!!window.GoldenLighting?.isEnabled(),semillaEstado:ids.includes(destino)?'recogida':ids.length>=3?'limite':'disponible'};
+  const vista = {...granja,aspectoRenovado:!!window.GoldenVisual?.isEnabled(),cicloVisual:!!window.GoldenLighting?.isCycleEnabled(),iluminacionSuave:!!window.GoldenLighting?.isEnabled(),semillaEstado:ids.includes(destino)?'recogida':ids.length>=3?'limite':'disponible'};
   const frame = document.createElement('iframe');
   frame.title = 'Visitando la granja de ' + granja.nombre;
   frame.setAttribute('sandbox', 'allow-scripts');

@@ -2778,12 +2778,13 @@ class FarmScene extends Phaser.Scene {
         if(o.acabado)o.acabado.setVisible(false);
         if(o.oculto||s.visible===false||(BUILD_DEF.barn&&!G.built?.barn))continue;
         const etapa=Math.min(3,Math.max(0,Math.floor(G.infraestructura?.granja||0))),key='barn_evo_'+etapa;
-        if(this.textures.exists(key)&&s.texture?.key!==key){
+        const renovado=!!window.GoldenVisual?.hasVariant(key),frame=renovado?'edificio-v2':'edificio';
+        if(this.textures.exists(key)&&(s.texture?.key!==key||s.frame?.name!==frame)){
           // Medir el edificio, no el lienzo transparente: los primeros sprites tienen mucho margen.
-          const [x,y,w,h,ancho]=[[39,92,50,36,.82],[29,76,70,52,.88],[17,63,94,65,.97],[2,53,124,75,1.16]][etapa];
+          const [x,y,w,h,ancho]=renovado?[8,16,112,112,[1.02,1.07,1.12,1.16][etapa]]:[[39,92,50,36,.82],[29,76,70,52,.88],[17,63,94,65,.97],[2,53,124,75,1.16]][etapa];
           const textura=this.textures.get(key);
-          if(!textura.has('edificio'))textura.add('edificio',0,x,y,w,h);
-          s.setTexture(key,'edificio');s.setScale(o.rw*ancho/w);
+          if(!textura.has(frame))textura.add(frame,0,x,y,w,h);
+          s.setTexture(key,frame);s.setScale(o.rw*ancho/w);
         }
         continue;
       }

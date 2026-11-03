@@ -12,6 +12,7 @@ function imagen(key){
  return imagenes.get(key);
 }
 async function dibujar(g){
+ if(window.GoldenVisual)GoldenVisual.setEnabled(g.aspectoRenovado===true);
  if(window.GoldenLighting){GoldenLighting.setEnabled(g.iluminacionSuave===true);GoldenLighting.setCycle(g.cicloVisual===true,false);}
  const m=g.mapa;GF.configurarEspacio(m.espacioV);GF.aplicarTerreno(g.expansiones);
  const terreno=GF.terreno(g.expansiones),T=GF.TILE,pad=3;
@@ -55,7 +56,7 @@ async function dibujar(g){
  const libres=[...terreno.mias].filter(k=>!ocupadas.has(k));let an=0;
  for(const [k,n] of Object.entries(m.animales||{}))for(let i=0;i<n&&an<libres.length;i++,an++){const [c,r]=libres[(an*7)%libres.length].split(',').map(Number);items.push({key:'animal_'+k,x:(c+.5)*T,y:(r+1)*T,w:T*.85});}
  const iluminadas=new Map();
- await Promise.all(items.map(async o=>{o.image=await imagen(o.key);if(o.image&&g.iluminacionSuave===true&&window.GoldenLighting){if(!iluminadas.has(o.key)){try{iluminadas.set(o.key,GoldenLighting.shadeImage(o.image));}catch(_){iluminadas.set(o.key,o.image);}}o.image=iluminadas.get(o.key);}}));
+ await Promise.all(items.map(async o=>{o.image=await imagen(o.key);if(o.image&&window.GoldenVisual)o.image=await GoldenVisual.visitImage(o.key,o.image);if(o.image&&g.iluminacionSuave===true&&window.GoldenLighting){if(!iluminadas.has(o.key)){try{iluminadas.set(o.key,GoldenLighting.shadeImage(o.image));}catch(_){iluminadas.set(o.key,o.image);}}o.image=iluminadas.get(o.key);}}));
  items.sort((a,b)=>a.y-b.y);
  for(const o of items){if(o.icon){ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText(o.icon,o.x+ox,o.y+oy);continue;}if(!o.image)continue;const h=o.w*o.image.height/o.image.width;ctx.drawImage(o.image,o.x+ox-o.w/2,o.y+oy-h,o.w,h);}
  // Recompensa separada: no representa una semilla que se quite al propietario.

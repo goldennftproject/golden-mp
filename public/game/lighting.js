@@ -146,7 +146,12 @@
   }
   function setEnabled(on){enabled=!!on;try{root.localStorage.setItem(PREF,enabled?'on':'off');}catch(_){}for(const scene of scenes)scene.children.list.forEach(tree);sync();}
   function sync(){const b=root.document?.getElementById('cfg-relief');if(b){b.disabled=!compatible;b.textContent='Iluminación: '+(!compatible?'Original (compatibilidad)':enabled?'Suave':'Original');b.setAttribute('aria-pressed',String(enabled&&compatible));}renderCycle();}
-  const api={attach,exclude,setEnabled,isEnabled:()=>enabled&&compatible,setCycle,isCycleEnabled:()=>cycleEnabled,cycleAt,CYCLE_MS,normals,shadeImage,eligible,stats};
+  function invalidate(texture){
+    attempted.delete(texture);queued.delete(texture);
+    for(const data of texture.dataSource||[])if(data?.destroy)data.destroy();
+    texture.dataSource=[];
+  }
+  const api={attach,exclude,invalidate,setEnabled,isEnabled:()=>enabled&&compatible,setCycle,isCycleEnabled:()=>cycleEnabled,cycleAt,CYCLE_MS,normals,shadeImage,eligible,stats};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(root.document){root.GoldenLighting=api;const b=root.document.getElementById('cfg-relief');if(b)b.addEventListener('click',()=>setEnabled(!enabled));sync();const cycleButton=root.document.getElementById('cfg-day-cycle');if(cycleButton)cycleButton.addEventListener('click',()=>setCycle(!cycleEnabled));root.setInterval(renderCycle,1000);root.document.addEventListener('visibilitychange',renderCycle);}
 })(typeof window==='undefined'?globalThis:window);

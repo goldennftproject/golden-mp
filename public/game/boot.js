@@ -161,6 +161,12 @@ class BootScene extends Phaser.Scene {
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.
     this.load.image("isla", "assets/farm/isla.png?v=1");
+    // Variante opcional separada: el atlas clásico y sus originales permanecen intactos.
+    if (typeof window !== "undefined" && window.GoldenVisual && GoldenVisual.pc()) {
+      this.load.image("__visualv2", "assets/visual-v2/atlas.png?v=1");
+      this.load.json("__visualv2map", "assets/visual-v2/atlas.json?v=1");
+    }
+
 
     // No hay barra propia: la pantalla de carga es UNA sola, la del HTML, y le pasamos el avance.
     // (Antes había dos barras seguidas y el juego "aparecía" antes de estar listo.)
@@ -227,7 +233,7 @@ class BootScene extends Phaser.Scene {
   loadOptional() {
     if (this._optStarted) return;
     this._optStarted = true;
-    const start = () => { if (this._started) return; this._started = true; this.buildAnims(); this.scene.start("farm"); };
+    const start = () => { if (this._started) return; this._started = true; if (typeof window !== "undefined" && window.GoldenVisual && GoldenVisual.pc()) GoldenVisual.prepare(this); this.buildAnims(); this.scene.start("farm"); };
     /* El límite corto protege sólo la consulta del manifiesto. Antes era incondicional: si el
        manifiesto respondía rápido pero los 176 frames todavía estaban entrando (por ejemplo,
        con el atlas caído y una red lenta), se abría la granja a los 1,8 s. `start()` construía
