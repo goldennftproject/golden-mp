@@ -163,8 +163,8 @@ class BootScene extends Phaser.Scene {
     this.load.image("isla", "assets/farm/isla.png?v=1");
     // Variante opcional separada: el atlas clásico y sus originales permanecen intactos.
     if (typeof window !== "undefined" && window.GoldenVisual && GoldenVisual.pc()) {
-      this.load.image("__visualv2", "assets/visual-v2/atlas.png?v=1");
-      this.load.json("__visualv2map", "assets/visual-v2/atlas.json?v=1");
+      this.load.image("__visualv2", "assets/visual-v2/atlas.png?v=2");
+      this.load.json("__visualv2map", "assets/visual-v2/atlas.json?v=2");
     }
 
 

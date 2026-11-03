@@ -2,7 +2,7 @@
    No añade campos a G, no compra, no guarda y no reinicia la escena. */
 (function(root){
  'use strict';
- const PREF='gf_visual_v2', originals=new Map(), variants=new Map();
+ const PREF='gf_visual_v2', originals=new Map(), variants=new Map(), effectAnchors=new Map();
  let enabled=true,manager=null,ready=false;
  try{enabled=root.localStorage.getItem(PREF)!=='classic';}catch(_){}
  const pc=()=>root.innerWidth>=900;
@@ -15,7 +15,7 @@
    if(!cv.getContext)continue;const ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(image,0,0);
    t.refresh();if(root.GoldenLighting?.invalidate)root.GoldenLighting.invalidate(t);
   }
-  const farm=root.FARM;if(farm?.sys?.isActive()&&farm.acabadosEdificios)farm.acabadosEdificios();
+  const farm=root.FARM;if(farm?.sys?.isActive()){farm.acabadosEdificios?.();farm.updateForge?.();}
  }
  function prepare(scene){
   if(ready&&manager===scene.textures)return true;
@@ -29,6 +29,7 @@
    // El atlas base usa CanvasTexture. Si cayó al respaldo Image, se conserva intacto.
    if(!old.getContext||!texture.refresh)continue;
    originals.set(key,copy(old));
+   if(fr.anchors)effectAnchors.set(key,fr.anchors);
    const cv=root.document.createElement('canvas');cv.width=fr.w;cv.height=fr.h;cv.getContext('2d').drawImage(src,fr.x,fr.y,fr.w,fr.h,0,0,fr.w,fr.h);variants.set(key,cv);
   }
   ready=true;manager.remove('__visualv2');scene.cache.json.remove('__visualv2map');repaint();sync();return true;
@@ -58,18 +59,44 @@
    img.src=isEnabled()?oldImages.get(img).replace('/seed_','/crop_'):oldImages.get(img);
   }
  }
- function sync(){root.document.documentElement.classList.toggle('visual-v2',isEnabled());decorate();const b=root.document.getElementById('cfg-visual-v2');if(b){b.textContent='Aspecto: '+(isEnabled()?'Renovado':'Clásico');b.setAttribute('aria-pressed',String(isEnabled()));}}
+function reconcileMovedCards(){
+ const doc=root.document;if(!doc)return;
+ for(const card of doc.querySelectorAll('.ov.show>.card.movida')){
+  // offsetWidth/Height no incluyen la escala temporal de ovpopm; getBoundingClientRect sí.
+  // El drag universal guarda px del viewport. No convertir porcentajes o centros contextuales.
+  if(!/^-?\d+(?:\.\d+)?px$/.test(card.style.left)||!/^(-?\d+(?:\.\d+)?)px$/.test(card.style.top))continue;
+  const left=Math.max(4,Math.min(parseFloat(card.style.left),Math.max(4,root.innerWidth-card.offsetWidth-4)));
+  const top=Math.max(4,Math.min(parseFloat(card.style.top),Math.max(4,root.innerHeight-card.offsetHeight-4)));
+  const lx=left+'px',ty=top+'px';
+  if(card.style.left!==lx)card.style.left=lx;
+  if(card.style.top!==ty)card.style.top=ty;
+  card.style.right='auto';card.style.bottom='auto';card.style.transform='none';
+ }
+}
+
+
+ function sync(){root.document.documentElement.classList.toggle('visual-v2',isEnabled());decorate();const b=root.document.getElementById('cfg-visual-v2');if(b){b.textContent='Aspecto: '+(isEnabled()?'Renovado':'Clásico');b.setAttribute('aria-pressed',String(isEnabled()));}reconcileMovedCards();}
  function setEnabled(on){enabled=!!on;try{root.localStorage.setItem(PREF,enabled?'renewed':'classic');}catch(_){}repaint();sync();}
  let visitAtlas=null;
  async function visitImage(key,original){
-  if(!isEnabled()||!['barn_evo_0','barn_evo_1','barn_evo_2','barn_evo_3','market','cocina'].includes(key))return original;
+  if(!isEnabled()||!['barn_evo_0','barn_evo_1','barn_evo_2','barn_evo_3','market','cocina','store','horno','establo','curtiduria'].includes(key))return original;
   try{
-   if(!visitAtlas)visitAtlas=Promise.all([root.fetch('assets/visual-v2/atlas.json?v=1').then(r=>{if(!r.ok)throw Error('atlas');return r.json();}),new Promise((resolve,reject)=>{const i=new root.Image();i.crossOrigin='anonymous';i.onload=()=>resolve(i);i.onerror=reject;i.src='assets/visual-v2/atlas.png?v=1';})]);
+   if(!visitAtlas)visitAtlas=Promise.all([root.fetch('assets/visual-v2/atlas.json?v=2').then(r=>{if(!r.ok)throw Error('atlas');return r.json();}),new Promise((resolve,reject)=>{const i=new root.Image();i.crossOrigin='anonymous';i.onload=()=>resolve(i);i.onerror=reject;i.src='assets/visual-v2/atlas.png?v=2';})]);
    const [map,image]=await visitAtlas,fr=map.frames[key];if(!fr)return original;
    const cv=root.document.createElement('canvas');cv.width=fr.w;cv.height=fr.h;cv.getContext('2d').drawImage(image,fr.x,fr.y,fr.w,fr.h,0,0,fr.w,fr.h);return cv;
   }catch(_){return original;}
  }
- const api={prepare,setEnabled,isEnabled,pc,visitImage,hasVariant:key=>isEnabled()&&variants.has(key)};
+ // Anclajes locales por arte: sólo lectura; nunca altera GF.CHIMENEA ni la partida.
+ function effectAnchor(sprite,kind,fallback){
+  const key=sprite?.texture?.key,p=effectAnchors.get(key)?.[kind];
+  if(!isEnabled()||!variants.has(key)||!p||![p.x,p.y].every(v=>Number.isFinite(v)&&v>=0&&v<=1))return fallback;
+  const w=sprite.displayWidth,h=sprite.displayHeight;
+  if(!(w>0&&h>0))return fallback;
+  const u=sprite.flipX?1-p.x:p.x,v=sprite.flipY?1-p.y:p.y;
+  const x=(u-sprite.originX)*w,y=(v-sprite.originY)*h,r=sprite.rotation||0,c=Math.cos(r),s=Math.sin(r);
+  return {x:sprite.x+x*c-y*s,y:sprite.y+x*s+y*c};
+ }
+ const api={effectAnchor,prepare,setEnabled,isEnabled,pc,visitImage,hasVariant:key=>isEnabled()&&variants.has(key)};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;
- if(root.document){root.GoldenVisual=api;sync();const b=root.document.getElementById('cfg-visual-v2');if(b)b.addEventListener('click',()=>setEnabled(!enabled));const shop=root.document.getElementById('seed-shop');if(shop)new root.MutationObserver(decorate).observe(shop,{childList:true,subtree:true});let wide=pc();root.addEventListener('resize',()=>{if(pc()!==wide){wide=pc();repaint();sync();}});}
+ if(root.document){root.GoldenVisual=api;sync();const b=root.document.getElementById('cfg-visual-v2');if(b)b.addEventListener('click',()=>setEnabled(!enabled));const shop=root.document.getElementById('seed-shop');if(shop)new root.MutationObserver(decorate).observe(shop,{childList:true,subtree:true});const movedCardObserver=new root.MutationObserver(reconcileMovedCards);root.document.querySelectorAll('.ov').forEach(ov=>movedCardObserver.observe(ov,{attributes:true,attributeFilter:['class']}));let wide=pc();root.addEventListener('resize',()=>{if(pc()!==wide){wide=pc();repaint();sync();}});}
 })(typeof window==='undefined'?globalThis:window);

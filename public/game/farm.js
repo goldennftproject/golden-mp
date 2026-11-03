@@ -974,8 +974,10 @@ class FarmScene extends Phaser.Scene {
         if (!cond()) return;
         const sp = obj.sprite; if (!sp || !sp.visible) return;
         const alto = sp.displayHeight || (obj.rw || obj.w);
-        const px = obj.cx + (obj.rw || obj.w) * ch.dx + (Math.random() * 5 - 2.5);
-        const py = obj.by - alto + alto * ch.dy - 2;
+        const original = { x: obj.cx + (obj.rw || obj.w) * ch.dx, y: obj.by - alto + alto * ch.dy };
+        const anchor = window.GoldenVisual?.effectAnchor?.(sp, 'smoke', original) || original;
+        const px = anchor.x + (Math.random() * 5 - 2.5);
+        const py = anchor.y - 2;
         const s = this.add.image(px, py, "puff" + ((Math.random() * 3) | 0))
           .setTint(tint).setAlpha(0.55)
           .setScale(0.6 + Math.random() * 0.5).setAngle(Math.random() * 360)
@@ -4536,8 +4538,9 @@ class FarmScene extends Phaser.Scene {
     // cambiar (herrería nueva del 9/8) sin que el resplandor quede flotando en cualquier lado.
     const alto = o.sprite.displayHeight || (o.rw || o.w);
     const k = alto / 99;                                  // escala respecto de la textura actual
-    const fx = o.cx - 0.027 * (o.rw || o.w);              // la fragua está apenas a la izquierda del centro
-    const fy = o.by - 0.299 * alto;                       // boca de la fragua, medida sobre el sprite
+    const original = {x: o.cx - 0.027 * (o.rw || o.w), y: o.by - 0.299 * alto};
+    const anchor = window.GoldenVisual?.effectAnchor?.(o.sprite, 'forge', original) || original;
+    const fx = anchor.x, fy = anchor.y;
     if (lit && !this.forgeGlow) {
       // núcleo intenso en el horno + halo suave que baña el frente del edificio (blend aditivo)
       const core = this.add.ellipse(fx, fy, 14 * k, 12 * k, 0xff7a2a, 0.5).setDepth(o.by + 1).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);

@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Continuación del aspecto renovado — 03/11/2026
+
+Dirección pide «sigue con todo». Segundo lote: Herrería, Horno de Piedra, Establo y Curtiduría, con las mismas dimensiones, claves, ocupación y reglas de construcción. Se conservan las seis variantes anteriores y los originales clásicos. Anclajes de humo/fragua por variante, con fallback clásico, sin mutar GF ni la partida. Se corrigen contrastes de acciones secundarias y deshabilitadas, Configuración, notas y moneda de mercado; rojo/dorado y destacado TU del ranking se preservan. El mercado usa coordenadas de viewport compatibles con arrastre y reencaja ventanas movidas al cambiar tema. Altar/ofrendas, pesca y plaza siguen fuera. Ver VISUAL-V2-CONTINUACION-20261103.md.
+
 ## Prueba visual renovada reversible — 03/11/2026
 
 Dirección acepta probar la dirección artística de la maqueta, condicionada a poder volver atrás. Se conservan todos los PNG y el atlas clásicos. Aspecto Renovado / Clásico en Configuración alterna interfaz y seis edificios sin recargar ni cambiar la partida: cuatro niveles de granero, mercado y cocina. Tema de pergamino/madera/verde sobre controles existentes, HUD compacto, iconos diferenciados y mercado lateral. Las normales se invalidan al cambiar texturas. Terreno, ocupación, precios, tiempos, energía, compras y progreso no cambian. La versión móvil conserva el aspecto clásico; las visitas respetan la preferencia. No es una copia exacta de la maqueta ni una sustitución de todo el arte. Ver PRUEBA-VISUAL-V2-20261103.md.

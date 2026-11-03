@@ -87,8 +87,32 @@
  .visual-v2 #hudbar .pill{font-size:12px}.visual-v2 #hudbar .pill .k{font-size:11px}
 }
 
-@media(min-width:900px){.visual-v2 #ov-market>.card{position:relative;inset:auto;transform:none}.visual-v2 #seed-shop>.shophead{margin:8px 0;padding:5px 0;min-height:0}}
+@media(min-width:900px){.visual-v2 #seed-shop>.shophead{margin:8px 0;padding:5px 0;min-height:0}}
 
 @media(min-width:900px){.visual-v2 #gmenu .gmi,.visual-v2 #gmenu .gmi .menu-label{color:#503820!important;text-shadow:none!important}}
 
 @media(max-width:899px){#cfg-visual-v2{display:none}}
+
+/* Contraste, estados y arrastre: sólo PC y sólo tema renovado. */
+@media(min-width:900px){
+ .visual-v2 .card button{background:linear-gradient(#855b35,#6b4729)}
+ .visual-v2 .card button.green{background:linear-gradient(#50702f,#3f5d27)}
+ .visual-v2 .card button.ghost{color:#553c25!important;text-shadow:none!important}
+ .visual-v2 .card button:disabled{background:#ded2b3!important;color:#65573f!important;text-shadow:none!important;opacity:1!important;filter:saturate(.3)!important;box-shadow:inset 0 0 0 1px #c1ad87!important}
+ .visual-v2 .card button.red{background:linear-gradient(#994632,#78382a);border-color:#713226;color:#fff5e3!important;text-shadow:0 1px #57281f;box-shadow:inset 0 1px #d68965,0 2px #52291e}
+ .visual-v2 .card button.gold{background:linear-gradient(#d3aa58,#b68a3f);border-color:#916927;color:#38240f!important;text-shadow:none;box-shadow:inset 0 1px #f2d68e,0 2px #76501f}
+ .visual-v2 .card .cfgsec h4{color:#72522c!important;text-shadow:none!important}
+ .visual-v2 .card .cfgsec p,.visual-v2 #cfg-auth-nota,
+ .visual-v2 .card .avgpill,.visual-v2 .card .avgpill b,
+ .visual-v2 .card .lbnote,.visual-v2 .card .dynote,.visual-v2 .card .mkt-cur{color:#59432c!important;text-shadow:none!important}
+ .visual-v2 .card .lbnote{border-top-color:#cfb583}
+ .visual-v2 #ov-market>.card{position:fixed;top:80px;right:18px;left:auto;bottom:auto;transform:none}
+ .visual-v2 #ov-market.show>.card:not(.movida){animation:visual-v2-panel-in .18s ease-out}
+ .visual-v2 .lbrow.me{background:#e4efd2;border-color:#829b55;box-shadow:inset 3px 0 #718e45}
+ .visual-v2 .lbrow.top1 .rk,.visual-v2 .lbrow.top2 .rk,.visual-v2 .lbrow.top3 .rk{color:#5c4127;background:#eddbb5;border:1px solid #b99a62;border-radius:4px}
+}
+@keyframes visual-v2-panel-in{from{opacity:.3;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(min-width:900px) and (prefers-reduced-motion:reduce){.visual-v2 #ov-market.show>.card:not(.movida){animation:none}}
+
+/* Disabled debe prevalecer también sobre .red y .gold. */
+@media(min-width:900px){.visual-v2 .card button:disabled{color:#65573f!important;text-shadow:none!important}}
