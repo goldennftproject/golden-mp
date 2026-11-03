@@ -24,7 +24,7 @@ def build(root,sources):
  for i,key in enumerate(['grass_a','grass_b','grass_c']):
   fr=mapping['frames'][key];x=round((meadow.width-side)*i/2);y=round((meadow.height-side)*i/2)
   tile=meadow.crop((x,y,x+side,y+side)).resize((fr['w'],fr['h']),Image.Resampling.LANCZOS);atlas.paste(tile,(fr['x'],fr['y']))
- atlas.save(folder/'atlas.png',optimize=True);mapping['version']=4;(folder/'atlas.json').write_text(json.dumps(mapping,separators=(',',':')),encoding='utf-8')
+ atlas.save(folder/'atlas.png',optimize=True);(folder/'atlas.json').write_text(json.dumps(mapping,separators=(',',':')),encoding='utf-8')
  for name,key in {'chest':'baul_premios_lleno','potato':'cropg_papa','wood':'tree','stone':'node_stone','market':'market','cook':'cocina','build':'build_store'}.items():
   fr=mapping['frames'][key];tile=atlas.crop((fr['x'],fr['y'],fr['x']+fr['w'],fr['y']+fr['h']));tile=tile.crop(bbox(tile));tile.thumbnail((80,80),Image.Resampling.LANCZOS)
   cv=Image.new('RGBA',(88,88));cv.alpha_composite(tile,((88-tile.width)//2,(88-tile.height)//2));cv.save(target/('objective-'+name+'.png'),optimize=True)

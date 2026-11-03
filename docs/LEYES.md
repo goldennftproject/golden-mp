@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Fidelidad a los recortes del concepto — 03/11/2026
+
+Dirección aporta comparativas de árbol, Mercado, HUD, Tienda y parcelas para acercar Renovado a la imagen aprobada. Se sustituye la familia del árbol y la tierra con surcos por terrones; se conservan pies, escala, huellas y plantas. HUD compacto, cabecera de Mercado menor, ilustraciones de los mismos productos y marcos más próximos a las referencias. Controles, funciones, precios, tiempos, energía, progreso y guardado permanecen. Clásico restaura los originales y móvil conserva su comportamiento. Atlas opcional v5 con sólo nueve marcos modificados; los otros ochenta y los edificios aprobados se preservan. Ver FIDELIDAD-CONCEPTO-20261103.md.
+
 ## Composición de la maqueta en el juego real — 03/11/2026
 
 Dirección autoriza acercar la composición real a la maqueta. Aspecto Renovado incorpora marcos ilustrados, logo apilado, HUD agrupado con XP, Tienda con toldo, objetivo contextual, Mercado lateral y controles de cantidad conservando los originales. Cámara y controles de vista se adaptan al espacio real sin cambiar el terreno; pradera y bosque se refinan sólo visualmente. Clásico restaura la presentación anterior. Se mantienen progreso, guardado, economía, ocupación y sistemas pausados. No se añaden edificios, parcelas ni personajes ficticios para reproducir la ilustración. Se atienden además los reportes de vinculación de Discord: invitación válida, respuesta temprana y arranque del bot, sin enviar mensajes ni vincular jugadores. Ver COMPOSICION-REFERENCIA-20261103.md y DISCORD-VINCULACION-20261101.md.

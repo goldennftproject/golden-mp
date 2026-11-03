@@ -133,6 +133,27 @@ def published_checks(root, atlas_folder, baseline_folder):
     print(f'OK: actual atlas {image.width}x{image.height}, {len(mapping["frames"])} frames with classic dimensions, no clipping/overlap, approved RGBA identical to baseline')
 
 
+def skin_version_checks():
+    skin_spec = importlib.util.spec_from_file_location('reference_skin_builder', Path(__file__).with_name('build-reference-skin.py'))
+    skin_builder = importlib.util.module_from_spec(skin_spec)
+    skin_spec.loader.exec_module(skin_builder)
+    with tempfile.TemporaryDirectory(prefix='golden-skin-version-') as temporary:
+        root = Path(temporary)
+        folder = root / 'public/assets/visual-v2'
+        folder.mkdir(parents=True)
+        sources = root / 'sources'
+        sources.mkdir()
+        for key in ['wood-frame', 'parchment-frame', 'green-frame', 'awning', 'logo-stacked', 'meadow']:
+            Image.new('RGBA', (48, 48), (80, 120, 30, 255)).save(sources / (key + '.png'))
+        Image.new('RGBA', (8, 8), (80, 120, 30, 255)).save(folder / 'atlas.png')
+        keys = ['grass_a', 'grass_b', 'grass_c', 'baul_premios_lleno', 'cropg_papa', 'tree', 'node_stone', 'market', 'cocina', 'build_store']
+        mapping = {'version': 37, 'frames': {key: {'x': 0, 'y': 0, 'w': 8, 'h': 8} for key in keys}, 'metadata': {'preserve': True}}
+        (folder / 'atlas.json').write_text(json.dumps(mapping), encoding='utf-8')
+        skin_builder.build(root, sources)
+        assert json.loads((folder / 'atlas.json').read_text(encoding='utf-8')) == mapping, 'Skin rebuild rewrote the atlas version or metadata'
+    print('OK: rebuilding reference skin preserves the existing atlas version and metadata')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parent.parent)
@@ -141,5 +162,6 @@ if __name__ == '__main__':
     parser.add_argument('--unit-only', action='store_true')
     options = parser.parse_args()
     unit_checks()
+    skin_version_checks()
     if not options.unit_only:
         published_checks(options.root, options.atlas or options.root / 'public/assets/visual-v2', options.baseline)

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from PIL import Image
 
-VERSION = 4
+VERSION = 5
 APPROVED = ('barn_evo_0', 'barn_evo_1', 'barn_evo_2', 'barn_evo_3',
             'market', 'cocina', 'store', 'horno', 'establo', 'curtiduria')
 ANCHORS = {'store': {'smoke': {'x': .192, 'y': .129}, 'forge': {'x': .564, 'y': .743}},

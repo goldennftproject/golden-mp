@@ -3,7 +3,8 @@
 (function(root){
  'use strict';
  const PREF='gf_visual_v2', originals=new Map(), variants=new Map(), effectAnchors=new Map();
- const VERSION=4, UI_KEYS=new Set(['vip','objetos','mejoras','suministros']);
+ const ATLAS_VERSION=5, UI_VERSION=4, CONCEPT_UI_VERSION=5, UI_KEYS=new Set(['vip','objetos','mejoras','suministros']);
+ const CROP_UI_KEYS=new Set(['papa','ciruela','cereza','remolacha','zanahoria','cebolla','calabacin','repollo','calabaza','brocoli','girasol','trigo','maiz']);
  const RELIC_ART={cobre:'gallinero',plata:'huerto',jade:'establo',oro:'tractor',granero:'granero',rubi:'molino',corona:'invernadero'};
  let enabled=true,manager=null,ready=false,loading=null,assetAtlas=null,compositesDirty=false;
  try{enabled=root.localStorage.getItem(PREF)!=='classic';}catch(_){}
@@ -50,8 +51,8 @@
  }
  function getAtlas(){
   if(!assetAtlas)assetAtlas=Promise.all([
-   root.fetch('assets/visual-v2/atlas.json?v='+VERSION).then(r=>{if(!r.ok)throw Error('atlas');return r.json();}),
-   new Promise((resolve,reject)=>{const i=new root.Image();i.crossOrigin='anonymous';i.onload=()=>resolve(i);i.onerror=reject;i.src='assets/visual-v2/atlas.png?v='+VERSION;})
+   root.fetch('assets/visual-v2/atlas.json?v='+ATLAS_VERSION).then(r=>{if(!r.ok)throw Error('atlas');return r.json();}),
+   new Promise((resolve,reject)=>{const i=new root.Image();i.crossOrigin='anonymous';i.onload=()=>resolve(i);i.onerror=reject;i.src='assets/visual-v2/atlas.png?v='+ATLAS_VERSION;})
   ]).catch(e=>{assetAtlas=null;throw e;});
   return assetAtlas;
  }
@@ -71,8 +72,9 @@
   // Arrancar en pantalla pequeña no descarga el atlas; ensanchar a PC lo carga sin reiniciar.
   ensure();return false;
  }
- const oldImages=new WeakMap(), oldLabels=new WeakMap(), failedUi=new Set(), missionNodes=new WeakMap(), missionDecorated=new WeakSet(), relicCards=new WeakMap(), failedRelics=new Set();
- const uiSource=key=>'assets/visual-v2/ui/'+key+'.png?v='+VERSION;
+ const oldImages=new WeakMap(), oldLabels=new WeakMap(), failedUi=new Set(), missionNodes=new WeakMap(), missionDecorated=new WeakSet(), relicCards=new WeakMap(), failedRelics=new Set(), cropImages=new WeakMap(), failedCrops=new Set();
+ const uiSource=key=>'assets/visual-v2/ui/'+key+((UI_KEYS.has(key)||key==='misiones')?'-concept':'')+'.png?v='+((UI_KEYS.has(key)||key==='misiones')?CONCEPT_UI_VERSION:UI_VERSION);
+ const cropSource=key=>'assets/visual-v2/ui/crops/'+key+'.png?v='+CONCEPT_UI_VERSION;
  function replaceUiImage(img,key){
   if(!oldImages.has(img)){
    oldImages.set(img,img.getAttribute('src'));
@@ -106,16 +108,20 @@
    let image=relicCards.get(card);
    if(isEnabled()&&key&&!failedRelics.has(key)){
     if(!image){
-     image=doc.createElement('img');image.className='reliquia-arte';image.alt='';image.width=112;image.height=112;image.loading='lazy';image.decoding='async';image.setAttribute('aria-hidden','true');image.src='assets/visual-v2/ui/reliquias/'+key+'.png?v='+VERSION;
+     image=doc.createElement('img');image.className='reliquia-arte';image.alt='';image.width=112;image.height=112;image.loading='lazy';image.decoding='async';image.setAttribute('aria-hidden','true');image.src='assets/visual-v2/ui/reliquias/'+key+'.png?v='+UI_VERSION;
      image.addEventListener('error',()=>{failedRelics.add(key);image.remove();card.classList.remove('reliquia-renovada');});relicCards.set(card,image);
     }
     if(image.parentElement!==card)card.prepend(image);card.classList.add('reliquia-renovada');
    }else{if(image?.parentElement===card)image.remove();card.classList.remove('reliquia-renovada');}
   }
   for(const img of doc.querySelectorAll('#seed-shop .mimg img')){
-   const src=img.getAttribute('src')||'';if(!/seed_/.test(src)&&!oldImages.has(img))continue;
-   if(!oldImages.has(img))oldImages.set(img,src);
-   img.src=isEnabled()?oldImages.get(img).replace('/seed_','/crop_'):oldImages.get(img);
+   let state=cropImages.get(img);
+   if(!state){const original=img.getAttribute('src')||'',key=original.match(/\/(?:seed_|crop_)([a-z]+)\.png(?:\?|$)/)?.[1];if(!CROP_UI_KEYS.has(key))continue;
+    state={original,key,fallback:original.replace('/seed_','/crop_')};cropImages.set(img,state);
+    img.addEventListener('error',()=>{if(img.getAttribute('src')===cropSource(state.key)){failedCrops.add(state.key);img.setAttribute('src',state.fallback);}});
+   }
+   const next=isEnabled()?(failedCrops.has(state.key)?state.fallback:cropSource(state.key)):state.original;
+   if(img.getAttribute('src')!==next)img.setAttribute('src',next);
   }
  }
 function reconcileMovedCards(){
