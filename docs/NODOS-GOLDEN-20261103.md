@@ -19,4 +19,6 @@ No cambia la tasa de recolección, energía por recurso, retiros, depósitos ni 
 
 ## Verificación y publicación
 
-Pendiente de completar y anotar resultados antes de activar. Se requieren pruebas del cliente, transacción SQL real aislada, colocación/guardado y publicación de servidor y cliente compatibles. No ejecutar compras de jugadores ni transferencias reales para probar.
+Pruebas completadas: cliente (precios, límites, cupos, cancelación y confirmación), coordinador de guardado/hidratación, renderer real (nueve nodos en 9×9), 60.000 comprobaciones de geometría en cuatro formatos, API y transacciones SQL reales en PostgreSQL aislado mediante PGlite. Auditoría independiente revalidó omisión/adelanto de relojes, consumo de cargas, falsificación de tamaño y conservación de compras al cambiar campaña. Se conservan las pruebas de autoguardado, recuperación, VIP, visitas y guardado atómico. No se ejecutaron compras de jugadores ni transferencias reales.
+
+El cliente compatible se publica inicialmente con PRODUCCION_PREMIUM_ACTIVA=false. La revisión automática requiere autorización específica para sustituir guardar en producción; no activar la opción hasta desplegar y verificar guardar, el esquema privado y la función produccion-premium. El esquema tiene su propio interruptor cerrado inicialmente.

@@ -79,4 +79,3 @@ const op=n=>'10000000-0000-4000-8000-'+String(n).padStart(12,'0');
  await db.close();
  console.log('OK SQL real/PGlite: gate, precios y contadores históricos, 9 tipos actuales/techo12, CAS e ISO equivalente, reintentos, aislamiento, colocación y cooldown, nivel al colocar, derechos alfa/release, protección mirror/epoch, ACL y rollback atómico.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
-

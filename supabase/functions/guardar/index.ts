@@ -465,23 +465,27 @@ function premiumSitio(d     ,o     ,lp     ,ignore=-1)          {
 }
 /* END PREMIUM GEOMETRY */
 function nodosPoseidos(d) { return NODOS_CONTRATO.filter(([i,t,lock,exp]) => !!(d.produccion && d.produccion.nodos && d.produccion.nodos[i]) || (exp == null && lock != null && (t==='tree'||t==='rock') && (d[t==='tree'?'treesOpen':'rocksOpen']||[]).includes(lock))); }
-function premiumReloj(antes,next,i,o,ahora,errores){
+function premiumReloj(antes,next,i,o,ahora,errores,desdeServidor=0){
  const key=o.key,b=antes.nodos?.[key];
  if(!b||!num(b.readyAt))return; // Todo soporte comprado nace con reloj SQL; compatibilidad de datos previos.
+ const usos=num(next.nodoUsos?.[i])-num(antes.nodoUsos?.[i]);
+ const bad=()=>errores.push('No se puede adelantar ni reiniciar el reloj de un nodo Golden');
+ if(usos<0){bad();return;}
  next.nodos=next.nodos||{};
- if(next.nodos[key]===undefined){next.nodos[key]=JSON.parse(JSON.stringify(b));return;}
- const q=next.nodos[key],bad=()=>errores.push('No se puede adelantar ni reiniciar el reloj de un nodo Golden');
+ if(next.nodos[key]===undefined){next.nodos[key]=JSON.parse(JSON.stringify(b));if(usos>0)bad();return;}
+ const q=next.nodos[key];
  if(!q||!Number.isFinite(q.readyAt)||q.readyAt<=0||!Number.isFinite(q.cdIni)||q.cdIni<0||q.cdIni>=q.readyAt){bad();return;}
  if(q.halfAt===undefined)q.halfAt=b.halfAt||0;
- if(q.readyAt===b.readyAt&&q.cdIni===b.cdIni)return;
+ if(q.readyAt===b.readyAt&&q.cdIni===b.cdIni){if(usos>0)bad();return;}
  if(q.readyAt<b.readyAt){bad();return;}
  const oldDur=b.readyAt-b.cdIni,dur=q.readyAt-q.cdIni;
  const pausa=antes.produccion?.pausas?.['n:'+i],sigue=next.produccion?.pausas?.['n:'+i];
  // Reanudar desplaza el mismo reloj por el tiempo pausado. No genera cargas.
- if(pausa&&!sigue){const delta=q.readyAt-b.readyAt;if(delta>=0&&delta<=Math.max(0,ahora-num(pausa.at))+5000&&Math.abs(dur-oldDur)<2)return;bad();return;}
- if(pausa||b.readyAt>ahora+1000){bad();return;}
+ const reanuda=pausa&&!sigue;
+ if(reanuda&&usos===0){const delta=q.readyAt-b.readyAt;if(delta>=0&&delta<=Math.max(0,ahora-num(pausa.at))+5000&&Math.abs(dur-oldDur)<2)return;bad();return;}
+ const stockAt=reanuda?Math.min(ahora,num(pausa.at)):ahora;
+ if(sigue||b.readyAt>stockAt+1000){bad();return;}
  const base=o.type==='tree'?1800000:o.type==='rock'?2400000:14400000;
- const usos=num(next.nodoUsos?.[i])-num(antes.nodoUsos?.[i]);
  const stat=o.type==='tree'?'talar':'minar',res=o.type==='tree'?'_':o.type==='rock'?'piedra':'bronce';
  const actos=num(next.stats?.[stat]?.[res])-num(antes.stats?.[stat]?.[res]);
  // La mascota de brazos puede drenar backlog sin nodoSumar. Conserva el largo
@@ -493,7 +497,9 @@ function premiumReloj(antes,next,i,o,ahora,errores){
  if(!atendido&&(!(usos>0)||!(actos>=usos))){bad();return;}
  if(dur<base*.9*.85-1000||dur>base+1000||q.cdIni>ahora+5000){bad();return;}
  const cargas=(r,t)=>r.readyAt>t?0:o.type==='ore'?1:Math.min(4,1+Math.max(0,Math.floor((t-r.readyAt)/Math.max(1000,r.readyAt-r.cdIni))));
- if(cargas(q,ahora)>cargas(b,ahora)){bad();return;}
+ const anteriores=cargas(b,stockAt),actuales=cargas(q,ahora);
+ const ciclos=!pausa&&desdeServidor>0?Math.floor(Math.max(0,ahora-desdeServidor)/(base*.9*.85)):0;
+ if(actuales>anteriores||usos>anteriores-actuales+ciclos){bad();return;}
 }
 function goldenCustodia(d) {
   let n = num(d && d.golden);
@@ -513,7 +519,7 @@ function xpGranjaOficios(d){
  const parte=(k,antes,despues)=>{const xp=Math.max(0,Number(s[k])||0);if(!a)return xp*antes;const corte=Math.max(0,Number(a[k])||0);return Math.min(xp,corte)*antes+Math.max(0,xp-corte)*despues;};
  return parte('tala',15,1.5)+parte('mining',20,2);
 }
-function protegerEconomia(prev, next, ahora) {
+function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   picosUnificarEstado(next);
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
   // El libro privado se proyecta desde PostgreSQL. El cliente sólo mueve nodos que
@@ -533,7 +539,7 @@ function protegerEconomia(prev, next, ahora) {
     if(n && n.nodos?.[i]===undefined){n.nodos=n.nodos||{};n.nodos[i]=true;}
     if(next.layout?.[i]===undefined && antes.layout?.[i]){next.layout=next.layout||{};next.layout[i]=JSON.parse(JSON.stringify(antes.layout[i]));}
     if(!n?.nodos?.[i]||!premiumSitio(next,o,next.layout?.[i],i))errores.push('El nodo Golden necesita espacio libre dentro de tu terreno');
-    premiumReloj(antes,next,i,o,ahora,errores);
+    premiumReloj(antes,next,i,o,ahora,errores,desdeServidor);
   }
   for(const k of Object.keys(n?.nodos||{}))if(+k>=86&&+k<=94&&!premiumActivos.has(+k))errores.push('Nodo Golden sin derecho confirmado');
   // Las entregas nacen en compras/transacciones autoritativas. Un snapshot sólo puede
@@ -961,7 +967,7 @@ Deno.serve(async (req) => {
       .select("seller,sold_to,kind,item,qty,price,paid,fee_pct")
       .or("seller.eq." + uid + ",sold_to.eq." + uid).limit(2000);
     if (marketError) return json({ error: "No se pudo validar el mercado. No se escribió nada." }, 503);
-    const protegidos = protegerEconomia(prevRow?.data ?? null, data, ahora.getTime());
+    const protegidos = protegerEconomia(prevRow?.data ?? null, data, ahora.getTime(), prevRow?.updated_at?new Date(prevRow.updated_at).getTime():0);
     if (protegidos.length) {
       await admin.from("farm_saves_log").insert({user_id:uid,reglas_v:VERSION,elapsed_s:Math.round(elapsedSeg),delta:{economia_rechazada:true},sospechas:protegidos});
       return json({ error: "Guardado económico bloqueado; conservá el respaldo local y recargá para sincronizar.", economia:true, sospechas: protegidos }, 409);

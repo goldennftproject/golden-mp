@@ -45,6 +45,7 @@ const clockNow=1800000000000,clockKey=world.versions[3].objects[86].key,baseMs=1
 d.nodos={[clockKey]:{cdIni:clockNow,halfAt:clockNow+baseMs/2,readyAt:clockNow+baseMs}};d.nodoUsos={86:0};d.stats={talar:{_:0}};d.tools={axe:10};
 for(const mode of ['all','key']){n=structuredClone(d);if(mode==='all')delete n.nodos;else delete n.nodos[clockKey];assert.deepEqual(plain(g.protegerEconomia(d,n,clockNow)),[]);assert.deepEqual(n.nodos[clockKey],d.nodos[clockKey],'cliente antiguo conserva reloj '+mode);}
 for(const change of [{readyAt:0,cdIni:0},{readyAt:clockNow-1,cdIni:clockNow-baseMs},{readyAt:clockNow+baseMs,cdIni:clockNow+1000}]){n=structuredClone(d);Object.assign(n.nodos[clockKey],change);assert.ok(g.protegerEconomia(d,n,clockNow).some(x=>/reloj/.test(x)),'no resetea, adelanta o acelera reloj');}
+for(const mode of ['same','missing']){n=structuredClone(d);n.nodoUsos[86]++;n.stats.talar._++;n.tools.axe--;n.res.madera=1;if(mode==='missing')delete n.nodos;assert.ok(g.protegerEconomia(d,n,clockNow).some(x=>/reloj/.test(x)),'no cobra antes de madurar conservando u omitiendo el reloj');}
 n=structuredClone(d);n.espacioV=1;n.layout[86]={cx:462,by:420};assert.ok(g.protegerEconomia(d,n,clockNow).some(x=>/superficie/.test(x)),'no amplía el terreno cambiando de versión');
 for(const remaining of [1,2,4]){
  const before=structuredClone(d);before.nodos[clockKey]={readyAt:clockNow-(remaining-1)*baseMs,cdIni:clockNow-remaining*baseMs,halfAt:clockNow-baseMs/2};
@@ -55,9 +56,12 @@ for(const remaining of [1,2,4]){
 }
 const full=structuredClone(d);full.godHand=true;full.nodos[clockKey]={readyAt:clockNow-3*baseMs,cdIni:clockNow-4*baseMs,halfAt:clockNow-3.5*baseMs};
 n=structuredClone(full);n.nodoUsos[86]+=4;n.stats.talar._+=4;n.tools.axe-=4;n.res.madera=4;n.nodos[clockKey]={readyAt:clockNow+baseMs,cdIni:clockNow,halfAt:clockNow+baseMs/2};assert.deepEqual(plain(g.protegerEconomia(full,n,clockNow)),[],'God Hand puede vaciar cuatro cargas legítimas');
+const tooMany=structuredClone(n);tooMany.nodoUsos[86]=5;tooMany.stats.talar._=5;tooMany.res.madera=5;assert.ok(g.protegerEconomia(full,tooMany,clockNow).some(x=>/reloj/.test(x)),'cuatro cargas no acreditan cinco usos');
+assert.deepEqual(plain(g.protegerEconomia(full,tooMany,clockNow,clockNow-baseMs*2)),[],'sesión larga permite ciclos reales según updated_at del servidor');
 const paused=structuredClone(d);paused.produccion.pausas['n:86']={at:clockNow-10000,estado:structuredClone(d.nodos[clockKey])};
 n=structuredClone(paused);delete n.produccion.pausas['n:86'];for(const k of ['readyAt','cdIni','halfAt'])n.nodos[clockKey][k]+=10000;assert.deepEqual(plain(g.protegerEconomia(paused,n,clockNow)),[],'reanudar desplaza el ciclo sin generar cargas');
 n=structuredClone(paused);delete n.produccion.pausas['n:86'];n.nodos[clockKey]={readyAt:0,cdIni:0,halfAt:0};assert.ok(g.protegerEconomia(paused,n,clockNow).some(x=>/reloj/.test(x)),'pausar y reanudar no renace lleno');
+n=structuredClone(paused);delete n.produccion.pausas['n:86'];for(const k of ['readyAt','cdIni','halfAt'])n.nodos[clockKey][k]+=10000;n.nodoUsos[86]++;n.stats.talar._++;assert.ok(g.protegerEconomia(paused,n,clockNow).some(x=>/reloj/.test(x)),'reanudar un reloj inmaduro no permite cobrar');
 const view=plain(g.visitaVista({user_id:'qa',name:'QA',data:d}));assert.deepEqual(view.mapa.premiumNodos,['86']);assert.ok(!JSON.stringify(view).includes(id));assert.ok(!JSON.stringify(view).includes('coste'));
 
 let handle,calls=[],rpcResponses=[],user={id:'qa',email_confirmed_at:'2026-01-01',is_anonymous:false};
