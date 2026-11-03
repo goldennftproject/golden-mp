@@ -4,6 +4,7 @@ class ForestScene extends Phaser.Scene {
   constructor() { super("forest"); }
 
   create() {
+    if (window.GoldenLighting) GoldenLighting.attach(this);
     const T = GF.TILE;
     this.W = 32 * T; this.H = 15 * T;   // 18/8: alto PROPIO. Antes tomaba GF.WORLD_H, que ahora crece con las expansiones: comprar césped en la granja agrandaba el mapa de combate un 67% y dispersaba a los bichos.   // bosque más ancho que la granja
     GF.uiOpen = false;

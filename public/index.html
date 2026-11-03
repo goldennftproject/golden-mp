@@ -1978,6 +1978,7 @@
   <div class="ov" id="ov-config"><div class="card" style="width:min(480px,94%)">
     <button class="close" data-close="ov-config" aria-label="Cerrar ventana">×</button>
     <h3>Configuración</h3>
+    <div class="cfgsec"><h4>Aspecto</h4><button class="ghost sm" id="cfg-relief" aria-pressed="true">Iluminación: Suave</button></div>
     <div id="cfg-equipo" style="display:none"><a href="/equipo/" target="_blank" rel="noopener noreferrer">🛡 Panel del equipo</a></div>
     <div class="cfgsec">
       <h4>Alfa de pruebas</h4>
@@ -2504,7 +2505,7 @@
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
     const GF_BUILD = "20260928-163402";
-    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/boot.js",
+    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/lighting.js","game/boot.js",
                    "game/farm.js","game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
        entrar »). El cargador de abajo pide un archivo, espera a que llegue, pide el siguiente:

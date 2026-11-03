@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Iluminación suave reversible — 03/11/2026
+
+Dirección autoriza probar en el juego la iluminación sugerida tras ver una simulación. Granja y Bosque usan normales aproximadas por textura y luz direccional cálida, conservando fuentes, siluetas, animaciones y tintes. Las visitas reproducen el mismo modelo en su canvas aislado; no reciben información privada adicional. Configuración → Aspecto permite Suave / Original, preferencia local sin tocar el guardado. HUD, textos, señales, portales luminosos y terreno/fondos ya compuestos conservan su lectura. Canvas o fallo de inicialización conserva el aspecto original. No se incorpora aún ciclo día/noche, luces puntuales, sombras proyectadas ni cambios de economía. Ver ILUMINACION-SUAVE-20261103.md.
+
 ## Dos nodos incluidos con VIP — 02/11/2026
 
 Dirección traslada la aclaración del diseñador: «Mantener la capacidad actual y añadir los dos [...] Nodos». Se conservan +25% de capacidad (mínimo 2 cupos), precio y duración. Se añaden dos elecciones gratuitas de nodos desbloqueados en el Cobertizo, una sola vez por cuenta, también reconocidas para VIP previamente registrado; renovar no repite. Los vales de expansión siguen separados. Nivel, terreno y cupos siguen siendo necesarios. Al vencer se conserva la propiedad y sólo se pausa el exceso por la regla existente. No se cobra por la entrega ni se alteran saldos, otras ventajas o el estudio económico. Ver VIP-DOS-NODOS-20261102.md.

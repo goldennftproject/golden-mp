@@ -8,7 +8,7 @@ let recibida=false;
 const imagenes=new Map();
 function imagen(key){
  if(!/^[a-z0-9_]{1,50}$/.test(key))return Promise.resolve(null);
- if(!imagenes.has(key))imagenes.set(key,new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='assets/farm/'+key+'.png';}));
+ if(!imagenes.has(key))imagenes.set(key,new Promise(resolve=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='assets/farm/'+key+'.png';}));
  return imagenes.get(key);
 }
 async function dibujar(g){
@@ -53,7 +53,8 @@ async function dibujar(g){
  const ocupadas=new Set(items.map(o=>Math.floor(o.x/T)+','+(Math.ceil(o.y/T)-1)));
  const libres=[...terreno.mias].filter(k=>!ocupadas.has(k));let an=0;
  for(const [k,n] of Object.entries(m.animales||{}))for(let i=0;i<n&&an<libres.length;i++,an++){const [c,r]=libres[(an*7)%libres.length].split(',').map(Number);items.push({key:'animal_'+k,x:(c+.5)*T,y:(r+1)*T,w:T*.85});}
- await Promise.all(items.map(async o=>{o.image=await imagen(o.key);}));
+ const iluminadas=new Map();
+ await Promise.all(items.map(async o=>{o.image=await imagen(o.key);if(o.image&&g.iluminacionSuave===true&&window.GoldenLighting){if(!iluminadas.has(o.key)){try{iluminadas.set(o.key,GoldenLighting.shadeImage(o.image));}catch(_){iluminadas.set(o.key,o.image);}}o.image=iluminadas.get(o.key);}}));
  items.sort((a,b)=>a.y-b.y);
  for(const o of items){if(o.icon){ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText(o.icon,o.x+ox,o.y+oy);continue;}if(!o.image)continue;const h=o.w*o.image.height/o.image.width;ctx.drawImage(o.image,o.x+ox-o.w/2,o.y+oy-h,o.w,h);}
  // Recompensa separada: no representa una semilla que se quite al propietario.

@@ -8,6 +8,7 @@ class FarmScene extends Phaser.Scene {
   constructor() { super("farm"); }
 
   create() {
+    if (window.GoldenLighting) GoldenLighting.attach(this);
     /* 18/8 — LO PRIMERO: fijar la FORMA de la granja para esta partida.
        Todo lo que viene después (césped, bosque, cerca, adornos, cámara, límites) cuelga de acá,
        así que tiene que resolverse antes de dibujar el primer píxel. `G.expansiones` es cuántos
