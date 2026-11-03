@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const file=process.argv[2]||require('node:path').join(__dirname,'../public/game/farm.js');
+const src=fs.readFileSync(file,'utf8');
+assert.match(src,/create\(\)\s*\{\s*if\s*\(window\.GoldenVisual\)\s*GoldenVisual\.prepareFarm\(this\)/,'Farm.create debe aplicar la invalidación diferida antes de dibujar los fondos');
+const state={level:8,expansiones:3,plata:147,layout:{a:{cx:84,by:42}},nodos:{a:{readyAt:123}}},before=JSON.stringify(state);
+const context={Phaser:{Scene:class{}},console:{warn(){}},GF:{BOSQUE:true,aplicarTerreno(){throw Error('No debe reaplicar terreno');}},G:state};
+vm.createContext(context);vm.runInContext(src+'\nthis.FarmScene=FarmScene;',context);
+const c=context,sc=new c.FarmScene(),events=[];
+sc.objs=[{type:'tree',i:2,copa:{destroy(){events.push('copa');}},sprite:{isCropped:true,setCrop(){events.push('crop');}}},{type:'rock',i:3,copa:{destroy(){throw Error('No tocar roca');}}}];
+sc.mosaicoTS={destroy(){events.push('tile-destroy');}};
+sc.textures={exists:k=>k==='bosque_mosaico',remove:k=>{assert.equal(k,'bosque_mosaico');assert.equal(sc.mosaicoTS,null);events.push('texture-remove');}};
+sc.dibujarCesped=()=>events.push('grass');sc.dibujarBosque=()=>events.push('forest');
+assert.equal(sc.refreshVisualTheme(),true);assert.deepEqual(events,['copa','crop','grass','tile-destroy','texture-remove','forest']);
+assert.equal(sc.objs[0].copa,null);assert.equal(sc.objs[0].copaClave,null);assert.equal(JSON.stringify(state),before,'Cambiar aspecto no escribe progreso');
+events.length=0;c.GF.BOSQUE=false;assert.equal(sc.refreshVisualTheme(),true);assert.deepEqual(events,['crop','grass'],'sin bosque sólo rehace césped y copas');
+c.GF.BOSQUE=true;sc.dibujarCesped=()=>{throw Error('render no disponible');};assert.equal(sc.refreshVisualTheme(),false,'fallo gráfico no lanza ni reinicia partida');assert.equal(JSON.stringify(state),before);
+console.log('OK: fondos compuestos se invalidan en orden, copas se liberan, no se toca terreno/progreso y fallo gráfico queda aislado');

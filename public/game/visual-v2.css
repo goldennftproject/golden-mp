@@ -38,10 +38,17 @@
  .visual-v2 #compras-accesos .tienda-abrir{width:100%;background:linear-gradient(#956335,#754a2b);border-color:#764827;border-radius:4px;padding:4px;font-size:13px;min-height:31px}
  .visual-v2 .compras-iconos{gap:5px;margin-top:7px}
  .visual-v2 .compras-iconos button{min-height:72px;padding:4px!important;border-radius:5px!important;background:linear-gradient(#79502f,#523820)!important;border:1px solid #b68d53!important;box-shadow:inset 0 1px #bd9b63,0 2px #3c2818!important}
- .visual-v2 .compras-iconos img{width:43px;height:43px;image-rendering:pixelated}
+ .visual-v2 .compras-iconos button.tienda-vip-activo{background:linear-gradient(#4d6d33,#355329)!important;border-color:#aed783!important}
+ .visual-v2 .compras-iconos img{width:43px;height:43px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 2px 1px #2d1b1466)}
  .visual-v2 .compras-iconos span{font-size:12px;color:#fff0d0}
  .visual-v2 #compras-accesos.compras-combate{width:280px}
- .visual-v2 #misiones-acceso{margin-top:9px!important;color:#fff0d0}
+ .visual-v2 #misiones-acceso{margin-top:9px!important;color:#fff0d0;display:flex;align-items:center;justify-content:center;gap:6px}
+ .visual-v2 #misiones-acceso img{width:26px;height:26px;object-fit:contain;image-rendering:pixelated}
+ .visual-v2 #ov-reliquias .objeto-card.reliquia-renovada{display:grid;grid-template-columns:112px minmax(0,1fr);column-gap:14px;row-gap:8px;align-items:center}
+ .visual-v2 #ov-reliquias .reliquia-arte{grid-column:1;grid-row:1/3;display:block;width:112px;height:112px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 3px 2px #65452644)}
+ .visual-v2 #ov-reliquias .reliquia-renovada>.objeto-datos{grid-column:2;grid-row:1;min-width:0}
+ .visual-v2 #ov-reliquias .reliquia-renovada>.objeto-acciones{grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:7px;min-width:0}
+ .visual-v2 #ov-reliquias .reliquia-renovada .objeto-nombre>span[aria-hidden="true"]{display:none}
  .visual-v2 #ov-market{justify-content:flex-end;padding:80px 18px 80px 180px}
  .visual-v2 #ov-market>.card{width:min(470px,calc(100vw - 210px))!important;margin:0;max-height:calc(100dvh - 160px);overflow:auto;align-self:flex-start}
  .visual-v2 #ov-market .mkt-list{max-height:none;overflow:visible}

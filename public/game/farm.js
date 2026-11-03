@@ -8,6 +8,7 @@ class FarmScene extends Phaser.Scene {
   constructor() { super("farm"); }
 
   create() {
+    if (window.GoldenVisual) GoldenVisual.prepareFarm(this);
     if (window.GoldenLighting) GoldenLighting.attach(this);
     /* 18/8 — LO PRIMERO: fijar la FORMA de la granja para esta partida.
        Todo lo que viene después (césped, bosque, cerca, adornos, cámara, límites) cuelga de acá,
@@ -5272,6 +5273,24 @@ class FarmScene extends Phaser.Scene {
      que la única forma de rehacerlas era rehacer la escena entera.
      Ahora cada una es un método que se limpia a sí mismo y se puede volver a llamar en caliente.
      create() llama a las cuatro igual que antes; expandirEnVivo() las vuelve a llamar. */
+  // Un cambio de aspecto sólo rehace imágenes derivadas; no reaplica terreno ni la partida.
+  // El anillo de bosque y el mosaico lejano deben leer la misma textura de árbol y césped.
+  refreshVisualTheme() {
+    try {
+      for (const o of this.objs || []) if (o.type === "tree") this.copaSacar(o);
+      this.dibujarCesped();
+      if (GF.BOSQUE) {
+        if (this.mosaicoTS) { this.mosaicoTS.destroy(); this.mosaicoTS = null; }
+        if (this.textures.exists("bosque_mosaico")) this.textures.remove("bosque_mosaico");
+        this.dibujarBosque();
+      }
+      return true;
+    } catch (e) {
+      console.warn("[aspecto] no se pudieron rehacer los fondos:", e);
+      return false;
+    }
+  }
+
   dibujarCesped() {
     if (this.cespedRT) { try { this.cespedRT.destroy(); } catch (e) {} this.cespedRT = null; }
     if (this.cespedG) { try { this.cespedG.destroy(); } catch (e) {} this.cespedG = null; }

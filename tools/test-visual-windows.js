@@ -69,6 +69,16 @@ function backgrounds(el){
 }
 function readable(el,label){const color=w.getComputedStyle(el).color;for(const bg of backgrounds(el)){const n=contrast(color,bg);assert(n>=4.5,label+' contraste '+n.toFixed(2)+' con '+color+' / '+bg);}}
 check('Renovado activa la clase a 1200 px',()=>assert(doc.documentElement.classList.contains('visual-v2')));
+check('VIP activo conserva verde sobre el estilo general de accesos y restaura su estado',()=>{
+ const vip=doc.querySelector('#compras-accesos [data-tienda="vip"]'),normal=backgrounds(vip),normalBorder=w.getComputedStyle(vip).borderTopColor;
+ vip.classList.add('tienda-vip-activo');
+ for(const stop of backgrounds(vip)){const [r,g,b]=rgb(stop);assert(g>r&&g>b,'VIP activo no tiene fondo verde: '+stop);}
+ assert.notEqual(w.getComputedStyle(vip).borderTopColor,normalBorder,'el borde de propiedad debe ganar al borde general');
+ readable(vip.querySelector('span'),'VIP activo');
+ w.GoldenVisual.setEnabled(false);assert(!doc.documentElement.classList.contains('visual-v2'));assert(vip.classList.contains('tienda-vip-activo'),'Clásico conserva el estado VIP');
+ w.GoldenVisual.setEnabled(true);for(const stop of backgrounds(vip)){const [r,g,b]=rgb(stop);assert(g>r&&g>b,'el verde vuelve al aspecto Renovado');}
+ vip.classList.remove('tienda-vip-activo');assert.deepEqual(backgrounds(vip),normal,'sin VIP vuelve el aspecto de acceso normal');assert.equal(w.getComputedStyle(vip).borderTopColor,normalBorder);
+});
 check('Ghost conserva texto legible sobre fondo claro',()=>readable(ghost,'ghost'));
 check('Ghost deshabilitado sigue siendo legible',()=>readable(disabled,'disabled ghost'));
 check('Destructivo deshabilitado sigue siendo legible',()=>readable(disabledRed,'disabled red'));

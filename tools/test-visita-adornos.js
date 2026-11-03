@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{JSDOM}=require('jsdom');
+const root=path.join(__dirname,'..'),server=fs.readFileSync(path.join(root,'supabase/functions/guardar/index.ts'),'utf8');
+const c={num:x=>Math.max(0,Number(x)||0)};vm.createContext(c);vm.runInContext(server.slice(server.indexOf('function visitaVista('),server.indexOf('function visitaOperacion('))+';this.vista=visitaVista',c);
+const data={level:3,espacioV:3,expansiones:0,plotsOwned:3,plots:[],decos:[{id:'farol',col:1,row:1},{id:'fuente',col:2,row:2}],produccion:{nodos:{}},built:{},layout:{}};
+const view=c.vista({user_id:'otro',name:'Dueño',data});view.aspectoRenovado=true;
+const before=JSON.stringify(data),dom=new JSDOM('<div id="titulo"></div><div id="estado"></div><button id="volver"></button><button id="semilla"></button><div id="mundo"></div><canvas id="lienzo"></canvas>',{runScripts:'outside-only'}),w=dom.window;
+const draws=[],fallback=[],variants=[];
+w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({drawImage:(im,...p)=>draws.push({src:im.src,p}),fillText:(text,...p)=>fallback.push({text,p})},{get:(t,k)=>t[k]||(()=>{})});
+w.Image=class{constructor(){this.width=30;this.height=60;}set src(v){this._src=v;if(v.includes('deco_fuente'))this.onerror();else this.onload();}get src(){return this._src;}};
+w.GoldenVisual={setEnabled(){},visitImage:async(k,im)=>{variants.push(k);return im;}};
+w.eval(fs.readFileSync(path.join(root,'public/game/config.js'),'utf8'));w.eval(fs.readFileSync(path.join(root,'public/game/visita-mapa.js'),'utf8'));
+(async()=>{await w.eval('dibujar('+JSON.stringify(view)+')');
+ const farol=draws.find(d=>d.src==='assets/farm/deco_farol.png');assert(farol,'el adorno usa su sprite, no emoji');assert.equal(farol.p[2],42,'la huella visual sigue siendo una celda');assert.equal(farol.p[3],84,'conserva proporción de la fuente cargada');
+ assert(variants.includes('deco_farol'),'el adorno respeta el aspecto elegido');assert(!fallback.some(d=>d.text==='🏮'),'no duplica imagen y emoji');assert(fallback.some(d=>d.text==='⛲'),'error de carga conserva símbolo del adorno');
+ assert.equal(w.G,undefined,'la visita sigue sin partida editable');assert.equal(JSON.stringify(data),before,'el render no modifica datos del dueño');dom.window.close();console.log('OK: adornos reales en visita, proporción/huella conservadas, aspecto compartido y símbolo de respaldo si falla imagen; sin cambios de progreso');
+})().catch(e=>{console.error(e);process.exitCode=1;});

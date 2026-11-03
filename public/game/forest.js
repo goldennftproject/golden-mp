@@ -26,25 +26,8 @@ class ForestScene extends Phaser.Scene {
     const Z = (typeof ZONA_DEF !== "undefined" && ZONA_DEF[GF.zona]) ? ZONA_DEF[GF.zona] : null;
     this.Z = Z; this.zonaKey = Z ? GF.zona : "pantano";
     if (typeof zonaMarcarVisitada === "function") zonaMarcarVisitada(this.zonaKey);
-    const PISO = Z ? Z.piso : [0x2f4a20, 0x2a431c];
-
-    // piso del mapa: damero de dos tonos + decoraciones
-    const g = this.add.graphics().setDepth(-1000);
-    const cols = Math.ceil(this.W / T), rows = Math.ceil(this.H / T);
-    for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < cols; cx++) {
-      g.fillStyle((cx + cy) % 2 === 0 ? PISO[0] : PISO[1], 1);
-      g.fillRect(cx * T, cy * T, T, T);
-    }
-    // matas y piedritas deterministas (LCG) para que no se vea plano
-    let seed = 20260731;
-    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-    for (let i = 0; i < 260; i++) {
-      const x = rnd() * this.W, y = rnd() * this.H, t = rnd();
-      if (t < 0.5) { g.fillStyle(Z ? Z.mata : 0x223a16, 0.8); g.fillRect(x, y, 2, 4); g.fillRect(x + 3, y + 1, 2, 3); }   // mata
-      else if (t < 0.8) { g.fillStyle(Z ? Z.hierba : 0x3a5527, 0.7); g.fillRect(x, y, 3, 2); }                    // hierba
-      else { g.fillStyle(0x4a4438, 0.6); g.fillRect(x, y, 3, 3); }                                                // piedrita
-    }
-    g.lineStyle(4, 0x22331a, 0.95).strokeRect(0, 0, this.W, this.H);
+    this.refreshVisualTheme();
+    this.events.once("shutdown", () => this.clearVisualFloor());
 
     // árboles decorativos (más densos a la derecha)
     this.treeCols = [];
@@ -225,6 +208,91 @@ class ForestScene extends Phaser.Scene {
     toast("La Zona Negra — cuanto más profundo, más peligro");
     log("Entraste a la Zona Negra. Los monstruos fuertes viven a la derecha.", "info");
     refreshHud();
+  }
+
+  // Sólo representación: se mantiene la paleta propia de cada zona y no se toca su mapa.
+  clearVisualFloor() {
+    if (this._forestFloorTiles) { this._forestFloorTiles.destroy(); this._forestFloorTiles = null; }
+    if (this._forestFloorG) { this._forestFloorG.destroy(); this._forestFloorG = null; }
+    if (this._forestFloorKey && this.textures.exists(this._forestFloorKey)) this.textures.remove(this._forestFloorKey);
+    this._forestFloorKey = null;
+  }
+
+  createVisualFloorTile() {
+    const T = GF.TILE, P = T * 8, Z = this.Z, palette = Z ? Z.piso : [0x2f4a20, 0x2a431c];
+    const channel = (c, i) => (c >> ((2 - i) * 8)) & 255;
+    const base = [0, 1, 2].map(i => (channel(palette[0], i) + channel(palette[1], i)) / 2);
+    // Del césped se usa sólo luminancia como relieve fino, nunca el verde de su pigmento.
+    // Piedra, fuego y guarida reciben sus propios colores y marcas de mineral/fracturas.
+    const sample = document.createElement("canvas"); sample.width = T; sample.height = T;
+    const sctx = sample.getContext("2d", { willReadFrequently: true });
+    sctx.drawImage(this.textures.get("grass_a").getSourceImage(), 0, 0, T, T);
+    const rgba = sctx.getImageData(0, 0, T, T).data, lum = new Float32Array(T * T);
+    let mean = 0;
+    for (let i = 0; i < lum.length; i++) { const p = i * 4; lum[i] = rgba[p] * .2126 + rgba[p + 1] * .7152 + rgba[p + 2] * .0722; mean += lum[i]; }
+    mean = Math.max(1, mean / lum.length);
+    const key = "__forest_floor_v3_" + this.zonaKey;
+    const texture = this.textures.createCanvas(key, P, P); this._forestFloorKey = key;
+    const ctx = texture.getContext(), data = ctx.createImageData(P, P);
+    let seed = 20261103;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    for (let y = 0; y < P; y++) for (let x = 0; x < P; x++) {
+      const p = (y * P + x) * 4;
+      const relief = Math.max(.77, Math.min(1.23, 1 + (lum[(y % T) * T + x % T] / mean - 1) * .34 + (rnd() - .5) * .08));
+      for (let i = 0; i < 3; i++) data.data[p + i] = Math.round(base[i] * relief);
+      data.data[p + 3] = 255;
+    }
+    ctx.putImageData(data, 0, 0);
+    const tone = amount => "rgb(" + base.map(c => Math.max(0, Math.min(255, Math.round(c * amount)))).join(",") + ")";
+    ctx.lineWidth = 1;
+    if (this.zonaKey !== "pantano") {
+      const cracks = this.zonaKey === "fuego";
+      for (let i = 0; i < (cracks ? 28 : 72); i++) {
+        const x = 7 + Math.floor(rnd() * (P - 20)), y = 7 + Math.floor(rnd() * (P - 20));
+        const w = 3 + Math.floor(rnd() * 7), h = 2 + Math.floor(rnd() * 4);
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y + 1); ctx.lineTo(x + w + 2, y + h);
+        if (cracks) { ctx.lineTo(x + w - 2, y + h + 5); ctx.strokeStyle = tone(.63); ctx.stroke(); }
+        else { ctx.lineTo(x + 1, y + h + 1); ctx.closePath(); ctx.fillStyle = tone(.89 + rnd() * .3); ctx.fill(); ctx.strokeStyle = tone(.7); ctx.stroke(); }
+      }
+    }
+    texture.refresh(); return key;
+  }
+
+  refreshVisualTheme() {
+    this.clearVisualFloor();
+    const T = GF.TILE, Z = this.Z, PISO = Z ? Z.piso : [0x2f4a20, 0x2a431c];
+    const g = this._forestFloorG = this.add.graphics().setDepth(-1000);
+    let renewed = false;
+    if (window.GoldenVisual?.isEnabled() && this.textures.exists("grass_a")) {
+      try {
+        const key = this.createVisualFloorTile();
+        this._forestFloorTiles = this.add.tileSprite(0, 0, this.W, this.H, key).setOrigin(0).setDepth(-1001);
+        renewed = true;
+      } catch (e) {
+        if (this._forestFloorKey && this.textures.exists(this._forestFloorKey)) this.textures.remove(this._forestFloorKey);
+        this._forestFloorKey = null;
+        console.warn("[aspecto] suelo de zona clásico:", e);
+      }
+    }
+    this._forestFloorRenewed = renewed;
+    if (!renewed) {
+      const cols = Math.ceil(this.W / T), rows = Math.ceil(this.H / T);
+      for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < cols; cx++) {
+        g.fillStyle((cx + cy) % 2 === 0 ? PISO[0] : PISO[1], 1);
+        g.fillRect(cx * T, cy * T, T, T);
+      }
+    }
+    // Las mismas decoraciones deterministas y el mismo borde, también en Clásico.
+    let seed = 20260731;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    for (let i = 0; i < 260; i++) {
+      const x = rnd() * this.W, y = rnd() * this.H, t = rnd();
+      if (t < 0.5) { g.fillStyle(Z ? Z.mata : 0x223a16, 0.8); g.fillRect(x, y, 2, 4); g.fillRect(x + 3, y + 1, 2, 3); }
+      else if (t < 0.8) { g.fillStyle(Z ? Z.hierba : 0x3a5527, 0.7); g.fillRect(x, y, 3, 2); }
+      else { g.fillStyle(0x4a4438, 0.6); g.fillRect(x, y, 3, 3); }
+    }
+    g.lineStyle(4, 0x22331a, 0.95).strokeRect(0, 0, this.W, this.H);
+    return true;
   }
 
   // pathfinding A* (módulo compartido con la Granja — nav.js)

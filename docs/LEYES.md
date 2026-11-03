@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Transformación del conjunto visual — 03/11/2026
+
+Dirección pide continuar la transformación completa, incluidos árboles, minerales, parcelas y accesos de Tienda. Se extiende el aspecto Renovado con estados coherentes de recursos/cultivos, entorno y decoración, manteniendo lienzos, animaciones, huellas y reglas. Las imágenes clásicas y los diez edificios renovados aprobados se preservan. Las copas y fondos compuestos se actualizan al alternar; la invalidación pendiente se aplica al volver del Bosque. Las visitas comparten manifiesto y respaldo clásico. Se incorporan ilustraciones a los accesos, manteniendo botones, identidad y eventos. No se modifican economía, progreso, cuentas ni los sistemas pausados. Ver TRANSFORMACION-VISUAL-20261103.md.
+
 ## Continuación del aspecto renovado — 03/11/2026
 
 Dirección pide «sigue con todo». Segundo lote: Herrería, Horno de Piedra, Establo y Curtiduría, con las mismas dimensiones, claves, ocupación y reglas de construcción. Se conservan las seis variantes anteriores y los originales clásicos. Anclajes de humo/fragua por variante, con fallback clásico, sin mutar GF ni la partida. Se corrigen contrastes de acciones secundarias y deshabilitadas, Configuración, notas y moneda de mercado; rojo/dorado y destacado TU del ranking se preservan. El mercado usa coordenadas de viewport compatibles con arrastre y reencaja ventanas movidas al cambiar tema. Altar/ofrendas, pesca y plaza siguen fuera. Ver VISUAL-V2-CONTINUACION-20261103.md.
