@@ -227,7 +227,7 @@ async function economiaSolicitar(detalle) {
       mercadoMarcarPendiente(uid,body);
       let data,error;
       for(let n=0;n<2;n++){
-        try{({data,error}=await conTope(sb.functions.invoke(detalle.usdt?'usdt':'guardar',{body}),detalle.usdt?30000:15000,'operación confirmada'));}catch(e){error=e;}
+        try{({data,error}=await conTope(sb.functions.invoke(detalle.usdt?'usdt':detalle.produccionPremium?'produccion-premium':'guardar',{body}),detalle.usdt?30000:15000,'operación confirmada'));}catch(e){error=e;}
         if(!error && data && data.ok)break;
         const status=error && error.context && error.context.status;
         if(status>=400 && status<500){
@@ -239,10 +239,14 @@ async function economiaSolicitar(detalle) {
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recarga con conexión para consultar el servidor.');if(detalle.usdt&&UID===uid)usdtMensaje('Resultado sin confirmar. Recarga para sincronizar y comprueba la misma transacción; no repitas el pago.');return;}
       if(!data.data||typeof data.updated_at!=='string')throw Error('Operación sin guardado confirmado');
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
+      if(detalle.produccionPremium){
+        toast(detalle.produccionPremium.accion==='colocar'?'Nodo colocado con su cupo propio':'Nodo comprado; puedes colocarlo desde el Cobertizo','success','compra');
+        return data;
+      }
       toast(detalle.usdt ? ("Depósito confirmado: +"+fmtGolden(data.cobro)+" Golden") : detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.mision ? 'Misión reclamada: +'+fmtPlata(data.cobro)+' Plata' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata', 'success', detalle.banco?'canje':detalle.diario||detalle.logro||detalle.mision?'premio':detalle.infra||detalle.mejora?'mejora':'compra');
       return data;
     }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid){toast('No se pudo completar la operación; comprueba la conexión');if(detalle.usdt)usdtMensaje('No se pudo completar la comprobación. El pago no debe repetirse; revisa el guardado y consulta el mismo hash.');}}
-  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();usdtProgramarPendiente();});
+  })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(detalle.produccionPremium&&isOpen('ov-cobertizo'))refreshCobertizo();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();usdtProgramarPendiente();});
   return MERCADO_EN_CURSO;
 }
 async function mercadoP2POperar(detalle){
@@ -693,6 +697,7 @@ function hydrate(d) {
   if (d.produccion && d.produccion.v === 1 && Number.isSafeInteger(d.produccion.base) && d.produccion.base >= 5 && d.produccion.base <= 200) {
     const p = d.produccion;
     G.produccion = { v: 1, base: p.base, nodos: {}, pausas: {}, vale: Number.isSafeInteger(p.vale) ? Math.max(0, Math.min(16, p.vale)) : 0, valesV:p.valesV===2?2:0 };
+    if(p.premium!==undefined&&typeof produccionPremiumNormalizar==='function')G.produccion.premium=produccionPremiumNormalizar(p.premium)||{v:0,compras:[]};
     G.produccion.vipHasta = Number.isSafeInteger(p.vipHasta) && p.vipHasta >= 0 ? p.vipHasta : 0;
     if(p.vipNodosV===1){G.produccion.vipNodosV=1;G.produccion.vipNodos=Number.isSafeInteger(p.vipNodos)?Math.max(0,Math.min(2,p.vipNodos)):0;}
     G.produccion.vipAplicado = p.vipAplicado === true && G.produccion.vipHasta > 0;

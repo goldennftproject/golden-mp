@@ -63,6 +63,9 @@ for(const[width,height]of[[1672,948],[1346,618],[1024,700],[1033,700],[900,700]]
  assert.equal(travelSlots.length,5);for(const badge of doc.querySelectorAll('#ov-viaje .vj-s .n')){assert.equal(css(badge).right,'2px','quantity stays inside every column');assert.equal(css(badge).bottom,'1px','quantity stays above the slot baseline');assert.equal(badge.textContent,'99');}
  for(const[k,v]of Object.entries({boxSizing:'border-box',paddingTop:'4px',paddingRight:'6px',paddingBottom:'4px',paddingLeft:'6px',overflow:'auto'}))assert.equal(css('#pd-lista')[k],v,'board leaves room for the rotated paper: '+k);
  assert.deepEqual(Array.from(doc.querySelectorAll('#pd-lista .pd-nota')),boardNotes);assert.deepEqual(boardNotes.map(note=>css(note).transform),rotations,'board keeps the original paper rotations');
+ const editor=doc.getElementById('editbar');editor.classList.add('show');const normalEditor=Array.from(editor.children).map(el=>css(el).display);editor.classList.add('premium-placement');
+ for(const el of editor.children)assert.equal(css(el).display,el.id==='edit-cancelar'?'inline-flex':'none','premium placement exposes only Cancel');
+ assert.equal(css('#edit-cancelar').minHeight,'30px');assert.equal(css('#edit-cancelar').borderTopWidth,'2px');editor.classList.remove('premium-placement');assert.deepEqual(Array.from(editor.children).map(el=>css(el).display),normalEditor,'regular editor controls return unchanged');
  assert.equal(css('.ck-olla [data-ckcancel]').minHeight,'22px');assert.equal(css('.ck-olla [data-ckcancel]').paddingLeft,'0px');assert.equal(css('.ck-olla [data-ckcancel]').fontSize,'9px','compact pot button keeps its original typography');
  probes.forEach((s,i)=>assert.equal(doc.querySelector(s),nodes[i],'CSS keeps the existing control node'));
  setMode(f,false);assert.deepEqual(snapshot(f),before,'Classic restores its exact style values');

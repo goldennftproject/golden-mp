@@ -39,6 +39,7 @@ async function dibujar(g){
    if(!m.produccionVersion&&o.type==='rock'&&!m.rocksOpen.includes(lock))continue;
   }
   const lp=m.layout[i],obra=m.obras[o.type];
+  if(o.premiumOnly && (!(m.premiumNodos||[]).includes(String(i)) || !GF.pieNodoValido(i,lp,g.expansiones)))continue;
   const x=lp?lp.cx:obra?(obra.col+.5)*T:o.cx,y=lp?lp.by:obra?(obra.row+1)*T:o.by;
   if(!GF.tuyo(Math.floor(x/T),Math.ceil(y/T)-1,g.expansiones))continue;
   const key=obra&&!m.built[o.type]?'build_'+o.type:o.type==='barn'?'barn_evo_'+m.granero:o.key;

@@ -738,7 +738,30 @@ GF.rehacerColisiones = function () {
    donde había un árbol futuro que no existe.
    Es la MISMA regla que ya vale para las parcelas: se ocupa la celda cuando la cosa es tuya.
    Ante la duda, presente — así un fallo acá deja una celda de más, nunca un objeto atravesable. */
+// Los índices reservados no son un desbloqueo de expansión ni propiedad por sí solos.
+GF.premiumRegistro = function (i, g) {
+  g = g || ((typeof G !== "undefined" && G) || {});
+  const o = GF.WORLD_OBJECTS[i], libro = g.produccion && g.produccion.premium;
+  if (!o || !o.premiumOnly || !libro || libro.v !== 1 || !Array.isArray(libro.compras)) return null;
+  const tipo = o.type === "ore" ? o.ore : o.type;
+  return libro.compras.find(c => c && c.nodo === i && c.tipo === tipo && typeof c.id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(c.id)) || null;
+};
+GF.pieNodoValido = function (i, lp, expansiones) {
+  const o = GF.WORLD_OBJECTS[i], T2 = GF.TILE;
+  if (!o || !lp || !Number.isFinite(lp.cx) || !Number.isFinite(lp.by)) return false;
+  const ancho = Math.max(1, Math.ceil(o.wCells || 1)), col = lp.cx / T2 - ancho / 2, row = lp.by / T2 - 1;
+  if (!Number.isInteger(col) || !Number.isInteger(row)) return false;
+  for (let c = col; c < col + ancho; c++)
+    for (const [dc, dr] of [[0,0],[-1,0],[1,0],[0,-1],[0,1]])
+      if (!GF.tuyo(c + dc, row + dr, expansiones)) return false;
+  return true;
+};
+GF.premiumPosicionValida = function (i, g) {
+  g = g || ((typeof G !== "undefined" && G) || {});
+  return !!GF.premiumRegistro(i, g) && !!(g.produccion.nodos && g.produccion.nodos[i]) && GF.pieNodoValido(i, g.layout && g.layout[i], g.expansiones || 0);
+};
 GF.objetoPresente = function (c) {
+  if (GF.WORLD_OBJECTS[c.i] && GF.WORLD_OBJECTS[c.i].premiumOnly) return GF.premiumPosicionValida(c.i);
   if (GF.esAltarOculto(c.tipo)) return false;
   if (!GF.PESCA_ACTIVA && ["lombricario","lonja","boya","fish"].includes(c.tipo)) return false;
   if (typeof G === "undefined" || !G) return true;
@@ -856,6 +879,13 @@ GF.generarNodosExpansion = function () {
     const reserva = par || (GF.espacioV === 3 ? libres[0] : null);
     e.parcela = reserva ? { col: reserva.c, row: reserva.r } : null;
   });
+  // Nueve soportes dedicados: nunca se agotan al comprar nodos regulares ni cambian
+  // sus índices. El pie de fábrica está en la cerca y no concede terreno/ocupación.
+  for (const tipo of ["tree", "rock", "bronce"]) for (let n = 0; n < 3; n++) {
+    const ancho = tipo === "tree" ? 2 : 1;
+    GF.WORLD_OBJECTS.push(snap(tipo === "tree" ? "tree" : tipo === "rock" ? "node_stone" : "node_bronze",
+      { type: tipo === "bronce" ? "ore" : tipo, ...(tipo === "bronce" ? { ore: "bronce" } : {}), exp: 999, premiumOnly: true }, ancho * T / 2, T, ancho * T));
+  }
   GF.rehacerColisiones();   // los nodos recién añadidos también son sólidos
 };
 GF.generarNodosExpansion();
@@ -1000,7 +1030,8 @@ GF.ocupFirma = function () {
     (g.treesOpen || []).length, (g.rocksOpen || []).length, g.plotsOwned || 0,
     (g.decos || []).length, (g.chests || []).length,
     Object.keys(g.layout || {}).length, Object.keys(g.obras || {}).length,
-    Object.keys(g.built || {}).length, GF.PLOTS.length].join("|");
+    Object.keys(g.built || {}).length, GF.PLOTS.length,
+    (Array.isArray(g.produccion?.premium?.compras) ? g.produccion.premium.compras : []).map(c => c ? c.id + ":" + c.nodo : "").join(",")].join("|");
 };
 GF.ocupacion = function () {
   const f = GF.ocupFirma();
@@ -1033,6 +1064,7 @@ GF.ocupacion = function () {
   const seVe = (o) => !o.oculto && (!o.sprite || o.sprite.visible !== false);
   for (let i = 0; i < GF.WORLD_OBJECTS.length; i++) {
     const o = GF.WORLD_OBJECTS[i];
+    if (o.premiumOnly && !GF.premiumPosicionValida(i)) continue;
     let lc = o.leftCol, br = o.baseRow;
     if (vivos) {
       /* La escena manda: existe si tiene sprite a la vista, y está DONDE lo pintó la escena. */

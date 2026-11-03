@@ -8,6 +8,7 @@ class FarmScene extends Phaser.Scene {
   constructor() { super("farm"); }
 
   create() {
+    this.marcarBarraColocacionPremium(false);
     if (window.GoldenVisual) GoldenVisual.prepareFarm(this);
     if (window.GoldenLighting) GoldenLighting.attach(this);
     /* 18/8 — LO PRIMERO: fijar la FORMA de la granja para esta partida.
@@ -266,7 +267,8 @@ class FarmScene extends Phaser.Scene {
       // 18/8: los nodos que trae una expansión no existen hasta que esa expansión se compró. No
       // pasan por el baúl ni por la escalera de niveles: vienen CON el terreno, que es lo que hace
       // que la compra se sienta. Su freno es haber comprado el bloque, y nada más.
-      const sinExpansion = (o.exp != null && (G.expansiones || 0) <= o.exp) ||
+      const premiumValido = o.premiumOnly && GF.premiumPosicionValida(i);
+      const sinExpansion = (o.exp != null && (G.expansiones || 0) <= o.exp && !premiumValido) || (o.premiumOnly && !premiumValido) ||
         (["tree", "rock", "ore"].includes(o.type) && typeof produccionNodoPoseido === "function" && produccionNodoPoseido(i) === false);
       /* LA BOYA DE TROFEOS no está hasta que se compra en la Lonja por 30 Escamas. Se declara
          en el mundo como todo lo demás —así vive en el mismo sitio y no en un caso especial del
@@ -3420,11 +3422,27 @@ class FarmScene extends Phaser.Scene {
     this.placingAuto = !GF.editMode;   // 13/8: vino de la bolsa/hotbar → al terminar o cancelar vuelve al modo normal
     if (!GF.editMode && window.setEditMode) setEditMode(true);   // por si vino de la Tienda o la bolsa
     this.placing = { tipo, id };
+    this.marcarBarraColocacionPremium(tipo === "premium");
     if (window.syncPlacingUI) syncPlacingUI(true);   // muestra el botón Cancelar de la barra de edición
     toast(tipo === "plot" ? "Clic en la celda donde va la parcela (clic derecho cancela)"
         : tipo === "obra" ? "Clic donde quieres levantar la obra (clic derecho cancela)"
         : tipo === "regalo" ? "Clic en la celda donde va " + ({ plot: "la parcela", tree: "el árbol", rock: "la roca" }[id] || "esto") + " (clic derecho cancela)"
+        : tipo === "premium" ? "Elige espacio libre para tu nodo Golden (clic derecho cancela)"
                           : "Clic en la celda donde va el adorno (clic derecho cancela)");
+  }
+  iniciarColocacionPremium(id) {
+    if (GF.scene !== "farm") { toast("Vuelve a tu granja para colocar el nodo."); return false; }
+    if (typeof PRODUCCION_PREMIUM_ACTIVA === "undefined" || !PRODUCCION_PREMIUM_ACTIVA || typeof produccionPremiumDerecho !== "function") { toast("La colocación de nodos Golden no está disponible."); return false; }
+    const derecho = produccionPremiumDerecho(id);
+    if (!derecho || derecho.nodo !== null || !["tree", "rock", "bronce"].includes(derecho.tipo)) { toast("Ese nodo no está pendiente de colocar."); return false; }
+    if (derecho.tipo === "bronce" && G.level < 3) { toast("Necesitas granja nivel 3 para colocar bronce."); return false; }
+    this.iniciarColocar("premium", id);
+    this.placing.premiumTipo = derecho.tipo;
+    return true;
+  }
+  marcarBarraColocacionPremium(activa) {
+    this._premiumPlacementBar = !!activa;
+    if (typeof document !== "undefined") document.getElementById?.("editbar")?.classList?.toggle?.("premium-placement", !!activa);
   }
   /* ¿QUÉ CELDAS OCUPA LO QUE LLEVO EN LA MANO, Y CABEN? (18/8)
      Una sola función para el rectángulo verde/rojo y para la comprobación al soltar. Mientras
@@ -3435,6 +3453,7 @@ class FarmScene extends Phaser.Scene {
     if (pl) {
       if (pl.tipo === "obra") { ancho = 3; c0 = col - 1; }                 // la obra se centra en el cursor
       else if (pl.tipo === "regalo" && pl.id === "tree") ancho = 2;
+      else if (pl.tipo === "premium" && pl.premiumTipo === "tree") ancho = 2;
     }
     const prueba = (desde) => {
       let ok = true, por = null;
@@ -3480,7 +3499,15 @@ class FarmScene extends Phaser.Scene {
       }
       return;
     }
-    if (pl.tipo === "deco") {
+    if (pl.tipo === "premium") {
+      const id = pl.id, derecho = typeof produccionPremiumDerecho === "function" && produccionPremiumDerecho(id);
+      if (!derecho || derecho.nodo !== null || derecho.tipo !== pl.premiumTipo || (derecho.tipo === "bronce" && G.level < 3) || typeof window.confirmarColocacionProduccionPremium !== "function") { toast("Comprueba tu nodo pendiente e inténtalo de nuevo."); return; }
+      const cx = (hu.c0 + hu.ancho / 2) * T, by = (row + 1) * T;
+      this.finColocar();
+      Promise.resolve(window.confirmarColocacionProduccionPremium(id, cx, by)).then(ok => {
+        if (ok && GF.scene === "farm") (window.farmScene || this).colocarPremiumEnVivo(id);
+      }).catch(() => toast("No se pudo confirmar la colocación. El nodo sigue en tu bolsa."));
+    } else if (pl.tipo === "deco") {
       if (decoColocar(pl.id, col, row)) { this.syncAdornos(); if (typeof syncEditDeco === "function") syncEditDeco(); toast(DECO_DEF[pl.id].label + " colocado"); }
       this.finColocar();
     } else if (pl.tipo === "plot") {
@@ -3541,6 +3568,7 @@ class FarmScene extends Phaser.Scene {
   // 13/8: cierre común — y si el colocado vino de la bolsa/hotbar, se sale del modo edición solo
   finColocar() {
     this.placing = null;
+    this.marcarBarraColocacionPremium(false);
     if (this.editHl) this.editHl.setVisible(false);
     if (this.ocupG) this.ocupG.setVisible(false);
     if (window.syncPlacingUI) syncPlacingUI(false);
@@ -3600,6 +3628,22 @@ class FarmScene extends Phaser.Scene {
     this.refreshNodeLocks();      // lo destapa con su saltito y sus chispas
     if (this.rebuildCollisions) this.rebuildCollisions();
     if (this.syncNodos) this.syncNodos();
+    return true;
+  }
+  colocarPremiumEnVivo(id) {
+    const derecho = (G.produccion?.premium?.compras || []).find(c => c.id === id);
+    if (!derecho || !Number.isInteger(derecho.nodo) || !GF.premiumPosicionValida(derecho.nodo)) return false;
+    const o = this.objs && this.objs.find(x => x.i === derecho.nodo), lp = G.layout[derecho.nodo];
+    if (!o || !o.sprite) return false;
+    o.cx = lp.cx; o.by = lp.by;
+    o.sprite.setPosition(o.cx, o.by).setDepth(o.by);
+    if (o.timer) o.timer.setPosition(o.cx, o.by - GF.TILE * 0.85);
+    if (o.shadow) o.shadow.setPosition(o.cx, o.by - 1).setDepth(o.by - 0.5);
+    Object.assign(o, (G.nodos || {})[produccionNodoKey(o.i)] || {});
+    this.refreshNodeLocks();
+    this.aplicarTexNodo(o, nowMs());
+    if (GF.ocupCambio) GF.ocupCambio();
+    if (this.rebuildCollisions) this.rebuildCollisions();
     return true;
   }
   // 13/8: botón Cancelar (o clic derecho): el plano/adorno queda en la bolsa, todo vuelve a como estaba
@@ -5886,9 +5930,10 @@ class FarmScene extends Phaser.Scene {
     if (!this.objs) return;
     for (const o of this.objs) {
       if (!["tree", "rock", "ore"].includes(o.type)) continue;
-      const abierto = G.produccion ? produccionNodoPoseido(o.i) : o.type === "tree"
+      const permitido = !GF.WORLD_OBJECTS[o.i]?.premiumOnly || GF.premiumPosicionValida(o.i);
+      const abierto = permitido && (G.produccion ? produccionNodoPoseido(o.i) : o.type === "tree"
         ? (G.treesOpen || [0]).includes(o.lockIdx)
-        : !(typeof nodoBloqueado === "function" && nodoBloqueado(o));
+        : !(typeof nodoBloqueado === "function" && nodoBloqueado(o)));
       if (abierto && o.oculto) {                       // recién colocado: aparece con un saltito
         o.oculto = false; o.locked = false;
         if (o.sprite) {
@@ -6058,6 +6103,7 @@ class FarmScene extends Phaser.Scene {
      entrega al vigía de main.js, que guarda y vuelve a entrar. Un juego que se salta un cuadro
      es infinitamente mejor que uno que se apaga. */
   update(time, deltaMs) {
+    if (this._premiumPlacementBar && (!GF.editMode || this.placing?.tipo !== "premium")) this.marcarBarraColocacionPremium(false);
     try { this.updateReal(time, deltaMs); this._errSeguidos = 0; }
     catch (e) {
       this._errSeguidos = (this._errSeguidos || 0) + 1;

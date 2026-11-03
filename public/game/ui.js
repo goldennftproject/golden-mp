@@ -2596,14 +2596,66 @@ function refreshCobertizo() {
     : "";
   const key = $("gm-cob"); if (key) key.textContent = items.length ? String(items.length) : "";
 }
+function produccionPremiumHtml() {
+  if (!PRODUCCION_PREMIUM_ACTIVA) return "";
+  const historial=produccionPremiumHistorial(),online=!!(typeof sb!=="undefined"&&sb&&UID&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID));
+  let h='<details id="prod-premium"><summary>Nodos con Golden</summary><p class="sub">Se guardan en el Cobertizo para colocarlos en tu terreno. Puedes comprarlos sin expandir. Máximo 3 de cada tipo y 12 compras con Golden por cuenta.</p><div class="resumen-menu"><span><b>'+(historial?historial.length:'—')+'/12</b>compras con Golden</span><span><b>'+(historial?historial.filter(c=>c.nodo==null).length:'—')+'</b>por colocar</span></div><div class="fbtns">';
+  for (const tipo of Object.keys(PRODUCCION_PREMIUM_DEF)) {
+    const c=produccionPremiumCotizacion(tipo),def=PRODUCCION_PREMIUM_DEF[tipo],motivo=!online?'Conecta y sincroniza el guardado':produccionPremiumMotivo(tipo);
+    const texto=!c?def.label+' · No disponible':c.precio==null?def.label+' · Límite alcanzado':'Comprar '+def.label+' · '+fmtGolden(c.precio)+' Golden';
+    h+='<div class="eleccion-nodo"><button class="gold sm" data-prod-premium="'+tipo+'" aria-describedby="prod-premium-motivo-'+tipo+'" title="'+escapeHtml(motivo||'Comprar '+def.label+' y guardarlo en el Cobertizo')+'" '+(motivo?'disabled':'')+'>'+texto+'</button><small class="sub" id="prod-premium-motivo-'+tipo+'">'+escapeHtml(motivo||'Comprados '+c.usadas+'/'+c.maxTipo+' · incluye cupo propio')+'</small></div>';
+  }
+  h+='</div>';
+  if(historial?.some(c=>c.nodo===null))h+='<div class="secc">Por colocar</div>';
+  for(const c of historial||[])if(c.nodo===null){const def=PRODUCCION_PREMIUM_DEF[c.tipo],motivo=!online?'Conecta y sincroniza el guardado':G.level<def.nivel?'Requiere granja nivel '+def.nivel:'';h+='<div class="row"><span>'+def.label+'</span><button class="green sm" data-prod-premium-colocar="'+c.id+'" '+(motivo?'disabled title="'+escapeHtml(motivo)+'"':'')+'>Elegir celda</button>'+(motivo?'<small class="sub">'+escapeHtml(motivo)+'</small>':'')+'</div>';}
+  return h+'<p class="sub">Cada nodo con Golden utiliza su propio cupo. Los vales de expansión y los dos nodos incluidos del VIP se conservan por separado.</p></details>';
+}
+function confirmarCompraProduccionPremium(tipo) {
+  const motivo=produccionPremiumMotivo(tipo),c=produccionPremiumCotizacion(tipo);
+  if(motivo){toast(motivo);return false;}
+  askConfirm('¿Comprar '+c.label+' por '+fmtGolden(c.precio)+' Golden? Es tu compra '+(c.usadas+1)+' de '+c.maxTipo+' de este tipo con Golden. Se guardará en el Cobertizo para colocarlo en tu terreno.',()=>produccionPremiumComprar(tipo,c.precio),{title:'Comprar nodo con Golden',yes:'Comprar · '+fmtGolden(c.precio)+' Golden',yesClass:'gold',no:'Cancelar'});
+}
+function abrirProduccionPremium() {
+  if(!PRODUCCION_PREMIUM_ACTIVA){toast('La compra de nodos con Golden no está disponible');return false;}
+  closeAllOv();openOv('ov-cobertizo');
+  const detalle=$('prod-premium');if(detalle){detalle.open=true;detalle.scrollIntoView?.({block:'nearest'});detalle.querySelector('summary')?.focus({preventScroll:true});}
+}
+function iniciarColocacionProduccionPremium(id) {
+  if(!PRODUCCION_PREMIUM_ACTIVA){toast('La colocación de nodos con Golden no está disponible');return false;}
+  const derecho=produccionPremiumDerecho(id),def=derecho&&PRODUCCION_PREMIUM_DEF[derecho.tipo];
+  if(!def){toast('Ese nodo ya está colocado o no está disponible');return false;}
+  if(G.level<def.nivel){toast('Requiere granja nivel '+def.nivel);return false;}
+  if(typeof window.farmScene?.iniciarColocacionPremium!=='function'){toast('Vuelve a tu granja para colocar el nodo');return false;}
+  return window.farmScene.iniciarColocacionPremium(id);
+}
+function confirmarColocacionProduccionPremium(id,cx,by) {
+  if(!PRODUCCION_PREMIUM_ACTIVA){toast('La colocación de nodos con Golden no está disponible');return false;}
+  const derecho=produccionPremiumDerecho(id),def=derecho&&PRODUCCION_PREMIUM_DEF[derecho.tipo];
+  if(!def){toast('Ese nodo ya está colocado o no está disponible');return false;}
+  if(G.level<def.nivel){toast('Requiere granja nivel '+def.nivel);return false;}
+  if(!Number.isFinite(cx)||!Number.isFinite(by)){toast('Elige una celda libre en tu terreno');return false;}
+  return new Promise(resolve=>{
+    let enviando=false,terminada=false,observer;
+    const finalizar=ok=>{if(terminada)return;terminada=true;observer?.disconnect();resolve(ok);};
+    askConfirm('¿Colocar '+def.label+' en la celda seleccionada? Su primera carga empezará a recuperarse al colocarlo.',async()=>{
+      enviando=true;
+      if(!PRODUCCION_PREMIUM_ACTIVA||!produccionPremiumDerecho(id)||G.level<def.nivel){toast('El nodo ya no está disponible para colocarlo');finalizar(false);return;}
+      try{const r=await economiaSolicitar({produccionPremium:{accion:'colocar',id,cx,by}});finalizar(r?.ok===true);}catch(_){finalizar(false);}
+    },{title:'Colocar nodo',yes:'Colocar',yesClass:'green',no:'Cancelar',onNo:()=>finalizar(false)});
+    // Escape o clic fuera cierran sin onNo; tampoco dejan una colocación esperando respuesta.
+    const ov=$('ov-confirm'),Observer=typeof MutationObserver==='function'?MutationObserver:document.defaultView?.MutationObserver;
+    if(!terminada&&ov&&Observer){observer=new Observer(()=>{if(!enviando&&!ov.classList.contains('show'))finalizar(false);});observer.observe(ov,{attributes:true,attributeFilter:['class']});}
+  });
+}
 function refreshProduccionGranja() {
   // Reliquias se gestiona en su propio panel, no en el Cobertizo.
   const cont = $("prod-granja"); if (!cont || !G.produccion) return;
   const abiertos = Array.from(cont.querySelectorAll("details:not(.ayuda-menu)")).map(d => d.open);
   const foco = typeof document !== "undefined" && document.activeElement;
-  const clave = foco && foco.getAttribute && (foco.getAttribute("data-prod-pause") || foco.getAttribute("data-prod-buy"));
+  const clave = foco && foco.getAttribute && (foco.getAttribute("data-prod-premium")!==null?'golden:'+foco.getAttribute("data-prod-premium"):foco.getAttribute("data-prod-pause") || foco.getAttribute("data-prod-buy"));
   const libres = produccionHayCupo();
-  let h = '<div class="resumen-menu"><span><b>'+produccionUsados()+'/'+produccionCapacidad()+'</b>cupos usados</span><span><b>'+Math.max(0,produccionCapacidad()-produccionUsados())+'</b>cupos libres</span><span><b>'+(G.produccion.vale||0)+'</b>vales de nodo</span></div><h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
+  const premium=produccionPremiumHistorial(),propios=(premium||[]).filter(c=>c.nodo!==null).length;
+  let h = '<div class="resumen-menu"><span><b>'+produccionUsados()+'/'+produccionCapacidad()+'</b>cupos usados</span><span><b>'+Math.max(0,produccionCapacidad()-produccionUsados())+'</b>cupos libres</span><span><b>'+(G.produccion.vale||0)+'</b>vales de nodo</span>'+(propios?'<span><b>'+produccionPremiumUsados()+'/'+propios+'</b>cupos propios Golden</span>':'')+'</div><h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
     '<p class="sub">1 nodo activo = 1 cupo · cada expansión suma 1.</p>';
   const vipGranja = produccionVipActivo();
   h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Sin VIP · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
@@ -2618,20 +2670,27 @@ function refreshProduccionGranja() {
     const motivo=G.level<d[2]?'Requiere granja nivel '+d[2]:!libres?'Sin cupos: pausa un nodo o expande':!gratis&&G.plata<d[1]?'Faltan '+fmtPlata(d[1]-G.plata)+' Plata':k==='plot'&&(G.plotsOwned||3)>=PLOT_MAX?'Máximo de parcelas alcanzado':k!=='plot'&&produccionEmplazamiento(k)<0?'Sin emplazamiento: libera terreno o expande':'';
     h += '<div class="eleccion-nodo"><button class="green sm" data-prod-buy="' + k + '" aria-describedby="prod-motivo-'+k+'" title="'+escapeHtml(motivo||'Activar '+d[0]+' · ocupa 1 cupo')+'" ' + (motivo ? 'disabled' : '') + '>' + d[0] + ' · ' + (gratis ? 'incluido' : d[1] + ' plata') + ' · niv. ' + d[2] + '</button><small class="motivo-accion" id="prod-motivo-'+k+'">'+escapeHtml(motivo||'Ocupa 1 cupo')+'</small></div>';
   }
-  h += '</div><p class="sub">Los nuevos nodos empiezan recuperando su primera carga. Necesitan un emplazamiento disponible del tipo elegido dentro de tu terreno; después puedes moverlos en edición.</p></details><details><summary>Gestionar producción activa y pausada</summary><div style="max-height:260px;overflow:auto;padding:4px">';
+  h += '</div><p class="sub">Los nuevos nodos empiezan recuperando su primera carga. Necesitan un emplazamiento disponible del tipo elegido dentro de tu terreno; después puedes moverlos en edición.</p></details>'+produccionPremiumHtml()+'<details><summary>Gestionar producción activa y pausada</summary><div style="max-height:260px;overflow:auto;padding:4px">';
   for (const o of produccionItems()) {
     const pausa = produccionPausada(o);
-    h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (pausa ? ' · pausada' : ' · activa') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" ' + (pausa && !libres ? 'disabled' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
+    const propio=produccionPremiumEsNodo(o.i,o.type);
+    h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (propio?' · cupo propio Golden':'') + (pausa ? ' · pausada' : ' · activa') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" ' + (pausa && !libres && !propio ? 'disabled' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
   }
   cont.innerHTML = h + '</div></details><hr>';
   Array.from(cont.querySelectorAll("details:not(.ayuda-menu)")).forEach((d, i) => d.open = !!abiertos[i] || (i===0 && (G.produccion.vale>0||G.produccion.vipNodos>0)));
   cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => produccionComprar(b.dataset.prodBuy));
+  cont.querySelectorAll("[data-prod-premium]").forEach(b => {
+    const tipo=b.dataset.prodPremium,c=produccionPremiumCotizacion(tipo);
+    b.onclick=()=>confirmarCompraProduccionPremium(tipo);
+    if(c&&c.precio!=null){const online=!!(typeof sb!=="undefined"&&sb&&UID&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID));ofrecerRecargaGolden(b,c.precio,!online||!!produccionPremiumMotivo(tipo,false));}
+  });
+  cont.querySelectorAll("[data-prod-premium-colocar]").forEach(b=>b.onclick=()=>iniciarColocacionProduccionPremium(b.dataset.prodPremiumColocar));
   cont.querySelectorAll("[data-prod-pause]").forEach(b => b.onclick = () => produccionAlternar(b.dataset.prodPause));
   const comprarVip = $("prod-vip-comprar");
   if (comprarVip) comprarVip.onclick = confirmarCompraVip;
   ofrecerRecargaGolden(comprarVip,PRODUCCION_VIP_PRECIO,vipGranja);
   if (clave) {
-    const b = Array.from(cont.querySelectorAll("[data-prod-pause], [data-prod-buy]")).find(b => !b.disabled && (b.dataset.prodPause === clave || b.dataset.prodBuy === clave));
+    const b = Array.from(cont.querySelectorAll("[data-prod-pause], [data-prod-buy], [data-prod-premium]")).find(b => !b.disabled && (b.dataset.prodPause === clave || b.dataset.prodBuy === clave || 'golden:'+b.dataset.prodPremium === clave));
     if (b) { const d = b.closest("details"); if (d) d.open = true; b.focus({ preventScroll: true }); }
     else { const s = cont.querySelector("summary"); if (s) s.focus({ preventScroll: true }); }
   }
@@ -5062,6 +5121,7 @@ function infraEnlazar(box){
 function refreshNft() {
   const box = $("nft-shop"); if (!box) return;
   let h = '<div class="info">Mejoras internas del juego, sin tokenización. Las pasivas de recolección se suman a tus herramientas normales.</div>';
+  if(PRODUCCION_PREMIUM_ACTIVA)h+='<div class="forge-row"><div class="fic"><img src="'+GF.spr('tree')+'" alt=""></div><div class="finfo"><div class="fnm">Nodos + cupo propio</div><div class="fds">Árboles, rocas y bronce · desde 1 Golden · compra sin expandir</div></div><div class="fbtns"><button class="gold sm" id="prod-premium-acceso">Ver nodos</button></div></div>';
   h += infraHtml('tienda')+infraOpcionalHtml('mercado');
   h += '<div class="secc">GOD HAND</div>';
   h += '<div class="forge-row' + (tengoGodHand() ? ' eq' : '') + '"><div class="fic"><img src="' + GF.spr("godhand") + '" onerror="this.remove()"></div><div class="finfo"><div class="fnm">GOD HAND' + (tengoGodHand() ? ' <span class="tag">tuya</span>' : '') + '</div>' +
@@ -5085,6 +5145,7 @@ function refreshNft() {
         '<button class="green sm" data-nft="' + k + '" ' + ((G.golden || 0) >= precio ? "" : "disabled") + '>' + precio + ' $G</button>') + '</div></div>';
   }
   box.innerHTML = h;
+  const nodosPremium=$('prod-premium-acceso');if(nodosPremium)nodosPremium.onclick=abrirProduccionPremium;
   infraEnlazar(box);
   box.querySelectorAll("[data-nft]").forEach(b => { b.onclick = () => { if (typeof comprarNft === "function") comprarNft(b.dataset.nft); refreshNft(); }; });
   box.querySelectorAll('[data-pasiva]').forEach(b => { b.onclick=()=>askConfirm('Mejorar '+NFT_DEF[b.dataset.pasiva].label+' por 50.000 Plata: el bono pasa de +0,10 a +0,15 unidades por recolección efectiva. Compra única, sin energía.',()=>mejorarPasiva(b.dataset.pasiva),{title:'Mejorar pasiva',yes:'Mejorar',yesClass:'gold',no:'Cancelar'}); });

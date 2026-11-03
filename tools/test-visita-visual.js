@@ -1,8 +1,8 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{JSDOM}=require('jsdom');
 const server=fs.readFileSync('supabase/functions/guardar/index.ts','utf8');
-const c={num:x=>Math.max(0,Number(x)||0)};vm.createContext(c);
-vm.runInContext(server.slice(server.indexOf('function visitaVista('),server.indexOf('function visitaOperacion('))+';globalThis.vista=visitaVista',c);
+const c={Math,Number,Array,Object,Set,Date,isFinite,JSON};vm.createContext(c);
+vm.runInContext(server.slice(server.indexOf('const VERSION ='),server.indexOf('/* === FIN REGLAS === */'))+';globalThis.vista=visitaVista',c);
 const data={level:3,espacioV:3,expansiones:1,plotsOwned:3,plots:[{state:'ready',cropKey:'papa'}],layout:{10:{cx:210,by:84,secret:'no'}},golden:500,seeds:{papa:99},produccion:{nodos:{0:true},vipHasta:9999},built:{store:true},email:'privado'};
 const before=JSON.stringify(data),view=c.vista({user_id:'otro',name:'Dueño',data});
 assert.equal(JSON.stringify(data),before);assert.equal(view.mapa.layout[10].secret,undefined);

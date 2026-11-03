@@ -2758,7 +2758,7 @@ function produccionVipTick(sinEscena) {
   if (!p || !p.vipAplicado || p.vipHasta > nowMs()) return false;
   p.vipAplicado = false; // antes de refrescar: evita reentradas
   if (G.pass) G.pass.vip = false;
-  const activos = produccionItems().filter(o => !produccionPausada(o));
+  const activos = produccionItems().filter(o => !produccionPausada(o) && !produccionPremiumEsNodo(o.i,o.type));
   const sobran = Math.max(0, activos.length - (p.base + (G.expansiones || 0)));
   const orden = p.orden || [];
   activos.sort((a,b) => orden.lastIndexOf(produccionClave(b)) - orden.lastIndexOf(produccionClave(a)) || b.i-a.i);
@@ -2806,7 +2806,7 @@ function produccionItems() {
   return items;
 }
 function produccionCapacidad() { return G.produccion ? G.produccion.base + (G.expansiones || 0) + (produccionVipActivo() ? produccionVipCupos() : 0) : Infinity; }
-function produccionUsados() { produccionVipTick(); return produccionItems().filter(o => !produccionPausada(o)).length; }
+function produccionUsados() { produccionVipTick(); return produccionItems().filter(o => !produccionPausada(o) && !produccionPremiumEsNodo(o.i,o.type)).length; }
 function produccionHayCupo() { return !G.produccion || produccionUsados() < produccionCapacidad(); }
 function produccionMigrar() {
   if (G.produccion) {
@@ -2838,7 +2838,7 @@ function produccionAlternar(clave) {
     : (sc && sc.objs && sc.objs.find(o => o.i === item.i)) || (G.nodos || {})[produccionNodoKey(item.i)] || {};
   const pausa = G.produccion.pausas[clave], t = nowMs();
   if (pausa) {
-    if (!produccionHayCupo()) { toast("Capacidad completa: pausa otra producción o expande."); return false; }
+    if (!produccionPremiumEsNodo(item.i,item.type) && !produccionHayCupo()) { toast("Capacidad completa: pausa otra producción o expande."); return false; }
     const copia = {...pausa.estado}, delta = Math.max(0, t - pausa.at);
     for (const k of ["readyAt", "halfAt", "cdIni", "witherAt"]) if (copia[k]) copia[k] += delta;
     Object.assign(fuente, copia);
@@ -2861,11 +2861,66 @@ function produccionAlternar(clave) {
 }
 function produccionEmplazamiento(tipo) {
   return GF.WORLD_OBJECTS.findIndex((o,idx)=>{
-    if(!(tipo==='tree'||tipo==='rock'?o.type===tipo:o.type==='ore'&&o.ore===tipo)||!(o.exp==null||o.exp<(G.expansiones||0))||produccionNodoPoseido(idx))return false;
+    if(o.premiumOnly||!(tipo==='tree'||tipo==='rock'?o.type===tipo:o.type==='ore'&&o.ore===tipo)||!(o.exp==null||o.exp<(G.expansiones||0))||produccionNodoPoseido(idx))return false;
     const lp=G.layout&&G.layout[idx],col=lp?Math.floor(lp.cx/GF.TILE-(o.wCells||1)/2):o.leftCol,row=(lp?Math.round(lp.by/GF.TILE):o.baseRow)-1;
     for(let c=col;c<col+(o.wCells||1);c++)if(!GF.tuyo(c,row)||GF.enCerca(c,row)||GF.celdaOcupada(c,row))return false;
     return true;
   });
+}
+// Preparado, sin activar antes de publicar y verificar la operación autoritativa.
+var PRODUCCION_PREMIUM_ACTIVA = false;
+var PRODUCCION_PREMIUM_MAX = 12;
+const PRODUCCION_PREMIUM_DEF = {
+  tree: { label:"Árbol", nivel:1, precios:[1,1.5,2] },
+  rock: { label:"Roca", nivel:1, precios:[1,1.5,2] },
+  bronce: { label:"Bronce", nivel:3, precios:[2.5,3.5,5] }
+};
+function produccionPremiumNormalizar(libro) {
+  if (libro==null) return {v:1,compras:[]};
+  if (typeof libro!=="object" || Array.isArray(libro) || libro.v!==1 || !Array.isArray(libro.compras) || libro.compras.length>PRODUCCION_PREMIUM_MAX) return null;
+  const ids=new Set(),nodos=new Set(),compras=[];
+  for (const c of libro.compras) {
+    if (!c || typeof c!=="object" || typeof c.id!=="string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(c.id) || ids.has(c.id.toLowerCase()) || !Object.prototype.hasOwnProperty.call(PRODUCCION_PREMIUM_DEF,c.tipo) || !Number.isFinite(c.coste) || c.coste<=0 || !Number.isSafeInteger(c.desde) || c.desde<0 || c.desde>8640000000000000) return null;
+    if (c.nodo!==null) {
+      const o=Number.isSafeInteger(c.nodo)&&c.nodo>=0&&GF.WORLD_OBJECTS[c.nodo];
+      if (!o || o.premiumOnly!==true || nodos.has(c.nodo) || (c.tipo==='bronce'?o.type!=='ore'||o.ore!=='bronce':o.type!==c.tipo)) return null;
+      nodos.add(c.nodo);
+    }
+    ids.add(c.id.toLowerCase());compras.push({id:c.id,tipo:c.tipo,coste:c.coste,desde:c.desde,nodo:c.nodo});
+  }
+  if (Object.keys(PRODUCCION_PREMIUM_DEF).some(tipo=>compras.filter(c=>c.tipo===tipo).length>PRODUCCION_PREMIUM_DEF[tipo].precios.length)) return null;
+  return {v:1,compras};
+}
+function produccionPremiumHistorial() {
+  const libro=produccionPremiumNormalizar(G.produccion && G.produccion.premium);
+  return libro?libro.compras:null;
+}
+function produccionPremiumDerecho(id) { return (produccionPremiumHistorial()||[]).find(c=>c.id===id&&c.nodo===null)||null; }
+function produccionPremiumEsNodo(i,tipo) { return tipo!=='plot' && (produccionPremiumHistorial()||[]).some(c=>c.nodo===i); }
+function produccionPremiumUsados() { return produccionItems().filter(o=>produccionPremiumEsNodo(o.i,o.type)&&!produccionPausada(o)).length; }
+function produccionPremiumCotizacion(tipo) {
+  const def=Object.prototype.hasOwnProperty.call(PRODUCCION_PREMIUM_DEF,tipo)?PRODUCCION_PREMIUM_DEF[tipo]:null,compras=produccionPremiumHistorial();
+  if (!def || !compras) return null;
+  const usadas=compras.filter(c=>c.tipo===tipo).length;
+  return {tipo,label:def.label,nivel:def.nivel,usadas,total:compras.length,maxTipo:def.precios.length,maxTotal:PRODUCCION_PREMIUM_MAX,precio:usadas<def.precios.length?def.precios[usadas]:null};
+}
+function produccionPremiumMotivo(tipo,revisarSaldo=true) {
+  if (!PRODUCCION_PREMIUM_ACTIVA) return "La compra de nodos con Golden no está disponible";
+  const c=produccionPremiumCotizacion(tipo);
+  if (!c) return "Sincroniza la granja antes de comprar";
+  if (c.usadas>=c.maxTipo) return "Máximo de "+c.maxTipo+" compras de este tipo con Golden";
+  if (c.total>=c.maxTotal) return "Máximo de "+c.maxTotal+" compras con Golden por cuenta";
+  if (!G.produccion) return "Sincroniza la granja antes de comprar";
+  if (revisarSaldo && !Number.isFinite(G.golden)) return "Sincroniza tu saldo de Golden";
+  if (revisarSaldo && G.golden<c.precio) return "Faltan "+fmtGolden(c.precio-G.golden)+" Golden";
+  return "";
+}
+function produccionPremiumComprar(tipo,precioEsperado) {
+  const motivo=produccionPremiumMotivo(tipo),c=produccionPremiumCotizacion(tipo);
+  if (motivo) { toast(motivo); return false; }
+  if (precioEsperado!==undefined && precioEsperado!==c.precio) { toast("El precio cambió. Revisa el nodo antes de comprar."); return false; }
+  // Sin entrega optimista: saldo, propiedad, contador y reloj llegan del servidor.
+  return economiaSolicitar({produccionPremium:{accion:'comprar',tipo,precioEsperado:c.precio}});
 }
 function produccionComprar(tipo) {
   if (!G.produccion || !produccionHayCupo()) { toast("No queda capacidad. Pausa otra producción o expande."); return false; }
@@ -2918,7 +2973,7 @@ function produccionComprar(tipo) {
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }
-function celdasProductivas() { return G.produccion ? produccionUsados() : 9 + 3 * (G.expansiones || 0); }
+function celdasProductivas() { return G.produccion ? produccionUsados()+produccionPremiumUsados() : 9 + 3 * (G.expansiones || 0); }
 function bonoPlataH() { return Math.round(celdasProductivas() * 20 * 0.015); }
 
 function nodosQueTocan(lvl) {

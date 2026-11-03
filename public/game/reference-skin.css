@@ -55,4 +55,8 @@
  .visual-v2 #compras-accesos.compras-combate::before,.visual-v2 #compras-accesos.compras-combate>.tienda-abrir:first-child::before,.visual-v2 #compras-accesos.compras-combate>.tienda-abrir:first-child::after{display:none}
  .visual-v2 #compras-accesos.compras-combate>.tienda-abrir:first-child,.visual-v2 #compras-accesos.compras-combate #misiones-acceso{display:flex;align-items:center;justify-content:center;gap:5px;position:relative;min-width:0;width:100%;min-height:36px;margin:0!important;padding:4px 6px!important;border:4px solid #9c632f;border-image:var(--ref-wood) 32 fill / 4px / 0 stretch;border-radius:3px;background:#613b20;box-shadow:0 2px #26331c77;font:700 13px/1.1 "Segoe UI",system-ui,sans-serif;font-size:13px!important;letter-spacing:0;text-transform:none;text-shadow:0 1px #2d1c11;color:#fff0cd}
  .visual-v2 #compras-accesos.compras-combate #misiones-acceso img{width:19px;height:19px}
+ .visual-v2 #editbar.premium-placement.show{width:max-content;max-width:calc(100vw - 32px);align-items:center;gap:8px;padding:4px 8px;border:2px solid #ac8754;border-radius:5px;background:#f5e6c6;box-shadow:0 3px 8px #241a1455}
+ .visual-v2 #editbar.premium-placement>*:not(#edit-cancelar){display:none!important}
+ .visual-v2 #editbar.premium-placement::before{content:'Elige una celda libre';color:#573d23;font:700 13px/1.25 "Segoe UI",system-ui,sans-serif;text-shadow:none}
+ .visual-v2 #editbar.premium-placement #edit-cancelar{display:inline-flex!important;align-items:center;justify-content:center;min-height:30px;margin:0;padding:3px 8px;border:2px solid #9a583c;border-image:none;border-radius:4px;background:#955037;color:#fff3d9;text-shadow:none;box-shadow:none;font-size:13px;line-height:1.2}
 }
