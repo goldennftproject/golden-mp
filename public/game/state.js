@@ -2868,7 +2868,7 @@ function produccionEmplazamiento(tipo) {
   });
 }
 // Preparado, sin activar antes de publicar y verificar la operación autoritativa.
-var PRODUCCION_PREMIUM_ACTIVA = false;
+var PRODUCCION_PREMIUM_ACTIVA = true;
 var PRODUCCION_PREMIUM_MAX = 12;
 const PRODUCCION_PREMIUM_DEF = {
   tree: { label:"Árbol", nivel:1, precios:[1,1.5,2] },

@@ -2,7 +2,7 @@
 
 ## Nodos con Golden y cupo propio — 03/11/2026
 
-Dirección conserva las compras con Plata y aprueba compras sin expansión de árbol/roca (1, 1,5 y 2 Golden) y bronce (2,5, 3,5 y 5), tres por tipo y máximo histórico de doce por cuenta. Cada derecho incluye un cupo reservado y se coloca en terreno abierto libre, sin ampliar terreno ni gastar regalos VIP/expansión. Servidor calcula precios, registra derechos permanentes y valida colocación/relojes. Retiros y estudio económico no cambian. Cliente preparado con ventas cerradas hasta verificar despliegue compatible. Ver NODOS-GOLDEN-20261103.md.
+Dirección conserva las compras con Plata y aprueba compras sin expansión de árbol/roca (1, 1,5 y 2 Golden) y bronce (2,5, 3,5 y 5), tres por tipo y máximo histórico de doce por cuenta. Cada derecho incluye un cupo reservado y se coloca en terreno abierto libre, sin ampliar terreno ni gastar regalos VIP/expansión. Servidor calcula precios, registra derechos permanentes y valida colocación/relojes. Retiros y estudio económico no cambian. Despliegue compatible y activación autorizados expresamente por dirección tras revisión automática; las veinte cuentas existentes pasan auditoría de compatibilidad en memoria sin modificar sus datos. Ver NODOS-GOLDEN-20261103.md.
 
 ## Tienda compacta en Zona Negra — 03/11/2026
 
