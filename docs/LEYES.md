@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Tienda compacta en Zona Negra — 03/11/2026
+
+Dirección traslada que la Tienda estorba en Zona Negra. Renovado PC usa dos botones compactos, Tienda y Misiones, bajo el HUD real; el catálogo y el panel ilustrado de granja se conservan. Sin cambios de mecánicas, progreso o economía. Ver TIENDA-ZONA-NEGRA-20261103.md.
+
 ## Revisión de menús tras la transformación — 03/11/2026
 
 Dirección pide comprobar los menús y el estado de Discord. Se corrigen recortes de cantidad/cierre/signos en Mercado, marco indebido de subtítulos, contraste de Cocina y Viaje, Cancelar de la cola y barras horizontales de Viaje/Tablón. Renovado PC conserva controles, datos y reglas; Clásico/móvil y sistemas pausados permanecen. Auditoría local de 32 ventanas en cuatro resoluciones, más pruebas de estilos y renderers. Discord se verifica activo sin enviar mensajes ni vincular cuentas. Ver AUDITORIA-MENUS-20261103.md.
