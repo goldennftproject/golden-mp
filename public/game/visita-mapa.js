@@ -12,6 +12,7 @@ function imagen(key){
  return imagenes.get(key);
 }
 async function dibujar(g){
+ if(window.GoldenLighting){GoldenLighting.setEnabled(g.iluminacionSuave===true);GoldenLighting.setCycle(g.cicloVisual===true,false);}
  const m=g.mapa;GF.configurarEspacio(m.espacioV);GF.aplicarTerreno(g.expansiones);
  const terreno=GF.terreno(g.expansiones),T=GF.TILE,pad=3;
  const canvas=document.getElementById('lienzo'),ctx=canvas.getContext('2d');

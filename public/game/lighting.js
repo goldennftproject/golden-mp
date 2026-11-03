@@ -4,12 +4,36 @@
    brillo cambie al mover/zoomar la cámara. Texto, señales y terreno permanecen legibles. */
 (function(root){
   'use strict';
-  const PIPELINE='GoldenRelief', PREF='gf_relief_v1';
+  const PIPELINE='GoldenRelief', PREF='gf_relief_v1', CYCLE_PREF='gf_day_cycle_v1', CYCLE_MS=30*60*1000;
   const SUN=[-.43,.50,.75], AMBIENT=[.56,.58,.60], COLOR=[1,.97,.90], POWER=.58;
   const scenes=new Set(), attempted=new WeakSet(), queued=new WeakSet();
-  let enabled=true, compatible=true;
-  try{enabled=root.localStorage.getItem(PREF)!=='off';}catch(_){}
+  let enabled=true, compatible=true, cycleEnabled=true;
+  try{enabled=root.localStorage.getItem(PREF)!=='off';cycleEnabled=root.localStorage.getItem(CYCLE_PREF)!=='off';}catch(_){}
   const stats={maps:0,pixels:0,milliseconds:0,failures:0};
+  // Reloj puramente visual: 30 min, igual al recargar y sin escrituras de partida.
+  const cycleFrames=[
+    [0,[1,1,1],'Día'],[.40,[1,1,1],'Día'],
+    [.52,[1,.87,.72],'Atardecer'],[.60,[1,.87,.72],'Atardecer'],
+    [.72,[.62,.70,.86],'Noche'],[.86,[.62,.70,.86],'Noche'],
+    [.94,[.96,.87,.90],'Amanecer'],[1,[1,1,1],'Día']
+  ];
+  function cycleAt(time){
+    const phase=((Number.isFinite(time)?time:0)%CYCLE_MS+CYCLE_MS)%CYCLE_MS/CYCLE_MS;
+    let i=0;while(i<cycleFrames.length-2&&phase>=cycleFrames[i+1][0])i++;
+    const a=cycleFrames[i],b=cycleFrames[i+1],t=(phase-a[0])/(b[0]-a[0]),mix=t*t*(3-2*t);
+    return {phase,name:t<.5?a[2]:b[2],rgb:a[1].map((v,c)=>v+(b[1][c]-v)*mix)};
+  }
+  function renderCycle(){
+    if(!root.document)return;
+    const active=enabled&&compatible&&cycleEnabled, state=active?cycleAt(Date.now()):{name:'Día',rgb:[1,1,1]};
+    // Una sola capa sobre el mundo completo mantiene idéntico tono entre bosque cercano
+    // y mosaico lejano. No se vuelven a hornear texturas ni se tiñe el HUD HTML.
+    const world=root.document.getElementById('game')||root.document.getElementById('mapa');
+    if(world){world.style.setProperty('--gf-day-color','rgb('+state.rgb.map(v=>Math.round(v*255)).join(',')+')');world.style.setProperty('--gf-day-opacity',state.rgb.every(v=>v===1)?'0':'1');}
+    const b=root.document.getElementById('cfg-day-cycle');
+    if(b){b.disabled=!enabled||!compatible;b.textContent='Ciclo: '+(cycleEnabled?'Activado · '+state.name:'Día fijo');b.setAttribute('aria-pressed',String(active));}
+  }
+  function setCycle(on,persist=true){cycleEnabled=!!on;if(persist)try{root.localStorage.setItem(CYCLE_PREF,cycleEnabled?'on':'off');}catch(_){}renderCycle();}
   function normals(rgba,w,h){
     const n=w*h, stride=w+1, lum=new Float32Array((w+1)*(h+1)), weight=new Float32Array(lum.length), distance=new Float32Array(n);
     // Integral de luminancia ponderada: el transparente no genera un borde negro.
@@ -121,8 +145,8 @@
     }
   }
   function setEnabled(on){enabled=!!on;try{root.localStorage.setItem(PREF,enabled?'on':'off');}catch(_){}for(const scene of scenes)scene.children.list.forEach(tree);sync();}
-  function sync(){const b=root.document?.getElementById('cfg-relief');if(b){b.disabled=!compatible;b.textContent='Iluminación: '+(!compatible?'Original (compatibilidad)':enabled?'Suave':'Original');b.setAttribute('aria-pressed',String(enabled&&compatible));}}
-  const api={attach,exclude,setEnabled,isEnabled:()=>enabled&&compatible,normals,shadeImage,eligible,stats};
+  function sync(){const b=root.document?.getElementById('cfg-relief');if(b){b.disabled=!compatible;b.textContent='Iluminación: '+(!compatible?'Original (compatibilidad)':enabled?'Suave':'Original');b.setAttribute('aria-pressed',String(enabled&&compatible));}renderCycle();}
+  const api={attach,exclude,setEnabled,isEnabled:()=>enabled&&compatible,setCycle,isCycleEnabled:()=>cycleEnabled,cycleAt,CYCLE_MS,normals,shadeImage,eligible,stats};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
-  if(root.document){root.GoldenLighting=api;const b=root.document.getElementById('cfg-relief');if(b)b.addEventListener('click',()=>setEnabled(!enabled));sync();}
+  if(root.document){root.GoldenLighting=api;const b=root.document.getElementById('cfg-relief');if(b)b.addEventListener('click',()=>setEnabled(!enabled));sync();const cycleButton=root.document.getElementById('cfg-day-cycle');if(cycleButton)cycleButton.addEventListener('click',()=>setCycle(!cycleEnabled));root.setInterval(renderCycle,1000);root.document.addEventListener('visibilitychange',renderCycle);}
 })(typeof window==='undefined'?globalThis:window);

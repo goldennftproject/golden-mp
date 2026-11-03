@@ -27,6 +27,8 @@
   }
   #game{position:fixed;inset:0}
   #game canvas{display:block}
+  #game{isolation:isolate}
+  #game::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:var(--gf-day-color,#fff);opacity:var(--gf-day-opacity,0);mix-blend-mode:multiply;transition:background-color 1.1s linear,opacity 1.1s linear}
 
   /* HUD superior */
   .brand h1:has(.gf-logo){position:relative;width:180px;height:50px;overflow:hidden;flex:none}
@@ -1978,7 +1980,7 @@
   <div class="ov" id="ov-config"><div class="card" style="width:min(480px,94%)">
     <button class="close" data-close="ov-config" aria-label="Cerrar ventana">×</button>
     <h3>Configuración</h3>
-    <div class="cfgsec"><h4>Aspecto</h4><button class="ghost sm" id="cfg-relief" aria-pressed="true">Iluminación: Suave</button></div>
+    <div class="cfgsec"><h4>Aspecto</h4><button class="ghost sm" id="cfg-relief" aria-pressed="true">Iluminación: Suave</button> <button class="ghost sm" id="cfg-day-cycle" aria-pressed="true" title="Ciclo visual de 30 minutos. No cambia los tiempos ni la producción.">Ciclo: Activado</button></div>
     <div id="cfg-equipo" style="display:none"><a href="/equipo/" target="_blank" rel="noopener noreferrer">🛡 Panel del equipo</a></div>
     <div class="cfgsec">
       <h4>Alfa de pruebas</h4>

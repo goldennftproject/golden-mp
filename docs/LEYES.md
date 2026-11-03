@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Ciclo visual de día y noche — 03/11/2026
+
+Dirección autoriza «Ahora sí el ciclo». Ciclo inicial de 30 minutos por reloj, con día, atardecer, noche clara y amanecer, interpolados suavemente. Una capa uniforme sobre el mundo evita diferencias entre los dos fondos del bosque; el HUD HTML permanece intacto. Configuración → Aspecto permite Día fijo; Original también desactiva la atmósfera. Preferencias locales, sin escrituras de partida ni cambios de energía, crecimiento, producción, economía o combate. Las visitas comparten fase y preferencia visual. Sin luces nuevas en ventanas ni sombras proyectadas. Ver CICLO-DIA-NOCHE-20261103.md.
+
 ## Iluminación suave reversible — 03/11/2026
 
 Dirección autoriza probar en el juego la iluminación sugerida tras ver una simulación. Granja y Bosque usan normales aproximadas por textura y luz direccional cálida, conservando fuentes, siluetas, animaciones y tintes. Las visitas reproducen el mismo modelo en su canvas aislado; no reciben información privada adicional. Configuración → Aspecto permite Suave / Original, preferencia local sin tocar el guardado. HUD, textos, señales, portales luminosos y terreno/fondos ya compuestos conservan su lectura. Canvas o fallo de inicialización conserva el aspecto original. No se incorpora aún ciclo día/noche, luces puntuales, sombras proyectadas ni cambios de economía. Ver ILUMINACION-SUAVE-20261103.md.
