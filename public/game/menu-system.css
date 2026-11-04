@@ -1,0 +1,126 @@
+/* Componentes de contenido: Renovado PC. Clásico y la geometría del HUD no cambian. */
+@media (min-width:900px){
+ .visual-v2{
+  --menu-space-xs:4px;--menu-space-sm:8px;--menu-space-md:12px;--menu-space-lg:16px;
+  --menu-paper:#f7e8c9;--menu-paper-soft:#efdfbd;--menu-line:#c6a46d;
+  --menu-ink:#44301b;--menu-ink-soft:#695034;--menu-selected:#e4efd0;--menu-selected-line:#738e46;
+  --menu-radius:4px;--menu-action-height:34px;
+ }
+ /* Las listas ya están dentro del pergamino de la ventana: no llevan otra tabla de madera. */
+ .visual-v2 .ov>.card .forge-list,.visual-v2 .ov>.card .skgrid,
+ .visual-v2 .ov>.card .mkt-list,.visual-v2 .ov>.card .lblist{
+  background:transparent;background-image:none;border:0;border-image:none;border-radius:0;
+  padding:2px;gap:var(--menu-space-md);box-shadow:none;image-rendering:auto;
+  scrollbar-width:thin;scrollbar-color:#ad8954 #efdfbd;
+ }
+ /* El marco de la bolsa cambia; las celdas conservan rareza, selección, equipo y contenido. */
+ .visual-v2 #ov-inv .slots,.visual-v2 #ov-cobertizo .slots,.visual-v2 #ov-cofre .slots{
+  background:var(--menu-paper-soft);background-image:none;border:1px solid var(--menu-line);
+  border-image:none;border-radius:var(--menu-radius);padding:var(--menu-space-sm);box-shadow:none;
+ }
+ .visual-v2 .ov>.card .cfgsec{
+  background:var(--menu-paper);background-image:none;border:1px solid var(--menu-line);
+  border-image:none;border-radius:var(--menu-radius);padding:var(--menu-space-md);
+  margin-top:var(--menu-space-md);box-shadow:inset 0 1px #fff7e3;
+ }
+ .visual-v2 .ov>.card .cfgsec>h4{margin:0 0 var(--menu-space-sm)}
+ .visual-v2 .ov>.card .cfgsec>p{margin:var(--menu-space-sm) 0}
+ .visual-v2 .ov>.card .cfgsec>h4+p{margin-top:0}
+ .visual-v2 .ov>.card .cfgsec>.menu-actions+a{display:inline-block;margin-top:var(--menu-space-sm)}
+ /* Secciones del mismo nivel: tinta sobre pergamino, no pequeñas cabeceras de ventana. */
+ .visual-v2 .ov>.card .secc,.visual-v2 .ov>.card .eqh{
+  background:transparent;background-image:none;border:0;border-bottom:1px solid var(--menu-line);
+  border-image:none;border-radius:0;padding:var(--menu-space-sm) 1px;
+  margin:var(--menu-space-lg) 0 var(--menu-space-xs);box-shadow:none;
+  color:var(--menu-ink)!important;text-shadow:none!important;text-align:left;
+  font:800 14px/1.35 "Segoe UI",system-ui,sans-serif;letter-spacing:.025em;image-rendering:auto;
+ }
+ .visual-v2 .ov>.card .secc:first-child,.visual-v2 .ov>.card .eqh:first-child{margin-top:0}
+ .visual-v2 .ov>.card .secc .fds{color:var(--menu-ink-soft)!important;text-shadow:none!important}
+ /* Filas compartidas. El catálogo de semillas conserva su composición ilustrada propia. */
+ .visual-v2 .ov>.card .forge-row,.visual-v2 .ov>.card .skrow,
+ .visual-v2 .ov>.card .lbrow,.visual-v2 .ov>.card .mkt-row:not(.ref-seed-row){
+  background:var(--menu-paper);border:1px solid var(--menu-line);border-image:none;
+  border-radius:var(--menu-radius);padding:var(--menu-space-md);margin-bottom:var(--menu-space-sm);
+  gap:var(--menu-space-md);box-shadow:inset 0 1px #fff7e3;color:var(--menu-ink);text-shadow:none;
+ }
+ .visual-v2 .ov>.card .forge-list>.forge-row,.visual-v2 .ov>.card .skgrid>.skrow,
+ .visual-v2 .ov>.card .lblist>.lbrow,.visual-v2 .ov>.card .mkt-list>.mkt-row:not(.ref-seed-row){margin-bottom:0}
+ .visual-v2 .ov>.card .forge-row .fic,
+ .visual-v2 .ov>.card .mkt-row:not(.ref-seed-row) .mimg{
+  background:var(--menu-paper-soft);border:1px solid var(--menu-line);border-image:none;
+  border-radius:var(--menu-radius);box-shadow:inset 0 1px #fff7e3;
+ }
+ .visual-v2 .ov>.card .forge-row .finfo,.visual-v2 .ov>.card .mkt-row .minfo{min-width:0;line-height:1.45}
+ .visual-v2 .ov>.card .forge-row .fds,.visual-v2 .ov>.card .mkt-row:not(.ref-seed-row) .mds{
+  font-size:13px;line-height:1.45;color:var(--menu-ink-soft);text-shadow:none;
+ }
+ .visual-v2 .ov>.card .forge-row.eq,.visual-v2 .ov>.card .lbrow.me{
+  background:var(--menu-selected);border-color:var(--menu-selected-line);
+  box-shadow:inset 3px 0 #6f8b43,inset 0 1px #f8ffec;
+ }
+ .visual-v2 .ov>.card .forge-row .fds.vip{color:#7a5606}
+ .visual-v2 .ov>.card .forge-row .fds.free,.visual-v2 .ov>.card .forge-row .fds.obj-next{color:#33591f}
+ .visual-v2 .ov>.card .forge-row .fds.obj-weekly{font-size:14px;color:#5b420f;font-weight:800}
+ /* Grupos explícitos: no se impone flex a todas las filas ni a controles de cantidad. */
+ .visual-v2 .ov>.card .menu-actions{
+  display:flex;flex-wrap:wrap;align-items:center;gap:var(--menu-space-sm);
+  margin-top:var(--menu-space-sm);min-width:0;
+ }
+ .visual-v2 .ov>.card .menu-actions>button{min-height:var(--menu-action-height);margin:0}
+ .visual-v2 .ov>.card .forge-row .fbtns{
+  gap:var(--menu-space-sm);align-items:stretch;max-width:46%;min-width:0;
+ }
+ .visual-v2 .ov>.card .forge-row .fbtns>button{
+  min-height:var(--menu-action-height);white-space:normal;overflow-wrap:normal;line-height:1.25;
+ }
+ .visual-v2 .ov>.card .forge-row .fbtns>.fds{max-width:220px}
+ .visual-v2 .ov>.card .objeto-acciones{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--menu-space-sm);
+ }
+ .visual-v2 .ov>.card .objeto-acciones>button{min-height:var(--menu-action-height)}
+ /* La acción primaria prevalece sobre el marco de madera genérico de reference-skin.
+    Las exclusiones conservan pestañas, cantidad, variantes semánticas y disabled. */
+ .visual-v2 .ov>.card button.green:not(.ghost):not(.red):not(.gold):not(.shoptab):not(.ref-step):not(:disabled){
+  background:#3f6125;border:5px solid #3f6125;border-image:var(--ref-green) 32 fill / 5px / 0 stretch;
+  border-radius:0;color:#fff5da;text-shadow:0 1px #273d18;box-shadow:0 2px #263519;
+ }
+ .visual-v2 .ov>.card .ayuda-menu{
+  border-color:var(--menu-line);border-radius:var(--menu-radius);color:var(--menu-ink);
+ }
+ .visual-v2 .ov>.card .ayuda-menu[open]{background:var(--menu-paper-soft);border-color:var(--menu-line)}
+ /* Navegación y selector de moneda comparten los colores del contenido. */
+ .visual-v2 #gmenu .menu-seccion{
+  background:transparent;background-image:none;border:0;border-bottom:1px solid var(--menu-line);
+  color:var(--menu-ink-soft);text-shadow:none;margin-top:var(--menu-space-sm);
+  padding:var(--menu-space-sm) var(--menu-space-xs) var(--menu-space-xs);font-weight:800;
+ }
+ .visual-v2 #gmenu .menu-seccion:first-child{margin-top:0}
+ .visual-v2 #gmenu .menu-icon{
+  background:var(--menu-paper-soft);border-color:var(--menu-line);color:#765329;border-radius:var(--menu-radius);
+ }
+ .visual-v2 #gmenu .gmi:focus-visible{background:#e4efd0;outline:2px solid #6f8b43;outline-offset:-2px}
+ .visual-v2 #gmenu .gmi.destacada{background:#f2dfac;border-color:#ad863e}
+ .visual-v2 #gmenu #gm-fijar[aria-pressed="true"] .menu-icon{background:#d9e7b9;color:#3c5725;border-color:#78914b}
+ .visual-v2 .ov>.card .curbtn{
+  background:#ead8b3!important;background-image:none!important;border:1px solid #b3935e!important;
+  border-image:none!important;border-radius:var(--menu-radius);color:#553c24!important;
+  text-shadow:none!important;filter:none;box-shadow:inset 0 1px #fff5d9!important;
+  padding:6px 10px;min-height:var(--menu-action-height);
+ }
+ .visual-v2 .ov>.card .curbtn.active,.visual-v2 .ov>.card .curbtn.active:hover{
+  background:#58783a!important;color:#fff4d3!important;border-color:#3f5929!important;box-shadow:inset 0 1px #9cb776!important;
+ }
+ .visual-v2 .ov>.card .curbtn:hover:not(.active){filter:brightness(1.05)}
+ .visual-v2 .ov>.card .lbtab.active::after{display:none}
+ /* Mejoras tiene descripciones extensas dentro del mercado lateral. Las acciones van debajo. */
+ .visual-v2 #ov-market.reference-market #nft-shop>.forge-row,
+ .visual-v2 #ov-market.reference-market #deco-shop>.forge-row{flex-wrap:wrap}
+ .visual-v2 #ov-market.reference-market #nft-shop>.forge-row>.finfo,
+ .visual-v2 #ov-market.reference-market #deco-shop>.forge-row>.finfo{flex:1 1 180px}
+ .visual-v2 #ov-market.reference-market #nft-shop>.forge-row>.fbtns,
+ .visual-v2 #ov-market.reference-market #deco-shop>.forge-row>.fbtns{
+  flex:1 1 100%;max-width:none;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;align-items:center;
+ }
+ .visual-v2 #ov-market.reference-market #nft-shop>.forge-row>.fbtns>.fds{flex:1 1 100%;max-width:none;text-align:right}
+}

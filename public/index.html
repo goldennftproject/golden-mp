@@ -1615,6 +1615,7 @@
 <link rel="stylesheet" href="game/reference-market.css?v=6">
 <link rel="stylesheet" href="game/reference-camera-ui.css?v=4">
 <link rel="stylesheet" href="game/news.css?v=1">
+<link rel="stylesheet" href="game/menu-system.css?v=1">
 </head>
 <body>
   <div id="game"></div>
@@ -1986,7 +1987,7 @@
   <div class="ov" id="ov-config"><div class="card" style="width:min(480px,94%)">
     <button class="close" data-close="ov-config" aria-label="Cerrar ventana">×</button>
     <h3>Configuración</h3>
-    <div class="cfgsec"><h4>Aspecto</h4><button class="ghost sm" id="cfg-visual-v2" aria-pressed="true" title="Alterna gráficos e interfaz, sin cambiar la partida.">Aspecto: Renovado</button> <button class="ghost sm" id="cfg-relief" aria-pressed="true">Iluminación: Suave</button> <button class="ghost sm" id="cfg-day-cycle" aria-pressed="true" title="Ciclo visual de 30 minutos. No cambia los tiempos ni la producción.">Ciclo: Activado</button></div>
+    <div class="cfgsec"><h4>Aspecto</h4><div class="menu-actions" role="group" aria-label="Opciones de aspecto"><button class="ghost sm" id="cfg-visual-v2" aria-pressed="true" title="Alterna gráficos e interfaz, sin cambiar la partida.">Aspecto: Renovado</button> <button class="ghost sm" id="cfg-relief" aria-pressed="true">Iluminación: Suave</button> <button class="ghost sm" id="cfg-day-cycle" aria-pressed="true" title="Ciclo visual de 30 minutos. No cambia los tiempos ni la producción.">Ciclo: Activado</button></div></div>
     <div id="cfg-equipo" style="display:none"><a href="/equipo/" target="_blank" rel="noopener noreferrer">🛡 Panel del equipo</a></div>
     <div class="cfgsec">
       <h4>Alfa de pruebas</h4>
@@ -2000,8 +2001,10 @@
     <div class="cfgsec" id="cfg-discord">
       <h4>Discord</h4>
       <p>Autoriza tu perfil de Discord y vuelve al juego. Tu granja conserva su cuenta y progreso.</p>
-      <button class="green sm" id="cfg-discord-create">Vincular Discord</button>
-      <button class="ghost sm" id="cfg-discord-state">Actualizar estado</button>
+      <div class="menu-actions" role="group" aria-label="Vinculación de Discord">
+        <button class="green sm" id="cfg-discord-create">Vincular Discord</button>
+        <button class="ghost sm" id="cfg-discord-state">Actualizar estado</button>
+      </div>
       <a id="cfg-discord-invite" href="https://discord.gg/fQZn9Bsvkd" target="_blank" rel="noopener noreferrer">Comunidad de Golden Farm</a>
       <p id="cfg-discord-status" role="status">Sin consultar.</p>
     </div>
@@ -2053,7 +2056,7 @@
     <div class="cfgsec">
       <h4>Editar granja</h4>
       <p>Mueve los objetos para reorganizar tu granja. Restablecer distribución recupera sus posiciones originales.</p>
-      <div class="row"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restablecer distribución</button></div>
+      <div class="row menu-actions"><button class="green" id="cfg-edit">Modo edición</button><button class="ghost sm" id="cfg-reset">Restablecer distribución</button></div>
     </div>
   </div></div>
 

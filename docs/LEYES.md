@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Componentes visuales comunes de los menús — 04/11/2026
+
+Dirección pide «que todos los menús respeten esas claves», incluyendo las tablas antiguas dentro de Mejoras y los botones demasiado juntos. Renovado de PC comparte superficies de pergamino, títulos de sección, tarjetas y separación de acciones mediante `game/menu-system.css`. Se conservan los controles existentes, sus estados y eventos, las ilustraciones aprobadas, el aspecto Clásico y la versión móvil. Esta revisión es visual: no cambia precios, producción, tiempos, energía, progreso ni guardado. Los criterios y excepciones están en `MENU-VISUAL-SYSTEM.md`.
+
 ## Incursión de prueba Free y Discord directo — 04/11/2026
 
 Dirección aclara mediante el mensaje del diseñador: «Coloca que solo se pueda hacer incursión de un click siendo free solo para completar tutorial y ya está. Queda demás vip». Sustituye la opción intermedia de restaurar tres salidas Free: una prueba única en Zona Negra I durante el paso de tutorial confirmado, con marca preservada por el servidor; el resto de incursiones automáticas sigue siendo VIP, hasta tres por día UTC. Se conservan el combate manual Free, las incursiones activas y el progreso.
