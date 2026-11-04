@@ -24,7 +24,7 @@ const G = {
   cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
   establoV: 1,                   // 11/9: el animal que no come no da (0/ausente = guardado del rinde con decimales, se migra una vez)
   triesV: 1,                     // 11/9: las armas suben por INTENTOS (Tibia); 0/ausente = guardado viejo con XP, se migra una vez
-  incursion: null, incDia: null, dummyTrain: null,   // incursiones de un clic y entrenamiento offline   // tareas de nivel 11-50, mejoras y cosméticos
+  incursion: null, incDia: null, incursionTutorialUsada: false, dummyTrain: null,   // prueba única del tutorial e incursiones VIP
   vales: 0, pedidos: null,   // 16/8: TABLÓN DE PEDIDOS — vales (moneda del tablón) + estado diario
   /* DOS BOLSAS, NO UNA (18/8) — el fallo que reportó dirección: "aparece que me dan un nodo de
      árbol y uno de cultivo, al reclamarlos suena el ruidito, pero no son entregados".
@@ -3427,7 +3427,7 @@ const TUTO_STEPS = [
      de un clic (tres por día, para el que no quiere jugar la Zona a mano) y el que confirmaba
      « Preparar el viaje » la primera vez no se enteraba nunca de que existía. Se presenta acá,
      ya con la Zona conocida, para que el jugador sepa que hay dos formas de ir. */
-  { id: "incursion", n: 1, txt: "Envía una incursión de un clic desde el portal (tienes 3 por día)", target: "portal" },
+  { id: "incursion", n: 1, txt: "Envía tu incursión de prueba desde el portal (Sin VIP: una para el tutorial; VIP: 3 al día)", target: "portal" },
   /* ======= EL CAMINO DE CRECIMIENTO, QUE ERA EL ÚNICO QUE NO SE ENSEÑABA (19/8, dirección) =======
      Desde el rediseño, las EXPANSIONES son la única fuente de nodos: no hay otra forma de tener una
      parcela, un árbol o una roca más. Y la cadena tiene tres eslabones que el jugador tenía que
@@ -4455,7 +4455,7 @@ async function marketCobrar(fila) {
 // Mandás al granjero a una zona, tarda tiempo REAL (como las ollas de la Cocina) y vuelve con botín y XP.
 // Gasta durabilidad del arma y estamina. Rinde menos que pelear a mano: el que juega, gana más.
 var INC_RENDIMIENTO = 0.7;    // 70% de lo que rendiría esa misma media hora peleando
-var INC_CUPO_DIA = 3;         // incursiones por día (0 = sin tope)
+var INC_CUPO_DIA = 3;         // VIP: tres incursiones por día UTC. Sin VIP: sólo la prueba del tutorial.
 /* 23/9 (diseñador, con captura): « pasar al 2.º cuarto de Zona Negra pide nivel 10; no tiene
    sentido que por tener una espada de hierro pueda ir a la zona 2 siendo nivel 6. Ponle que en
    la incursión de un clic deba tener nivel 10, lo mismo para las otras: que se respete el nivel ».
@@ -4486,8 +4486,12 @@ function incCupoHoy() {
 }
 function incActiva() { return G.incursion || null; }
 function incFalta() { const i = incActiva(); return i ? Math.max(0, i.endAt - nowMs()) : 0; }
+function incursionDisponiblePorTutorial(zona = "zn1") {
+  const st = typeof tutoActivo === "function" ? tutoActivo() : null;
+  return !!(zona === "zn1" && st && st.id === "incursion" && !G.incursionTutorialUsada && !incActiva() && statGet("incursion") === 0);
+}
 function incSalir(zona) {
-  if(!vipVigente()){toast('La excursión de un clic requiere VIP. Puedes entrar a la Zona Negra a pie.');return;}
+  if(!vipVigente()&&!incursionDisponiblePorTutorial(zona)){toast('Las excursiones de un clic requieren VIP, salvo la prueba única del tutorial en Zona Negra I. Puedes entrar a la Zona Negra a pie.');return;}
   const z = INCURSIONES[zona]; if (!z) return;
   if (incActiva()) { toast("Ya hay una incursión en curso"); return; }
   /* 26/9: si el granjero está EN la Zona a pie, tampoco sale de incursión (la puerta al revés) */
@@ -4502,6 +4506,7 @@ function incSalir(zona) {
   if (poder <= 0) { toast("Tu arma no sirve para pelear"); return; }
   const ms = z.min * 60000;
   G.incursion = { zona, endAt: nowMs() + ms, total: ms, poder, arma: id };
+  if (!vipVigente()) G.incursionTutorialUsada = true;
   cupo.n++;
   if (typeof statAdd === "function") statAdd("incursion", "_", 1);   // 19/9: deja rastro (el paso del tutorial lo lee)
   if (typeof tutoEvent === "function") tutoEvent("incursion");

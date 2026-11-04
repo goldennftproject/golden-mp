@@ -651,6 +651,7 @@ function snapshot() {
     cont: G.cont,             /* 8/9 t: el árbol que llevás puesto — se pierde al morir, no al recargar */
     tumba: G.tumba,           /* 8/9: tu cuerpo en la zona — sus 10 min son de reloj real */
     modoPelea: G.modoPelea,   /* 8/9: perseguir o parado — es preferencia, no estado del viaje */
+    incursionTutorialUsada: G.incursionTutorialUsada === true,
     stats: G.stats, statsBase: G.statsBase, actividadGranja:G.actividadGranja, actividadAcciones:G.actividadAcciones, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorDur: G.armorDur, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, lombDia: G.lombDia, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
     armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons,
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
@@ -926,6 +927,7 @@ function hydrate(d) {
   G.nodoUsos = (d.nodoUsos && typeof d.nodoUsos === "object") ? d.nodoUsos : {};
   G.cosEq = (d.cosEq && typeof d.cosEq === "object") ? d.cosEq : null;
   G.incursion = (d.incursion && d.incursion.endAt) ? d.incursion : null;
+  G.incursionTutorialUsada = d.incursionTutorialUsada === true;
   G.incDia = (d.incDia && typeof d.incDia === "object") ? d.incDia : null;
   G.dummyTrain = (d.dummyTrain && d.dummyTrain.desde) ? d.dummyTrain : null;
   G.stam = (typeof d.stam === "number") ? d.stam : null;   // null = arranca llena
@@ -1579,6 +1581,17 @@ function avisarSinNube() {
   if (typeof toast === "function") toast(m.corto);
 }
 
+async function incursionSincronizarTutorial(zona) {
+  if(vipVigente())return true;
+  const uid=UID,antes=SAVE_CONFIRMACIONES.get(uid)||0;
+  if(!uid||!CARGA_OK||SOLO_LOCAL||!incursionDisponiblePorTutorial(zona)){toast('La prueba de incursión sólo está disponible durante el tutorial.');return false;}
+  await saveFarm(true);
+  if(UID!==uid||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(uid)||!SAVE_BASES.get(uid)||(SAVE_CONFIRMACIONES.get(uid)||0)<=antes||!incursionDisponiblePorTutorial(zona)){
+    if(UID===uid)toast('No se pudo confirmar el paso del tutorial. Guarda y vuelve a intentarlo.');
+    return false;
+  }
+  return true;
+}
 function saveFarm(force) {
   if (MERCADO_EN_CURSO) {
     if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
@@ -1635,7 +1648,7 @@ async function saveFarmReal(force) {
       // RLS ya impide el upsert directo. Un ACK necesita la versión real del servidor.
         const { data: r, error: fe } = await alfaInvocarGuardado(cuerpo);
         if(UID!==saveUid)return;
-        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { const sinCambiosEnVuelo=snapKey()===key; actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(sinCambiosEnVuelo)claveConfirmada=snapKey(); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); if(!USDT_OCUPADO)USDT_REINTENTO_AT=0; usdtProgramarPendiente(); }
+        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { const sinCambiosEnVuelo=snapKey()===key; actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(r.incursionTutorialUsada===true)G.incursionTutorialUsada=true; if(sinCambiosEnVuelo)claveConfirmada=snapKey(); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); if(!USDT_OCUPADO)USDT_REINTENTO_AT=0; usdtProgramarPendiente(); }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el

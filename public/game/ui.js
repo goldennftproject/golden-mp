@@ -7161,12 +7161,13 @@ function refreshOfrendas() {
 }
 
 /* ---- Incursiones: combate de un clic ---- */
+var INC_SALIDA_EN_CURSO=false;
 function refreshIncursion() {
   const box = $("inc-list"); if (!box) return;
   const vip=vipVigente();
   const inc = incActiva(), cupo = incCupoHoy(), poder = incPoder();
   const sinCupo = !!(INC_CUPO_DIA && cupo.n >= INC_CUPO_DIA);   // el cupo también bloquea el botón (10/8)
-  let h = '<p class="sub">Zona Negra a pie: Sin VIP y VIP. Excursiones de un clic: sólo VIP. Una excursión iniciada se conserva aunque venza el VIP.</p><div class="info">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitas un arma equipada') +
+  let h = '<p class="sub">Combate a pie para todos. Free: una incursión de prueba en el tutorial. VIP: hasta 3 incursiones al día.</p><div class="info">Tu poder de combate: <b>' + poder + '</b>' + (poder ? '' : ' — necesitas un arma equipada') +
     ' · incursiones de hoy: ' + cupo.n + '/' + (INC_CUPO_DIA || "sin tope") + '</div>';
   if (inc) {
     const z = INCURSIONES[inc.zona], left = incFalta(), pct = Math.round((1 - left / (inc.total || 1)) * 100);
@@ -7176,6 +7177,7 @@ function refreshIncursion() {
   }
   INC_ORDER.forEach(k => {
     const z = INCURSIONES[k];
+    const prueba=!vip&&incursionDisponiblePorTutorial(k),acceso=vip||prueba;
     const listo = poder >= z.poderRec, flojo = poder < z.poderRec * 0.5;
     /* 23/9: el nivel del cuarto manda, como a pie. Sin nivel la fila lo dice y el botón no sale. */
     const nivelOk = (typeof incPuedeNivel === "function") ? incPuedeNivel(k) : true;
@@ -7192,7 +7194,7 @@ function refreshIncursion() {
                         : ' — vas justo: volverías herido y con menos botín')) + '</div></div>' +
       // el cupo diario también bloquea el botón: antes salía verde y incSalir rebotaba con un
       // toast, aunque la misma ventana mostraba "incursiones de hoy: n/N" (10/8)
-      '<div class="fbtns"><button class="green sm" ' + (!vip || inc || !poder || sinCupo || !nivelOk ? "disabled" : "") + ' data-inc="' + k + '">' + (!vip ? 'Sólo VIP' : nivelOk ? "Salir" : "Nivel " + nivelReq) + '</button></div></div>';
+      '<div class="fbtns"><button class="green sm" ' + (!acceso || inc || !poder || sinCupo || !nivelOk || INC_SALIDA_EN_CURSO ? "disabled" : "") + ' data-inc="' + k + '">' + (!acceso ? 'Sólo VIP' : !nivelOk ? "Nivel " + nivelReq : prueba ? 'Prueba del tutorial' : "Salir") + '</button></div></div>';
   });
   h += '<div class="info">Al Dragón de las Cavernas hay que ir a pelearlo en persona: no se puede por incursión.</div>';
   if (G.incResumen) h += '<button class="ghost sm" id="inc-ultimo-resumen">Ver última excursión</button>';
@@ -7201,7 +7203,13 @@ function refreshIncursion() {
   box.querySelectorAll("[data-inc]").forEach(b => b.onclick = () => {
     const k = b.dataset.inc, z = INCURSIONES[k];
     askConfirm("Mandar al granjero a " + z.label + " por " + fmtSecs(z.min * 60) + ". Gasta durabilidad del arma y estamina. ¿Salir?",
-      () => { incSalir(k); refreshIncursion(); },
+      async () => {
+        if(INC_SALIDA_EN_CURSO)return;
+        INC_SALIDA_EN_CURSO=true;b.disabled=true;
+        try{if(!vipVigente()&&!await incursionSincronizarTutorial(k))return;incSalir(k);}
+        catch{toast('No se pudo confirmar la salida. Guarda y vuelve a intentarlo.');}
+        finally{INC_SALIDA_EN_CURSO=false;refreshIncursion();}
+      },
       { title: "Incursión a " + z.label, yes: "Salir", yesClass: "green", no: "Cancelar", noClass: "red" });
   });
 }

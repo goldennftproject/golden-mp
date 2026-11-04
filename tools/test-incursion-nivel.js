@@ -8,7 +8,7 @@
 const fs = require("fs"), vm = require("vm"), path = require("path");
 const RAIZ = path.join(__dirname, "..");
 const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Date, JSON, Object, Array, Number, String, Boolean, Set, Map,
-  isNaN, isFinite, parseInt, parseFloat, performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval() {} };
+  isNaN, isFinite, parseInt, parseFloat, URLSearchParams, location: { hash: "", search: "" }, performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval() {} };
 ctx.window = ctx; ctx.globalThis = ctx;
 ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };

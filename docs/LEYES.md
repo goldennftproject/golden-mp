@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Incursión de prueba Free — 04/11/2026
+
+Dirección aclara: «Coloca que solo se pueda hacer incursión de un click siendo free solo para completar tutorial y ya está. Queda demás vip». Una prueba única en Zona Negra I durante el paso confirmado; después, incursiones automáticas VIP con máximo tres por día UTC. Se conserva combate manual, partidas y salidas activas. Ver INCURSION-TUTORIAL-20261104.md.
+
 ## Objetivos de madera después del reinicio — 03/11/2026
 
 Dirección pide corregir el reporte de Not, revisar las demás cuentas y recuperar sólo las talas posteriores al último reinicio. Objetivos se repinta al recibir el guardado confirmado; Guardar V8 reconoce fabricar, talar y gastar madera en el mismo intervalo con testigos de nodo, reloj, XP, herramientas y energía. Se preservan relojes conocidos y los cobros manuales/idempotentes. La recuperación acumulativa contrasta cuatro fuentes y la campaña, utiliza respaldo mínimo cifrado y omite versiones concurrentes. No atribuye actividad sin fecha a misiones diarias ni cambia recursos, premios cobrados o saldos. Ver OBJETIVOS-MADERA-20261103.md.

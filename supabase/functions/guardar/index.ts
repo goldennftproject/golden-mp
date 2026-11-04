@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 8;        // Tala: evidencia física aunque la madera se consuma antes del guardado.
+const VERSION = 9;        // 04/11: una incursión de prueba Sin VIP en el tutorial; conserva la evidencia de tala V8.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -633,7 +633,31 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   const prestigioInfra=next.prestige===num(antes.prestige)+1&&next.level===1;
   if(!Number.isFinite(extra)||(prestigioInfra?extra!==0:extra<extraAntes||extra>extraAntes+ganadaInfra*bonoInfra+1e-5))errores.push('XP extra de infraestructura inválida');
   next.farmXpEdificios=extra;
-  if(next.incursion&&!mismoJSON(antes.incursion,next.incursion)&&num(antes.produccion?.vipHasta)<=ahora)errores.push('Las excursiones nuevas requieren VIP activo');
+  // La prueba Sin VIP se reconoce contra el tutorial YA aceptado, nunca contra un
+  // salto de paso en el propio envío. La marca sólo la escribe y conserva el servidor.
+  const tutorialIncursionPaso=25;
+  const incursionAnterior=Math.max(0,num(antes.stats?.incursion?._));
+  const pruebaIncursionUsada=antes.incursionTutorialUsada===true || incursionAnterior>0 || !!antes.incursion ||
+    antes.tuto?.done===true || num(antes.tuto?.step)>tutorialIncursionPaso;
+  const nuevaIncursion=!!next.incursion&&!mismoJSON(antes.incursion,next.incursion);
+  const pruebaIncursionPendiente=!pruebaIncursionUsada && !antes.incursion &&
+    antes.tuto?.done===false && antes.tuto?.step===tutorialIncursionPaso;
+  const pruebaIncursionAvanza=next.tuto?.step>tutorialIncursionPaso &&
+    num(next.stats?.incursion?._)===1 && next.incursion?.zona==='zn1';
+  const usaPruebaIncursion=nuevaIncursion && num(antes.produccion?.vipHasta)<=ahora &&
+    pruebaIncursionPendiente && pruebaIncursionAvanza;
+  if(nuevaIncursion && num(antes.produccion?.vipHasta)<=ahora && !usaPruebaIncursion)
+    errores.push('Las excursiones nuevas requieren VIP, salvo la prueba única del tutorial');
+  next.incursionTutorialUsada=pruebaIncursionUsada || usaPruebaIncursion;
+  // Contar salidas contra la fila aceptada impide reiniciar el cupo en un snapshot.
+  // Conservar una incursión idéntica no vuelve a gastar un uso (reintentos/recarga).
+  const diaIncursion=new Date(ahora).toISOString().slice(0,10);
+  const nIncursion=antes.incDia?.date===diaIncursion ? Math.max(0,Math.floor(num(antes.incDia?.n))) : 0;
+  if(nuevaIncursion && nIncursion>=3)errores.push('Ya hiciste las 3 incursiones de hoy');
+  if(nuevaIncursion && antes.incursion && num(antes.incursion.endAt)>ahora)
+    errores.push('Ya hay una incursión en curso');
+  if(antes.incDia || next.incDia || nuevaIncursion)
+    next.incDia={date:diaIncursion,n:nIncursion+(nuevaIncursion?1:0)};
   if(!mismoJSON(antes.artefactos||null,next.artefactos||null))errores.push('Los objetos productores sólo se modifican en el servidor');
   if(!mismoJSON(antes.infraestructura||null,next.infraestructura||null))errores.push('La infraestructura sólo se mejora en el servidor');
   if(!mismoJSON(antes.mejorasPasivas||null,next.mejorasPasivas||null))errores.push('Las mejoras de pasivas sólo se compran en el servidor');
@@ -1033,7 +1057,7 @@ Deno.serve(async (req) => {
     if (Number(prevRow?.data?.reinicio || 0) > Number(data.reinicio || 0)) return json({ error: "La cuenta se reinició. Recargá para comenzar de cero.", conflicto: true }, 409);
     const op = body?.op;
     if (op != null && (typeof op !== "string" || !/^[a-zA-Z0-9._-]{8,100}$/.test(op))) return json({ error: "Identificador de operación inválido" }, 400);
-    if (op && prevRow?.data?._saveOp === op) return json({ ok: true, repetido: true, updated_at: prevRow.updated_at, actividadGranja:prevRow.data.actividadGranja,logrosV2:prevRow.data.logrosV2 });
+    if (op && prevRow?.data?._saveOp === op) return json({ ok: true, repetido: true, updated_at: prevRow.updated_at, actividadGranja:prevRow.data.actividadGranja,logrosV2:prevRow.data.logrosV2,incursionTutorialUsada:prevRow.data.incursionTutorialUsada===true });
     if (Object.prototype.hasOwnProperty.call(body, "base") && body.base !== (prevRow?.updated_at ?? null)) return json({ error: "Otra sesión guardó una versión diferente", conflicto: true }, 409);
     const ahora = new Date(Math.max(Date.now(), prevRow?.updated_at ? new Date(prevRow.updated_at).getTime() + 1 : 0));
     const elapsedSeg = prevRow?.updated_at ? (ahora.getTime() - new Date(prevRow.updated_at).getTime()) / 1000 : 0;
@@ -1077,7 +1101,7 @@ Deno.serve(async (req) => {
     if (escrito.error && /mercado_ack/.test(escrito.error.message || "")) escrito = await escribir(false);
     if (escrito.error?.code === "23505" || (!escrito.error && !escrito.data)) return json({ error: "Otra sesión guardó antes. No se sobrescribió su granja.", conflicto: true }, 409);
     if (escrito.error) return json({ error: escrito.error.message }, 500);
-    return json({ ok: true, sospechas: sospechas.length, updated_at: escrito.data.updated_at, actividadGranja:data.actividadGranja,logrosV2:data.logrosV2 });
+    return json({ ok: true, sospechas: sospechas.length, updated_at: escrito.data.updated_at, actividadGranja:data.actividadGranja,logrosV2:data.logrosV2,incursionTutorialUsada:data.incursionTutorialUsada===true });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
   }
