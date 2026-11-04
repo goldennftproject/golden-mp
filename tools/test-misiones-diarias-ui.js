@@ -9,3 +9,34 @@ run("G.actividadGranja.jornada.cobradas.siembra=500;G.actividadGranja.jornada.pl
 run("G.actividadGranja.jornada.dia='2000-01-01'");assert.equal(html().querySelectorAll('button:disabled').length,5);
 run("G.actividadGranja.jornada={dia:new Date(nowMs()).toISOString().slice(0,10),energia:100,plata:2500}");assert.equal(html().querySelectorAll('button:disabled').length,5);assert.equal(run('jornadaEstado().plata'),2500);
 console.log('OK: cinco misiones, progreso, botones ejecutables, cobros bloqueados y cambio de dia/migracion.');
+
+// El ACK debe actualizar Misiones si permanece abierto, sin exigir reabrirlo.
+let objetivosAbiertos=true,repintados=0,guardados=0,peticiones=0;
+ctx.isOpen=id=>id==='ov-objetivos'&&objetivosAbiertos;
+ctx.saveFarm=()=>{guardados++;};ctx.economiaSolicitar=()=>{peticiones++;return Promise.resolve();};
+const refrescarObjetivos=ctx.refreshObjetivos;
+ctx.refreshObjetivos=()=>{repintados++;return refrescarObjetivos();};
+const filaMision=(panel,id)=>{
+  const nombre=run('JORNADA_MISIONES').find(m=>m.id===id).nombre;
+  const d=new JSDOM(ctx.document.getElementById(panel).innerHTML).window.document;
+  return [...d.querySelectorAll('.forge-row')].find(r=>r.querySelector('progress')?.getAttribute('aria-label')===nombre);
+};
+const progreso=(panel,id)=>Number(filaMision(panel,id).querySelector('progress').getAttribute('value'));
+run("estadoDeCero();G.actividadGranja={v:1,energia:0,bonoTotal:0,registro:{chop:0},jornada:{v:2,dia:new Date(nowMs()).toISOString().slice(0,10),energia:0,plata:0,progreso:{chop:0},cobradas:{}}};refreshObjetivos()");
+assert.equal(progreso('objetivos-list','madera'),0);
+run("actividadGranjaRecibir({v:1,energia:10,bonoTotal:0,registro:{chop:1},jornada:{v:2,dia:new Date(nowMs()).toISOString().slice(0,10),energia:10,plata:0,progreso:{chop:1,plant:3,platos:4,mine:2},cobradas:{}}},true);actividadGranjaRefrescar()");
+assert.equal(progreso('objetivos-list','madera'),1,'muestra 1/10 al recibir el ACK, sin reabrir');
+for(const [id,n]of [['siembra',3],['cocina',4],['mineria',2],['jornada',10]])assert.equal(progreso('objetivos-list',id),n,id);
+for(const panel of ['cob-jornada','banco-actividad','vip-actividad'])assert.equal(progreso(panel,'madera'),1,panel);
+assert.equal(repintados,2,'un repintado inicial y uno por actualización, sin recursión');
+objetivosAbiertos=false;
+const htmlCerrado=ctx.document.getElementById('objetivos-list').innerHTML;
+run("actividadGranjaRecibir({v:1,energia:20,bonoTotal:0,registro:{chop:10},jornada:{v:2,dia:new Date(nowMs()).toISOString().slice(0,10),energia:20,plata:0,progreso:{chop:10},cobradas:{}}},true);actividadGranjaRefrescar()");
+assert.equal(ctx.document.getElementById('objetivos-list').innerHTML,htmlCerrado,'no repinta un menú cerrado');
+assert.equal(repintados,2);
+for(const panel of ['cob-jornada','banco-actividad','vip-actividad'])assert.equal(progreso(panel,'madera'),10,panel);
+objetivosAbiertos=true;ctx.refreshObjetivos();
+assert.equal(progreso('objetivos-list','madera'),10);
+assert.equal(filaMision('objetivos-list','madera').querySelector('button').disabled,false,'reclamar queda disponible, sin cobro automático');
+assert.equal(guardados,0,'el refresco no guarda');assert.equal(peticiones,0,'el refresco no inicia operaciones');
+console.log('OK: ACK actualiza las cinco misiones abiertas y conserva otros paneles; cerrado no repinta ni genera guardados, peticiones o cobros.');

@@ -2764,7 +2764,11 @@ function actividadGranjaHtml(){
   const a=actividadGranjaEstado();
   return jornadaHtml()+'<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gasta energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
 }
-function actividadGranjaRefrescar(){const j=$('cob-jornada');if(j)j.innerHTML=jornadaHtml();for(const id of ['banco-actividad','vip-actividad']){const el=$(id);if(el)el.innerHTML=actividadGranjaHtml();}}
+function actividadGranjaRefrescar(){
+  const j=$('cob-jornada');if(j)j.innerHTML=jornadaHtml();
+  for(const id of ['banco-actividad','vip-actividad']){const el=$(id);if(el)el.innerHTML=actividadGranjaHtml();}
+  if(isOpen('ov-objetivos'))refreshObjetivos();
+}
 function refreshBanco(cotizar=true){
   if(typeof renderUsdt==='function')renderUsdt();
   if(cotizar&&typeof usdtConsultar==='function')usdtConsultar();

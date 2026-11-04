@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 7;        // Nodos Golden: libro autoritativo y cupos propios por derecho.
+const VERSION = 8;        // Tala: evidencia física aunque la madera se consuma antes del guardado.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -75,7 +75,72 @@ function actividadAcreditar(data,cantidad,ahora){
   if(a.energia>=ACTIVIDAD_OBJETIVO&&!a.cumplidaAt)a.cumplidaAt=ahora;data.actividadGranja=a;return a;
 }
 function actividadEstado(d,ahora){const a=actividadLibro(d);return {energia:a.energia,objetivo:ACTIVIDAD_OBJETIVO,cumplida:a.energia>=ACTIVIDAD_OBJETIVO,vip:num(d?.produccion?.vipHasta)>ahora,usdt:false};}
-function actividadEvidencias(a,b,ahora){
+// No depende de cuánto material queda en la bolsa. null conserva el testigo neto
+// de clientes antiguos sin historia de nodos; cero significa que la historia no prueba tala.
+function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
+  const mundo=premiumMundo(a);
+  if(mundo!==premiumMundo(b))return 0;
+  const presente=(d,o)=>premiumPresente(d,o)||(!o.premiumOnly&&o.exp===null&&o.lock===0&&d.treesOpen===undefined);
+  const arboles=mundo.objects.filter(o=>o.type==='tree'&&presente(a,o)&&presente(b,o)&&
+    (o.premiumOnly||o.exp===null||num(a.expansiones)>o.exp));
+  if(!arboles.length)return 0;
+  if(!arboles.some(o=>a.nodos?.[o.key]!==undefined||a.nodoUsos?.[o.i]!==undefined||b.nodoUsos?.[o.i]!==undefined))return null;
+  const inicio=desdeServidor>0&&desdeServidor<=ahora?desdeServidor:ahora,base=1800000;
+  const comidaCd=(d,t)=>(Array.isArray(d.buffs)?d.buffs:[]).some(x=>x?.type==='cd'&&x.mult===.85&&num(x.until)>t);
+  const comidaNueva=num(a.dishes?.estofado)>num(b.dishes?.estofado)&&comidaCd(b,inicio);
+  const cicloNuevo=base*((num(a.produccion?.vipHasta)>inicio||num(b.produccion?.vipHasta)>inicio)?.9:1)*((comidaCd(a,inicio)||comidaNueva)?.85:1);
+  const cargas=(r,t)=>!r?.readyAt?4:r.readyAt>t?0:Math.min(4,1+Math.max(0,Math.floor((t-r.readyAt)/(r.readyAt-r.cdIni))));
+  let probadas=0;
+  for(const o of arboles){
+    const previo=a.nodoUsos?.[o.i]??0,actual=b.nodoUsos?.[o.i]??previo;
+    if(!Number.isSafeInteger(previo)||previo<0||!Number.isSafeInteger(actual)||actual<=previo)continue;
+    const n=actual-previo,r=a.nodos?.[o.key],q=b.nodos?.[o.key],virgen=previo===0&&(!r||r.readyAt===0);
+    // Un árbol ya usado sin reloj no vuelve a nacer con cuatro cargas.
+    if(!virgen&&(!r||!Number.isFinite(r.readyAt)||!Number.isFinite(r.cdIni)||r.readyAt<=r.cdIni||r.cdIni<=0)){
+      if(!r&&!Object.keys(a.nodos||{}).length)return null;
+      continue;
+    }
+    if(a.produccion?.pausas?.['n:'+o.i])continue;
+    const pausa=b.produccion?.pausas?.['n:'+o.i];
+    if(pausa&&(!Number.isFinite(pausa.at)||pausa.at<inicio||pausa.at>ahora))continue;
+    const fin=pausa?pausa.at:ahora;
+    if(!q||!Number.isFinite(q.readyAt)||!Number.isFinite(q.cdIni)||q.cdIni<=0||q.readyAt<=q.cdIni||q.cdIni>fin+1000)continue;
+    const dur=q.readyAt-q.cdIni,antesDur=virgen?cicloNuevo:r.readyAt-r.cdIni;
+    if(antesDur<base*.9*.85-1000||Math.min(Math.abs(dur-antesDur),Math.abs(dur-cicloNuevo),Math.abs(dur-base))>1000)continue;
+    if(!virgen&&(q.readyAt<r.readyAt||(q.readyAt===r.readyAt&&q.cdIni===r.cdIni)))continue;
+    const iniciales=virgen?4:cargas(r,inicio),restantes=cargas(q,fin);
+    let primera;
+    if(virgen||iniciales===4)primera=inicio+cicloNuevo;
+    else if(!iniciales)primera=r.readyAt;
+    else primera=Math.min(r.readyAt+iniciales*antesDur,inicio+cicloNuevo);
+    const producidas=primera<=fin?1+Math.floor((fin-primera)/cicloNuevo):0;
+    if(restantes>iniciales+producidas||n>iniciales+producidas-restantes)continue;
+    if(!restantes&&q.cdIni<inicio-1000)continue;
+    probadas+=n;
+  }
+  const stat=Math.max(0,num(b.stats?.talar?._)-num(a.stats?.talar?._));
+  const xp=Math.floor(Math.max(0,num(b.skills?.tala)-num(a.skills?.tala))/10);
+  let ingresosPedidos=0;
+  for(const [periodo,campo] of [['dia','lista'],['semana','pedSemanal'],['mes','pedMensual'],['finde','pedEvento']]){
+    const p=a.pedidos,q=b.pedidos;if(!p?.[periodo]||p[periodo]!==q?.[periodo])continue;
+    const anteriores=campo==='lista'?(Array.isArray(p[campo])?p[campo]:[]):[p[campo]],actuales=campo==='lista'?(Array.isArray(q[campo])?q[campo]:[]):[q[campo]];
+    anteriores.forEach((antes,i)=>{const despues=actuales[i];
+      if(antes?.hecho!==false||despues?.hecho!==true||antes.tipo==='tutorial'||antes.tipoEncargo==='tutorial'||num(antes.n)<=0||num(antes.plata)<=0)return;
+      if(mismoJSON({...antes,hecho:false},{...despues,hecho:false}))ingresosPedidos+=antes.plata;
+    });
+  }
+  const fabricadas=Math.min(Math.floor(Math.max(0,num(b.skills?.crafting)-num(a.skills?.crafting))/5),Math.floor(Math.max(0,num(a.plata)+ingresosPedidos-num(b.plata))/2));
+  const hachas=Math.max(0,num(a.tools?.axe)+fabricadas-num(b.tools?.axe));
+  const e=a.energiaGranja,finVip=num(a.produccion?.vipHasta);
+  if(!e||!Number.isFinite(e.actual)||!Number.isFinite(b.energiaGranja?.actual)||b.energiaGranja.actual<0)return 0;
+  const regen=(desde,hasta)=>{const vip=Math.max(0,Math.min(hasta,finVip)-desde);return (vip*100+(Math.max(0,hasta-desde)-vip)*50)/ENERGIA_GRANJA_MS;};
+  // La regeneración anterior al último guardado sólo puede llenar el depósito.
+  // El intervalo posterior usa updated_at del servidor, nunca visto/at del cliente nuevo.
+  const energiaInicio=Math.min(finVip>inicio?100:50,Math.max(0,e.actual)+regen(Math.min(inicio,Math.max(0,num(e.at)||inicio)),inicio));
+  const energia=Math.floor(Math.max(0,energiaInicio+regen(inicio,ahora)-b.energiaGranja.actual)+1e-6);
+  return Math.min(probadas,stat,xp,Math.floor(hachas),energia);
+}
+function actividadEvidencias(a,b,ahora,desdeServidor=0){
   const suma=o=>Object.values(o||{}).reduce((s,v)=>s+Math.max(0,num(v)),0);
   const sube=(x,y)=>Object.keys(y||{}).reduce((s,k)=>s+Math.max(0,num(y[k])-num(x?.[k])),0);
   const baja=(x,y)=>sube(y,x);
@@ -97,8 +162,9 @@ function actividadEvidencias(a,b,ahora){
     const p=a.animals?.[k]?.[i],q=b.animals[k][i];
     if(p&&num(p.comidoAt)>0&&num(p.comidoAt)>=num(p.prodAt)&&Math.max(num(p.prodAt),num(p.comidoAt))+86400000<=ahora&&num(q.prodAt)>num(p.prodAt))animales++;
   }
+  const tala=talaEvidenciaNodos(a,b,ahora,desdeServidor);
   return {plant:Math.min(siembras,baja(a.seeds,b.seeds)+Math.floor(Math.max(0,num(a.plata)-num(b.plata)))),harvest:Math.min(stat('cosechar'),cosechas),
-    chop:Math.min(stat('talar'),Math.max(Math.max(0,num(a.tools?.axe)-num(b.tools?.axe)),(num(b.skills?.crafting)-num(a.skills?.crafting)>=5?Math.max(0,num(b.res?.madera)-num(a.res?.madera)):0))),
+    chop:tala===null?Math.min(stat('talar'),Math.max(Math.max(0,num(a.tools?.axe)-num(b.tools?.axe)),(num(b.skills?.crafting)-num(a.skills?.crafting)>=5?Math.max(0,num(b.res?.madera)-num(a.res?.madera)):0))):tala,
     mine:Math.min(stat('minar'),Math.max(baja(a.picks?.dur,b.picks?.dur),(num(b.skills?.crafting)-num(a.skills?.crafting)>=10?['piedra','bronce','hierro','oro','diamante','netherita'].reduce((s,k)=>s+Math.min(Math.max(0,num(b.stats?.minar?.[k])-num(a.stats?.minar?.[k])),Math.max(0,num(b.res?.[k])-num(a.res?.[k]))),0):0)))+Math.min(excavados,sube(a.seeds,b.seeds)+sube(a.res,b.res)),
     animal:animales,craft:insumos>0?inventarioNuevo+colas(a.horno,b.horno,'listoAt')+derivados:0,
     cook:insumos>0?colas(a.cooking,b.cooking,'endAt')+colas(a.lombricario,b.lombricario,'listaEn'):0,
@@ -158,8 +224,18 @@ function platosTerminados(prev,next,ahora){
  }
  return Object.keys(candidatos).reduce((s,k)=>s+Math.min(candidatos[k],Math.max(0,num(next.stats?.cocinar?.[k])-num(prev.stats?.cocinar?.[k])),Math.max(0,num(next.dishes?.[k])-num(prev.dishes?.[k]))),0);
 }
-function actividadActualizar(prev,next,ahora,recibo,premiar=true){
-  const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora):{},pedidos=next.actividadAcciones||{};
+function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0){
+  // Omitir un reloj moderno no convierte el siguiente guardado en un cliente legado.
+  if(prev?.nodos)for(const o of premiumMundo(prev).objects){
+    const r=prev.nodos[o.key],q=next.nodos?.[o.key];
+    if(o.type!=='tree'||!r||!premiumPresente(prev,o))continue;
+    const valido=q&&typeof q==='object'&&!Array.isArray(q)&&Number.isFinite(q.readyAt)&&Number.isFinite(q.cdIni)&&
+      (r.readyAt>0?q.readyAt>=r.readyAt&&q.readyAt>q.cdIni:q.readyAt>=0&&q.cdIni>=0);
+    if(valido)continue;
+    if(!next.nodos||typeof next.nodos!=='object'||Array.isArray(next.nodos))next.nodos={};
+    next.nodos[o.key]=JSON.parse(JSON.stringify(r));
+  }
+  const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora,desdeServidor):{},pedidos=next.actividadAcciones||{};
   const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
   const regen=(Math.max(0,Math.min(ahora,fin)-at)*100+Math.max(0,ahora-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
   let presupuesto=e&&Number.isFinite(e.actual)?Math.max(0,e.actual+regen-num(next.energiaGranja?.actual)):0,credito=0;const acciones={};
@@ -606,7 +682,7 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
         if (obraN.n!==expN+1 || Math.abs(num(obraN.desde)-ahora)>300000 || num(obraN.hasta)-num(obraN.desde)<600000*obraN.n*(fin>ahora?0.9:1)-1000) errores.push("Obra no autorizada");
         const precio=20+10*expN+5*expN*expN+Math.round(.5*Math.pow(Math.max(0,expN-2),3));gasto += expN>=2?Math.ceil(precio*1.3):precio;
         const receta=EXPANSION_MATERIALES[expN],recibo={};
-        actividadActualizar(antes,JSON.parse(JSON.stringify(next)),ahora,recibo);
+        actividadActualizar(antes,JSON.parse(JSON.stringify(next)),ahora,recibo,true,desdeServidor);
         let minas=num(recibo.mine);
         if(!receta)errores.push('Receta de expansión inexistente');
         for(const [k,q] of Object.entries(receta||{})){
@@ -984,7 +1060,7 @@ Deno.serve(async (req) => {
 
     /* modo rechazo (futuro, tras calibrar): un guardado con sospechas no entra */
     if (MODO === "rechazo" && sospechas.length) return json({ error: "guardado rechazado", sospechas }, 422);
-    actividadActualizar(prevRow?.data??null,data,ahora.getTime(),undefined,body.jornada===1); // Sólo guardados aceptados; CAS evita duplicar crédito.
+    actividadActualizar(prevRow?.data??null,data,ahora.getTime(),undefined,body.jornada===1,prevRow?.updated_at?new Date(prevRow.updated_at).getTime():0); // Sólo guardados aceptados; CAS evita duplicar crédito.
 
     /* el guardado ENTRA, y con él queda anotado lo del mercado que ya se contó: así el
        mismo permiso no se gasta dos veces. Si la columna todavía no existe (falta correr

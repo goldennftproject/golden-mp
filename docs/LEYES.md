@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Objetivos de madera después del reinicio — 03/11/2026
+
+Dirección pide corregir el reporte de Not, revisar las demás cuentas y recuperar sólo las talas posteriores al último reinicio. Objetivos se repinta al recibir el guardado confirmado; Guardar V8 reconoce fabricar, talar y gastar madera en el mismo intervalo con testigos de nodo, reloj, XP, herramientas y energía. Se preservan relojes conocidos y los cobros manuales/idempotentes. La recuperación acumulativa contrasta cuatro fuentes y la campaña, utiliza respaldo mínimo cifrado y omite versiones concurrentes. No atribuye actividad sin fecha a misiones diarias ni cambia recursos, premios cobrados o saldos. Ver OBJETIVOS-MADERA-20261103.md.
+
 ## Noticias compartidas entre juego y Discord — 03/11/2026
 
 Dirección aprueba los dos anuncios e imágenes revisados y pide leer las mismas noticias dentro del juego. Menú → Noticias incorpora lista, imagen ampliable, texto legible y marca local de novedades; sin apertura automática ni escrituras de partida o consultas a Supabase. Los textos e imágenes de public/news/index.json coinciden con los dos mensajes verificados de #anuncios. No se publican nuevos mensajes de Discord sin su vista previa y autorización. Se conservan ambos estilos, guardado y sistemas pausados. Ver NOTICIAS-JUEGO-DISCORD-20261103.md.
