@@ -6041,52 +6041,84 @@ function refreshPerfil() {
   operar('state');
 }
 function prepararEnlacesDiscord() {
-  const caja=$('cfg-discord-code-box');if(!caja)return;
-  // Una ruta /channels no permite entrar a quien aún no pertenece al servidor.
-  // Invitación existente y permanente verificada el 03/11/2026; no se crea acceso nuevo.
-  const entrar=$('cfg-discord-invite')||caja.querySelector('a');
-  if(entrar){entrar.id='cfg-discord-invite';entrar.href='https://discord.gg/fQZn9Bsvkd';entrar.textContent='Entrar al Discord de Golden Farm';entrar.target='_blank';entrar.rel='noopener noreferrer';}
-  let canal=$('cfg-discord-channel');
-  if(!canal&&entrar){canal=document.createElement('a');canal.id='cfg-discord-channel';canal.style.marginLeft='10px';entrar.after(canal);}
-  if(canal){canal.href='https://discord.com/channels/1564640221063024763/1564640914687664189';canal.textContent='Abrir #empieza-aquí';canal.target='_blank';canal.rel='noopener noreferrer';canal.title='Después de entrar al servidor, usa /vincular en este canal.';}
-  const paso=caja.querySelector('p');
-  if(paso)paso.textContent='1. Entra al servidor y abre #empieza-aquí. Usa /vincular y pega este código en la opción codigo. Caduca en 10 minutos.';
+  const entrar=$('cfg-discord-invite');
+  if(entrar){entrar.href='https://discord.gg/fQZn9Bsvkd';entrar.target='_blank';entrar.rel='noopener noreferrer';}
+}
+var DISCORD_OAUTH_ACTIVA=null;
+async function discordOAuthPedir(path,cuenta,body){
+  if(!['start','finish'].includes(path))throw Error('Acción de Discord no disponible.');
+  if(!sb||!cuenta||UID!==cuenta||!CARGA_OK||SOLO_LOCAL)throw Error('Entra con el correo de tu granja y espera a que cargue.');
+  const sesion=await conTope(sb.auth.getSession(),10000,'sesión de Discord');
+  if(UID!==cuenta||sesion.error||sesion.data?.session?.user?.id!==cuenta||!sesion.data.session.access_token)throw Error('La cuenta cambió. Vuelve a abrir Configuración.');
+  const r=await fetch('/api/discord/'+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',Authorization:'Bearer '+sesion.data.session.access_token},body:JSON.stringify({account:cuenta,...body}),signal:AbortSignal.timeout(25000)});
+  const data=await r.json();
+  if(UID!==cuenta)throw Error('La cuenta cambió. Vuelve a abrir Configuración.');
+  if(!r.ok||!data?.ok){const error=Error(data?.error||'No se pudo confirmar Discord. Actualiza el estado y vuelve a intentarlo.');error.code=data?.code;error.status=r.status;throw error;}
+  return data;
 }
 function prepararDiscord() {
   prepararEnlacesDiscord();
-  const crear=$('cfg-discord-create'),ver=$('cfg-discord-state'),confirmar=$('cfg-discord-confirm'),
-    estado=$('cfg-discord-status'),caja=$('cfg-discord-code-box'),campo=$('cfg-discord-code'),copiar=$('cfg-discord-copy');
-  if(!crear||!ver||!confirmar||!estado)return;
+  const crear=$('cfg-discord-create'),ver=$('cfg-discord-state'),estado=$('cfg-discord-status');
+  if(!crear||!ver||!estado)return;
   const cuenta=typeof UID!=='undefined'?UID:null;
-  if(campo?.dataset.cuenta!==cuenta){if(campo){campo.value='';campo.dataset.cuenta=cuenta||'';}if(caja)caja.hidden=true;}
+  if(DISCORD_OAUTH_ACTIVA){if(DISCORD_OAUTH_ACTIVA.cuenta===cuenta)return;DISCORD_OAUTH_ACTIVA.cancelar();}
   let ocupado=false;
-  const operar=async action=>{
+  const pintar=data=>{
+    crear.hidden=!!data.linked;
+    estado.textContent=data.linked?'Discord vinculado: '+data.name+'.'+(data.founder_eligible?' Tu cuenta cumple la condición de Fundador de la Alfa.':''):'Discord todavía no vinculado.';
+  };
+  const consultar=async()=>{
     if(ocupado)return;
-    ocupado=true;crear.disabled=ver.disabled=confirmar.disabled=true;
+    ocupado=true;crear.disabled=ver.disabled=true;
     estado.textContent='Consultando Discord…';
     try{
       if(typeof sb==='undefined'||!sb||!cuenta||!CARGA_OK||SOLO_LOCAL)throw new Error('Entra con el correo de tu granja y espera a que cargue.');
-      const {data,error}=await conTope(sb.functions.invoke('discord-link',{body:{action,account:cuenta}}),15000,'Discord');
+      const {data,error}=await conTope(sb.functions.invoke('discord-link',{body:{action:'state',account:cuenta}}),15000,'Discord');
       if(UID!==cuenta)return;
       if(error){let msg;try{msg=(await error.context.json()).error;}catch{}throw new Error(msg||'No se pudo consultar Discord. Reintenta con conexión.');}
       if(!data?.ok)throw new Error(data?.error||'No se pudo confirmar la vinculación.');
-      crear.hidden=!!data.linked;confirmar.hidden=!data.pending||!!data.linked;
-      if(data.linked){
-        estado.textContent='Discord vinculado: '+data.name+'.'+(data.founder_eligible?' Tu cuenta tiene un depósito confirmado; cumple la condición de Fundador de la Alfa.':'');
-        if(caja)caja.hidden=true;if(campo)campo.value='';
-      }else if(data.pending){
-        estado.textContent='Perfil identificado: '+data.name+'. Comprueba que es tuyo y pulsa Confirmar mi Discord.';
-      }else{
-        estado.textContent=data.code?'Código preparado. Úsalo con el bot en Discord y vuelve para confirmar.':'Discord todavía no vinculado.';
-        if(data.code&&campo){campo.value=data.code;campo.dataset.cuenta=cuenta;caja.hidden=false;}
-        if(!data.expires_at&&caja)caja.hidden=true;
-      }
+      pintar(data);
     }catch(e){if(UID===cuenta)estado.textContent=e.message;}
-    finally{ocupado=false;if(UID===cuenta)crear.disabled=ver.disabled=confirmar.disabled=false;}
+    finally{ocupado=false;if(UID===cuenta)crear.disabled=ver.disabled=false;}
   };
-  crear.onclick=()=>operar('create');ver.onclick=()=>operar('state');confirmar.onclick=()=>operar('confirm');
-  if(copiar)copiar.onclick=async()=>{if(!campo?.value)return;try{await navigator.clipboard.writeText(campo.value);estado.textContent='Código copiado. Usa /vincular en Discord y pégalo en la opción codigo.';}catch{campo.focus();campo.select();estado.textContent='Selecciona y copia el código.';}};
-  operar('state');
+  crear.onclick=async()=>{
+    if(DISCORD_OAUTH_ACTIVA?.cuenta===cuenta){DISCORD_OAUTH_ACTIVA.cancelar();estado.textContent='Vinculación cancelada. Puedes volver a intentarlo.';return;}
+    if(ocupado||DISCORD_OAUTH_ACTIVA)return;
+    if(!cuenta||UID!==cuenta||!CARGA_OK||SOLO_LOCAL){estado.textContent='Entra con el correo de tu granja y espera a que cargue.';return;}
+    // Se abre dentro del gesto del jugador; la granja permanece abierta y no se recarga.
+    const popup=window.open('about:blank','golden-discord-link','popup,width=540,height=760');
+    if(!popup){estado.textContent='Permite abrir la ventana de Discord y vuelve a pulsar Vincular Discord.';return;}
+    ocupado=true;crear.disabled=ver.disabled=true;estado.textContent='Abriendo la autorización de Discord…';
+    let flow=null,timer=null,confirmando=false;
+    const terminar=()=>{window.removeEventListener('message',recibir);window.removeEventListener('focus',alVolver);if(timer)clearInterval(timer);if(!popup.closed)popup.close();if(DISCORD_OAUTH_ACTIVA?.popup===popup)DISCORD_OAUTH_ACTIVA=null;ocupado=false;if(UID===cuenta){crear.disabled=ver.disabled=false;crear.textContent='Vincular Discord';}};
+    const confirmarFlujo=async()=>{
+      if(!flow||confirmando)return;
+      if(UID!==cuenta){terminar();return;}
+      confirmando=true;crear.disabled=ver.disabled=true;estado.textContent='Confirmando tu perfil de Discord…';
+      let pendiente=false;
+      try{const data=await discordOAuthPedir('finish',cuenta,{flow});if(UID===cuenta)pintar(data);}
+      catch(e){const autorizando=e.code==='authorization_pending';pendiente=UID===cuenta&&(autorizando||e.status===429||e.status>=500||!Number.isInteger(e.status));if(UID===cuenta)estado.textContent=autorizando?'Autoriza tu perfil en Discord y vuelve al juego.':pendiente?'No se pudo confirmar el resultado. Pulsa Actualizar estado para reintentar la misma vinculación.':e.message;}
+      finally{confirmando=false;if(pendiente&&UID===cuenta){crear.disabled=ver.disabled=false;}else terminar();}
+    };
+    const alVolver=()=>flow?confirmarFlujo():undefined;
+    const recibir=async ev=>{
+      if(ev.origin!==location.origin||ev.source!==popup||ev.data?.type!=='golden-discord-oauth'||ev.data.flow!==flow||!flow||confirmando)return;
+      if(UID!==cuenta){terminar();return;}
+      if(!ev.data.ok){estado.textContent='Vinculación cancelada o caducada. Puedes volver a intentarlo.';terminar();return;}
+      await confirmarFlujo();
+    };
+    DISCORD_OAUTH_ACTIVA={cuenta,popup,cancelar:terminar,confirmar:confirmarFlujo};window.addEventListener('message',recibir);window.addEventListener('focus',alVolver);
+    try{
+      const data=await discordOAuthPedir('start',cuenta,{});
+      const url=new URL(data.url);
+      if(url.origin!=='https://discord.com'||url.pathname!=='/oauth2/authorize'||url.searchParams.get('client_id')!=='1564641499654656091'||url.searchParams.get('scope')!=='identify'||url.searchParams.get('redirect_uri')!==location.origin+'/api/discord/callback'||url.searchParams.get('state')!==data.flow||!/^[-_A-Za-z0-9]{32,100}$/.test(data.flow))throw Error('No se pudo abrir la autorización de Golden Farm.');
+      if(UID!==cuenta||DISCORD_OAUTH_ACTIVA?.popup!==popup){terminar();return;}
+      flow=data.flow;popup.location.replace(url.href);estado.textContent='Autoriza tu perfil en la ventana de Discord.';crear.textContent='Cancelar vinculación';crear.disabled=ver.disabled=false;
+      const limite=Date.now()+300000;
+      timer=setInterval(()=>{if(UID!==cuenta){terminar();return;}if(!confirmando&&Date.now()>limite){estado.textContent='La autorización ha caducado. Vuelve a pulsar Vincular Discord.';terminar();}},500);
+    }catch(e){if(UID===cuenta)estado.textContent=e.message;terminar();}
+  };
+  ver.onclick=()=>DISCORD_OAUTH_ACTIVA?.cuenta===cuenta?DISCORD_OAUTH_ACTIVA.confirmar():consultar();consultar();
 }
 function refreshConfig() {
   prepararDiscord();

@@ -1,27 +1,3 @@
 'use strict';
-const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),{JSDOM}=require('jsdom');
-const doc=new JSDOM(fs.readFileSync('public/index.html','utf8')).window.document;
-const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(process.cwd(),{'game/main.js':''});
-(async()=>{
- await c.SAVE_READY;c.document=doc;c.estadoDeCero();
- const uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';let result={ok:true,linked:false},calls=[];
- c.testSb={functions:{invoke:async(name,{body})=>{calls.push(body);return {data:result};}}};
- vm.runInContext("sb=testSb;UID='"+uid+"';CARGA_OK=true;SOLO_LOCAL=false",c);
- const tick=()=>new Promise(r=>setImmediate(r));
- c.prepararDiscord();await tick();assert.equal(calls.at(-1).action,'state');
- const join=doc.getElementById('cfg-discord-invite'),channel=doc.getElementById('cfg-discord-channel');
- assert.equal(join.href,'https://discord.gg/fQZn9Bsvkd','Primero permite entrar al servidor por invitación permanente');
- assert.equal(channel.href,'https://discord.com/channels/1564640221063024763/1564640914687664189','Después abre un canal concreto, no un destino incompleto');
- assert.equal(join.target,'_blank');assert.equal(channel.rel,'noopener noreferrer');
- const callsBeforeLinks=calls.length,stateBeforeLinks=JSON.stringify(c.G);
- c.prepararEnlacesDiscord();c.prepararEnlacesDiscord();assert.equal(doc.querySelectorAll('#cfg-discord-channel').length,1,'No duplica enlaces al reabrir');assert.equal(calls.length,callsBeforeLinks,'Preparar enlaces no crea ni confirma códigos');assert.equal(JSON.stringify(c.G),stateBeforeLinks,'Enlaces no modifican progreso');
- result={ok:true,linked:false,code:'GF-'+('A'.repeat(32)),expires_at:'future'};
- doc.getElementById('cfg-discord-create').click();await tick();
- assert.equal(doc.getElementById('cfg-discord-code').value,'GF-'+('A'.repeat(32)));
- assert.equal(doc.getElementById('cfg-discord-code-box').hidden,false);
- result={ok:true,pending:true,name:'Tester (@tester)'};
- doc.getElementById('cfg-discord-state').click();await tick();assert.equal(doc.getElementById('cfg-discord-confirm').hidden,false);assert.match(doc.getElementById('cfg-discord-status').textContent,/@tester/);
- result={ok:true,linked:true,name:'Tester (@tester)',founder_eligible:true};
- doc.getElementById('cfg-discord-confirm').click();await tick();assert.equal(calls.at(-1).action,'confirm');assert.equal(doc.getElementById('cfg-discord-code').value,'');assert.match(doc.getElementById('cfg-discord-status').textContent,/depósito confirmado/);
- console.log('OK: crear comando, comprobar perfil, confirmación explícita y limpieza del código.');
-})().catch(e=>{console.error(e);process.exitCode=1;});
+// Compatibilidad con el nombre usado por la suite previa: ahora se prueba OAuth.
+require('./test-discord-oauth-ui');

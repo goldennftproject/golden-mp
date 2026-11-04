@@ -1,8 +1,10 @@
 # Las leyes de Golden Farm
 
-## Incursión de prueba Free — 04/11/2026
+## Incursión de prueba Free y Discord directo — 04/11/2026
 
-Dirección aclara: «Coloca que solo se pueda hacer incursión de un click siendo free solo para completar tutorial y ya está. Queda demás vip». Una prueba única en Zona Negra I durante el paso confirmado; después, incursiones automáticas VIP con máximo tres por día UTC. Se conserva combate manual, partidas y salidas activas. Ver INCURSION-TUTORIAL-20261104.md.
+Dirección aclara mediante el mensaje del diseñador: «Coloca que solo se pueda hacer incursión de un click siendo free solo para completar tutorial y ya está. Queda demás vip». Sustituye la opción intermedia de restaurar tres salidas Free: una prueba única en Zona Negra I durante el paso de tutorial confirmado, con marca preservada por el servidor; el resto de incursiones automáticas sigue siendo VIP, hasta tres por día UTC. Se conservan el combate manual Free, las incursiones activas y el progreso.
+
+Dirección pide «darle a vincular, que te aparezca el Discord pidiendo permisos para vincular la cuenta y ahí está. […] No poner barra vincular». La interfaz utiliza OAuth con permiso identify, sin pedir que coincidan correos ni añadir inicio de sesión por Discord. Se conservan las vinculaciones existentes; cada Discord pertenece como máximo a una granja. El secreto OAuth sólo reside en Render y la clave privilegiada de Supabase permanece en la Edge Function. Los códigos históricos se conservan únicamente por compatibilidad, sin presentarlos como pasos del flujo nuevo. Ver DISCORD-OAUTH-20261104.md e INCURSION-TUTORIAL-20261104.md.
 
 ## Objetivos de madera después del reinicio — 03/11/2026
 
