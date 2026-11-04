@@ -4,7 +4,7 @@
   --menu-space-xs:4px;--menu-space-sm:8px;--menu-space-md:12px;--menu-space-lg:16px;
   --menu-paper:#f7e8c9;--menu-paper-soft:#efdfbd;--menu-line:#c6a46d;
   --menu-ink:#44301b;--menu-ink-soft:#695034;--menu-selected:#e4efd0;--menu-selected-line:#738e46;
-  --menu-radius:4px;--menu-action-height:34px;
+  --menu-radius:4px;--menu-action-height:34px;--menu-copy-min:180px;
  }
  /* Las listas ya están dentro del pergamino de la ventana: no llevan otra tabla de madera. */
  .visual-v2 .ov>.card .forge-list,.visual-v2 .ov>.card .skgrid,
@@ -73,12 +73,16 @@
  }
  .visual-v2 .ov>.card .forge-row .fbtns>button{
   min-height:var(--menu-action-height);white-space:normal;overflow-wrap:normal;line-height:1.25;
+  width:max-content;max-width:100%;align-self:flex-end;flex:0 0 auto;
  }
  .visual-v2 .ov>.card .forge-row .fbtns>.fds{max-width:220px}
  .visual-v2 .ov>.card .objeto-acciones{
   display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--menu-space-sm);
  }
  .visual-v2 .ov>.card .objeto-acciones>button{min-height:var(--menu-action-height)}
+ .visual-v2 .ov>.card .motivo-accion{
+  max-width:100%;color:var(--menu-ink-soft);text-shadow:none;font-size:12px;line-height:1.4;
+ }
  /* La acción primaria prevalece sobre el marco de madera genérico de reference-skin.
     Las exclusiones conservan pestañas, cantidad, variantes semánticas y disabled. */
  .visual-v2 .ov>.card button.green:not(.ghost):not(.red):not(.gold):not(.shoptab):not(.ref-step):not(:disabled){
@@ -123,4 +127,19 @@
   flex:1 1 100%;max-width:none;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;align-items:center;
  }
  .visual-v2 #ov-market.reference-market #nft-shop>.forge-row>.fbtns>.fds{flex:1 1 100%;max-width:none;text-align:right}
+ /* Compras desplegables: texto con ancho legible, acción compacta a la derecha.
+    Con poco espacio la acción pasa debajo; el aviso de saldo nunca es otra columna. */
+ .visual-v2 #ov-market.reference-market #seed-shop .ayuda-menu .mkt-row:not(.ref-seed-row){
+  display:flex;flex-wrap:wrap;align-items:center;gap:var(--menu-space-sm) var(--menu-space-md);
+ }
+ .visual-v2 #ov-market.reference-market #seed-shop .ayuda-menu .mkt-row:not(.ref-seed-row)>.minfo{
+  flex:1 1 var(--menu-copy-min);min-width:min(100%,var(--menu-copy-min));max-width:100%;
+ }
+ .visual-v2 #ov-market.reference-market #seed-shop .ayuda-menu .mkt-row:not(.ref-seed-row)>button{
+  flex:0 0 auto;width:max-content;max-width:100%;min-width:0;margin-left:auto;
+  white-space:normal;overflow-wrap:normal;font-size:13px;line-height:1.25;padding:6px 8px;
+ }
+ .visual-v2 #ov-market.reference-market #seed-shop .ayuda-menu .mkt-row:not(.ref-seed-row)>.motivo-accion{
+  flex:1 1 100%;margin:0;text-align:right;
+ }
 }
