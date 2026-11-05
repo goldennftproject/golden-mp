@@ -2048,6 +2048,7 @@ function refreshHud() {
   if(isOpen('ov-banco'))bancoActualizarPrevia();
   try { syncMisionesBadge(); } catch (e) {}   // contador de misiones del menú (10/8)
   try { syncLogrosBadge(); } catch (e) {}     // 22/8: cuántos logros hay para cobrar
+  try { syncJornadaBadge(); } catch (e) {}    // Misiones diarias confirmadas, listas para reclamar
   try { syncCaminoBadge(); } catch (e) {}     // 25/8: cuánto le falta a la meta de la semana
   try { syncAlbumBadge(); } catch (e) {}      // 23/8: el % del álbum
   /* 24/8 — LA BOLSA ABIERTA NO PUEDE MENTIR. Dirección reportó que al vender, el objeto seguía
@@ -2765,6 +2766,7 @@ function actividadGranjaHtml(){
   return jornadaHtml()+'<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gasta energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
 }
 function actividadGranjaRefrescar(){
+  syncJornadaBadge();
   const j=$('cob-jornada');if(j)j.innerHTML=jornadaHtml();
   for(const id of ['banco-actividad','vip-actividad']){const el=$(id);if(el)el.innerHTML=actividadGranjaHtml();}
   if(isOpen('ov-objetivos'))refreshObjetivos();
@@ -4369,6 +4371,21 @@ function misionesHtml(lista, stars) {
       '<div class="durbar"><i style="width:' + Math.min(100, Math.round(m.n / m.goal * 100)) + '%"></i></div>' +
       '<div class="fds">' + Math.min(m.n, m.goal) + '/' + m.goal + ' · recompensa: ' + stars + ' estrellas</div></div></div>';
   }).join("");
+}
+// Contador discreto de recompensas diarias disponibles; no inicia guardados ni cobros.
+function syncJornadaBadge() {
+  const button=$('misiones-acceso'),badge=$('misiones-contador');
+  if(!button||!badge||typeof jornadaEstado!=='function')return;
+  // Sólo estado confirmado por el servidor: las acciones locales aún no guardadas no cuentan.
+  const j=jornadaEstado(),remaining=Math.max(0,5000-j.plata);
+  const n=remaining>0?JORNADA_MISIONES.filter(m=>!j.cobradas[m.id]&&
+    (m.tipo==='energia'?j.energia:(j.progreso[m.tipo]||0))>=m.meta).length:0;
+  const text=n?String(n):'';
+  if(badge.textContent!==text)badge.textContent=text;
+  badge.hidden=n===0;
+  const label=n?'Misiones diarias: '+n+' recompensa'+(n===1?'':'s')+' disponible'+(n===1?'':'s'):'Ver misiones diarias y reclamar Plata';
+  if(button.title!==label)button.title=label;
+  if(button.getAttribute('aria-label')!==label)button.setAttribute('aria-label',label);
 }
 // el contador del menú: cuántas llevás hoy, y pulsa si te queda alguna sin cumplir
 function syncMisionesBadge() {

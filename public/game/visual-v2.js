@@ -100,7 +100,8 @@
    if(!missionNodes.has(mission))missionNodes.set(mission,Array.from(mission.childNodes));
    if(isEnabled()&&!missionDecorated.has(mission)){
     const icon=doc.createElement('img'),label=doc.createElement('span');icon.src=uiSource('misiones');icon.alt='';icon.width=26;icon.height=26;icon.setAttribute('aria-hidden','true');icon.addEventListener('error',()=>{icon.hidden=true;});label.textContent='Misiones';
-    mission.replaceChildren(icon,label);missionDecorated.add(mission);
+    const counter=mission.querySelector('#misiones-contador');
+    mission.replaceChildren(icon,label,...(counter?[counter]:[]));missionDecorated.add(mission);
    }else if(!isEnabled()&&missionDecorated.has(mission)){mission.replaceChildren(...missionNodes.get(mission));missionDecorated.delete(mission);}
   }
   for(const card of doc.querySelectorAll('#ov-reliquias .objeto-card')){

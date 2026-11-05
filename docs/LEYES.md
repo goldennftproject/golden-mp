@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Contador discreto de misiones diarias — 05/11/2026
+
+Dirección aprueba «Sí, contador discreto» tras revisar la propuesta de mostrar los premios diarios confirmados y disponibles junto al acceso Misiones de debajo de Tienda. El contador numérico desaparece cuando no hay cobros, al reclamarlos o al reinicio UTC; conserva el mismo botón al alternar Clásico/Renovado. No confunde las misiones de Plata con las del Pase ni duplica el contador de Logros. Usa el estado ya confirmado sin consultas nuevas, guardados o cobros automáticos. Premios, límites, cuentas, balance y sistemas pausados permanecen. Ver CONTADOR-MISIONES-20261105.md.
+
 ## Componentes visuales comunes de los menús — 04/11/2026
 
 Dirección pide «que todos los menús respeten esas claves», incluyendo las tablas antiguas dentro de Mejoras y los botones demasiado juntos. Renovado de PC comparte superficies de pergamino, títulos de sección, tarjetas y separación de acciones mediante `game/menu-system.css`. Se conservan los controles existentes, sus estados y eventos, las ilustraciones aprobadas, el aspecto Clásico y la versión móvil. Esta revisión es visual: no cambia precios, producción, tiempos, energía, progreso ni guardado. Los criterios y excepciones están en `MENU-VISUAL-SYSTEM.md`.

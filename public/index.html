@@ -1532,6 +1532,8 @@
     #compras-accesos{display:block;position:fixed;left:12px;top:92px;width:156px;z-index:6;pointer-events:auto}
     #compras-accesos.compras-combate{width:280px}.compras-combate .compras-iconos{grid-template-columns:repeat(4,minmax(0,1fr))}
     .tienda-abrir{display:block;width:100%;padding:3px 8px!important;font-size:11px!important;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+    #misiones-acceso .jornada-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:4px;padding:0 4px;border:1px solid #c6ad73;border-radius:9px;background:#335123;color:#fff3cc;font:700 11px/1 sans-serif;letter-spacing:0;text-shadow:none;flex-shrink:0;vertical-align:middle}
+    #misiones-acceso .jornada-badge[hidden]{display:none}
     .compras-iconos{display:grid;grid-template-columns:1fr 1fr;gap:5px}
     .compras-iconos button{min-height:64px;padding:3px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:#674626!important;border:1px solid #bd9656!important;border-image:none!important;border-radius:7px!important;box-shadow:0 2px 0 #352716!important;transition:background .15s}
     .compras-iconos button:hover{background:#855e30!important}.compras-iconos img{width:40px;height:40px;object-fit:contain;image-rendering:pixelated}.compras-iconos span{font-size:11px;color:#fff0cc;text-shadow:0 1px #25190f;font-weight:800}.compras-iconos .tienda-vip-activo{border-color:#aed783!important;background:#355329!important}
@@ -1692,7 +1694,7 @@
       <button data-tienda="mejoras" title="Mejoras: edificios, God Hand y pasivas de recolección"><img src="assets/ui/shop-mejoras-v1.webp" alt="" width="48" height="48"><span>Mejoras</span></button>
       <button data-tienda="suministros" title="Packs: materiales para construir y fabricar"><img src="assets/ui/shop-suministros-v1.webp" alt="" width="48" height="48"><span>Packs</span></button>
     </div>
-    <button class="tienda-abrir" id="misiones-acceso" style="margin-top:6px" title="Ver misiones diarias y reclamar Plata" onclick="openOv('ov-objetivos')">📋 Misiones</button>
+    <button class="tienda-abrir" id="misiones-acceso" style="margin-top:6px" title="Ver misiones diarias y reclamar Plata" onclick="openOv('ov-objetivos')">📋 Misiones<b id="misiones-contador" class="jornada-badge" hidden aria-hidden="true"></b></button>
   </nav>
   <div class="ov" id="ov-tienda"><div class="card" style="width:min(760px,94vw)"><button class="close" data-close="ov-tienda" aria-label="Cerrar tienda">×</button><h3>Tienda de la granja</h3><div id="tienda-catalogo"></div></div></div>
 
