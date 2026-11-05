@@ -1532,6 +1532,11 @@
     #compras-accesos{display:block;position:fixed;left:12px;top:92px;width:156px;z-index:6;pointer-events:auto}
     #compras-accesos.compras-combate{width:280px}.compras-combate .compras-iconos{grid-template-columns:repeat(4,minmax(0,1fr))}
     .tienda-abrir{display:block;width:100%;padding:3px 8px!important;font-size:11px!important;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+    #ov-p2p .p2p-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0}
+    #ov-p2p #p2p-cobros{flex:1 1 180px;min-width:0;font-size:13px;line-height:1.4}
+    #ov-p2p #p2p-cobros.p2p-cobros-listos{padding:6px 8px;border-left:3px solid #597d38;background:#edf1d5;color:#385226;font-weight:700}
+    #ov-p2p .p2p-toolbar button{flex:0 0 auto;margin:0}
+    #ov-p2p #p2p-ver-cobros[hidden]{display:none}
     #misiones-acceso .jornada-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:4px;padding:0 4px;border:1px solid #c6ad73;border-radius:9px;background:#335123;color:#fff3cc;font:700 11px/1 sans-serif;letter-spacing:0;text-shadow:none;flex-shrink:0;vertical-align:middle}
     #misiones-acceso .jornada-badge[hidden]{display:none}
     .compras-iconos{display:grid;grid-template-columns:1fr 1fr;gap:5px}
@@ -2162,11 +2167,16 @@
   <div class="ov" id="ov-p2p"><div class="card" style="width:min(680px,94%)">
     <button class="close" data-close="ov-p2p" aria-label="Cerrar ventana">×</button>
     <h3>Comercio entre jugadores</h3>
-    <div class="sub">Compra y vende con otros jugadores. Revisa la comisión al publicar; el cobro te espera en Mis anuncios.</div>
+    <div class="sub">Compra y vende con otros jugadores. Cobra tus ventas en Mis anuncios y cobros.</div>
     <div class="shoptabs">
       <button class="shoptab active" data-p2p="comprar">Comprar</button>
       <button class="shoptab" data-p2p="vender">Vender</button>
-      <button class="shoptab" data-p2p="mias">Mis anuncios</button>
+      <button class="shoptab" data-p2p="mias">Mis anuncios y cobros</button>
+    </div>
+    <div class="p2p-toolbar menu-actions" role="group" aria-label="Consulta de comercio">
+      <span class="fds" id="p2p-cobros" role="status" aria-live="polite" title="Se consulta al abrir o actualizar Comercio.">Consulta tus ventas al abrir Comercio.</span>
+      <button class="green sm" id="p2p-ver-cobros" hidden>Ver cobros</button>
+      <button class="sm" id="p2p-actualizar" title="Volver a consultar anuncios y cobros">Actualizar</button>
     </div>
     <div class="forge-list" id="p2p-list" style="max-height:58vh"></div>
   </div></div>

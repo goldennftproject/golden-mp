@@ -2145,23 +2145,72 @@ window.SAVE_READY = initSave();
 // ================= MERCADO P2P ("detallitos (1)" punto 8) =================
 // Tabla `market` en Supabase. El anon-key solo permite lo justo (ver policies en sql/market.sql):
 // publicar lo tuyo, comprar publicaciones libres (update condicional = atómico) y cobrar tus ventas.
-async function mkList(filtro) {
-  if (!sb) return [];
+/* Las pantallas nuevas distinguen una lista vacía de una consulta fallida. Los callers
+   antiguos conservan [] ante error; sólo estricto propaga el fallo y limita la espera. */
+async function mkLecturaMercado(opciones, consultar, permiteSinUid = false) {
+  const estricto = !!(opciones && opciones.estricto === true), uid = UID;
+  let temporizador = null, vencida = false, abortador = null;
+  const comprobar = () => {
+    if (vencida) throw Error("La consulta del comercio tardó demasiado. Vuelve a intentarlo.");
+    if (UID !== uid) throw Error("La cuenta cambió. Vuelve a consultar el comercio.");
+  };
   try {
-    let q = sb.from("market").select("*").is("sold_to", null).order("created_at", { ascending: false }).limit(60);
-    if (filtro && filtro.kind) q = q.eq("kind", filtro.kind);
-    const { data, error } = await q;
-    if (error) { console.warn("market list:", error.message); return []; }
-    return data || [];
-  } catch (e) { console.warn("market list err:", e); return []; }
+    if (!sb || (!uid && (estricto || !permiteSinUid))) throw Error("Necesitas conexión y una sesión activa para consultar el comercio.");
+    const cliente = sb;
+    if (estricto && typeof AbortController === "function") abortador = new AbortController();
+    const limite = estricto ? new Promise((_, rechazar) => {
+      temporizador = setTimeout(() => {
+        vencida = true;
+        if (abortador) abortador.abort();
+        rechazar(Error("La consulta del comercio tardó demasiado. Vuelve a intentarlo."));
+      }, 15000);
+    }) : null;
+    const lectura = consultar(cliente, uid, comprobar, abortador && abortador.signal);
+    const filas = await (limite ? Promise.race([lectura, limite]) : lectura);
+    comprobar();
+    return filas;
+  } catch (e) {
+    if (estricto) throw e;
+    console.warn("market read:", e && e.message || e);
+    return [];
+  } finally {
+    if (temporizador !== null) clearTimeout(temporizador);
+  }
 }
-async function mkMine() {
-  if (!sb || !UID) return [];
-  try {
-    const { data, error } = await sb.from("market").select("*").eq("seller", UID).order("created_at", { ascending: false }).limit(60);
-    if (error) { console.warn("market mine:", error.message); return []; }
-    return data || [];
-  } catch (e) { return []; }
+async function mkList(filtro, opciones = {}) {
+  return mkLecturaMercado(opciones, async (cliente, uid, comprobar, signal) => {
+    comprobar();
+    let q = cliente.from("market").select("*").is("sold_to", null).order("created_at", { ascending: false }).limit(60);
+    if (filtro && filtro.kind) q = q.eq("kind", filtro.kind);
+    if (signal) q = q.abortSignal(signal);
+    const { data, error } = await q;
+    comprobar();
+    if (error) throw Error("No se pudo consultar el comercio. Vuelve a intentarlo.");
+    if (!Array.isArray(data)) throw Error("El servidor devolvió una lista de anuncios no válida.");
+    return data;
+  }, true);
+}
+async function mkMine(opciones = {}) {
+  return mkLecturaMercado(opciones, async (cliente, uid, comprobar, signal) => {
+    const pendientes = opciones.pendientes === true, filas = [];
+    // paid es NOT NULL DEFAULT false. Filtrar antes de paginar evita que anuncios ya
+    // cobrados oculten ventas antiguas pendientes detrás del límite histórico de 60.
+    for (let pagina = 0; pagina < (pendientes ? 20 : 1); pagina++) {
+      comprobar();
+      let q = cliente.from("market").select("*").eq("seller", uid);
+      if (pendientes) q = q.eq("paid", false);
+      q = q.order("created_at", { ascending: false }).order("id", { ascending: false });
+      q = pendientes ? q.range(pagina * 100, pagina * 100 + 99) : q.limit(60);
+      if (signal) q = q.abortSignal(signal);
+      const { data, error } = await q;
+      comprobar();
+      if (error) throw Error("No se pudieron consultar tus anuncios. Vuelve a intentarlo.");
+      if (!Array.isArray(data)) throw Error("El servidor devolvió una lista de anuncios no válida.");
+      filas.push(...data);
+      if (!pendientes || data.length < 100) return filas;
+    }
+    throw Error("Hay demasiados anuncios pendientes para confirmar la lista completa. Contacta con el equipo.");
+  });
 }
 async function mkPublish(row) {
   if (!sb || !UID) { toast("Necesitas conexión para publicar"); return null; }

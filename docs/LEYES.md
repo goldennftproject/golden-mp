@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Ventas por cobrar visibles en Comercio — 05/11/2026
+
+Dirección autoriza implementar, probar y publicar el aviso de ventas por cobrar, acceso directo, pestaña Mis anuncios y cobros y actualización manual. Comercio consulta al abrir o pulsar Actualizar, conserva la lectura durante la navegación y vuelve a consultar tras una operación manual. La cantidad usa el neto vigente de cada anuncio; Ver cobros sólo navega. Errores, carga y ausencia de ventas son estados distintos. La caché y las respuestas se vinculan a la cuenta y generación de consulta; las lecturas estrictas tienen plazo y no presentan resultados parciales como completos. No hay sondeos periódicos ni cambios de reglas, comisiones, recibos, guardado, compras o cobros del servidor. Ver COMERCIO-COBROS-20261105.md.
+
 ## Etiquetas concretas del botón de guía — 05/11/2026
 
 Dirección autoriza implementar, probar y publicar etiquetas más específicas de Mostrar. La guía de construcción y cocina nombra su destino efectivo: Ver Herrería/Horno/Cocina, Ver receta, Ver olla o Ver plato listo. Fuera de la granja indica Ver mapa, que es la acción ya existente. Los subdestinos de materiales conservan sus etiquetas de parcelas, cultivos o Mercado. El aspecto Renovado muestra el texto real del botón en lugar de un Mostrar fijo dibujado por CSS. Se mantienen controlador, foco, resaltado, progreso, requisitos y tiempos; el botón no ejecuta construcción, cocina o cobro. Ver ETIQUETAS-GUIA-20261105.md.

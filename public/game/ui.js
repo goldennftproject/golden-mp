@@ -93,7 +93,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-ofrendas": () => refreshOfrendas(),
   "ov-incursion": () => refreshIncursion(),
   "ov-viaje": () => refreshViaje(),   // 8/9: la puerta de la Zona Negra
-  "ov-p2p": () => refreshP2P(),
+  "ov-p2p": () => refreshP2P(true),
   "ov-cos": () => refreshCosmeticos(),
   "ov-pass": () => refreshPass(),
   "ov-cofre": () => refreshChest(),
@@ -7279,23 +7279,66 @@ function refreshIncursion() {
 
 /* ---- Mercado entre jugadores (P2P) ---- */
 let p2pTab = "comprar", p2pCache = null, p2pLoading = false;
-async function refreshP2P() {
+let p2pUid = null, p2pGeneration = 0, p2pFlight = null;
+let p2pMine = null, p2pPublic = null, p2pMineError = "", p2pPublicError = "";
+function p2pCuentaActual(){return typeof UID==='string'?UID:'';}
+function p2pLimpiar(uid){
+  p2pUid=uid;p2pGeneration++;p2pCache=null;p2pMine=null;p2pPublic=null;
+  p2pMineError='';p2pPublicError='';p2pLoading=false;p2pFlight=null;
+}
+function p2pResumen(){
+  const status=$('p2p-cobros'),link=$('p2p-ver-cobros'),update=$('p2p-actualizar');
+  const ventas=(p2pMine||[]).filter(r=>r.sold_to&&!r.paid),n=ventas.length;
+  const neto=ventas.reduce((s,r)=>s+marketNet(r.price,marketFee(r)),0);
+  if(status){
+    status.textContent=p2pMineError?'No se pudieron consultar tus cobros. Pulsa Actualizar.':
+      p2pMine===null?'Consultando tus cobros…':n?n+' venta'+(n===1?'':'s')+' · '+fmt(neto)+' Plata por cobrar':'Sin ventas por cobrar';
+    status.classList.toggle('p2p-cobros-listos',p2pMine!==null&&!p2pMineError&&n>0);
+  }
+  if(link)link.hidden=p2pMine===null||!!p2pMineError||n===0;
+  if(update)update.disabled=p2pLoading;
+}
+async function refreshP2P(actualizar=false) {
   const box = $("p2p-list"); if (!box) return;
+  const uid=p2pCuentaActual();
+  if(actualizar||p2pUid!==uid)p2pLimpiar(uid);
   document.querySelectorAll("[data-p2p]").forEach(b => {
     b.classList.toggle("active", b.dataset.p2p === p2pTab);
-    b.onclick = () => { p2pTab = b.dataset.p2p; p2pCache = null; refreshP2P(); };
+    b.onclick = () => { p2pTab = b.dataset.p2p; return refreshP2P(); };
   });
-  if (p2pLoading) return;
-  const tabPedida = p2pTab;   // la pestaña con la que arrancó ESTA carga
-  if (!p2pCache) {
-    p2pLoading = true; box.innerHTML = '<div class="fds">Cargando…</div>';
-    try { p2pCache = (tabPedida === "comprar") ? await mkList() : await mkMine(); }
-    catch (e) { p2pCache = []; }
-    p2pLoading = false;
-    // si mientras cargaba el jugador cambió de pestaña, esto ya no sirve: se recarga con la nueva
-    if (p2pTab !== tabPedida) { p2pCache = null; return refreshP2P(); }
+  const update=$('p2p-actualizar'),link=$('p2p-ver-cobros');
+  if(update)update.onclick=()=>refreshP2P(true);
+  if(link)link.onclick=()=>{p2pTab='mias';return refreshP2P();};
+  if(p2pLoading){p2pResumen();return p2pFlight;}
+  const jobs=[];
+  if(p2pMine===null&&!p2pMineError)jobs.push({key:'mine',read:()=>mkMine({estricto:true,pendientes:true})});
+  if(p2pTab==='comprar'&&p2pPublic===null&&!p2pPublicError)jobs.push({key:'public',read:()=>mkList(null,{estricto:true})});
+  if(jobs.length){
+    const generation=p2pGeneration;
+    p2pLoading=true;p2pResumen();box.setAttribute('aria-busy','true');box.innerHTML='<div class="fds">Cargando…</div>';
+    p2pFlight=(async()=>{
+      const results=await Promise.allSettled(jobs.map(job=>Promise.resolve().then(job.read)));
+      if(generation!==p2pGeneration)return;
+      if(uid!==p2pCuentaActual()){
+        p2pLimpiar(p2pCuentaActual());p2pMineError=p2pPublicError='cuenta';p2pResumen();
+        box.setAttribute('aria-busy','false');box.innerHTML='<div class="fds">La cuenta ha cambiado. Pulsa Actualizar.</div>';return;
+      }
+      results.forEach((result,i)=>{
+        const ok=result.status==='fulfilled'&&Array.isArray(result.value);
+        if(jobs[i].key==='mine'){p2pMine=ok?result.value:null;p2pMineError=ok?'':'lectura';}
+        else{p2pPublic=ok?result.value:null;p2pPublicError=ok?'':'lectura';}
+      });
+      p2pLoading=false;p2pFlight=null;
+      return refreshP2P();
+    })();
+    return p2pFlight;
   }
+  p2pResumen();box.setAttribute('aria-busy','false');
+  const error=p2pTab==='comprar'?p2pPublicError:p2pTab==='mias'?p2pMineError:'';
+  if(error){p2pCache=null;box.innerHTML='<div class="fds">No se pudieron cargar '+(p2pTab==='comprar'?'las publicaciones':'tus anuncios')+'. Pulsa Actualizar.</div>';return;}
+  p2pCache=p2pTab==='comprar'?p2pPublic:p2pMine;
   const filas = p2pCache || [];
+  const generation=p2pGeneration,current=()=>uid===p2pCuentaActual()&&generation===p2pGeneration;
   let h = "";
   // entregas pendientes (compras/retiros que no entraron en la bolsa): nunca se pierden
   if (typeof mkPendCount === "function" && mkPendCount() > 0) {
@@ -7357,24 +7400,28 @@ async function refreshP2P() {
   box.innerHTML = h;
   { const pb = $("p2p-pend"); if (pb) pb.onclick = () => { mkPendCobrar(); refreshP2P(); }; }
   box.querySelectorAll("[data-pub]").forEach(b => b.onclick = async () => {
+    if(!current())return;
     const [kind, key, i] = b.dataset.pub.split(":");
     const q = $("p2q-" + i), pr = $("p2p-" + i);
     const cant = kind === "arm" || kind === "armor" ? 1 : Math.max(1, +(q && q.value) || 1);
     // candado anti-exploit (12/8): el P2P tampoco deja sacar recursos que el objetivo activo pide
-    await marketPublicar(kind, key, cant, Math.max(1, +(pr && pr.value) || 1));
-    p2pCache = null; refreshP2P();
+    try{await marketPublicar(kind, key, cant, Math.max(1, +(pr && pr.value) || 1));}
+    finally{if(uid===p2pCuentaActual())await refreshP2P(true);}
   });
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = async () => {
-    await marketComprar((p2pCache || []).find(r => String(r.id) === b.dataset.buy));
-    p2pCache = null; refreshP2P();
+    if(!current())return;
+    try{await marketComprar(filas.find(r => String(r.id) === b.dataset.buy));}
+    finally{if(uid===p2pCuentaActual())await refreshP2P(true);}
   });
   box.querySelectorAll("[data-cancel]").forEach(b => b.onclick = async () => {
-    await marketCancelar((p2pCache || []).find(r => String(r.id) === b.dataset.cancel));
-    p2pCache = null; refreshP2P();
+    if(!current())return;
+    try{await marketCancelar(filas.find(r => String(r.id) === b.dataset.cancel));}
+    finally{if(uid===p2pCuentaActual())await refreshP2P(true);}
   });
   box.querySelectorAll("[data-cobrar]").forEach(b => b.onclick = async () => {
-    await marketCobrar((p2pCache || []).find(r => String(r.id) === b.dataset.cobrar));
-    p2pCache = null; refreshP2P();
+    if(!current())return;
+    try{await marketCobrar(filas.find(r => String(r.id) === b.dataset.cobrar));}
+    finally{if(uid===p2pCuentaActual())await refreshP2P(true);}
   });
 }
 
