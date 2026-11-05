@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 9;        // 04/11: una incursión de prueba Sin VIP en el tutorial; conserva la evidencia de tala V8.
+const VERSION = 10;       // 05/11: energía/snapshot coherentes, tala en vuelo y testigos CD hasta ACK.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -85,7 +85,9 @@ function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
     (o.premiumOnly||o.exp===null||num(a.expansiones)>o.exp));
   if(!arboles.length)return 0;
   if(!arboles.some(o=>a.nodos?.[o.key]!==undefined||a.nodoUsos?.[o.i]!==undefined||b.nodoUsos?.[o.i]!==undefined))return null;
-  const inicio=desdeServidor>0&&desdeServidor<=ahora?desdeServidor:ahora,base=1800000;
+  // El snapshot aceptado puede preceder a su recepción: incluye las acciones en vuelo.
+  const recibido=desdeServidor>0&&desdeServidor<=ahora?desdeServidor:ahora,anclaEnergia=num(a.energiaGranja?.at);
+  const inicio=anclaEnergia>0&&anclaEnergia<=recibido?anclaEnergia:recibido,base=1800000;
   const comidaCd=(d,t)=>(Array.isArray(d.buffs)?d.buffs:[]).some(x=>x?.type==='cd'&&x.mult===.85&&num(x.until)>t);
   const comidaNueva=num(a.dishes?.estofado)>num(b.dishes?.estofado)&&comidaCd(b,inicio);
   const cicloNuevo=base*((num(a.produccion?.vipHasta)>inicio||num(b.produccion?.vipHasta)>inicio)?.9:1)*((comidaCd(a,inicio)||comidaNueva)?.85:1);
@@ -108,7 +110,7 @@ function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
     const dur=q.readyAt-q.cdIni,antesDur=virgen?cicloNuevo:r.readyAt-r.cdIni;
     if(antesDur<base*.9*.85-1000||Math.min(Math.abs(dur-antesDur),Math.abs(dur-cicloNuevo),Math.abs(dur-base))>1000)continue;
     if(!virgen&&(q.readyAt<r.readyAt||(q.readyAt===r.readyAt&&q.cdIni===r.cdIni)))continue;
-    const iniciales=virgen?4:cargas(r,inicio),restantes=cargas(q,fin);
+    const iniciales=virgen?4:cargas(r,inicio),restantes=cargas(q,fin+1000);
     let primera;
     if(virgen||iniciales===4)primera=inicio+cicloNuevo;
     else if(!iniciales)primera=r.readyAt;
@@ -137,7 +139,8 @@ function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
   // La regeneración anterior al último guardado sólo puede llenar el depósito.
   // El intervalo posterior usa updated_at del servidor, nunca visto/at del cliente nuevo.
   const energiaInicio=Math.min(finVip>inicio?100:50,Math.max(0,e.actual)+regen(Math.min(inicio,Math.max(0,num(e.at)||inicio)),inicio));
-  const energia=Math.floor(Math.max(0,energiaInicio+regen(inicio,ahora)-b.energiaGranja.actual)+1e-6);
+  const finEnergia=Number.isFinite(b.energiaGranja?.at)?Math.min(ahora,Math.max(inicio,b.energiaGranja.at)):ahora;
+  const energia=Math.floor(Math.max(0,energiaInicio+regen(inicio,finEnergia)-b.energiaGranja.actual)+1e-6);
   return Math.min(probadas,stat,xp,Math.floor(hachas),energia);
 }
 function actividadEvidencias(a,b,ahora,desdeServidor=0){
@@ -237,7 +240,9 @@ function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0
   }
   const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora,desdeServidor):{},pedidos=next.actividadAcciones||{};
   const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
-  const regen=(Math.max(0,Math.min(ahora,fin)-at)*100+Math.max(0,ahora-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
+  // Sólo el intervalo representado por la muestra, sin reutilizar regeneración posterior.
+  const finEnergia=Number.isFinite(next.energiaGranja?.at)?Math.min(ahora,Math.max(at,next.energiaGranja.at)):ahora;
+  const regen=(Math.max(0,Math.min(finEnergia,fin)-at)*100+Math.max(0,finEnergia-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
   let presupuesto=e&&Number.isFinite(e.actual)?Math.max(0,e.actual+regen-num(next.energiaGranja?.actual)):0,credito=0;const acciones={};
   for(const k of Object.keys(ACTIVIDAD_COSTOS)){
     const anterior=Math.max(0,num(a.registro[k])),pedido=Number.isSafeInteger(pedidos[k])&&pedidos[k]>=0&&pedidos[k]<=1e9?Math.max(anterior,pedidos[k]):anterior;
@@ -667,7 +672,12 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   if(!mismoJSON(antes.visitas||{},next.visitas||{}))errores.push('Las semillas de visitas sólo se reclaman en el servidor');
   const energia=next.energiaGranja;
   if(energia && (!Number.isFinite(energia.actual)||energia.actual<0||energia.actual>100||!Number.isFinite(energia.at)))errores.push('Energía de granja inválida');
-  next.energiaGranja={v:1,actual:Math.min(energia ? Math.max(0,num(energia.actual)) : energiaServidor(antes,ahora),energiaServidor(antes,ahora)),at:ahora};
+  // Transportar valor e instante juntos; las fechas del cliente no amplían el saldo permitido.
+  const energiaAt=energia ? Math.min(ahora,Math.max(0,num(antes.energiaGranja?.at),desdeServidor,num(energia.at))) : ahora;
+  const energiaHasta=energia ? Math.max(energiaAt,num(energia.at)) : energiaAt,energiaFinVip=num(antes.produccion?.vipHasta);
+  const energiaAdelantada=(Math.max(0,Math.min(energiaHasta,energiaFinVip)-energiaAt)*100+Math.max(0,energiaHasta-Math.max(energiaAt,energiaFinVip))*50)/ENERGIA_GRANJA_MS;
+  const energiaActual=energia ? num(energia.at)<energiaAt ? energiaServidor({energiaGranja:energia,produccion:antes.produccion},energiaAt) : Math.max(0,num(energia.actual)-energiaAdelantada) : energiaServidor(antes,energiaAt);
+  next.energiaGranja={v:1,actual:Math.min(energiaActual,energiaServidor(antes,energiaAt)),at:energiaAt};
   let gastoVip = 0, reembolso = 0;
   if (!Number.isFinite(goldenCustodia(next))) errores.push("Golden inválido en saldo o contenedor");
   if (!prev && goldenCustodia(next) > 0) errores.push("Golden inicial no autorizado");

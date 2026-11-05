@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Recaída de los objetivos de madera — 05/11/2026
+
+Dirección autoriza completar, probar y publicar la corrección del contador y recuperar el progreso demostrable de todas las cuentas afectadas, no sólo de Not. Se conserva la coherencia entre instante y valor de energía en guardados en vuelo y los testigos de comida hasta confirmar su snapshot. La recuperación acumulativa corrobora fuentes posteriores al reinicio; las misiones diarias sólo reciben actividad que se pueda fechar en ese día. Preimagen mínima cifrada nueva, CAS e idempotencia; sin materiales, saldos ni cobros automáticos. Se autoriza una respuesta breve al reporte en Discord tras verificar el resultado. Ver OBJETIVOS-MADERA-20261105.md.
+
 ## Etiqueta de revisión de depósitos acreditados — 05/11/2026
 
 Dirección autoriza corregir, probar y publicar la etiqueta del panel del equipo. En Incidencias, un estado acreditado muestra No requiere revisión, independientemente de la marca administrativa resolved. Los demás registros conservan Revisada o Por revisar. Se mantienen notas, botones, permisos y consultas. Sólo cambia el texto mostrado: no se marcan registros como resueltos ni se modifican depósitos o saldos. Ver PANEL-REVISION-20261105.md.

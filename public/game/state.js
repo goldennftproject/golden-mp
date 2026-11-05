@@ -103,6 +103,7 @@ window.G = G;
    referencia), lo que cambia es lo que hay adentro. */
 const G_INICIAL_JSON = JSON.stringify(G);
 function estadoDeCero() {
+  BUFF_CD_CONFIRMADOS.clear();
   const fresco = JSON.parse(G_INICIAL_JSON);
   for (const k of Object.keys(G)) delete G[k];
   Object.assign(G, fresco);
@@ -384,6 +385,30 @@ function granjaRegenAusente(ms) {
   G.hp = Math.min(G.hpMax, G.hp + granjaCuraPorSeg() * seg);
   return G.hp - antes;
 }
+// El CD vencido conserva su testigo hasta confirmar el snapshot que lo incluyó.
+// Confirmar no reactiva el bono ni cambia su duración; los efectos miran until.
+var BUFF_CD_CONFIRMADOS = new Set();
+function buffCdClave(b) {
+  return b && b.type === "cd" && Number.isFinite(b.mult) && Number.isFinite(b.until)
+    ? JSON.stringify([b.type,b.mult,b.until]) : null;
+}
+function buffCdRestaurar(lista) {
+  BUFF_CD_CONFIRMADOS.clear();
+  const t=nowMs();
+  G.buffs=(Array.isArray(lista)?lista:[]).filter(b=>b&&(b.until>t||buffCdClave(b))).map(b=>({...b}));
+}
+function buffCdConfirmar(lista) {
+  for(const b of (Array.isArray(lista)?lista:[])){const k=buffCdClave(b);if(k)BUFF_CD_CONFIRMADOS.add(k);}
+  const t=nowMs();
+  G.buffs=G.buffs.filter(b=>{const k=buffCdClave(b);return !(k&&b.until<=t&&!b.on&&BUFF_CD_CONFIRMADOS.has(k));});
+  const presentes=new Set(G.buffs.map(buffCdClave).filter(Boolean));
+  for(const k of BUFF_CD_CONFIRMADOS)if(!presentes.has(k))BUFF_CD_CONFIRMADOS.delete(k);
+}
+function buffConservar(b,t) {
+  const k=buffCdClave(b),conservar=b.until>t||b.on||!!(k&&!BUFF_CD_CONFIRMADOS.has(k));
+  if(!conservar&&k)BUFF_CD_CONFIRMADOS.delete(k);
+  return conservar;
+}
 function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida máxima temporal
   /* 18/9 — la hora sale de nowMs(), como todos los demás relojes del juego. Acá decía Date.now()
      directo, que es el único sitio del archivo que se saltaba la función: mezclar las dos
@@ -404,7 +429,7 @@ function buffTick() {   // 1 vez por segundo desde el HUD: regeneración y vida 
       if (b.until <= t && b.on) { b.on = false; G.hpMax -= b.mult; G.hp = Math.min(G.hp, G.hpMax); dirty = true; }
     }
   }
-  G.buffs = G.buffs.filter(b => b.until > t || b.on);
+  G.buffs = G.buffs.filter(b => buffConservar(b,t));
   if (dirty) { const el = document.getElementById("s-hp"); if (el) el.textContent = Math.ceil(G.hp) + "/" + G.hpMax; }
 }
 

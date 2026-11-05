@@ -797,8 +797,8 @@ function hydrate(d) {
   if (d.runaOro && typeof d.runaOro === "object") G.runaOro = d.runaOro;
   if (typeof d.expansiones === "number") G.expansiones = Math.max(0, Math.min(16, d.expansiones));
   GF.aplicarTerreno(G.expansiones || 0);
-  // los buffs traen su propio vencimiento: se descartan los que ya caducaron mientras no estabas
-  if (Array.isArray(d.buffs)) G.buffs = d.buffs.filter(b => b && b.until > Date.now());
+  // Los efectos vencen por until; el testigo CD pendiente se conserva hasta confirmar su guardado.
+  buffCdRestaurar(d.buffs);
   if (d.seeds) G.seeds = Object.assign({}, G.seeds, d.seeds);
   if (d.selSeed && CROP_DEF[d.selSeed]) G.selSeed = d.selSeed;
   if (d.tools) G.tools = Object.assign({}, G.tools, d.tools);
@@ -1648,7 +1648,7 @@ async function saveFarmReal(force) {
       // RLS ya impide el upsert directo. Un ACK necesita la versión real del servidor.
         const { data: r, error: fe } = await alfaInvocarGuardado(cuerpo);
         if(UID!==saveUid)return;
-        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { const sinCambiosEnVuelo=snapKey()===key; actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(r.incursionTutorialUsada===true)G.incursionTutorialUsada=true; if(sinCambiosEnVuelo)claveConfirmada=snapKey(); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); if(!USDT_OCUPADO)USDT_REINTENTO_AT=0; usdtProgramarPendiente(); }
+        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { const sinCambiosEnVuelo=snapKey()===key; buffCdConfirmar(cuerpo.data.buffs); actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(r.incursionTutorialUsada===true)G.incursionTutorialUsada=true; if(sinCambiosEnVuelo)claveConfirmada=snapKey(); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); if(!USDT_OCUPADO)USDT_REINTENTO_AT=0; usdtProgramarPendiente(); }
         else if (fe) {
           /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
              diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el
