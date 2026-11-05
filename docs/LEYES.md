@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Misma ilustración de cultivos en todos los iconos — 05/11/2026
+
+Dirección pide que el producto del Mercado se vea igual en el Inventario y en la etiqueta de su bolsa de semillas. Renovado PC comparte las trece ilustraciones de producto en bolsa, barra, costes y listados; cada saco incorpora ese mismo PNG. Se conservan los iconos clásicos y móviles, los controles, claves, cantidades, guardado y partidas. Es un cambio de presentación, sin economía ni consultas nuevas. Ver ICONOS-CULTIVOS-20261105.md.
+
 ## Recaída de los objetivos de madera — 05/11/2026
 
 Dirección autoriza completar, probar y publicar la corrección del contador y recuperar el progreso demostrable de todas las cuentas afectadas, no sólo de Not. Se conserva la coherencia entre instante y valor de energía en guardados en vuelo y los testigos de comida hasta confirmar su snapshot. La recuperación acumulativa corrobora fuentes posteriores al reinicio; las misiones diarias sólo reciben actividad que se pueda fechar en ese día. Preimagen mínima cifrada nueva, CAS e idempotencia; sin materiales, saldos ni cobros automáticos. Se autoriza una respuesta breve al reporte en Discord tras verificar el resultado. Ver OBJETIVOS-MADERA-20261105.md.

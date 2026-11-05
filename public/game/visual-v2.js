@@ -72,9 +72,56 @@
   // Arrancar en pantalla pequeña no descarga el atlas; ensanchar a PC lo carga sin reiniciar.
   ensure();return false;
  }
- const oldImages=new WeakMap(), oldLabels=new WeakMap(), failedUi=new Set(), missionNodes=new WeakMap(), missionDecorated=new WeakSet(), relicCards=new WeakMap(), failedRelics=new Set(), cropImages=new WeakMap(), failedCrops=new Set();
+ const oldImages=new WeakMap(), oldLabels=new WeakMap(), failedUi=new Set(), missionNodes=new WeakMap(), missionDecorated=new WeakSet(), relicCards=new WeakMap(), failedRelics=new Set(), cropImages=new WeakMap(), cropBound=new WeakSet(), failedCrops=new Set();
  const uiSource=key=>'assets/visual-v2/ui/'+key+((UI_KEYS.has(key)||key==='misiones')?'-concept':'')+'.png?v='+((UI_KEYS.has(key)||key==='misiones')?CONCEPT_UI_VERSION:UI_VERSION);
  const cropSource=key=>'assets/visual-v2/ui/crops/'+key+'.png?v='+CONCEPT_UI_VERSION;
+ const seedSource=key=>'assets/visual-v2/ui/seeds/'+key+'.svg?v=1';
+ const cropAsset=state=>state.family==='seed'?seedSource(state.key):cropSource(state.key);
+ function restoreCropError(img,state){
+  if(state.originalError!=null){if(img.getAttribute('onerror')!==state.originalError)img.setAttribute('onerror',state.originalError);}
+  if(state.originalHandler||state.originalError==null)img.onerror=state.originalHandler;
+ }
+ // Una misma ilustración identifica el cultivo; la bolsa distingue las semillas.
+ // Sólo presentación HTML: no se sustituyen texturas del mundo ni datos de objetos.
+ function decorateCropImage(img){
+  const current=img.getAttribute('src')||'';
+  let match=null;
+  try{const url=new root.URL(current,root.document.baseURI),base=new root.URL(root.document.baseURI);if(url.origin===base.origin)match=url.pathname.match(/\/assets\/farm\/(crop|seed)_([a-z]+)\.png$/);}catch(_){}
+  if(match&&!CROP_UI_KEYS.has(match[2]))match=null;
+  let state=cropImages.get(img);
+  if(state&&!match&&current!==cropAsset(state)){
+   if(!img.hasAttribute('onerror')&&!img.onerror)restoreCropError(img,state);
+   cropImages.delete(img);return;
+  }
+  if(match&&(!state||current!==state.fallback)){
+   if(!state||current!==state.original){
+    const supplied=img.hasAttribute('onerror')||img.onerror;
+    state={original:current,key:match[2],sourceFamily:match[1],originalError:supplied?img.getAttribute('onerror'):(state?.originalError??null),originalHandler:supplied?img.onerror:(state?.originalHandler??null)};cropImages.set(img,state);
+   }
+  }
+  if(!state)return;
+  state.family=state.sourceFamily==='seed'&&!img.closest('#seed-shop .mimg')?'seed':'crop';
+  state.fallback=state.family==='crop'?state.original.replace('/seed_','/crop_'):state.original;
+  if(!cropBound.has(img)){
+   cropBound.add(img);
+   // Quitar el fallback inline antes de cargar: de lo contrario borra el <img>
+   // y no da tiempo a recuperar la imagen clásica cuando falla el arte opcional.
+   img.addEventListener('error',()=>{
+    const live=cropImages.get(img);if(!live)return;
+    const source=cropAsset(live);
+    if(img.getAttribute('src')===source){failedCrops.add(live.family+':'+live.key);decorateCropImage(img);}
+   });
+  }
+  const renewed=isEnabled()&&!failedCrops.has(state.family+':'+state.key);
+  const next=renewed?cropAsset(state):(isEnabled()?state.fallback:state.original);
+  if(renewed){img.removeAttribute('onerror');img.onerror=null;}
+  else restoreCropError(img,state);
+  if(img.getAttribute('src')!==next)img.setAttribute('src',next);
+ }
+ function decorateCropImages(node){
+  if(node.matches?.('img'))decorateCropImage(node);
+  for(const img of node.querySelectorAll?.('img')||[])decorateCropImage(img);
+ }
  function replaceUiImage(img,key){
   if(!oldImages.has(img)){
    oldImages.set(img,img.getAttribute('src'));
@@ -115,15 +162,7 @@
     if(image.parentElement!==card)card.prepend(image);card.classList.add('reliquia-renovada');
    }else{if(image?.parentElement===card)image.remove();card.classList.remove('reliquia-renovada');}
   }
-  for(const img of doc.querySelectorAll('#seed-shop .mimg img')){
-   let state=cropImages.get(img);
-   if(!state){const original=img.getAttribute('src')||'',key=original.match(/\/(?:seed_|crop_)([a-z]+)\.png(?:\?|$)/)?.[1];if(!CROP_UI_KEYS.has(key))continue;
-    state={original,key,fallback:original.replace('/seed_','/crop_')};cropImages.set(img,state);
-    img.addEventListener('error',()=>{if(img.getAttribute('src')===cropSource(state.key)){failedCrops.add(state.key);img.setAttribute('src',state.fallback);}});
-   }
-   const next=isEnabled()?(failedCrops.has(state.key)?state.fallback:cropSource(state.key)):state.original;
-   if(img.getAttribute('src')!==next)img.setAttribute('src',next);
-  }
+  decorateCropImages(doc);
  }
 function reconcileMovedCards(){
  const doc=root.document;if(!doc)return;
@@ -163,5 +202,5 @@ function reconcileMovedCards(){
  }
  const api={effectAnchor,prepare,prepareFarm,setEnabled,isEnabled,pc,visitImage,hasVariant:key=>isEnabled()&&variants.has(key)};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;
- if(root.document){root.GoldenVisual=api;sync();const b=root.document.getElementById('cfg-visual-v2');if(b)b.addEventListener('click',()=>setEnabled(!enabled));const artObserver=new root.MutationObserver(decorate);root.document.querySelectorAll('#seed-shop,#ov-tienda,#ov-vip,#ov-reliquias').forEach(el=>artObserver.observe(el,{childList:true,subtree:true}));const movedCardObserver=new root.MutationObserver(reconcileMovedCards);root.document.querySelectorAll('.ov').forEach(ov=>movedCardObserver.observe(ov,{attributes:true,attributeFilter:['class']}));let wide=pc();root.addEventListener('resize',()=>{if(pc()!==wide){wide=pc();repaint();sync();ensure();}});}
+ if(root.document){root.GoldenVisual=api;sync();const b=root.document.getElementById('cfg-visual-v2');if(b)b.addEventListener('click',()=>setEnabled(!enabled));const artObserver=new root.MutationObserver(decorate);root.document.querySelectorAll('#seed-shop,#ov-tienda,#ov-vip,#ov-reliquias').forEach(el=>artObserver.observe(el,{childList:true,subtree:true}));const cropObserver=new root.MutationObserver(records=>{for(const record of records){if(record.type==='attributes')decorateCropImage(record.target);else for(const node of record.addedNodes)decorateCropImages(node);}});cropObserver.observe(root.document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src']});const movedCardObserver=new root.MutationObserver(reconcileMovedCards);root.document.querySelectorAll('.ov').forEach(ov=>movedCardObserver.observe(ov,{attributes:true,attributeFilter:['class']}));let wide=pc();root.addEventListener('resize',()=>{if(pc()!==wide){wide=pc();repaint();sync();ensure();}});}
 })(typeof window==='undefined'?globalThis:window);
