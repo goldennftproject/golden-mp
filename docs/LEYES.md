@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Etiqueta de revisión de depósitos acreditados — 05/11/2026
+
+Dirección autoriza corregir, probar y publicar la etiqueta del panel del equipo. En Incidencias, un estado acreditado muestra No requiere revisión, independientemente de la marca administrativa resolved. Los demás registros conservan Revisada o Por revisar. Se mantienen notas, botones, permisos y consultas. Sólo cambia el texto mostrado: no se marcan registros como resueltos ni se modifican depósitos o saldos. Ver PANEL-REVISION-20261105.md.
+
 ## Ventas por cobrar visibles en Comercio — 05/11/2026
 
 Dirección autoriza implementar, probar y publicar el aviso de ventas por cobrar, acceso directo, pestaña Mis anuncios y cobros y actualización manual. Comercio consulta al abrir o pulsar Actualizar, conserva la lectura durante la navegación y vuelve a consultar tras una operación manual. La cantidad usa el neto vigente de cada anuncio; Ver cobros sólo navega. Errores, carga y ausencia de ventas son estados distintos. La caché y las respuestas se vinculan a la cuenta y generación de consulta; las lecturas estrictas tienen plazo y no presentan resultados parciales como completos. No hay sondeos periódicos ni cambios de reglas, comisiones, recibos, guardado, compras o cobros del servidor. Ver COMERCIO-COBROS-20261105.md.
