@@ -4125,6 +4125,20 @@ function guiaDestinoActual(){
   if(!sub&&st.id?.startsWith('place_'))st.ui='[data-plano="'+st.id.slice(6)+'"]';
   return st;
 }
+function guiaEtiquetaMostrar(destino){
+  // Describe el destino efectivo: un desvío a parcelas o Mercado conserva su propia etiqueta.
+  // «Ver» señala el control; no promete construir, cocinar o recoger al pulsar esta guía.
+  if(destino&&GF.scene&&GF.scene!=='farm')return 'Ver mapa';
+  if(destino?.panel==='ov-cocina'){
+    if(destino.ui==='#ck-recoger')return 'Ver plato listo';
+    if(destino.ui==='#ck-cola')return 'Ver olla';
+    if(destino.ui?.startsWith('[data-cook='))return 'Ver receta';
+  }
+  const edificios={store:['ov-forge','Ver Herrería'],horno:['ov-horno','Ver Horno'],cocina:['ov-cocina','Ver Cocina']};
+  const edificio=Object.prototype.hasOwnProperty.call(edificios,destino?.target)?edificios[destino.target]:null;
+  if(edificio&&(!destino.panel||destino.panel===edificio[0]))return edificio[1];
+  return destino?.target==='plot'?(destino.guiaPlot==='growing'?'Ver cultivos':'Mostrar parcelas'):destino?.ui?'Mostrar acción':destino?.target?'Mostrar destino':'Abrir menú';
+}
 function mostrarObjetivo(){
   const st=guiaDestinoActual();if(!st)return;
   const sc=window.farmScene;
@@ -4160,7 +4174,7 @@ function tutoRefresh() {
   const sub = (typeof tutoSub === "function") ? tutoSub() : null;
   const texto=sub?sub.txt:(st.brujula?st.txt:tutoTxt(st)),breve={kit:'Abre el baúl de bienvenida',buyseed:'Mercado → Compra 3 semillas de papa',craftarm:'Herrería → Forja una Espada de Madera'};
  const cartel=document.getElementById('tuto-txt');cartel.title=texto+(st.beneficio?' · '+st.beneficio:'');cartel.textContent=!sub&&!st.brujula&&breve[st.id]?breve[st.id]:texto;
-  const destino=guiaDestinoActual(),mostrar=$('tuto-ir');if(mostrar){mostrar.hidden=window.innerWidth<=640||!destino||!(destino.target||destino.panel);mostrar.onclick=mostrarObjetivo;mostrar.textContent=destino?.target==='plot'?(destino.guiaPlot==='growing'?'Ver cultivos':'Mostrar parcelas'):destino?.ui?'Mostrar acción':destino?.target?'Mostrar destino':'Abrir menú';mostrar.setAttribute('aria-label','Mostrar destino: '+texto);}
+  const destino=guiaDestinoActual(),mostrar=$('tuto-ir');if(mostrar){mostrar.hidden=window.innerWidth<=640||!destino||!(destino.target||destino.panel);mostrar.onclick=mostrarObjetivo;const etiqueta=guiaEtiquetaMostrar(destino);mostrar.textContent=etiqueta;mostrar.setAttribute('aria-label',etiqueta+': '+texto);}
   const titulo=el.querySelector('.k');if(titulo)titulo.textContent=st.brujula?'Siguiente':'Objetivo';
   const need = st.brujula ? 0 : tutoNeed(st);
   /* El desvío por nodos agotados no reemplaza el objetivo: conserva el contador para que se vea

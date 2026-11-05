@@ -22,8 +22,8 @@
  .visual-v2 #tuto>.k{display:none}
  .visual-v2 #tuto #tuto-txt{font-size:19px;line-height:1.15;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;color:#45301b!important}
  .visual-v2 #tuto #tuto-n{font-size:15px;white-space:nowrap}
- .visual-v2 #tuto #tuto-ir{font-size:0;font-weight:800;min-height:38px;padding:5px 15px;flex-shrink:0}
- .visual-v2 #tuto #tuto-ir::after{content:'Mostrar';font-size:18px}
+ .visual-v2 #tuto #tuto-ir{font-size:18px;font-weight:800;min-height:38px;padding:5px 15px;flex-shrink:0}
+ .visual-v2 #tuto #tuto-ir::after{content:none}
  .visual-v2 #tuto .reference-objective-icon{width:48px;height:45px;object-fit:contain;image-rendering:pixelated;flex:0 0 auto}
  .visual-v2 #hotwrap{left:var(--ref-center-x);bottom:16px;max-width:var(--ref-safe-width)}
  .visual-v2 #hotbar{box-sizing:border-box;max-width:var(--ref-safe-width);border:11px solid #9d6531;border-image:var(--ref-wood) 32 fill / 11px / 0 stretch;border-radius:0;background:#59341e;padding:5px;gap:6px;box-shadow:0 5px #27331b77;overflow-x:auto;scrollbar-width:thin}
@@ -42,7 +42,7 @@
  .visual-v2 #compras-accesos::before{top:29px;height:33px}
  .visual-v2 .compras-iconos{margin-top:30px;gap:5px}.visual-v2 .compras-iconos button{min-height:76px;border-width:6px!important}.visual-v2 .compras-iconos img{width:42px;height:42px}.visual-v2 .compras-iconos span{font-size:14px}
  .visual-v2 #compras-accesos #misiones-acceso{margin:13px -12px -64px!important;width:calc(100% + 24px);min-height:45px;font-size:17px!important}.visual-v2 #misiones-acceso img{width:27px;height:27px}
- .visual-v2 #tuto{top:99px;min-height:44px;padding:1px 5px;gap:5px;max-width:min(740px,var(--ref-safe-width));border-width:6px}.visual-v2 #tuto #tuto-txt{font-size:16px}.visual-v2 #tuto #tuto-ir{font-size:0;padding:4px 9px;min-height:28px}.visual-v2 #tuto #tuto-ir::after{font-size:15px}.visual-v2 #tuto .reference-objective-icon{width:30px;height:28px}
+ .visual-v2 #tuto{top:99px;min-height:44px;padding:1px 5px;gap:5px;max-width:min(740px,var(--ref-safe-width));border-width:6px}.visual-v2 #tuto #tuto-txt{font-size:16px}.visual-v2 #tuto #tuto-ir{font-size:15px;padding:4px 9px;min-height:28px}.visual-v2 #tuto .reference-objective-icon{width:30px;height:28px}
  .visual-v2 #hotwrap{bottom:9px}.visual-v2 #hotbar{border-width:9px;padding:3px;gap:4px}.visual-v2 .hcell{width:clamp(40px,4vw,57px);height:53px}
 }
 @media(min-width:900px) and (max-width:1100px){

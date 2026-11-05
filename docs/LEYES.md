@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Etiquetas concretas del botón de guía — 05/11/2026
+
+Dirección autoriza implementar, probar y publicar etiquetas más específicas de Mostrar. La guía de construcción y cocina nombra su destino efectivo: Ver Herrería/Horno/Cocina, Ver receta, Ver olla o Ver plato listo. Fuera de la granja indica Ver mapa, que es la acción ya existente. Los subdestinos de materiales conservan sus etiquetas de parcelas, cultivos o Mercado. El aspecto Renovado muestra el texto real del botón en lugar de un Mostrar fijo dibujado por CSS. Se mantienen controlador, foco, resaltado, progreso, requisitos y tiempos; el botón no ejecuta construcción, cocina o cobro. Ver ETIQUETAS-GUIA-20261105.md.
+
 ## Contador discreto de misiones diarias — 05/11/2026
 
 Dirección aprueba «Sí, contador discreto» tras revisar la propuesta de mostrar los premios diarios confirmados y disponibles junto al acceso Misiones de debajo de Tienda. El contador numérico desaparece cuando no hay cobros, al reclamarlos o al reinicio UTC; conserva el mismo botón al alternar Clásico/Renovado. No confunde las misiones de Plata con las del Pase ni duplica el contador de Logros. Usa el estado ya confirmado sin consultas nuevas, guardados o cobros automáticos. Premios, límites, cuentas, balance y sistemas pausados permanecen. Ver CONTADOR-MISIONES-20261105.md.
