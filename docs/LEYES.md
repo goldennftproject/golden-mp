@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Martillo visible para editar la granja — 05/11/2026
+
+Dirección pide un martillo a la derecha para entrar y salir de la edición, porque los jugadores no descubren el acceso de Configuración. Se incorpora Editar/Listo en PC, encima del disquete, sincronizado con el modo existente y oculto fuera de la granja propia, durante visitas y en modalidades bloqueantes. Conserva distribución, validaciones y el guardado de edición habitual. Sin cambios de economía, cuentas ni móvil. Ver ACCESO-EDICION-PC-20261105.md.
+
 ## Canje gratuito separado de las compras — 05/11/2026
 
 Dirección autoriza «Y bueno arréglalo entonces, fíjea eso» después de reproducir que Elegir nodo gratuito también permitía comprar oro. Se separan vales básicos, regalos VIP y compras con Plata, conservando fuentes y prioridad existentes. El vale elige un único nodo entre parcela, árbol o roca. La guía explica cupo/emplazamiento; los botones antiguos no pueden convertirse en cobros y el foco no salta de un regalo agotado a una compra. Se conservan el oro y el vale de Memo, saldos, cuentas, reglas y guardado. Ver VALE-NODO-GRATUITO-20261105.md.

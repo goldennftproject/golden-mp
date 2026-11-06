@@ -3,6 +3,7 @@ let VISITA_ACTUAL = null;
 function visitaCerrar() {
   if (VISITA_ACTUAL) VISITA_ACTUAL.remove();
   VISITA_ACTUAL = null;
+  if (typeof syncEdicionAcceso === 'function') syncEdicionAcceso();
 }
 function visitaAbrir(granja) {
   if (!granja || !granja.mapa || !vipVigente()) { toast('No se pudo cargar el mapa de esta granja.'); return; }
@@ -45,6 +46,7 @@ function visitaAbrir(granja) {
   frame.remove = () => { descarga.abort(); clearTimeout(espera); carga.remove(); window.removeEventListener('message', recibir); quitar(); };
   closeOv('ov-visitas');
   VISITA_ACTUAL = frame;
+  if (typeof syncEdicionAcceso === 'function') syncEdicionAcceso();
   document.body.append(frame,carga);
   frame.focus();
   // Descarga pública desde la página principal; srcdoc conserva el origen opaco

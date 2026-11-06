@@ -1076,6 +1076,7 @@ function placeMenuPc() {
   liberarControlInferior("hotwrap");
   liberarControlInferior("editbar");
   liberarControlInferior("guardado-manual");
+  liberarControlInferior("edicion-acceso");
   const st = menu.style;
   if (st && typeof st.setProperty === "function") { st.setProperty("--gmenu-top", top + "px"); st.setProperty("--gmenu-max-height", alto + "px"); }
   else if (st) { st["--gmenu-top"] = top + "px"; st["--gmenu-max-height"] = alto + "px"; }
@@ -2036,8 +2037,22 @@ function refreshEnergiaHud(energia) {
   ep.title = "Energía: " + Math.floor(energia) + "/" + max + " · Siguiente punto en " + energiaHudTiempo(siguiente) +
     " · Completa en " + energiaHudTiempo(completa) + ". Recuperación continua; 4 horas de vacía a llena. Clic para ver energía y capacidad.";
 }
+function edicionAccesoDisponible() {
+  return !!(window.innerWidth >= 900 && window.GF && GF.scene === 'farm' &&
+    !(typeof VISITA_ACTUAL !== 'undefined' && VISITA_ACTUAL) && !document.querySelector('.ov.bloquea.show') && typeof window.setEditMode === 'function');
+}
+function syncEdicionAcceso() {
+  const caja = $('edicion-acceso'), boton = $('editar-granja');
+  if (!caja || !boton) return;
+  const disponible = edicionAccesoDisponible(), editando = !!(window.GF && GF.editMode);
+  caja.hidden = !disponible;boton.disabled = !disponible;
+  const texto = editando ? 'Finalizar edición' : 'Editar granja: mover edificios, parcelas y nodos';
+  boton.setAttribute('aria-pressed', String(editando));boton.setAttribute('aria-label', texto);boton.title = texto;
+  const etiqueta = boton.querySelector('span');if(etiqueta)etiqueta.textContent = editando ? 'Listo' : 'Editar';
+}
 function refreshHud() {
   ordenarHudPc();
+  syncEdicionAcceso();
   if(typeof ubicarComprasPc==='function')ubicarComprasPc();
   const energia=energiaGranjaTick();setTxt('s-energia-granja',Math.floor(energia)+'/'+energiaGranjaMax());
   const ef=$('energia-granja-fill');if(ef)ef.style.width=Math.max(0,Math.min(100,energia/energiaGranjaMax()*100))+'%';
@@ -6417,6 +6432,8 @@ function placeSaveIndPc() {
   if (hotbar && cruza(actual, hotbar, 4)) subirSobre(hotbar);
   const manual = caja($("guardado-manual"));
   if (manual && cruza(actual, manual, 4)) subirSobre(manual);
+  const editar = caja($("edicion-acceso"));
+  if (editar && cruza(actual, editar, 4)) subirSobre(editar);
   const promptEl = $("prompt");
   const prompt = promptEl && promptEl.classList && typeof promptEl.classList.contains === "function" && promptEl.classList.contains("show") ? caja(promptEl) : null;
   if (prompt && cruza(actual, prompt, 4)) subirSobre(prompt);
@@ -6813,7 +6830,7 @@ function initUniversalDrag() {
   makeHoldDrag($("hotwrap"), "gf_hotpos", false, syncRegistroPrompt);           // barra de acceso rápido
   const registro = $("logpanel");
   makeHoldDrag(registro, "gf_logpos", true, syncRegistroPrompt);                  // registro/chat (anclado por abajo: se abre hacia ARRIBA)
-  const syncLayouts = () => { syncRegistroPrompt(); placeToast(); placeMenuPc(); syncRecientesMenuPc(); };
+  const syncLayouts = () => { syncEdicionAcceso(); syncRegistroPrompt(); placeToast(); placeMenuPc(); syncRecientesMenuPc(); };
   syncLayouts(); window.addEventListener("resize", syncLayouts);
   // Abrir/cerrar puede venir de un clic, del tutorial o de un aviso de error: observar la
   // clase evita que una de esas rutas deje el prompt con la geometría vieja.
@@ -6970,7 +6987,7 @@ function initUI() {
       gm.classList.add("collapsed"); syncRecientesMenuPc(); sincronizarGuiaMenu();
     }
     if (!anyOvOpen()) return;
-    if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel, #guardado-manual, #compras-accesos")) return;
+    if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel, #guardado-manual, #edicion-acceso, #compras-accesos")) return;
     let cerro = false;
     document.querySelectorAll(".ov.show:not(.bloquea)").forEach(o => {
       if (o.id !== "ov-inv") { desenfocarAlCerrar(o); o.classList.remove("show"); cerro = true; }
@@ -7005,6 +7022,7 @@ function initUI() {
     // 13/8: salir de edición con algo "en la mano" lo suelta (queda en la bolsa)
     if (!on) { const sc = window.farmScene; if (sc && sc.placing) { sc.placing = null; if (sc.editHl) sc.editHl.setVisible(false); sc.placingAuto = false; } if (window.syncPlacingUI) syncPlacingUI(false); }
     GF.editMode = on;
+    syncEdicionAcceso();
     const ce2 = $("cfg-edit"); if (ce2) ce2.textContent = on ? "Finalizar edición" : "Modo edición";
     const eb = $("editbar"); if (eb) eb.classList.toggle("show", on);
     if (typeof placeEditbarPc === "function") placeEditbarPc();
@@ -7023,6 +7041,11 @@ function initUI() {
   };
   const doFarmReset = () => { G.layout = {}; G.layoutPlots = {}; G.layoutPond = null; if (typeof saveFarm === "function") saveFarm(true); if (window.FARM && window.FARM.scene) window.FARM.scene.restart(); toast("↺ Distribución de la granja restablecida"); };
   const ce = $("cfg-edit"); if (ce) ce.onclick = () => setEditMode(!GF.editMode);
+  const editarAcceso = $('editar-granja');
+  if (editarAcceso) editarAcceso.onclick = () => {
+    if (edicionAccesoDisponible()) window.setEditMode(!GF.editMode);
+  };
+  syncEdicionAcceso();
   // sonidos on/off (Configuración)
   // 14/8: la guía de objetivos es OPCIONAL — este interruptor esconde cartel y flechas;
   // los objetivos siguen avanzando y premiando en silencio, y se puede volver a prender
