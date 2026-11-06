@@ -23,9 +23,15 @@
     const a=cycleFrames[i],b=cycleFrames[i+1],t=(phase-a[0])/(b[0]-a[0]),mix=t*t*(3-2*t);
     return {phase,name:t<.5?a[2]:b[2],rgb:a[1].map((v,c)=>v+(b[1][c]-v)*mix)};
   }
+  // La atmósfera y los emisores comparten reloj; nunca depende de la hora de pesca.
+  function atmosphere(time=Date.now()){
+    const active=enabled&&compatible&&cycleEnabled;
+    const state=active?cycleAt(time):{name:'Día',rgb:[1,1,1]};
+    return {...state,active,darkness:Math.max(0,Math.min(1,(1-state.rgb[0])/.38))};
+  }
   function renderCycle(){
     if(!root.document)return;
-    const active=enabled&&compatible&&cycleEnabled, state=active?cycleAt(Date.now()):{name:'Día',rgb:[1,1,1]};
+    const state=atmosphere(),active=state.active;
     // Una sola capa sobre el mundo completo mantiene idéntico tono entre bosque cercano
     // y mosaico lejano. No se vuelven a hornear texturas ni se tiñe el HUD HTML.
     const world=root.document.getElementById('game')||root.document.getElementById('mapa');
@@ -151,7 +157,7 @@
     for(const data of texture.dataSource||[])if(data?.destroy)data.destroy();
     texture.dataSource=[];
   }
-  const api={attach,exclude,invalidate,setEnabled,isEnabled:()=>enabled&&compatible,setCycle,isCycleEnabled:()=>cycleEnabled,cycleAt,CYCLE_MS,normals,shadeImage,eligible,stats};
+  const api={attach,exclude,invalidate,setEnabled,isEnabled:()=>enabled&&compatible,setCycle,isCycleEnabled:()=>cycleEnabled,cycleAt,atmosphere,CYCLE_MS,normals,shadeImage,eligible,stats};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(root.document){root.GoldenLighting=api;const b=root.document.getElementById('cfg-relief');if(b)b.addEventListener('click',()=>setEnabled(!enabled));sync();const cycleButton=root.document.getElementById('cfg-day-cycle');if(cycleButton)cycleButton.addEventListener('click',()=>setCycle(!cycleEnabled));root.setInterval(renderCycle,1000);root.document.addEventListener('visibilitychange',renderCycle);}
 })(typeof window==='undefined'?globalThis:window);

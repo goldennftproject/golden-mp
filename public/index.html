@@ -28,7 +28,7 @@
   #game{position:fixed;inset:0}
   #game canvas{display:block}
   #game{isolation:isolate}
-  #game::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:var(--gf-day-color,#fff);opacity:var(--gf-day-opacity,0);mix-blend-mode:multiply;transition:background-color 1.1s linear,opacity 1.1s linear}
+  #game::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:var(--gf-day-sources,var(--gf-day-color,#fff));opacity:var(--gf-day-opacity,0);mix-blend-mode:multiply;transition:background-color 1.1s linear,opacity 1.1s linear}
 
   /* HUD superior */
   .brand h1:has(.gf-logo){position:relative;width:180px;height:50px;overflow:hidden;flex:none}
@@ -2554,7 +2554,7 @@
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
     const GF_BUILD = "20260928-163402";
-    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/news.js","game/lighting.js","game/visual-v2.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/boot.js",
+    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/news.js","game/lighting.js","game/visual-v2.js","game/world-lights.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/boot.js",
                    "game/farm.js","game/reference-world.js","game/reference-camera-ui.js","game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
        entrar »). El cargador de abajo pide un archivo, espera a que llegue, pide el siguiente:

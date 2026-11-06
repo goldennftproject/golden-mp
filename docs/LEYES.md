@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Luces cálidas que acompañan el ciclo — 06/11/2026
+
+Dirección pide luz en los edificios durante la fase oscura, fuego animado y halos visibles. Se añaden emisores en ventanas, faroles y bocas reales del arte, con encendido nocturno gradual y fuego discreto de día. Comparten el ciclo visual sin duplicar el velo antiguo, siguen edición/estilo/nivel y se limpian al salir. Las visitas reproducen sólo fuentes públicas. Sin cambios de partidas, economía, guardado ni reglas horarias. Ver LUCES-NOCTURNAS-20261106.md.
+
 ## Martillo visible para editar la granja — 05/11/2026
 
 Dirección pide un martillo a la derecha para entrar y salir de la edición, porque los jugadores no descubren el acceso de Configuración. Se incorpora Editar/Listo en PC, encima del disquete, sincronizado con el modo existente y oculto fuera de la granja propia, durante visitas y en modalidades bloqueantes. Conserva distribución, validaciones y el guardado de edición habitual. Sin cambios de economía, cuentas ni móvil. Ver ACCESO-EDICION-PC-20261105.md.

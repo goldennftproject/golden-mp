@@ -327,6 +327,7 @@ class FarmScene extends Phaser.Scene {
         lockIdx, locked, oculto };
     });
     this.acabadosEdificios();
+    this.worldLights = window.GoldenWorldLights?.create(this) || null;
     this.objs.forEach(o => this.tintarNodo(o));   // cada veta con el color de su mineral (9/8)
     // 18/8: y la textura QUE LE TOCA POR SU ENFRIAMIENTO. Sin esto el sprite nace entero aunque el
     // nodo esté a medio regenerar, que es el fallo que se veía al volver de la Zona Negra o tras
@@ -3359,7 +3360,7 @@ class FarmScene extends Phaser.Scene {
       const alto = DECO_ALTO[id] || 30;
       const im = this.add.image(x, y, "deco_" + id).setOrigin(0.5, 1).setDepth(y);
       im.setDisplaySize(Math.round(im.width * alto / im.height), alto);
-      if (id !== "farolito") return im;
+      if (id !== "farolito" || this.worldLights) return im;
       // el farolito es el único adorno ANIMADO: las luciérnagas del frasco laten.
       // Va en un contenedor para que al levantarlo se borre también el resplandor.
       const c = this.add.container(x, y).setDepth(y);
@@ -3771,6 +3772,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   crearFaroles() {
+    if (this.worldLights) return;
     if (!Array.isArray(this.faroles) || this.faroles.length || !this.add) return;
     (this.adornos || []).forEach(a => {
       if (a.id !== "farol" && a.id !== "farolito") return;
@@ -3783,6 +3785,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   refrescarFaroles() {
+    if (this.worldLights) { this.limpiarFaroles(); return; }
     // Antes del primer tick de ambiente todavía no existe la colección. Tampoco se crean luces
     // en medio de un reinicio de escena: el cielo nuevo es quien inaugura su propia colección.
     if (!this.cielo || this.cielo.active === false || !Array.isArray(this.faroles)) return;
@@ -4451,7 +4454,7 @@ class FarmScene extends Phaser.Scene {
           onComplete: () => { pez.destroy(); this.sueltoPart(1); } });
       }
     }
-    // --- CIELO: día/noche con la hora REAL del jugador + faroles de noche
+    // --- CIELO: el ciclo visual manda; hora real sólo como respaldo sin iluminación nueva.
     if (!this.cielo) {
       // 17/8 (dirección): "dentro del corral es de un día y fuera es otro horario".
       // Cierto: el velo medía SOLO el mundo jugable (714x504), así que el bosque, la franja de
@@ -4469,7 +4472,7 @@ class FarmScene extends Phaser.Scene {
       this._cieloAt = 0;
     }
     if (t >= (this._cieloAt || 0)) {
-      this._cieloAt = t + 20000;
+      this._cieloAt = t + (window.GoldenLighting?.atmosphere ? 1000 : 20000);
       /* 25/8 — LA CUENTA SE MUDÓ A config.js Y ACÁ SOLO SE PREGUNTA.
          Estos siete renglones eran la ÚNICA definición de « es de noche » en todo el juego, y
          vivían dentro del código que pinta el cielo. Pesca v3 necesitaba la misma respuesta para
@@ -4477,14 +4480,20 @@ class FarmScene extends Phaser.Scene {
          `typeof esDeNoche === "function"` que siempre daba falso: el pez nocturno picaba a las
          tres de la tarde y nadie se enteró. Ahora hay UNA fuente (cieloDelMomento) y dos lectores
          —el cielo y la laguna—, así que no pueden discrepar aunque alguien corra el atardecer. */
-      const { alpha, col } = cieloDelMomento();
+      const visual = window.GoldenLighting?.atmosphere?.();
+      const { alpha, col } = visual ? {alpha:0,col:0x0a1030} : cieloDelMomento();
       this.cielo.fillColor = col;
+      if (visual) {
+        this.tweens.killTweensOf?.(this.cielo); this.tweens.killTweensOf?.(this.cieloTinte);
+        this.cielo.fillAlpha = 0; this.cieloTinte.fillAlpha = 0;
+      } else {
       this.tweens.add({ targets: this.cielo, fillAlpha: alpha * 0.78, duration: 3000 });   // 22/8: menos negro…
       // …y más luna: el tinte azul acompaña la misma curva, fuerte en la noche azul y tímido
       // en las medias horas naranjas del amanecer/atardecer (ahí manda el sol, no la luna).
       const azul = Math.min(0.55, alpha * (col === 0x0a1030 ? 1.45 : 0.5));
       this.tweens.add({ targets: this.cieloTinte, fillAlpha: azul, duration: 3000 });
-      const noche = esDeNoche();   // 25/8: el MISMO umbral que la laguna, no una copia del 0.12
+      }
+      const noche = visual ? visual.darkness > .45 : esDeNoche();
       // el relevo mariposas ↔ luciérnagas se engancha al MISMO umbral que enciende los faroles,
       // así que todo lo nocturno pasa a la vez. La primera vez se aplica seco (si entrás de
       // noche, ya hay luciérnagas); después siempre con fundido.
@@ -4726,6 +4735,10 @@ class FarmScene extends Phaser.Scene {
 
   // fragua encendida mientras se craftea/repara; si no, a medio fuego (detalles jueves)
   updateForge() {
+    if (this.worldLights) {
+      if (this.forgeGlow) { this.forgeGlow.forEach(g => { this.tweens.killTweensOf(g); g.destroy(); }); this.forgeGlow = null; }
+      return;
+    }
     const o = this.storeObj; if (!o || !o.sprite) return;
     // 13/8: la herrería EN OBRA no se toca — este método pisaba build_store con "store"
     // terminado en cada tick (el bug del playtest: "coloqué el plano y salió construida")
@@ -6214,6 +6227,8 @@ class FarmScene extends Phaser.Scene {
     this.tickMariposas(dt, t);
     this.tickBuzon(t);
     this.tickAmbiente(dt, t);
+    this.worldLights?.sync({objects:this.objs,adornos:this.adornos,built:G.built,
+      forgeLit:(G.forgeLitUntil||0)>t,atmosphere:window.GoldenLighting?.atmosphere?.()},t);
     this.tickVapor(t);      // vapor de la Cocina y chispas del Altar mejorado
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
     // clic sostenido: aplicar el destino que quedó pendiente por el freno del recálculo

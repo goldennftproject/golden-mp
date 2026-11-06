@@ -6,12 +6,78 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')enviar('visita-salir
 semilla.onclick=()=>{semilla.disabled=true;estado.textContent='Recogiendo semilla…';enviar('visita-semilla');};
 let recibida=false;
 const imagenes=new Map();
+let cerrarLucesVisita=()=>{};
 function imagen(key){
  if(!/^[a-z0-9_]{1,50}$/.test(key))return Promise.resolve(null);
  if(!imagenes.has(key))imagenes.set(key,new Promise(resolve=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='assets/farm/'+key+'.png';}));
  return imagenes.get(key);
 }
+// Sólo imágenes y ventanas públicas: el snapshot no revela si el dueño está
+// cocinando o usando la fragua. El terreno se conserva y las fuentes siguen el
+// mismo orden por Y que sus edificios, sin iluminar a través de otros objetos.
+function pintarVisita(canvas,ctx,items,fondo,ox,oy){
+ const api=window.GoldenWorldLights,media=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+ const luces=new Map(),mapa=document.getElementById('mapa');
+ if(api)for(const o of items){
+  if(!o.image)continue;
+  const h=o.w*o.image.height/o.image.width;
+  const sprite={x:o.x+ox,y:o.y+oy,displayWidth:o.w,displayHeight:h,originX:.5,originY:1};
+  const fuentes=api.profiles(o.key,o.renewed===true).filter(p=>p.kind==='window').map(p=>({p,pos:api.anchor(sprite,p)})).filter(v=>v.pos);
+  if(fuentes.length)luces.set(o,fuentes);
+ }
+ let halo,core;
+ function textura(nucleo){
+  const cv=document.createElement('canvas');cv.width=cv.height=64;
+  const c=cv.getContext('2d'),g=c.createRadialGradient(32,32,0,32,32,32);
+  if(nucleo){g.addColorStop(0,'rgba(255,244,180,1)');g.addColorStop(.28,'rgba(255,204,92,.95)');g.addColorStop(.65,'rgba(255,151,48,.5)');}
+  else{g.addColorStop(0,'rgba(255,205,112,.9)');g.addColorStop(.22,'rgba(255,185,80,.65)');g.addColorStop(.55,'rgba(255,167,62,.22)');}
+  g.addColorStop(1,'rgba(255,157,55,0)');c.fillStyle=g;c.fillRect(0,0,64,64);return cv;
+ }
+ if(luces.size){halo=textura(false);core=textura(true);}
+ let raf=0,ultimo=-Infinity,oscuro=-1,muerto=false;
+ function pintar(t){
+  const at=window.GoldenLighting?.atmosphere?.()||{active:false,darkness:0};
+  if(oscuro===0&&at.darkness===0)return;
+  oscuro=at.darkness;
+  const pools=[];
+  ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(fondo,0,0);
+  for(const o of items){
+   if(o.icon&&!o.image){ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText(o.icon,o.x+ox,o.y+oy);continue;}
+   if(!o.image)continue;
+   const h=o.w*o.image.height/o.image.width;ctx.drawImage(o.image,o.x+ox-o.w/2,o.y+oy-h,o.w,h);
+   for(const {p,pos}of luces.get(o)||[]){
+    const a=api.appearance(p,at.darkness,t,!!media?.matches,at.active),r=Math.max(pos.w*6.5,pos.h*4.5);
+    if(at.active&&at.darkness)pools.push({pos,strength:at.darkness});
+    if(a.halo<=0&&a.core<=0)continue;
+    ctx.save();ctx.globalCompositeOperation='lighter';
+    if(a.halo>0){ctx.globalAlpha=a.halo;ctx.drawImage(halo,pos.x-r/2,pos.y-r*.83/2,r,r*.83);}
+    if(a.core>0){ctx.globalAlpha=a.core;ctx.drawImage(core,pos.x-pos.w/2,pos.y-pos.h*a.stretch/2,pos.w,pos.h*a.stretch);}
+    ctx.restore();
+   }
+  }
+  const layers=api?.atmosphereLayers?.(pools);
+  if(layers)mapa?.style.setProperty('--gf-day-sources',layers);else mapa?.style.removeProperty('--gf-day-sources');
+ }
+ function tick(t){
+  raf=0;if(muerto||document.hidden)return;
+  if(t-ultimo>=(media?.matches?1000:100)){ultimo=t;pintar(t);}
+  raf=window.requestAnimationFrame(tick);
+ }
+ function visibilidad(){
+  if(raf){window.cancelAnimationFrame(raf);raf=0;}
+  if(!muerto&&!document.hidden){ultimo=-Infinity;oscuro=-1;if(window.requestAnimationFrame)raf=window.requestAnimationFrame(tick);else pintar(0);}
+ }
+ function cerrar(){
+  muerto=true;if(raf)window.cancelAnimationFrame(raf);raf=0;
+  document.removeEventListener('visibilitychange',visibilidad);window.removeEventListener('pagehide',cerrar);luces.clear();
+  mapa?.style.removeProperty('--gf-day-sources');
+ }
+ pintar(0);
+ if(luces.size&&window.requestAnimationFrame){document.addEventListener('visibilitychange',visibilidad);window.addEventListener('pagehide',cerrar,{once:true});visibilidad();}
+ return cerrar;
+}
 async function dibujar(g){
+ cerrarLucesVisita();
  if(window.GoldenVisual)GoldenVisual.setEnabled(g.aspectoRenovado===true);
  if(window.GoldenLighting){GoldenLighting.setEnabled(g.iluminacionSuave===true);GoldenLighting.setCycle(g.cicloVisual===true,false);}
  const m=g.mapa;GF.configurarEspacio(m.espacioV);GF.aplicarTerreno(g.expansiones);
@@ -61,9 +127,10 @@ async function dibujar(g){
  const libres=[...terreno.mias].filter(k=>!ocupadas.has(k));let an=0;
  for(const [k,n] of Object.entries(m.animales||{}))for(let i=0;i<n&&an<libres.length;i++,an++){const [c,r]=libres[(an*7)%libres.length].split(',').map(Number);items.push({key:'animal_'+k,x:(c+.5)*T,y:(r+1)*T,w:T*.85});}
  const iluminadas=new Map();
- await Promise.all(items.map(async o=>{o.image=await imagen(o.key);if(o.image&&window.GoldenVisual)o.image=await GoldenVisual.visitImage(o.key,o.image);if(o.image&&g.iluminacionSuave===true&&window.GoldenLighting){if(!iluminadas.has(o.key)){try{iluminadas.set(o.key,GoldenLighting.shadeImage(o.image));}catch(_){iluminadas.set(o.key,o.image);}}o.image=iluminadas.get(o.key);}}));
+ await Promise.all(items.map(async o=>{o.image=await imagen(o.key);if(o.image&&window.GoldenVisual){const original=o.image;o.image=await GoldenVisual.visitImage(o.key,original);o.renewed=o.image!==original;}if(o.image&&g.iluminacionSuave===true&&window.GoldenLighting){if(!iluminadas.has(o.key)){try{iluminadas.set(o.key,GoldenLighting.shadeImage(o.image));}catch(_){iluminadas.set(o.key,o.image);}}o.image=iluminadas.get(o.key);}}));
  items.sort((a,b)=>a.y-b.y);
- for(const o of items){if(o.icon&&!o.image){ctx.font='28px system-ui';ctx.textAlign='center';ctx.fillText(o.icon,o.x+ox,o.y+oy);continue;}if(!o.image)continue;const h=o.w*o.image.height/o.image.width;ctx.drawImage(o.image,o.x+ox-o.w/2,o.y+oy-h,o.w,h);}
+ const fondo=document.createElement('canvas');fondo.width=canvas.width;fondo.height=canvas.height;fondo.getContext('2d').drawImage(canvas,0,0);
+ cerrarLucesVisita=pintarVisita(canvas,ctx,items,fondo,ox,oy);
  // Recompensa separada: no representa una semilla que se quite al propietario.
  const sitio=GF.PLOTS_BASE.find(p=>GF.tuyo(p.col,p.row,g.expansiones))||{col:1,row:1};
  semilla.style.left=((sitio.col+.5)*T+ox)+'px';semilla.style.top=((sitio.row+1)*T+oy)+'px';semilla.hidden=false;
