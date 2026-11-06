@@ -16,5 +16,5 @@ c.estadoDeCero();c.G.level=25;c.G.expansiones=16;c.GF.aplicarTerreno(16);c.G.pro
 const half=snap();c.hydrate(half);assert.equal(c.G.produccion.vipNodos,1);const legacy=snap();delete legacy.produccion.vipNodos;delete legacy.produccion.vipNodosV;assert.equal(s.protegerEconomia(half,legacy,clock).length,0);assert.equal(legacy.produccion.vipNodos,1);
 const missing=snap();missing.produccion.vipNodos=0;assert(check(snap(),missing).some(e=>e.includes('sin nodo')));
 const d=new JSDOM(fs.readFileSync('public/index.html','utf8')).window.document;c.document=d;
-c.refreshProduccionGranja();assert.match(d.querySelector('[data-prod-buy=bronce]').textContent,/incluido/);assert.equal(d.getElementById('prod-elegir').open,true);
+c.refreshProduccionGranja();assert.match(d.querySelector('[data-prod-buy=bronce]').textContent,/incluido/);assert.equal(d.getElementById('prod-vip-elegir').open,true);
 console.log('OK: capacidad sin cambios, dos elecciones, minerales, VIP anterior, F5, renovación, expiración, Free rechazado y pestañas antiguas.');

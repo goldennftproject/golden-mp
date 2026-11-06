@@ -1,6 +1,10 @@
 "use strict";
 const assert = require("node:assert/strict"), vm = require("node:vm"), path = require("node:path");
-const {ctx, problemas, elementos} = require("./arrancar-el-juego.contexto.js").arrancar(path.resolve(__dirname,".."));
+// El DOM mínimo de este arnés no implementa canvas, CSSStyleDeclaration ni observadores.
+// Las decoraciones del navegador tienen sus propias pruebas JSDOM; aquí se ejercita
+// el motor productivo y, al final, los botones reales del Cobertizo en JSDOM.
+const sinDecoraciones = Object.fromEntries(["lighting","visual-v2","reference-hud","reference-market","reference-ui","reference-camera-ui"].map(k=>["game/"+k+".js", ""]));
+const {ctx, problemas, elementos} = require("./arrancar-el-juego.contexto.js").arrancar(path.resolve(__dirname,".."),sinDecoraciones);
 assert.equal(problemas.filter(p=>p.grave).length,0);
 const run = s => vm.runInContext(s,ctx);
 run(`var relojProdTest=1800000000000;nowMs=()=>relojProdTest;saveFarm=()=>{};toast=()=>{};log=()=>{};refreshHud=()=>{};reiniciarGranjaSuave=()=>{};celebrate=()=>{};estadoDeCero();`);

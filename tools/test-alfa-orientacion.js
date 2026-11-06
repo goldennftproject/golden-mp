@@ -13,7 +13,7 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.
  c.G.produccion.vipHasta=0;c.G.picks={owned:{gold:true},dur:{gold:30},eq:'gold'};c.G.res.madera=0;step('stone');
  d=c.tutoSub();assert.equal(d.ui,"[data-craft='stone']");assert.ok(!d.txt.includes('madera'),'no exige madera que la receta ya no cobra');
  c.G.planos={horno:1,store:1};step('place_store');c.refreshCobertizo();d=c.guiaDestinoActual();assert.equal(d.ui,'[data-plano="store"]');assert.ok(doc.querySelector(d.ui));
- c.G.tuto.done=true;c.G.planos={};c.G.produccion.vale=1;d=c.brujula();assert.equal(d.ui,'#prod-elegir>summary');assert.ok(d.beneficio.includes('especializar'));
+ c.G.tuto.done=true;c.G.planos={};c.G.produccion.vale=1;d=c.brujula();assert.equal(d.ui,'#prod-gestion>summary','con cupo lleno dirige primero a gestionar producción');assert.ok(d.beneficio.includes('especializar'));
  let opened=null,selected=false,bought=false;c.openOv=id=>{opened=id;};c.expansionComprar=()=>{bought=true;};
  const market=doc.getElementById('ov-market');market.querySelector('[data-shop="deco"]').onclick=()=>{selected=true;};market.querySelector('#shop-deco').innerHTML='<button id="exp-comprar">Comprar</button>';doc.getElementById('exp-comprar').onclick=()=>{bought=true;};
  c.guiaActiva=()=>({id:'brujula',brujula:true,panel:'ov-market',ui:'#exp-comprar',txt:'Expandí'});c.mostrarObjetivo();assert.equal(opened,'ov-market');assert.equal(selected,true);assert.equal(bought,false,'mostrar nunca compra');

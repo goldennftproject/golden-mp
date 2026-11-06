@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Canje gratuito separado de las compras — 05/11/2026
+
+Dirección autoriza «Y bueno arréglalo entonces, fíjea eso» después de reproducir que Elegir nodo gratuito también permitía comprar oro. Se separan vales básicos, regalos VIP y compras con Plata, conservando fuentes y prioridad existentes. El vale elige un único nodo entre parcela, árbol o roca. La guía explica cupo/emplazamiento; los botones antiguos no pueden convertirse en cobros y el foco no salta de un regalo agotado a una compra. Se conservan el oro y el vale de Memo, saldos, cuentas, reglas y guardado. Ver VALE-NODO-GRATUITO-20261105.md.
+
 ## Misma ilustración de cultivos en todos los iconos — 05/11/2026
 
 Dirección pide que el producto del Mercado se vea igual en el Inventario y en la etiqueta de su bolsa de semillas. Renovado PC comparte las trece ilustraciones de producto en bolsa, barra, costes y listados; cada saco incorpora ese mismo PNG. Se conservan los iconos clásicos y móviles, los controles, claves, cantidades, guardado y partidas. Es un cambio de presentación, sin economía ni consultas nuevas. Ver ICONOS-CULTIVOS-20261105.md.

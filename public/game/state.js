@@ -2947,6 +2947,11 @@ function produccionPremiumComprar(tipo,precioEsperado) {
   // Sin entrega optimista: saldo, propiedad, contador y reloj llegan del servidor.
   return economiaSolicitar({produccionPremium:{accion:'comprar',tipo,precioEsperado:c.precio}});
 }
+// La interfaz muestra la fuente que la operación ya utiliza, sin alterar su prioridad.
+function produccionFuenteNodo(tipo) {
+  if (G.produccion?.vale > 0 && ["plot", "tree", "rock"].includes(tipo)) return "vale";
+  return G.produccion?.vipNodos > 0 ? "vip" : "plata";
+}
 function produccionComprar(tipo) {
   if (!G.produccion || !produccionHayCupo()) { toast("No queda capacidad. Pausa otra producción o expande."); return false; }
   let nuevaClave, confirmacion;
@@ -3810,6 +3815,20 @@ function tutoAdelanto() {}
    El objeto que devuelve tiene la MISMA forma que un paso del tutorial (txt, target, panel, ui)
    para que la flecha del mundo y la de los menús funcionen sin cambiar una línea; la marca
    `brujula: true` es para que nadie lo confunda con un paso y trate de « cumplirlo ». */
+function produccionValeGuia() {
+  if (!(G.produccion?.vale > 0)) return null;
+  const base = { panel:"ov-cobertizo", beneficio:"Elige parcela, árbol o roca para especializar tu granja" };
+  if (!produccionHayCupo()) return Object.assign(base, {
+    txt:"Tu nodo gratuito sigue pendiente: pausa una producción para liberar un cupo, o expande",
+    ui:"#prod-gestion>summary"
+  });
+  const hayParcela = (G.plotsOwned || 3) < PLOT_MAX;
+  const hayNodo = produccionEmplazamiento("tree") >= 0 || produccionEmplazamiento("rock") >= 0;
+  return Object.assign(base, {
+    txt:hayParcela || hayNodo ? "Elige tu nodo gratuito: una parcela, un árbol o una roca" : "Tu vale sigue disponible: libera un emplazamiento o expande para elegir el nodo gratuito",
+    ui:"#prod-elegir>summary"
+  });
+}
 function brujula() {
   if (!G.tuto || !G.tuto.done) return null;
   const B = (o) => Object.assign({ id: "brujula", brujula: true, n: 1 }, o);
@@ -3819,8 +3838,8 @@ function brujula() {
       if (GF.esAltarOculto(t) || !BUILD_DEF[t] || (G.built && G.built[t]) || (G.obras && G.obras[t])) continue;
       return B({ txt: "Tienes el plano de " + BUILD_DEF[t].label + " esperando: colócalo (Menú ☰ → Cobertizo)", panel: "ov-cobertizo", ui: '[data-plano="'+t+'"]' });
     }
-    if((G.produccion?.vale||0)>0)
-      return B({txt:'Tienes '+G.produccion.vale+' vale(s): elige tu próximo nodo en el Cobertizo',panel:'ov-cobertizo',ui:'#prod-elegir>summary',beneficio:'Elige parcela, árbol o roca para especializar tu granja'});
+    const valeGuia = produccionValeGuia();
+    if (valeGuia) return B(valeGuia);
     if (typeof dailyState === "function" && dailyState().claimable)
       return B({ txt: "Te llegó el paquete del día: abre el buzón", target: "buzon" });
     if (typeof cartaAbueloPendiente === "function" && cartaAbueloPendiente())
