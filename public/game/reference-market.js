@@ -34,8 +34,11 @@
   input.replaceWith(wrapper);wrapper.append(minus,input,plus);
   const price=doc.createElement('div');price.className='ref-price';price.setAttribute('aria-hidden','true');
   const coin=doc.createElement('img');coin.src='assets/farm/coin_plata.png?a=4';coin.alt='';coin.width=24;coin.height=24;
-  const text=doc.createElement('span');price.append(coin,text);row.append(price);
-  Object.assign(state,{wrapper,minus,plus,price,text});rowState.set(row,state);row.classList.add('ref-seed-row');
+  const text=doc.createElement('span'),amount=doc.createElement('div');amount.className='ref-price-amount';amount.append(coin,text);
+  const growth=doc.createElement('span'),growthText=doc.createElement('span');growth.className='ref-grow-time';growth.hidden=true;
+  growth.innerHTML='<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 5v5l3 2"/></svg>';
+  growth.append(growthText);price.append(amount,growth);row.append(price);
+  Object.assign(state,{wrapper,minus,plus,price,text,growth,growthText});rowState.set(row,state);row.classList.add('ref-seed-row');
   button.replaceChildren(doc.createTextNode('Comprar'));button.setAttribute('aria-label','Comprar semillas de '+label);
   syncRow(state);
  }
@@ -44,6 +47,9 @@
   const total=row.querySelector('.compra-total');
   const text=(total?.textContent||'').replace(/^Total:\s*/,'').trim();
   if(state.text.textContent!==text)state.text.textContent=text;
+  const duration=row.querySelector('.seed-grow-time')?.textContent?.trim()||'';
+  if(state.growthText.textContent!==duration){state.growthText.textContent=duration;state.growth.title='Tiempo base hasta la cosecha: '+duration;}
+  if(state.growth.hidden===!!duration)state.growth.hidden=!duration;
   const details=row.querySelector('.mds:not(.compra-total)')?.textContent?.trim();
   if(details&&row.getAttribute('title')!==details)row.setAttribute('title',details);
   const number=Number(state.input.value),minimum=Number(state.input.min||1),maximum=state.input.max===''?Infinity:Number(state.input.max);

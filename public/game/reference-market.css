@@ -32,7 +32,11 @@
  .visual-v2 #ov-market.reference-market .ref-seed-row .mnm{grid-area:name;font-size:19px;font-weight:850;color:#352714;line-height:1.12;overflow-wrap:normal;cursor:help}
  .visual-v2 #ov-market.reference-market .ref-seed-row .seedlv{display:inline-block;font-size:9px;white-space:nowrap;color:#856f4e;background:#e9d5ac;border:1px solid #ccb17a;border-radius:2px;padding:1px 2px;vertical-align:middle}
  .visual-v2 #ov-market.reference-market .ref-seed-row .mds{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
- .visual-v2 #ov-market.reference-market .ref-price{grid-area:price;display:flex;align-items:center;gap:5px;min-width:0;color:#49331f;font-size:16px;font-weight:750;line-height:1.15}
+ .visual-v2 #ov-market.reference-market .ref-price{grid-area:price;display:flex;flex-wrap:wrap;align-items:center;gap:4px 9px;min-width:0;color:#49331f;font-size:16px;font-weight:750;line-height:1.15}
+ .visual-v2 #ov-market.reference-market .ref-price-amount{display:flex;align-items:center;gap:5px;min-width:0;max-width:100%}
+ .visual-v2 #ov-market.reference-market .ref-price-amount>span{min-width:0;overflow-wrap:anywhere}
+ .visual-v2 #ov-market.reference-market .ref-grow-time:not([hidden]){display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;max-width:100%;white-space:nowrap;font-size:12px;font-weight:650;color:#76532e}
+ .visual-v2 #ov-market.reference-market .ref-grow-time svg{flex:0 0 auto;width:14px;height:14px}
  .visual-v2 #ov-market.reference-market .ref-price img{width:24px;height:24px;object-fit:contain;image-rendering:pixelated;flex-shrink:0}
  .visual-v2 #ov-market.reference-market .ref-quantity{grid-area:quantity;display:grid;grid-template-columns:29px minmax(28px,1fr) 29px;gap:0;align-items:stretch;height:30px;border:2px solid #9c7342;border-radius:3px;background:#f8e6c1;overflow:hidden}
  .visual-v2 #ov-market.reference-market .ref-quantity>input{grid-column:auto;grid-row:auto;box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;max-width:none;border:0;border-radius:0;padding:1px;text-align:center;font:750 17px system-ui;color:#513820;background:#fff0ce;box-shadow:none;appearance:textfield;-moz-appearance:textfield}

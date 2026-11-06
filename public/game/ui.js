@@ -5932,7 +5932,7 @@ function refreshSeedShop() {
     const controls = unlocked
       ? `<input id="sq-${k}" aria-label="Cantidad de semillas de ${cd.label}" title="Cantidad a comprar" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
       : `<button class="ghost sm" disabled data-cultivo-bloqueado="${k}" title="Se abre con la habilidad de Cultivo">Cultivo nv ${cd.lvl}</button>`;
-    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en ${fmtSecs(cd.grow)} · tienes ${fmt(G.seeds[k] || 0)}</div><div class="mds compra-total" id="st-${k}" aria-live="polite">Total: ${cd.seedCost} Plata</div></div>${controls}</div>`;
+    return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en <span class="seed-grow-time">${fmtSecs(cd.grow)}</span> · tienes ${fmt(G.seeds[k] || 0)}</div><div class="mds compra-total" id="st-${k}" aria-live="polite">Total: ${cd.seedCost} Plata</div></div>${controls}</div>`;
   }).join("")
   /* 31/8 (today.docx: « quitar que la tienda venda lombrices — solo se obtienen en el mapa o en
      el lombricero ») — la fila de venta se fue. Si volviera, la lombriz dejaría de ser el reloj

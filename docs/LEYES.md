@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Tiempo de cosecha visible en Mercado — 06/11/2026
+
+Dirección traslada mostrar la duración junto al coste de cada semilla. Renovado PC añade un reloj con el tiempo base ya existente en la descripción, permitiendo salto de línea sin invadir Comprar. Conserva controles, cantidades, precios, tiempos efectivos, Clásico, móvil y partidas. Ver TIEMPO-COSECHA-MERCADO-20261106.md.
+
 ## Luces cálidas que acompañan el ciclo — 06/11/2026
 
 Dirección pide luz en los edificios durante la fase oscura, fuego animado y halos visibles. Se añaden emisores en ventanas, faroles y bocas reales del arte, con encendido nocturno gradual y fuego discreto de día. Comparten el ciclo visual sin duplicar el velo antiguo, siguen edición/estilo/nivel y se limpian al salir. Las visitas reproducen sólo fuentes públicas. Sin cambios de partidas, economía, guardado ni reglas horarias. Ver LUCES-NOCTURNAS-20261106.md.
