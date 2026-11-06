@@ -3669,6 +3669,10 @@ function refreshForge() {
   });
   // armas y flechas → pestaña ARMAS (detalles viernes: no se mezclan con las herramientas)
   let armas = "";
+  const nivelCombate = typeof combatInfo === "function" ? combatInfo().lvl : 1;
+  const nivelArmaOk = w => nivelCombate >= (w.lvl || 1);
+  const nivelArmaHtml = w => '<div class="fds forge-combat-level">Para forjar: Combate <b>Nv. ' + (w.lvl || 1) + '</b>'
+    + (nivelArmaOk(w) ? '' : ' · Tienes Nv. ' + nivelCombate) + '</div>';
   if (!G.armasUnlocked) {   // viernes (2): la pestaña Armas se desbloquea pagando
     /* 19/8: pero el PRIMER ESCALÓN se ve igual. Antes, con la pestaña cerrada no se mostraba ni una
        sola arma: el jugador no tenía forma de saber que existía una espada a su alcance, y el
@@ -3678,7 +3682,7 @@ function refreshForge() {
     if (we) {
       const own = G.weapons && G.weapons[ARMA_ENTRADA], eqNow = G.gear.arma === ARMA_ENTRADA;
       const cs = Object.keys(we.cost).map(k => resIc(k) + " " + we.cost[k]).join(" · ") + " · " + coinIc("plata") + " " + we.plata;
-      const puede = canAfford(we.cost) && G.plata >= we.plata;
+      const puede = nivelArmaOk(we) && canAfford(we.cost) && G.plata >= we.plata;
       const btn = own
         ? (eqNow ? '<button class="ghost sm" disabled>Equipada</button>'
                  : '<button class="ghost sm" data-eqarm="' + ARMA_ENTRADA + '">Equipar</button>')
@@ -3686,6 +3690,7 @@ function refreshForge() {
       armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(we.sprite || ARM_TIPO_DEF[we.tipo].sprite) + '"></div>' +
         '<div class="finfo"><div class="fnm">' + we.label + '</div>' +
         '<div class="fds">Tu primera arma — con ella se entra a la Zona Negra</div>' +
+        nivelArmaHtml(we) +
         '<div class="fds">' + cs + ' · ' + we.dur + ' usos</div></div>' +
         '<div class="fbtns">' + btn + '</div></div>';
     }
@@ -3712,9 +3717,10 @@ function refreshForge() {
         } else {
           const cdL = armCdLeft(id);
           btns = cdL > 0 ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(cdL / 1000)) + '</button>'
-            : '<button class="green sm" ' + (canAfford(w.cost) && G.plata >= w.plata ? "" : "disabled") + ' data-carm="' + id + '">Forjar</button>';
+            : '<button class="green sm" ' + (nivelArmaOk(w) && canAfford(w.cost) && G.plata >= w.plata ? "" : "disabled")
+              + (nivelArmaOk(w) ? '' : ' title="Requiere Combate nivel ' + w.lvl + '; tienes ' + nivelCombate + '"') + ' data-carm="' + id + '">Forjar</button>';
         }
-        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(w.sprite || td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + (w.buffVal ? td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] : 'sin bono — en madera es un palo') + '</div><div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Coste: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
+        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(w.sprite || td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + (w.buffVal ? td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] : 'sin bono — en madera es un palo') + '</div>' + nivelArmaHtml(w) + '<div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Coste: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
       });
     });
   }

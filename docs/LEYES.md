@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Nivel de Combate visible en la Herrería — 06/11/2026
+
+Dirección autoriza mostrar el nivel requerido de cada arma, desactivar Forjar cuando falta Combate, probar y publicar. El catálogo usa los mismos niveles que la fabricación y explica el nivel actual cuando falta. Conserva costes, enfriamientos, escala, armas obtenidas y partidas. Ver FORJA-NIVEL-COMBATE-20261106.md.
+
 ## Tiempo de cosecha visible en Mercado — 06/11/2026
 
 Dirección traslada mostrar la duración junto al coste de cada semilla. Renovado PC añade un reloj con el tiempo base ya existente en la descripción, permitiendo salto de línea sin invadir Comprar. Conserva controles, cantidades, precios, tiempos efectivos, Clásico, móvil y partidas. Ver TIEMPO-COSECHA-MERCADO-20261106.md.
