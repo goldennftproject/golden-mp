@@ -1,0 +1,11 @@
+/* Pending prizes are distinct from the normal inventory gain chips. */
+/* The shop follows #flujo in DOM order and also uses z6; lift only an active roulette notice. */
+@media(min-width:641px){#flujo:has(.gf-premio-aviso){z-index:8}}
+#flujo .gf-premio-aviso{flex-wrap:wrap;max-width:min(280px,calc(100vw - 24px));border-color:#d7ad53;background:#302416;animation:none;opacity:1;transform:none}
+#flujo .gf-premio-aviso>b{color:#ffdf87}
+#flujo .gf-premio-aviso>small{flex-basis:100%;padding-left:26px;color:#ffdf87;font-size:11px;font-weight:700;line-height:1.2}
+#flujo .gf-premio-acreditado>b,#flujo .gf-premio-acreditado>small{color:#9ede54}
+#ov-ruletas .gf-entregas{position:sticky;top:0;z-index:2;background:#f7e7c8;border-top:1px solid #d6b27b;border-bottom:1px solid #d6b27b;gap:6px;padding-top:8px;padding-bottom:8px}
+#ov-ruletas .gf-entregas>span{flex:1 1 180px;line-height:1.35}
+#ov-ruletas .gf-entregas-pendientes{background:#fff0bf}
+#ov-ruletas .gf-entregas-pendientes button{border-color:#597d38;background:#4c6d2b;color:#fff7dc;text-shadow:0 1px #263a19;min-height:38px;font-weight:800}

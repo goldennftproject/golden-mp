@@ -36,7 +36,7 @@ function fits(sc){const b=sc.scale.height<=740&&!sc._referenceOverview?sc.refere
 for(const[width,height]of[[1672,948],[1346,618],[1033,700]]){
  const f=fixture(width,height);f.sc.fitCamera();fits(f.sc);assert(f.c.zoom>0&&Number.isFinite(f.c.zoom));
  const b=f.sc.referenceContentBounds();assert(b.bottom>=f.ctx.GF.ORIG_Y+f.ctx.GF.WORLD_H+42*.12,'starter includes the south fence and rim above the hotbar');assert(b.right>=378+42*.12&&b.left<=-42*.12,'starter includes the full owned footprint');
- if(height<=740){assert(f.c.zoom*42>=44&&f.c.zoom*42<=48,'short desktop prioritizes readable 44–48 px tiles');f.sc.setReferenceOverview(true);fits(f.sc);assert.equal(f.sc._referenceCameraManual,false);assert(f.c.zoom<1.14,'overview can zoom out to fit the whole farm');f.sc.setReferenceOverview(false);fits(f.sc);}
+ if(height<=740){fits(f.sc);assert(f.c.zoom>0&&f.c.zoom<=1.14,'short desktop fits visible content without imposing a clipping zoom floor');f.sc.setReferenceOverview(true);fits(f.sc);assert.equal(f.sc._referenceCameraManual,false);assert(f.c.zoom<1.14,'overview can zoom out to fit the whole farm');f.sc.setReferenceOverview(false);fits(f.sc);}
  const a=f.sc.zonaSeguraCamaraGuia();assert(a.left>=258,'shop column is reserved');
  f.setMarket(true);f.sc.refreshReferenceFraming();fits(f.sc);assert(f.sc.zonaSeguraCamaraGuia().right<=width-f.marketWidth-30,'market column is reserved');
  assert.equal(JSON.stringify(f.state),f.before,'framing never writes the game state');

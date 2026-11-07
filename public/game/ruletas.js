@@ -13,8 +13,33 @@
  function pendiente(){return typeof ruletasPendiente==='function'&&!!ruletasPendiente();}
  function saldo(k){return typeof G!=='undefined'?Math.max(0,n(G[k])):0;}
  function imagen(k){const im=document.createElement('img');im.src='assets/'+(fuentes[k]||'farm/coin_esencia.png');im.alt='';return im;}
+ // A prize in the queue is not an inventory gain. Actual delivered gains use the normal bag flow.
+ const avisados=new Set();let avisoPremioEl=null,avisoPremioTimer=null,avisoPremioPendiente=null,avisoPremioCuenta=null;
+ const cuentaActual=()=>typeof UID!=='undefined'?String(UID||'local'):'local';
+ function quitarAvisoPremio(){if(avisoPremioEl)avisoPremioEl.remove();clearTimeout(avisoPremioTimer);avisoPremioEl=null;avisoPremioPendiente=null;avisoPremioCuenta=null;if(typeof placeFlujoPc==='function')placeFlujoPc();}
+ function avisarPremio(r,recuperado){
+  if(recuperado||r?.cancelado||!r||typeof r.op!=='string'||!/^[a-f0-9-]{36}$/i.test(r.op))return;
+  const p=r.premio||{},esGolden=r.modo==='golden'&&r.goldenWin===true;
+  if(!esGolden&&r.modo!=='objetos')return;
+  const cantidad=esGolden?n(r.payout):n(p.qty);if(cantidad<=0||!esGolden&&!fuentes[p.item])return;
+  const scope=cuentaActual(),id=scope+':'+r.op;if(avisados.has(id))return;
+  const cola=typeof G!=='undefined'&&Array.isArray(G.mkPend)?G.mkPend:[];
+  const entrega=esGolden?null:cola.slice().reverse().find(x=>x&&x.kind===p.kind&&x.item===p.item&&n(x.qty)===cantidad);
+  if(!esGolden&&!entrega)return;
+  const caja=document.getElementById('flujo');if(!caja)return;
+  avisados.add(id);while(avisados.size>100)avisados.delete(avisados.values().next().value);
+  quitarAvisoPremio();avisoPremioPendiente=entrega;avisoPremioCuenta=scope;
+  const el=avisoPremioEl=document.createElement('div'),numero=document.createElement('b'),nombre=document.createElement('span'),detalle=document.createElement('small');
+  el.className='flch gf-premio-aviso'+(esGolden?' gf-premio-acreditado':'');el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+  numero.textContent='+'+fmt(cantidad);nombre.className='fn';nombre.textContent=esGolden?'Golden':String(p.label||p.item);detalle.textContent=esGolden?'Acreditados':'Por recoger';
+  el.append(imagen(esGolden?'golden':p.item),numero,nombre,detalle);caja.append(el);
+  if(typeof placeFlujoPc==='function')placeFlujoPc();
+  avisoPremioTimer=setTimeout(()=>{if(avisoPremioEl===el)quitarAvisoPremio();},6000);
+ }
  function crear(){
   if(ov)return;ov=document.createElement('div');ov.id='ov-ruletas';ov.className='ov';ov.innerHTML=HTML;document.body.appendChild(ov);
+  // Keep the existing claim control above the wheel, never below the ten-prize catalogue.
+  $('.gf-consulta').after($('.gf-entregas'));
   $('[data-close]').onclick=()=>{if(typeof closeOv==='function')closeOv('ov-ruletas');else ov.classList.remove('show');if(disparador?.isConnected)disparador.focus();};
   $$('.gf-tab').forEach(b=>{b.onclick=()=>seleccionar(b.id==='gf-tab-golden'?'golden':'objetos');b.addEventListener('keydown',e=>{if(leyendo||girando)return;if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();seleccionar(e.key==='Home'?'golden':e.key==='End'?'objetos':modo==='golden'?'objetos':'golden');$('#gf-tab-'+(modo==='golden'?'golden':'objects')).focus();}});});
   $('.gf-spin-golden').onclick=()=>pedir('golden');$('.gf-spin-objects').onclick=()=>pedir('objetos');$('[data-r-actualizar]').onclick=consultar;
@@ -44,6 +69,7 @@
  }
  function render(){
   if(!ov)return;
+  if(avisoPremioEl&&(avisoPremioCuenta!==cuentaActual()||avisoPremioPendiente&&!(typeof G!=='undefined'&&Array.isArray(G.mkPend)&&G.mkPend.includes(avisoPremioPendiente))))quitarAvisoPremio();
   const ocupada=leyendo||girando;
   $('[data-golden-balance]').textContent=fmt(saldo('golden'));$('[data-plata-balance]').textContent=fmt(saldo('plata'));
   $$('.gf-tab').forEach(b=>{const activa=b.id===(modo==='golden'?'gf-tab-golden':'gf-tab-objects');b.disabled=ocupada;b.setAttribute('aria-selected',String(activa));b.tabIndex=activa?0:-1;});
@@ -52,6 +78,8 @@
   $('[data-r-actualizar]').textContent=pendiente()?'Comprobar giro':'Actualizar';$('[data-r-actualizar]').disabled=ocupada;
   const entregas=typeof mkPendCount==='function'?Math.max(0,n(mkPendCount())):0;
   $('[data-r-recoger]').textContent='Entregas pendientes ('+entregas+')';$('[data-r-recoger]').disabled=ocupada||pendiente()||!entregas;
+  $('.gf-entregas').classList.toggle('gf-entregas-pendientes',entregas>0);
+  $('.gf-entregas>span').textContent=entregas?'Por recoger: aún no están en tu bolsa. Pulsa Entregas pendientes para recibir lo que quepa.':'Los premios de objetos se recogen aquí. Si no caben, se conservan.';
   if(estado){
    const g=estado.config.golden,o=estado.config.objetos,e=n(g.escala)||10000,p=n(g.pesoJackpot);
    $('[data-pot]').textContent=fmt(estado.bote);$('[data-reserve]').textContent=fmt(estado.reserva);$('[data-r-probabilidad]').textContent=pct(p,e)+' de jackpot por giro';$('[data-r-ticket]').textContent='Ticket: '+fmt(g.ticket)+' Golden';
@@ -70,8 +98,8 @@
   const box=$(r.modo==='golden'?'[data-golden-result]':'[data-object-result]'),titulo=document.createElement('span'),detalle=document.createElement('span'),p=r.premio||{};
   titulo.className='gf-result-title';detalle.className='gf-result-detail';box.classList.toggle('winner',r.modo==='objetos'||!!r.goldenWin);
   if(r.modo==='golden'){titulo.textContent=r.goldenWin?'¡Ganaste '+fmt(r.payout)+' Golden!':'Esta vez, sin premio';detalle.textContent=r.goldenWin?'Bote completo acreditado a tu saldo':'El bote creció '+fmt(estado.config.golden.aporteBote)+' Golden · probabilidad sin cambios';}
-  else{titulo.append(imagen(p.item),document.createTextNode(fmt(p.qty)+' × '+String(p.label||p.item||'Premio')));detalle.textContent='Premio confirmado en Entregas pendientes';}
-  if(recuperado)detalle.textContent+=' · giro comprobado';box.replaceChildren(titulo,detalle);
+  else{titulo.append(imagen(p.item),document.createTextNode(fmt(p.qty)+' × '+String(p.label||p.item||'Premio')));detalle.textContent='Premio confirmado. Recoge las entregas con el botón de arriba.';}
+  if(recuperado)detalle.textContent+=' · giro comprobado';box.replaceChildren(titulo,detalle);avisarPremio(r,recuperado);
  }
  async function consultar(){
   crear();if(leyendo||girando)return;leyendo=true;listo=false;mensaje='';aviso=false;render();

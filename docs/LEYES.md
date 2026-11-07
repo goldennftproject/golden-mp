@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Adaptación a pantallas bajas y aviso de premios — 07/11/2026
+
+Dirección autoriza terminar de probar y publicar. Renovado PC adapta Tienda, Ruletas y Misiones al ancho y alto libres, con controles compactos cuando hace falta; la cámara encuadra sin el mínimo que recortaba contenido y conserva el zoom manual. Entregas pendientes sube antes de la rueda y cada recibo nuevo confirmado avisa «Por recoger» o «Acreditados» según corresponda, sin duplicar los aumentos reales de bolsa. Se conservan arte, controles, partidas, economía y sistemas pausados. Ver ADAPTACION-Y-PREMIOS-20261107.md.
+
 ## Novedades visibles y acabado fiel al concepto — 06/11/2026
 
 Dirección pide que Ruletas y Noticias se descubran a simple vista y que Mercado, Tienda, Misiones y HUD respeten los detalles de la referencia original. Ruletas permanece junto a Tienda; Noticias muestra sus publicaciones sin leer y Nuevo se retira al abrir la función. Renovado PC reutiliza el arte estático original, con controles y datos reales, logo saliente y franja más baja; conserva alternativas para Clásico, móvil, combate y errores de carga. Se verifica la interacción con ratón además del aspecto. Sin cambios de economía, partidas, guardado ni sistemas pausados. Ver NOVEDADES-Y-ACABADO-20261106.md.

@@ -32,7 +32,7 @@ const W = dom.window;
 const ctx = { console: { log(){}, warn(){}, error(){}, info(){} }, Math, Date, JSON, Object, Array,
   Number, String, Boolean, Set, Map, isNaN, isFinite, parseInt, parseFloat, RegExp, Error, Promise,
   performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval(){}, clearTimeout(){},
-  requestAnimationFrame: () => 0, document: W.document, Image: W.Image, Node: W.Node,
+  requestAnimationFrame: () => 0, location: W.location, document: W.document, Image: W.Image, Node: W.Node,
   HTMLElement: W.HTMLElement, MouseEvent: W.MouseEvent, Event: W.Event, getComputedStyle: W.getComputedStyle };
 ctx.window = ctx; ctx.globalThis = ctx;
 ctx.addEventListener = () => {}; ctx.removeEventListener = () => {};

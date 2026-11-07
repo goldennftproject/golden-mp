@@ -1357,7 +1357,8 @@ class FarmScene extends Phaser.Scene {
       const zMin = Math.min(cw / (L.x2 - L.x1), ch / (L.y2 - L.y1));
       const fit = Math.min((safe.right - safe.left) / Math.max(GF.TILE * 2, bounds.right - bounds.left),
         (safe.bottom - safe.top) / Math.max(GF.TILE * 2, bounds.bottom - bounds.top));
-      const z = Math.max(zMin, close ? Math.max(1.05, Math.min(1.14, fit)) : fit);
+      // In a short window, measured free space takes priority over the preferred close zoom.
+      const z = Math.max(zMin, close ? Math.min(1.14, fit) : fit);
       this._referenceBaseZoom = z;
       this.zoomUserMin = zMin / z;
       // Un resize o abrir/cerrar Mercado conserva el zoom y scroll elegidos por el jugador.
@@ -1369,15 +1370,30 @@ class FarmScene extends Phaser.Scene {
         this.zoomUser = Phaser.Math.Clamp(this.zoomUser || 1, this.zoomUserMin, 2.4);
         c.setZoom(Math.max(zMin, z * this.zoomUser));
       }
+      const encajarLimites = (centerX, centerY) => {
+        // The physical camera viewport can be wider than the original world bounds at this
+        // automatic zoom. Permit its intended frame without moving terrain or changing camLim.
+        const halfW = c.width / (2 * c.zoom), halfH = c.height / (2 * c.zoom);
+        const left = Math.min(L.x1, centerX - halfW), right = Math.max(L.x2, centerX + halfW);
+        const top = Math.min(L.y1, centerY - halfH), bottom = Math.max(L.y2, centerY + halfH);
+        if (typeof c.setBounds === 'function') c.setBounds(left, top, right - left, bottom - top);
+      };
       if (!this._referenceCameraManual) {
         const x = (bounds.left + bounds.right) / 2, y = (bounds.top + bounds.bottom) / 2;
         const dx = (safe.left + safe.right) / 2 - ((c.x || 0) + cw / 2);
         const dy = (safe.top + safe.bottom) / 2 - ((c.y || 0) + ch / 2);
-        c.centerOn(x - dx / c.zoom, y - dy / c.zoom);
+        const centerX = x - dx / c.zoom, centerY = y - dy / c.zoom;
+        encajarLimites(centerX, centerY);
+        c.centerOn(centerX, centerY);
+      } else {
+        // Resize/zoom preserve the chosen scroll even when the visible viewport grows wider
+        // than the map. Derive bounds afresh; never accumulate extra world or move the farm.
+        encajarLimites(c.scrollX + c.width / 2, c.scrollY + c.height / 2);
       }
       this._referenceFramingActive = true;
       return;
     }
+    const restaurarLimites = this._referenceFramingActive && !this._referenceCameraManual;
     const keepManualZoom = this._referenceFramingActive && this._referenceCameraManual && manualZoom !== true;
     const manualActualZoom = this.cameras.main.zoom;
     if (this._referenceFramingActive) {
@@ -1420,6 +1436,11 @@ class FarmScene extends Phaser.Scene {
       const u = Phaser.Math.Clamp(this.zoomUser || 1, this.zoomUserMin, 2.4);
       this.zoomUser = u;
       this.cameras.main.setZoom(Math.max(zMin, z * u));
+      if (restaurarLimites) {
+        const c = this.cameras.main;
+        if (typeof c.setBounds === 'function') c.setBounds(L.x1, L.y1, L.x2 - L.x1, L.y2 - L.y1);
+        c.centerOn(GF.ORIG_X + GF.WORLD_W / 2, GF.ORIG_Y + GF.WORLD_H / 2);
+      }
       return;
     }
     const fill = Math.max(GF.ZOOM, cw / GF.WORLD_W, ch / GF.WORLD_H);
