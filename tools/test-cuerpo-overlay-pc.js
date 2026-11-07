@@ -22,7 +22,7 @@ function caso(ancho, cuerpoAbierto, compartir) {
   const overlay = { classList: clases(false) };
   const cuerpo = { classList: clases(cuerpoAbierto) };
   const ctx = {
-    window: { innerWidth: ancho }, GF: { esOcultoMvp: () => false }, Math,
+    window: { innerWidth: ancho }, GF: { esAltarOculto: () => false, esOcultoMvp: () => false }, Math,
     $: id => ({ "ov-inv": overlay, "cuerpo-panel": cuerpo })[id] || null,
     hideSeedWheel() {}, pescaAparejosAbierto: () => false, pescaAparejosCerrar() {},
     cerrarCuerpoPanelPc: undefined, enfocarOvPc: () => { focos++; }, OV_SFX: {}, OV_REFRESH: {},

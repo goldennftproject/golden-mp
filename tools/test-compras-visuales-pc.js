@@ -19,6 +19,6 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.
  const anterior=opened;c.abrirCompra('animales');assert.equal(opened,anterior,'no salta el requisito de Establo');
  c.G.built.establo=true;c.abrirCompra('animales');assert.equal(opened,'ov-establo');assert.equal(compras,0,'navegar nunca compra, cobra o activa VIP');
  c.GF.scene='forest';c.ubicarComprasPc();assert.equal(doc.getElementById('compras-accesos').classList.contains('compras-combate'),true,'en combate los accesos se compactan en una fila');c.GF.scene='farm';c.ubicarComprasPc();assert.equal(doc.getElementById('compras-accesos').classList.contains('compras-combate'),false);
- assert.equal(doc.querySelectorAll('#compras-accesos [data-tienda]').length,5);
+ assert.deepEqual([...doc.querySelectorAll('#compras-accesos [data-tienda]')].map(button=>button.dataset.tienda),['inicio','vip','objetos','mejoras','suministros','ruletas']);
  console.log('OK: accesos, imágenes, VIP sin saldo/activo, destinos y pestañas exactas; animales con Establo y ninguna compra al navegar.');
 })().catch(e=>{console.error(e);process.exitCode=1});

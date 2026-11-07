@@ -1,0 +1,74 @@
+/* Exact Mercado pieces: one outer frame, its nameplate and its original red close. */
+@media(min-width:900px){
+ .visual-v2.concept-finish-ready.market-pieces-ready{
+  --market-frame:url('../assets/market-ui/window-frame-aligned.svg');
+  --market-plaque:url('../assets/market-ui/plaque.svg');
+  --market-infill:url('../assets/market-ui/header-infill-aligned.svg');
+  --market-close:url('../assets/market-ui/close.png');
+ }
+ .visual-v2.adaptive-layout #compras-accesos.adaptive-scroll{scrollbar-width:none}
+ .visual-v2.adaptive-layout #compras-accesos.adaptive-scroll::-webkit-scrollbar{display:none}
+ /* The Mercado canopy remains unique; only its old, duplicated body border moves. */
+ .visual-v2.concept-finish-ready #ov-market.reference-market>.card{--market-art-width:460px;border-color:transparent;border-image:none}
+ .visual-v2.concept-finish-ready #ov-market.reference-market>.card::after{
+  content:'';display:block;position:absolute;z-index:0;left:-9px;right:-9px;bottom:-9px;
+  top:calc(var(--market-art-width)*102/511 - 27px);width:auto;height:auto;
+  border:9px solid transparent;border-top-width:0;border-image:var(--ref-wood) 0 32 32 / 0 9px 9px / 0 stretch;
+  background:none;filter:none;pointer-events:none;
+ }
+ .visual-v2.concept-finish-ready.market-pieces-ready #ov-market.reference-market>.card::after{
+  border-image:var(--market-frame) 76 14 18 / 0 9px 9px / 0 stretch;
+ }
+ .visual-v2.concept-finish-ready.market-pieces-ready .ov>.card.wood-window{
+  border:9px solid #754a29!important;
+  border-image:var(--market-frame) 76 14 18 / 76px 9px 9px / 0 stretch!important;
+  /* Align the upper rail and plaque at 14px below the card box edge. */
+  border-radius:0!important;background:linear-gradient(to bottom,transparent 5px,#f5e5c6 5px)!important;
+  background-origin:padding-box!important;background-clip:padding-box!important;
+  box-shadow:0 5px 12px #17210e75;max-height:calc(100dvh - 32px);
+  scrollbar-gutter:auto;scrollbar-width:none;
+ }
+ .visual-v2.concept-finish-ready.market-pieces-ready .wood-window::-webkit-scrollbar{display:none}
+ .visual-v2.concept-finish-ready.market-pieces-ready .ov:not(#ov-market)>.wood-window>h3.wood-menu-heading,
+ .visual-v2.concept-finish-ready.market-pieces-ready #ov-ruletas>.wood-window>.gf-header{
+  box-sizing:border-box;position:sticky;display:flex;align-items:center;justify-content:center;z-index:5;
+  min-height:64px;flex:0 0 auto;width:auto;top:0;transform:translateY(-18px);margin:0 -18px -2px;padding:3px 46px;
+  border:0;border-radius:0;box-shadow:none;
+  background:var(--market-infill) center/100% 100% no-repeat;
+  color:#fff0d0;font:700 var(--market-title-font,25px)/1.15 Georgia,'Times New Roman',serif;text-align:center;
+  text-shadow:1px 2px 1px #35200e;letter-spacing:0;
+ }
+ .visual-v2.concept-finish-ready.market-pieces-ready .wood-window>.wood-menu-heading::before,
+ .visual-v2.concept-finish-ready.market-pieces-ready .wood-window>.wood-menu-heading::after{display:none}
+ .visual-v2.concept-finish-ready.market-pieces-ready .wood-window .wood-menu-title{
+  display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;align-self:flex-start;margin-top:2px;
+  width:fit-content;min-width:min(205px,100%);max-width:100%;min-height:54px;padding:1px 14px;
+  border:11px solid transparent;border-image:var(--market-plaque) 18 24 17 fill / 11px 16px 11px / 0 stretch;
+  border-radius:0;background:transparent;box-shadow:none;
+  color:#fff2ce;font:inherit;line-height:1.15;text-shadow:1px 2px 1px #35200e,-.5px 0 #452714;
+  overflow-wrap:anywhere;
+ }
+ .visual-v2.concept-finish-ready.market-pieces-ready .ov:not(#ov-market)>.wood-window>.close,
+ .visual-v2.concept-finish-ready.market-pieces-ready #ov-ruletas .gf-header>.close{
+  --market-close-height:calc(38px * 48 / 49);
+  box-sizing:border-box;width:38px!important;height:var(--market-close-height)!important;min-width:38px;min-height:0;
+  padding:0!important;border:0!important;border-image:none!important;border-radius:0!important;
+  background:var(--market-close) center/100% 100% no-repeat!important;box-shadow:none!important;
+  /* A few native windows set z-index:2 inline; the close must stay over the sticky title. */
+  color:transparent!important;font-size:0!important;text-shadow:none!important;z-index:7!important;
+ }
+ .visual-v2.concept-finish-ready.market-pieces-ready .ov:not(#ov-market)>.wood-window>.close{
+  position:sticky!important;float:none!important;display:block;top:0!important;right:auto;
+  margin:-12px -6px calc(12px - var(--market-close-height)) auto!important;
+ }
+ .visual-v2.concept-finish-ready.market-pieces-ready .wood-window .close:hover{filter:brightness(1.1)}
+ .visual-v2.concept-finish-ready.market-pieces-ready .wood-window .close:focus-visible{outline:2px solid #fff0c3;outline-offset:2px}
+ .visual-v2.concept-finish-ready.market-pieces-ready #ov-ruletas>.wood-window>.gf-header{top:0;transform:none;margin:0;padding:3px 46px;align-items:flex-start}
+ .visual-v2.concept-finish-ready.market-pieces-ready #ov-ruletas .gf-header>h3.wood-menu-heading{
+  margin:0;padding:0;border:0;border-image:none;background:none;box-shadow:none;
+  color:#fff0d0!important;font:700 var(--market-title-font,25px)/1.15 Georgia,'Times New Roman',serif;text-shadow:1px 2px 1px #35200e!important;
+ }
+ .visual-v2.concept-finish-ready.market-pieces-ready #ov-ruletas .gf-header>.close{position:absolute;top:12px;right:8px;margin:0!important}
+}
+@media(min-width:1250px) and (max-width:1499px){.visual-v2.concept-finish-ready #ov-market.reference-market>.card{--market-art-width:410px}}
+@media(min-width:900px) and (max-width:1249px){.visual-v2.concept-finish-ready #ov-market.reference-market>.card{--market-art-width:370px}}

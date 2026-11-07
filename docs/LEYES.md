@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Marcos comunes con las piezas del Mercado — 07/11/2026
+
+Dirección aprueba la vista con el borde superior del marco alineado con la tabla del título: «Ahora sí, así queda mejor. Probá que todos los menús funcionen bien y publicalo». Renovado PC reutiliza las piezas originales del Mercado en las cabeceras, placas, laterales, base y cierres de las ventanas. El toldo permanece sólo en Mercado. Se conservan controles, arrastre, foco, cierres, desplazamiento, Clásico, móvil, cuentas y partidas; las funciones pausadas no se activan. Ver MARCOS-MERCADO-20261107.md.
+
 ## Madera compartida en accesos — 07/11/2026
 
 Dirección aprueba la vista local y pide publicarla. Ruletas, Misiones y Noticias de Renovado PC comparten el marco y las vetas de la placa Tienda original, con nueve cortes y rótulos, iconos y contadores reales. Se conservan los accesos compactos de 48 px en pantallas bajas y los estilos Clásico, móvil y combate. Cambio sólo de presentación; sin economía, partidas ni sistemas pausados. Ver BOTONES-MADERA-20261107.md.
