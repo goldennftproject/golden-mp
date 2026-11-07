@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Lista de jugadores sobre la Tienda — 06/11/2026
+
+Dirección autoriza corregir y publicar la lista de conectados. Sale del contexto del HUD para aparecer sobre la Tienda y debajo de las ventanas; ajusta ancho, alto y posición al viewport, conservando scroll, cierre y foco. Mantiene nombres públicos, contador, cuentas únicas y servicio de presencia. Sin cambios de economía, jugadores ni guardado. Ver LISTA-JUGADORES-VISIBLE-20261106.md.
+
 ## Producciones pausadas visibles en el Cobertizo — 06/11/2026
 
 Dirección autoriza corregir, probar y publicar el aviso de pausas: aparece arriba del Cobertizo con acceso a la gestión, que abre inicialmente y coloca primero las pausadas; si falta cupo, Reactivar explica el motivo. Respeta el cierre manual y los nodos con cupo propio Golden. Conserva nodos, capacidad, tiempos, economía y partidas. Ver PAUSAS-VISIBLES-COBERTIZO-20261106.md.
