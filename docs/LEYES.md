@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Noticias compartidas tras revisión — 07/11/2026
+
+Dirección aprueba los textos y la captura para Discord, Noticias del juego y Telegram. Se añade el resumen de ruletas, premios y adaptación sin reemplazar noticias anteriores; Discord y Telegram usan los bots y destinos autorizados, con recibos que impiden duplicados. No se cambia la economía ni se reactiva ninguna tarea periódica. Ver NOTICIAS-20261107.md.
+
 ## Adaptación a pantallas bajas y aviso de premios — 07/11/2026
 
 Dirección autoriza terminar de probar y publicar. Renovado PC adapta Tienda, Ruletas y Misiones al ancho y alto libres, con controles compactos cuando hace falta; la cámara encuadra sin el mínimo que recortaba contenido y conserva el zoom manual. Entregas pendientes sube antes de la rueda y cada recibo nuevo confirmado avisa «Por recoger» o «Acreditados» según corresponda, sin duplicar los aumentos reales de bolsa. Se conservan arte, controles, partidas, economía y sistemas pausados. Ver ADAPTACION-Y-PREMIOS-20261107.md.

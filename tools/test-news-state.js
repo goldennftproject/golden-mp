@@ -52,10 +52,10 @@ test('opening marks only the displayed article and notifies consumers and menu b
     assert.equal(f.api.state().unread, feed.items.length - 1);
     assert.equal(f.events.at(-1).unread, feed.items.length - 1);
     assert.equal(JSON.parse(f.w.localStorage.getItem('gf_news_seen_v1')).length, 1);
-    assert.match(f.d.getElementById('gm-news').getAttribute('aria-label'), /1 sin leer/);
-    assert.equal(f.d.getElementById('gm-news-badge').textContent, '1 nueva');
-    const unread = Array.from(f.d.querySelectorAll('[data-news-id]')).find(button => button.querySelector('.news-entry-new'));
-    unread.click();
+    assert.equal(f.d.getElementById('gm-news').getAttribute('aria-label'), 'Noticias: '+(feed.items.length-1)+' sin leer');
+    assert.equal(f.d.getElementById('gm-news-badge').textContent, (feed.items.length-1)+(feed.items.length===2?' nueva':' nuevas'));
+    while(f.api.state().unread){const unread = Array.from(f.d.querySelectorAll('[data-news-id]')).find(button => button.querySelector('.news-entry-new'));
+    unread.click();}
     assert.equal(f.api.state().unread, 0);
     assert.equal(f.events.at(-1).unread, 0);
     assert.equal(f.d.getElementById('gm-news-badge').hidden, true);

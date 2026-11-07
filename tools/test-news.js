@@ -50,7 +50,7 @@ function contrast(foreground, background) {
   const a = luminance(foreground), b = luminance(background); return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
 }
 (async () => {
-  assert.equal(actual.version, 1); assert.equal(actual.items.length, 2);
+  assert.equal(actual.version, 1); assert(actual.items.length >= 2);
   assert.equal(html.match(/"game\/news\.js"/g).length, 1);
   assert.equal(html.match(/href="game\/news\.css\?v=1"/g).length, 1);
   assert.equal(new JSDOM(html).window.document.querySelectorAll('.gmi[data-panel="ov-noticias"]').length, 1);
@@ -59,17 +59,17 @@ function contrast(foreground, background) {
   await tick();
   assert.equal(f.calls.length, 1, 'one background request, no polling');
   assert.equal(f.calls[0].url, '/news/index.json'); assert.equal(f.calls[0].opts.credentials, 'omit');
-  assert.equal(badge.textContent, '2 nuevas'); assert.equal(badge.hidden, false);
+  assert.equal(badge.textContent, actual.items.length + ' nuevas'); assert.equal(badge.hidden, false);
   assert.equal(d.querySelectorAll('.ov.show').length, 0, 'new items never open a popup');
   assert.equal(w.localStorage.getItem('gf_news_seen_v1'), null, 'background load never marks items seen');
   d.getElementById('gm-news').click(); await tick();
   assert(d.getElementById('ov-noticias').classList.contains('show')); assert.equal(f.calls.length, 2, 'refresh on explicit open');
-  assert.equal(d.querySelectorAll('.news-entry').length, 2); assert.equal(badge.textContent, '1 nueva');
+  assert.equal(d.querySelectorAll('.news-entry').length, actual.items.length); assert.equal(badge.textContent, (actual.items.length - 1) + (actual.items.length === 2 ? ' nueva' : ' nuevas'));
   assert.equal(d.querySelector('.news-title').textContent, actual.items[0].title);
   assert.equal(d.querySelector('.news-content').textContent.includes(actual.items[0].title), false, 'the exactly repeated Discord title is only displayed once');
-  assert.equal(d.querySelectorAll('.news-content ul li').length, 5); assert(d.querySelector('.news-content strong'));
-  assert.equal(d.querySelector('.news-discord').href, actual.items[0].discordUrl);
-  assert.equal(d.querySelector('.news-discord').rel, 'noopener noreferrer');
+  assert.equal(d.querySelectorAll('.news-content ul li').length, actual.items[0].content.split(/\r?\n/).filter(line => /^\s*[-*•]\s+/.test(line)).length); assert(d.querySelector('.news-content strong'));
+  if(actual.items[0].discordUrl){assert.equal(d.querySelector('.news-discord').href, actual.items[0].discordUrl);
+  assert.equal(d.querySelector('.news-discord').rel, 'noopener noreferrer');}else assert.equal(d.querySelector('.news-discord'),null);
   assert.equal(d.querySelector('.news-content a').href, 'https://goldenfarm.onrender.com/', 'the original game URL is a safe clickable link');
   let readerBubbled = false; d.querySelector('.news-card').addEventListener('pointerdown', () => { readerBubbled = true; });
   d.querySelector('.news-content p').dispatchEvent(new w.Event('pointerdown', { bubbles: true }));
@@ -85,7 +85,7 @@ function contrast(foreground, background) {
   d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); assert.equal(d.activeElement.id, 'news-image-zoom');
   d.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   assert.equal(lightbox.hidden, true); assert.equal(d.activeElement, imageButton); assert(w.isOpen('ov-noticias'));
-  d.querySelectorAll('.news-entry')[1].focus(); d.querySelectorAll('.news-entry')[1].click(); assert.equal(badge.hidden, true);
+  d.querySelectorAll('.news-entry')[1].focus(); d.querySelectorAll('.news-entry')[1].click(); for (let i = 2; i < actual.items.length; i++) d.querySelectorAll('.news-entry')[i].click(); assert.equal(badge.hidden, true);
   assert.equal(d.activeElement.dataset.newsId, actual.items[1].id, 'rebuilding unread labels preserves the selected entry keyboard focus');
   assert.deepEqual(JSON.parse(w.localStorage.getItem('gf_news_seen_v1')), actual.items.map(x => x.id));
   d.querySelector('.news-image-button').click(); w.closeOv('ov-noticias'); assert.equal(lightbox.hidden, true);
@@ -127,12 +127,12 @@ function contrast(foreground, background) {
     assert.equal(broken.d.getElementById('news-status').dataset.error, 'true'); assert.equal(broken.d.querySelectorAll('.news-entry').length, 0);
   }
   broken.setFeed(actual); broken.d.querySelector('#news-status button').click(); await tick();
-  assert.equal(broken.d.querySelectorAll('.news-entry').length, 2, 'retry recovers from corrupt/offline feed'); broken.w.close();
+  assert.equal(broken.d.querySelectorAll('.news-entry').length, actual.items.length, 'retry recovers from corrupt/offline feed'); broken.w.close();
 
   const slow = fixture(); const deferred = slow.delay(); await tick();
   slow.d.getElementById('gm-news').click(); slow.w.GoldenNews.refresh(); assert.equal(slow.calls.length, 1, 'concurrent opens share one request');
   slow.w.closeOv('ov-noticias'); deferred.resolve(); await tick();
-  assert.equal(slow.d.getElementById('gm-news-badge').textContent, '2 nuevas');
+  assert.equal(slow.d.getElementById('gm-news-badge').textContent, actual.items.length + ' nuevas');
   assert.equal(slow.w.localStorage.getItem('gf_news_seen_v1'), null, 'a response after closing cannot mark unread items as read'); slow.w.close();
 
   const colors = fixture(); await tick(); colors.d.getElementById('gm-news').click(); await tick();

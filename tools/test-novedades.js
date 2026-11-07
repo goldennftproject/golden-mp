@@ -91,16 +91,16 @@ test('the access row stays behind login/loading and appears when the game surfac
 });
 test('real Noticias and Discovery share load, read and failure events without duplicate downloads',async()=>{
  const f=await fixture({news:{unread:0,loaded:false,failed:false}});try{
-  const calls=[],feed=read('public/news/index.json');let offline=false;
+  const calls=[],feed=read('public/news/index.json'),articleCount=JSON.parse(feed).items.length;let offline=false;
   f.w.fetch=async(url,options)=>{calls.push({url,options});if(offline)throw Error('offline');return{ok:true,text:async()=>feed};};
   delete f.w.GoldenNews;f.w.eval(read('public/game/news.js'));await f.settle();
   const badge=f.d.getElementById('noticias-contador'),menuBadge=f.d.getElementById('gm-news-badge');
   assert.equal(calls.length,1,'only the news module downloads the shared public feed');assert.equal(calls[0].url,'/news/index.json');
-  assert.equal(f.w.GoldenNews.state().unread,2);assert.match(badge.textContent,/2/);assert.match(menuBadge.textContent,/2/);
+  assert.equal(f.w.GoldenNews.state().unread,articleCount);assert.equal(badge.textContent,String(articleCount));assert.match(menuBadge.textContent,new RegExp('^'+articleCount+' '));
   f.w.GoldenDiscovery.refresh();f.w.GoldenDiscovery.refresh();await f.settle();assert.equal(calls.length,1,'discovery rendering does not query the feed');
   f.d.getElementById('ov-noticias').classList.add('show');await f.w.GoldenNews.open();await f.settle();
-  assert.equal(f.w.GoldenNews.state().unread,1);assert.match(badge.textContent,/1/);assert.match(menuBadge.textContent,/1/);
-  f.d.querySelectorAll('.news-entry')[1].click();await f.settle();assert.equal(badge.hidden,true);assert.equal(menuBadge.hidden,true);
+  assert.equal(f.w.GoldenNews.state().unread,articleCount-1);assert.equal(badge.textContent,String(articleCount-1));assert.match(menuBadge.textContent,new RegExp('^'+(articleCount-1)+' '));
+  for(let i=1;i<articleCount;i++){f.d.querySelectorAll('.news-entry')[i].click();await f.settle();}assert.equal(badge.hidden,true);assert.equal(menuBadge.hidden,true);
   offline=true;await f.w.GoldenNews.refresh();await f.settle();assert.equal(f.w.GoldenNews.state().failed,true);
   assert.match(f.d.getElementById('noticias-acceso').title,/no se pudo|conex/i);assert.equal(badge.hidden,true);
  }finally{f.close();}

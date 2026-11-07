@@ -1,6 +1,15 @@
 {
   "items": [
     {
+      "id": "2026-11-07-ruletas-y-mejoras",
+      "title": "Novedades de Golden Farm",
+      "date": "2026-11-07",
+      "alt": "Ruleta de objetos con un premio de cinco maderas por recoger, aviso a la izquierda y acceso a Entregas pendientes en la parte superior.",
+      "image": "/news/golden-farm-ruletas-y-mejoras-20261107.jpg",
+      "content": "Ya están disponibles las dos ruletas y varias mejoras para jugar con más comodidad:\n\n🎡 **Ruleta de objetos:** 3 giros gratis y 2 adicionales por 100 y 200 Plata. Máximo 5 por día, con reinicio UTC. Todos los giros de objetos entregan un premio.\n\n🪙 **Jackpot Golden:** ticket de 1 Golden y un 0,2 % de probabilidad de ganar el bote por giro. También puede salir sin premio.\n\n🎁 **Premios más claros:** verás un aviso como «+5 Madera · Por recoger». El botón **Entregas pendientes** está arriba de la rueda. Si los objetos no caben en la bolsa, se conservan para recogerlos después.\n\n🖥️ **Mejor adaptación de pantalla:** Tienda, Ruletas y Misiones se acomodan al espacio disponible, y la cámara ajusta el encuadre de la granja.\n\n📣 **Más fácil de encontrar:** Ruletas junto a Tienda y Noticias con contador de publicaciones sin leer. También mejoramos el acabado del Mercado, Tienda y Misiones.\n\nGracias por los reportes y las sugerencias 🌱\n\nPara actualizar: guardá con el disquete, esperá el ✓ y recargá.\n\n🎮 https://goldenfarm.onrender.com/",
+      "discordUrl": "https://discord.com/channels/1564640221063024763/1564643673889841243/1568601117401817209"
+    },
+    {
       "title": "Golden Farm estrena aspecto en PC",
       "date": "2026-11-03",
       "alt": "Capturas de Golden Farm con su aspecto renovado: edificios, árboles, parcelas, HUD, Tienda y Mercado.",
