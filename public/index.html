@@ -1708,7 +1708,12 @@
       <button data-tienda="mejoras" title="Mejoras: edificios, God Hand y pasivas de recolección"><img src="assets/ui/shop-mejoras-v1.webp" alt="" width="48" height="48"><span>Mejoras</span></button>
       <button data-tienda="suministros" title="Packs: materiales para construir y fabricar"><img src="assets/ui/shop-suministros-v1.webp" alt="" width="48" height="48"><span>Packs</span></button>
     </div>
+    <button type="button" id="ruletas-acceso" data-tienda="ruletas" data-novedad="ruletas-v1" data-novedad-nombre="Ruletas" title="Ruletas Golden y de objetos: tres giros gratuitos al día, más opciones pagadas"><span class="novedad-ruleta" aria-hidden="true">★</span><span class="novedad-copy"><span>Ruletas</span><small>3 gratis al día</small></span></button>
     <button class="tienda-abrir" id="misiones-acceso" style="margin-top:6px" title="Ver misiones diarias y reclamar Plata" onclick="openOv('ov-objetivos')">📋 Misiones<b id="misiones-contador" class="jornada-badge" hidden aria-hidden="true"></b></button>
+  </nav>
+  <nav id="novedades-accesos" aria-label="Novedades y actividades" hidden>
+    <button type="button" id="ruletas-acceso-movil" data-tienda="ruletas" data-novedad="ruletas-v1" data-novedad-nombre="Ruletas"><span class="novedad-ruleta" aria-hidden="true">★</span><span>Ruletas</span></button>
+    <button type="button" id="noticias-acceso" data-panel="ov-noticias" title="Leer noticias y actualizaciones del juego"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h14v18H4z M18 7h3v12a2 2 0 0 1-2 2 M7 7h8 M7 11h8 M7 15h3 M7 18h8"/></svg><span>Noticias</span><b id="noticias-contador" hidden aria-hidden="true"></b></button>
   </nav>
   <div class="ov" id="ov-tienda"><div class="card" style="width:min(760px,94vw)"><button class="close" data-close="ov-tienda" aria-label="Cerrar tienda">×</button><h3>Tienda de la granja</h3><div id="tienda-catalogo"></div></div></div>
 
@@ -2365,7 +2370,7 @@
   <div class="gmenu collapsed" id="gmenu">
     <div class="gmitems" role="navigation" aria-label="Menús del juego">
       <div class="menu-seccion">Mi granja</div>
-      <button class="gmi" data-tienda="ruletas" title="Jackpot Golden y tres giros gratuitos diarios de objetos."><span class="menu-icon" aria-hidden="true">◉</span><span class="menu-label">Ruletas</span></button>
+      <button class="gmi" data-tienda="ruletas" data-novedad="ruletas-v1" data-novedad-nombre="Ruletas" title="Jackpot Golden y tres giros gratuitos diarios de objetos."><span class="menu-icon" aria-hidden="true">◉</span><span class="menu-label">Ruletas</span></button>
       <button class="gmi" title="Ver tu nombre, cambiarlo y gestionar Discord." data-panel="ov-perfil"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></span><span class="menu-label">Mi perfil</span></button>
       <button class="gmi" title="Objetos, semillas y materiales que llevas." data-panel="ov-inv"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8V6a6 6 0 0 1 12 0v2 M4 8h16v13H4z M8 12h8v5H8z"/></svg></span><span class="menu-label">Inventario</span></button>
       <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7 M5 9v12h14V9 M9 21v-7h6v7"/></svg></span><span class="menu-label">Cobertizo</span><b class="menu-badge" id="gm-cob"></b></button>
@@ -2548,6 +2553,9 @@
   </script>
 
   <link rel="stylesheet" href="game/ruletas.css">
+  <link rel="stylesheet" href="game/novedades.css">
+  <link rel="stylesheet" href="game/hud-finish.css">
+  <link rel="stylesheet" href="game/concept-finish.css">
   <script>
   /* Cargador con reintentos: el server free de Render a veces corta conexiones.
      Carga los scripts del juego EN FILA (uno por vez) y reintenta cada uno hasta 8 veces. */
@@ -2556,7 +2564,7 @@
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
     const GF_BUILD = "20260928-163402";
-    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/ruletas-api.js","game/ruletas.js","game/news.js","game/lighting.js","game/visual-v2.js","game/world-lights.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/boot.js",
+    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/ruletas-api.js","game/ruletas.js","game/news.js","game/novedades.js","game/lighting.js","game/visual-v2.js","game/world-lights.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/concept-finish.js","game/boot.js",
                    "game/farm.js","game/reference-world.js","game/reference-camera-ui.js","game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
        entrar »). El cargador de abajo pide un archivo, espera a que llegue, pide el siguiente:

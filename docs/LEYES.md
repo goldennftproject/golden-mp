@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Novedades visibles y acabado fiel al concepto — 06/11/2026
+
+Dirección pide que Ruletas y Noticias se descubran a simple vista y que Mercado, Tienda, Misiones y HUD respeten los detalles de la referencia original. Ruletas permanece junto a Tienda; Noticias muestra sus publicaciones sin leer y Nuevo se retira al abrir la función. Renovado PC reutiliza el arte estático original, con controles y datos reales, logo saliente y franja más baja; conserva alternativas para Clásico, móvil, combate y errores de carga. Se verifica la interacción con ratón además del aspecto. Sin cambios de economía, partidas, guardado ni sistemas pausados. Ver NOVEDADES-Y-ACABADO-20261106.md.
+
 ## Dos ruletas tras vista previa aprobada — 06/11/2026
 
 Dirección autoriza implementar y publicar «hazlo» tras revisar la demo. Jackpot: bote inicial único de 10 Golden, ticket de 1, reparto 80% bote/20% reserva y probabilidad fija de 0,2%; paga completo y sólo abre otro bote con reserva suficiente. Objetos: 3 gratis + 2 pagos de 100/200 Plata por día UTC, máximo 5, con probabilidades y cantidades de la vista aprobada. Sorteo criptográfico y transacción en servidor, CAS, precio confirmado, recibos permanentes y cancelación de operaciones inciertas. Los premios no se pierden por bolsa llena o arma duplicada. Se conservan partidas, compras, herramientas, equipamiento y sistemas pausados; no activa retiros, canje ni modifica el estudio económico. Ver RULETAS-20261106.md.

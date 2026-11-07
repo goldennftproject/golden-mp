@@ -99,11 +99,15 @@
     }
     flush();
   }
+  function state() {
+    return { unread: items.filter(item => !seen.has(item.id)).length, loaded, failed };
+  }
   function updateBadge() {
-    const count = items.filter(item => !seen.has(item.id)).length;
+    const count = state().unread;
     badge.hidden = !count; badge.textContent = count ? count + (count === 1 ? ' nueva' : ' nuevas') : '';
     const button = doc.getElementById('gm-news');
     if (button) button.setAttribute('aria-label', count ? 'Noticias: ' + count + ' sin leer' : 'Noticias');
+    root.dispatchEvent(new root.CustomEvent('golden:news-state', { detail: state() }));
   }
   function markSeen(id) {
     if (seen.has(id)) return;
@@ -202,7 +206,7 @@
       if (panel.classList.contains('show')) { showStatus('', false); renderOpen(); }
       return true;
     }).catch(() => {
-      failed = true;
+      failed = true; updateBadge();
       if (panel.classList.contains('show')) showStatus(loaded ? 'No se han podido actualizar las noticias. Puedes seguir leyendo las cargadas.' : 'No se han podido cargar las noticias. Revisa la conexión.', true);
       return false;
     }).finally(() => { root.clearTimeout(timer); refresh.disabled = false; inflight = null; });
@@ -238,7 +242,7 @@
     if (!panel.classList.contains('show')) closeImage();
   }).observe(panel, { attributes: true, attributeFilter: ['class'] });
   root.addEventListener('storage', event => { if (event.key === storageKey) { seen = readSeen(); updateBadge(); renderList(); } });
-  root.GoldenNews = Object.freeze({ open, refresh: load, closeImage });
+  root.GoldenNews = Object.freeze({ open, refresh: load, closeImage, state });
   // A single lightweight public request; no wait on it anywhere in the game boot.
   root.setTimeout(() => { if (!loaded && !failed && !inflight) load(); }, 0);
 })(window);

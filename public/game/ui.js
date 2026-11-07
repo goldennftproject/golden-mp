@@ -2926,7 +2926,7 @@ function refreshTienda(){
     ['suministros','Packs de materiales','Construye y fabrica','Madera, piedra y minerales','Desde '+Math.min(...Object.values(PACKS_DEF).map(d=>d.golden))+' Golden','Ver packs']
   ];
   box.innerHTML='<div class="tienda-saldos"><span>'+coinIc('plata')+' '+fmtPlata(G.plata)+' Plata</span><span>'+coinIc('esencia')+' '+fmtGolden(G.golden)+' Golden</span><button class="gold sm" onclick="abrirRecargaGolden()">Recargar Golden</button></div><div class="tienda-grid">'+cards.map(([id,nombre,beneficio,detalle,precio,accion])=>'<article class="tienda-producto '+(id==='vip'?'tienda-destacado':'')+'"><div class="tienda-arte"><img src="assets/ui/shop-'+id+'-v1.webp" alt="" width="256" height="256"></div><div class="tienda-copy"><h4>'+nombre+'</h4><strong>'+beneficio+'</strong>'+tiendaVentajasVisuales(id)+tiendaPropiedadVisual(id)+(id==='vip'||id==='objetos'?'':'<p>'+detalle+'</p>')+'<div class="tienda-producto-pie"><b>'+precio+'</b><button class="green sm" data-tienda="'+id+'">'+accion+'</button></div></div></article>').join('')+'</div><div class="tienda-otras"><button class="ghost sm" data-tienda="semillas">🌱 Semillas · Plata</button><button class="ghost sm" data-tienda="adornos">🌼 Adornos</button><button class="ghost sm" data-tienda="bolsas">🎒 Bolsas</button><button class="ghost sm" data-tienda="animales" '+(!G.built?.establo?'disabled title="Construye el Establo para comprar animales"':'')+'>🐾 Animales</button></div><p class="sub">Compras con monedas del juego. Depósitos USDT: consulta el Banco. Retiros desactivados.</p>';
-  const otras=box.querySelector('.tienda-otras');if(otras){const b=document.createElement('button');b.type='button';b.className='green sm';b.dataset.tienda='ruletas';b.textContent='◉ Ruletas';otras.prepend(b);}
+  const otras=box.querySelector('.tienda-otras');if(otras){const b=document.createElement('button');b.type='button';b.className='green sm';b.dataset.tienda='ruletas';b.dataset.novedad='ruletas-v1';b.dataset.novedadNombre='Ruletas';b.textContent='◉ Ruletas';otras.prepend(b);}
 }
 function ubicarComprasPc(){
   const nav=$('compras-accesos');if(!nav||window.innerWidth<=640)return;
@@ -7015,7 +7015,7 @@ function initUI() {
       gm.classList.add("collapsed"); syncRecientesMenuPc(); sincronizarGuiaMenu();
     }
     if (!anyOvOpen()) return;
-    if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel, #guardado-manual, #edicion-acceso, #compras-accesos")) return;
+    if (e.target.closest(".card, #gmenu, #hotwrap, .hudbar, #logpanel, #editbar, #seedwheel, #guardado-manual, #edicion-acceso, #compras-accesos, #novedades-accesos")) return;
     let cerro = false;
     document.querySelectorAll(".ov.show:not(.bloquea)").forEach(o => {
       if (o.id !== "ov-inv") { desenfocarAlCerrar(o); o.classList.remove("show"); cerro = true; }

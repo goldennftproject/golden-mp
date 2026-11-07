@@ -1,0 +1,33 @@
+/* HUD finish against the approved full concept, not a new layout.
+   Source: exec-59ab2fc2-e1a2-411a-90f6-fb0597f8bf77.png (1672 × 941):
+   wooden strip ~66px high at y14; stacked logo ~192 × 96, outside the strip.
+   Existing nodes, actions, values, meters and responsive order remain in place. */
+@media(min-width:900px){
+ .visual-v2 #hudbar.reference-hud{top:12px;height:58px;min-height:58px;padding:1px 9px;padding-left:24px;border-width:6px;border-image:url('../assets/visual-v2/skin/wood-frame-concept.png?v=5') 32 fill stretch;background:#80532e;background-clip:padding-box;border-radius:5px;overflow:visible;box-shadow:0 2px #392716,0 4px 5px #17220e55;align-items:center}
+ .visual-v2 #hudbar.reference-hud .brand h1:has(.gf-logo){width:156px;height:42px;overflow:visible}
+ .visual-v2 #hudbar.reference-hud .brand .gf-logo{width:156px;height:75px;object-fit:contain;max-height:none;filter:drop-shadow(0 2px 1px #2d211b66)}
+ .visual-v2 #hudbar.reference-hud .pill{min-height:42px}
+ .visual-v2 #hudbar.reference-hud .pill:not(#jugadores-online)::before{top:3px;bottom:3px;width:1px;background:linear-gradient(transparent,#d8b36c 12%,#d8b36c 88%,transparent);opacity:.8}
+}
+@media(min-width:1500px){
+ .visual-v2 #hudbar.reference-hud{--ref-hud-label:20px;--ref-hud-number:21px;--ref-hud-gutter:44px;top:14px;height:66px;min-height:66px;padding:1px 10px;padding-left:30px;border-width:6px}
+ .visual-v2 #hudbar.reference-hud .brand{flex-basis:328px;gap:12px!important}
+ .visual-v2 #hudbar.reference-hud .brand h1:has(.gf-logo){width:196px;height:48px}
+ .visual-v2 #hudbar.reference-hud .brand .gf-logo{width:196px;height:94px}
+ .visual-v2 #hudbar.reference-hud #jugadores-online{min-height:30px;font-size:14px;padding:4px 8px;border-radius:4px}
+ .visual-v2 #hudbar.reference-hud #jugadores-online .k{font-size:13px}
+ .visual-v2 #hudbar.reference-hud .pill{min-height:50px}
+ .visual-v2 #hudbar.reference-hud .refhud-icon{left:6px;width:35px;height:42px}
+ .visual-v2 #hudbar.reference-hud #lvlpill{width:220px}
+ .visual-v2 #hudbar.reference-hud #energia-granja-pill,.visual-v2 #hudbar.reference-hud #stampill{width:210px}
+ .visual-v2 #hudbar.reference-hud #hppill{width:170px}
+ .visual-v2 #hudbar.reference-hud #cbar{width:195px}
+ .visual-v2 #hudbar.reference-hud #hud-sound,.visual-v2 #hudbar.reference-hud #menu-btn{min-height:39px}
+}
+@media(min-width:900px) and (max-width:1099px){
+ .visual-v2 #hudbar.reference-hud{top:12px;height:48px;min-height:48px;border-width:5px;padding:1px 4px;padding-left:16px}
+ .visual-v2 #hudbar.reference-hud .brand{flex-basis:190px;gap:3px!important}
+ .visual-v2 #hudbar.reference-hud .brand h1:has(.gf-logo){width:116px;height:36px}
+ .visual-v2 #hudbar.reference-hud .brand .gf-logo{width:116px;height:56px}
+ .visual-v2 #hudbar.reference-hud .pill{min-height:36px}
+}
