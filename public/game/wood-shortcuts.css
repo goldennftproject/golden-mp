@@ -1,0 +1,49 @@
+/* Shared original Tienda wood. Native buttons, events, labels and badges retained. */
+@media(min-width:900px){
+ .visual-v2.concept-finish-ready{--shortcut-wood:url('../assets/visual-v2/skin/wood-shortcuts.svg')}
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #ruletas-acceso,
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso,
+ .visual-v2.concept-finish-ready #novedades-accesos #noticias-acceso{
+  box-sizing:border-box;position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;
+  border:12px solid transparent!important;border-image:var(--shortcut-wood) 15 16 12 fill / 12px 13px 10px / 0 stretch!important;
+  border-radius:0!important;background:#57351e!important;background-clip:padding-box!important;box-shadow:none!important;
+  color:#fff0d0!important;text-shadow:0 2px 1px #35200e,1px 0 #51301a!important;
+  font-family:Georgia,'Times New Roman',serif!important;font-weight:700!important;text-transform:none;letter-spacing:0;
+  filter:drop-shadow(0 3px 1px #17210e88);gap:7px;
+ }
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #ruletas-acceso::before,
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso::before,
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso::after{display:none!important}
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #ruletas-acceso{
+  height:64px;min-height:64px;aspect-ratio:auto;margin:6px 0 0!important;padding:2px 8px!important;font-size:22px!important;
+ }
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso{
+  height:55px;min-height:55px;aspect-ratio:auto;margin:5px 0 0!important;padding:0 9px!important;font-size:22px!important;
+ }
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso>img,
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso>span{opacity:1!important}
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso>img{width:28px!important;height:28px!important;object-fit:contain}
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #ruletas-acceso .novedad-ruleta{width:28px;height:28px;font-size:17px}
+ .visual-v2.concept-finish-ready #ruletas-acceso .novedad-copy small{font:500 10px/1.1 'Segoe UI',system-ui,sans-serif;color:#f5dfb5}
+ .visual-v2.concept-finish-ready.adaptive-layout #compras-accesos #ruletas-acceso .novedad-badge{top:-9px!important;right:-5px!important;font-size:8px;padding:2px 3px}
+ .visual-v2.concept-finish-ready #novedades-accesos #noticias-acceso{min-width:149px;height:51px;min-height:51px;padding:0 5px!important;font-size:17px}
+ .visual-v2.concept-finish-ready #novedades-accesos #noticias-acceso svg{width:20px;height:22px;color:#f4d58c}
+ .visual-v2.concept-finish-ready #noticias-contador{position:absolute;top:-7px;right:-6px;min-width:19px;min-height:19px;padding:1px 3px;border-radius:50%;box-shadow:0 1px 2px #24180b99}
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-contador{top:-7px;right:-5px;z-index:1}
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #ruletas-acceso:hover,
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso:hover,
+ .visual-v2.concept-finish-ready #novedades-accesos #noticias-acceso:hover{filter:brightness(1.1) drop-shadow(0 3px 1px #17210e88)}
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #ruletas-acceso:active,
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso:active,
+ .visual-v2.concept-finish-ready #novedades-accesos #noticias-acceso:active{filter:brightness(.94) drop-shadow(0 1px 1px #17210e88)}
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #ruletas-acceso:focus-visible,
+ .visual-v2.concept-finish-ready #compras-accesos:not(.compras-combate) #misiones-acceso:focus-visible,
+ .visual-v2.concept-finish-ready #novedades-accesos #noticias-acceso:focus-visible{outline:2px solid #fff1b7;outline-offset:2px}
+ /* Short viewports keep the established two-column layout with the same frame. */
+ .visual-v2.concept-finish-ready.adaptive-layout #compras-accesos.adaptive-shortcuts #ruletas-acceso,
+ .visual-v2.concept-finish-ready.adaptive-layout #compras-accesos.adaptive-shortcuts #misiones-acceso{
+  height:48px;min-height:48px;margin:0!important;padding:0!important;font:700 13px/1.1 Georgia,'Times New Roman',serif!important;gap:1px;
+ }
+ .visual-v2.concept-finish-ready.adaptive-layout #compras-accesos.adaptive-shortcuts #ruletas-acceso .novedad-copy small{font-size:8px}
+ .visual-v2.concept-finish-ready.adaptive-layout #compras-accesos.adaptive-shortcuts #misiones-acceso>img{display:none}
+}

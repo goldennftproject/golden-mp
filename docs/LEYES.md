@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Madera compartida en accesos — 07/11/2026
+
+Dirección aprueba la vista local y pide publicarla. Ruletas, Misiones y Noticias de Renovado PC comparten el marco y las vetas de la placa Tienda original, con nueve cortes y rótulos, iconos y contadores reales. Se conservan los accesos compactos de 48 px en pantallas bajas y los estilos Clásico, móvil y combate. Cambio sólo de presentación; sin economía, partidas ni sistemas pausados. Ver BOTONES-MADERA-20261107.md.
+
 ## Noticias compartidas tras revisión — 07/11/2026
 
 Dirección aprueba los textos y la captura para Discord, Noticias del juego y Telegram. Se añade el resumen de ruletas, premios y adaptación sin reemplazar noticias anteriores; Discord y Telegram usan los bots y destinos autorizados, con recibos que impiden duplicados. No se cambia la economía ni se reactiva ninguna tarea periódica. Ver NOTICIAS-20261107.md.
