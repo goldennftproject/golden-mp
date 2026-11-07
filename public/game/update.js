@@ -137,13 +137,38 @@
     }
     return false;
   }
+  let recargando=false;
+  function falloRecarga(mensaje) {
+    recargando=false;
+    const el=document.getElementById('updbanner'),texto=el&&el.querySelector('.updt');
+    if(texto)texto.textContent=mensaje;
+    const boton=document.getElementById('updnow');if(boton){boton.disabled=false;boton.textContent='Reintentar actualización';}
+  }
   async function doReload() {
-    try { if (typeof saveFarm === "function") saveFarm(); } catch (e) {}
-    const el = document.getElementById("updbanner"), t = el && el.querySelector(".updt");
-    if (t) t.textContent = "Esperando al servidor…";
-    const btn = document.getElementById("updnow"); if (btn) btn.disabled = true;
-    await servidorListo(60000);
-    setTimeout(() => location.reload(), 400);   // guarda el progreso antes de recargar
+    if(recargando)return;
+    recargando=true;
+    const jugando=juegoEnCurso(),cuenta=typeof UID==='undefined'?null:UID;
+    const el=document.getElementById('updbanner'),texto=el&&el.querySelector('.updt');
+    const boton=document.getElementById('updnow');if(boton)boton.disabled=true;
+    if(texto)texto.textContent='Esperando al servidor…';
+    try{
+      if(!await conTope(servidorListo(60000),65000,'esperar servidor antes de actualizar')){falloRecarga('El servidor aún no responde. La partida sigue abierta; vuelve a intentarlo.');return;}
+      if(cuenta!==(typeof UID==='undefined'?null:UID)||jugando!==juegoEnCurso()){
+        falloRecarga('La sesión ha cambiado. No se actualizó la partida.');return;
+      }
+      if(jugando){
+        if(texto)texto.textContent='Confirmando el guardado antes de actualizar…';
+        if(typeof prepararRecargaSegura!=='function'||typeof recargaSigueConfirmada!=='function'){
+          falloRecarga('No se pudo comprobar el guardado. La partida sigue abierta.');return;
+        }
+        const ticket=await prepararRecargaSegura();
+        if(!ticket?.ok||!recargaSigueConfirmada(ticket)){
+          falloRecarga(ticket?.motivo||'El progreso cambió mientras se guardaba. La partida sigue abierta; vuelve a intentarlo.');return;
+        }
+      }
+      // Sin demora entre la última comprobación y la recarga: no abre una ventana de acciones sin guardar.
+      location.reload();
+    }catch(e){falloRecarga('No se pudo confirmar la actualización. La partida sigue abierta; vuelve a intentarlo.');}
   }
 
   // al volver a la pestaña o recuperar conexión, chequear al instante

@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Guardado antes de actualizar y copias de diagnóstico — 07/11/2026
+
+Dirección pide: «Fíjate bien qué ha sucedido y si puedes recuperar el progreso, si solo pasó con Nico o con muchos más». Se revisan guardados y conflictos sin modificar cuentas. La actualización espera confirmación del estado actual y conserva la partida ante errores; las copias pendientes se archivan antes de hidratar el servidor. La herramienta de copias locales sólo busca y descarga una copia elegida por el jugador. La recuperación de progreso requiere evidencia y comparación con los avances posteriores; no se restaura automáticamente. Se mantiene el autoguardado de cinco segundos por inactividad. Ver INCIDENTE-PROGRESO-20261107.md.
+
 ## Marcos comunes con las piezas del Mercado — 07/11/2026
 
 Dirección aprueba la vista con el borde superior del marco alineado con la tabla del título: «Ahora sí, así queda mejor. Probá que todos los menús funcionen bien y publicalo». Renovado PC reutiliza las piezas originales del Mercado en las cabeceras, placas, laterales, base y cierres de las ventanas. El toldo permanece sólo en Mercado. Se conservan controles, arrastre, foco, cierres, desplazamiento, Clásico, móvil, cuentas y partidas; las funciones pausadas no se activan. Ver MARCOS-MERCADO-20261107.md.

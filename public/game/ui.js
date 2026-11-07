@@ -7224,7 +7224,9 @@ function initUI() {
   /* 8/9: la tira también se repinta en el latido — los números suben al craftear o al cobrar,
      no solo al gastar, y con la firma no cuesta nada si no cambió nada. */
   setInterval(() => { try { refreshRecientes(); refreshMorral(); refreshCombate(); marketVentasTick(); bancoTick(); } catch (e) {} }, 1000);
-  setInterval(() => { if (typeof buffTick === "function") buffTick(); if (typeof expansionObraTick === "function") { try { if (expansionObraTick()) refreshHud(); } catch (e) { console.warn(e); } } if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
+  // Durante el flush de actualización se difiere sólo este latido. Los relojes absolutos
+  // conservan el tiempo y se ponen al día al retomar; las acciones manuales siguen detectándose.
+  setInterval(() => { if(typeof RECARGA_GUARDANDO!=="undefined"&&RECARGA_GUARDANDO)return; if (typeof buffTick === "function") buffTick(); if (typeof expansionObraTick === "function") { try { if (expansionObraTick()) refreshHud(); } catch (e) { console.warn(e); } } if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
   /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
      el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa
      que pasó después. A 180 ms es indistinguible de instantáneo, y comparar dos objetos planos

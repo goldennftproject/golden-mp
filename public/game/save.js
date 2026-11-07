@@ -49,6 +49,7 @@ let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
 const SAVE_BASES = new Map(), SAVE_CONFLICTOS = new Set();
 const SAVE_CONFIRMACIONES = new Map();
 let SAVE_EN_CURSO = null, SAVE_OTRA = false;
+var RECARGA_GUARDANDO = false; // Sólo difiere el latido pasivo del HUD mientras se confirma la recarga.
 let MERCADO_GLOBAL = false, MERCADO_CACHE = null, MERCADO_REFRESCANDO = null, MERCADO_INTENTO = 0, MERCADO_EN_CURSO = null;
 const ALFA_GUARDADOS={intentos:0,confirmados:0,conflictos:0,fallos:0,ultimo:null,ms:[]};
 async function alfaInvocarGuardado(body){
@@ -207,7 +208,7 @@ async function recuperarGuardadoServidor(){
    if(UID!==uid||error||!data?.data||typeof data.data!=='object'||!data.updated_at)return false;
    CARGA_OK=false;
    try{hydrate(data.data);}finally{CARGA_OK=true;}
-   SAVE_BASES.set(uid,data.updated_at);mercadoLimpiarPendiente(uid);SAVE_CONFLICTOS.delete(uid);SAVE_OTRA=false;copiaGuardar(snapshot());lastSavedKey=snapKey();
+   SAVE_BASES.set(uid,data.updated_at);mercadoLimpiarPendiente(uid);SAVE_CONFLICTOS.delete(uid);SAVE_OTRA=false;copiaGuardar(snapshot(),true);lastSavedKey=snapKey();
    refreshHud();syncSlots();if(window.FARM?.scene?.isActive?.()&&typeof reiniciarGranjaSuave==='function')reiniciarGranjaSuave();
    toast('Guardado del servidor recuperado. El respaldo del conflicto se conserva en este navegador.');USDT_REINTENTO_AT=0;usdtProgramarPendiente();return true;
  }catch(e){toast('No se pudo recuperar; se conserva la partida y el bloqueo de seguridad.');return false;}
@@ -241,7 +242,7 @@ async function economiaSolicitar(detalle) {
       }
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recarga con conexión para consultar el servidor.');if(detalle.usdt&&UID===uid)usdtMensaje('Resultado sin confirmar. Recarga para sincronizar y comprueba la misma transacción; no repitas el pago.');return;}
       if(!data.data||typeof data.updated_at!=='string')throw Error('Operación sin guardado confirmado');
-      hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot());mercadoLimpiarPendiente(uid);
+      hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot(),true);mercadoLimpiarPendiente(uid);
       if(detalle.produccionPremium){
         toast(detalle.produccionPremium.accion==='colocar'?'Nodo colocado con su cupo propio':'Nodo comprado; puedes colocarlo desde el Cobertizo','success','compra');
         return data;
@@ -1442,15 +1443,17 @@ async function loadFarm() {
       const {data,error} = await conTope(sb.from("farms").select("data,name,updated_at").eq("user_id",uid).maybeSingle(),15000,"leer granja");
       if (UID !== uid) { CARGA_FALLO = true; return false; }
       if (error) { await sleepMs(1200 * (intento + 1)); continue; }
-      SAVE_BASES.set(uid,data && data.updated_at || null); SAVE_CONFLICTOS.delete(uid);
+      if(data&&(!data.data||typeof data.data!=="object"))throw new Error("Granja remota inválida");
+      const respaldo=copiaLeer();
+      if(!copiaPreservarAntesDeCarga(respaldo,data?.data,uid,data?.updated_at))throw new Error("No se pudo conservar la copia anterior; no se cargó ni se sobrescribió");
+      if(UID!==uid){CARGA_FALLO=true;return false;}
       if (data) {
-        if (!data.data || typeof data.data !== "object") throw new Error("Granja remota inválida");
-        const respaldo = copiaLeer();
         if (mercadoPendiente(uid) && respaldo && respaldo.uid === uid) copiaAparcar(respaldo);
         hydrate(data.data);
+        SAVE_BASES.set(uid,data.updated_at||null);SAVE_CONFLICTOS.delete(uid);
         window.NICK = data.name ? String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/,"") || data.name : null;
         CARGA_OK = true;
-        copiaGuardar(snapshot());
+        copiaGuardar(snapshot(),true);
         if(typeof ruletasTieneReciboPendiente==='function'&&ruletasTieneReciboPendiente(uid))SAVE_CONFLICTOS.add(uid);
         else mercadoLimpiarPendiente(uid);
         lastSavedKey = snapKey();
@@ -1460,6 +1463,7 @@ async function loadFarm() {
       }
       // Cuenta verificada sin granja: inicio limpio. Nunca se sube una copia huérfana.
       estadoDeCero(); window.NICK = null; CUENTA_PREVIA = false;
+      SAVE_BASES.set(uid,null);SAVE_CONFLICTOS.delete(uid);
       CARGA_OK = true;
       const confirmaciones = SAVE_CONFIRMACIONES.get(uid) || 0;
       await saveFarm(true);
@@ -1486,7 +1490,7 @@ async function loadFarm() {
    escribir el vacío encima. Y sí: borrar la caché se la lleva. Eso es lo que dice el jugador que
    quiere, y es lo único que debería llevársela. */
 const GF_COPIA_KEY = "gf-granja-copia-" + SB_REF;   // 14/9: por proyecto — la copia del proyecto viejo no cruza
-function copiaGuardar(snap) {
+function copiaGuardar(snap, confirmada=false) {
   try {
     localStorage.setItem(GF_COPIA_KEY, JSON.stringify({
       /* 25/8 — EL APODO VIAJA EN LA COPIA, y esto era el último agujero de la persistencia local.
@@ -1498,6 +1502,7 @@ function copiaGuardar(snap) {
          El nombre es parte de la partida, así que va donde va la partida. */
       uid: UID, nick: (typeof window !== "undefined" && window.NICK) || null,
       at: Date.now(), nivel: G.level || 1, plata: Math.floor(G.plata || 0), data: snap,
+      confirmada:confirmada===true,baseServidor:SAVE_BASES.get(UID)||null,
     }));
   } catch (e) { /* sin espacio: la nube sigue siendo la verdad */ }
 }
@@ -1506,14 +1511,68 @@ function copiaNick(c) {
   if (c && c.nick && typeof window !== "undefined" && !window.NICK) window.NICK = c.nick;
 }
 function copiaLeer() { try { return JSON.parse(localStorage.getItem(GF_COPIA_KEY) || "null"); } catch (e) { return null; } }
+
+/* Antes de hidratar la nube, conservar la copia propia que difiere. Es diagnóstico,
+   nunca una autorización para restaurar ni para saltar versiones o reinicios. */
+function copiaHuellaDiagnostico(data, ruta='') {
+  if(Array.isArray(data))return data.map((valor,i)=>copiaHuellaDiagnostico(valor,ruta+'[]'));
+  if(!data||typeof data!=='object')return data;
+  const limpio={};
+  for(const clave of Object.keys(data).sort()){
+    if((ruta===''&&(clave==='visto'||clave==='_saveOp'))||(ruta==='energiaGranja'&&clave==='at'))continue;
+    limpio[clave]=copiaHuellaDiagnostico(data[clave],ruta?ruta+'.'+clave:clave);
+  }
+  return limpio;
+}
+function copiaArchivarDiagnostico(copia, motivo, remota=null, version=null) {
+  if(!copia?.data||typeof copia.data!=='object')return true;
+  try{
+    const huella=JSON.stringify(copiaHuellaDiagnostico(copia.data));
+    // La fecha no forma la clave: la misma copia legacy se conserva una sola vez.
+    // El hash sólo acorta la clave; comparar el contenido completo resuelve colisiones.
+    let hash=2166136261;for(let i=0;i<huella.length;i++)hash=Math.imul(hash^huella.charCodeAt(i),16777619)>>>0;
+    const uid=copia.uid||'sin-cuenta',raiz='gf-carga-respaldo-'+SB_REF+'-'+uid+'-'+hash.toString(16);
+    let clave=raiz,indice=0;
+    while(localStorage.getItem(clave)!==null){
+      try{const previa=JSON.parse(localStorage.getItem(clave));if(previa?.cuenta===(copia.uid||null)&&JSON.stringify(copiaHuellaDiagnostico(previa.data))===huella)return true;}catch{}
+      if(++indice>100)throw Error('No se pudo reservar un respaldo separado');
+      clave=raiz+'-'+indice;
+    }
+    const registro={v:1,cuenta:copia.uid||null,origen:motivo,conservadoAt:Date.now(),localAt:Number(copia.at)||null,
+      versionLocal:copia.baseServidor||null,confirmada:copia.confirmada===true,versionRemota:version||null,reinicioLocal:Number(copia.data.reinicio)||0,reinicioServidor:Number(remota?.reinicio)||0,
+      restauracionAutomatica:false,nick:copia.nick||null,data:copia.data};
+    const texto=JSON.stringify(registro);localStorage.setItem(clave,texto);
+    if(localStorage.getItem(clave)!==texto)throw Error('No se pudo verificar el respaldo');
+    return true;
+  }catch(e){sesionLog('no se pudo preservar un respaldo de diagnóstico');return false;}
+}
+function copiaPreservarAntesDeCarga(copia, remota, uid, version) {
+  if(!copia||copia.uid!==uid||!copia.data||typeof copia.data!=='object')return true;
+  const localAt=Date.parse(copia.baseServidor),remotaAt=Date.parse(version);
+  const remotaAnterior=Number.isFinite(localAt)&&Number.isFinite(remotaAt)&&localAt>remotaAt;
+  if(copia.confirmada===true&&!remotaAnterior)return true;
+  if(JSON.stringify(copiaHuellaDiagnostico(copia.data))===JSON.stringify(copiaHuellaDiagnostico(remota)))return true;
+  const invalidada=(Number(copia.data.reinicio)||0)<(Number(remota?.reinicio)||0);
+  const conservada=copiaArchivarDiagnostico(copia,invalidada?'copia-anterior-al-reinicio':'antes-de-cargar-servidor',remota,version);
+  // Una copia de antes de un reinicio no autoriza ni su restauración ni bloquear la carga nueva.
+  return conservada||invalidada;
+}
+
 /* 19/9 — APARCAR, no borrar. Una copia sin dueño que la puerta del correo no deja jugar se mueve
    a `gf-granja-aparcada-<ref>` (se conserva la última) y se quita de la clave viva. Si algún día
    hay que rescatarla a mano: JSON.parse(localStorage.getItem("gf-granja-aparcada-…")). */
 const GF_APARCADA_KEY = "gf-granja-aparcada-" + SB_REF;
 function copiaAparcar(c) {
-  try { localStorage.setItem(GF_APARCADA_KEY, JSON.stringify(Object.assign({}, c, { aparcadaAt: Date.now() }))); } catch (e) {}
-  try { localStorage.removeItem(GF_COPIA_KEY); } catch (e) {}
-  try { console.warn("copia local sin dueño aparcada en " + GF_APARCADA_KEY); } catch (e) {}
+  try{
+    const anterior=JSON.parse(localStorage.getItem(GF_APARCADA_KEY)||'null');
+    if(anterior&&!copiaArchivarDiagnostico(anterior,'antes-de-reemplazar-aparcada'))return false;
+    const texto=JSON.stringify(Object.assign({},c,{aparcadaAt:Date.now()}));
+    localStorage.setItem(GF_APARCADA_KEY,texto);
+    if(localStorage.getItem(GF_APARCADA_KEY)!==texto)return false;
+    localStorage.removeItem(GF_COPIA_KEY);
+    try{console.warn("copia local sin dueño aparcada en "+GF_APARCADA_KEY);}catch{}
+    return true;
+  }catch(e){sesionLog('no se pudo aparcar la copia; se conserva la original');return false;}
 }
 /* ¿la copia local tiene MÁS progreso que lo que acabamos de cargar? Se compara por lo que el
    jugador entendería como avanzar: nivel y plata. Sin adivinar: si empatan, manda la nube. */
@@ -1597,6 +1656,31 @@ async function incursionSincronizarTutorial(zona) {
   }
   return true;
 }
+
+/* Recargar exige una confirmación del estado actual, no sólo que termine una promesa.
+   saveFarm también resuelve cuando falla o hay conflicto; no alcanza con await solo. */
+function recargaSigueConfirmada(ticket) {
+  return !!(ticket&&ticket.uid===UID&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&
+    !SAVE_EN_CURSO&&!MERCADO_EN_CURSO&&SAVE_BASES.get(UID)===ticket.base&&
+    lastSavedKey===ticket.key&&snapKey()===ticket.key);
+}
+async function prepararRecargaSegura() {
+  const uid=UID,antes=SAVE_CONFIRMACIONES.get(uid)||0;
+  const fallo=motivo=>({ok:false,motivo});
+  if(!uid||!CARGA_OK||SOLO_LOCAL)return fallo('No se pudo confirmar la conexión de la granja. La partida sigue abierta.');
+  if(SAVE_CONFLICTOS.has(uid)){copiaGuardar(snapshot());return fallo('Hay un guardado pendiente de sincronizar. Se conserva la partida y no se actualizará todavía.');}
+  if(RECARGA_GUARDANDO)return fallo('Ya se está confirmando otra actualización. La partida sigue abierta.');
+  RECARGA_GUARDANDO=true;
+  try{
+    await conTope(saveFarm(true),40000,'guardar antes de actualizar');
+    const ticket={uid,base:SAVE_BASES.get(uid),key:lastSavedKey};
+    if((SAVE_CONFIRMACIONES.get(uid)||0)<=antes||!ticket.base||!recargaSigueConfirmada(ticket))
+      return fallo('El progreso actual no se ha confirmado. La partida sigue abierta; vuelve a intentar la actualización.');
+    return {ok:true,...ticket};
+  }catch(e){return fallo('No se pudo confirmar el guardado. La partida sigue abierta; vuelve a intentarlo.');}
+  finally{RECARGA_GUARDANDO=false;}
+}
+
 function saveFarm(force) {
   if (MERCADO_EN_CURSO) {
     if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
@@ -1684,6 +1768,7 @@ async function saveFarmReal(force) {
         else throw Error('Guardado sin versión confirmada');
       if (UID !== saveUid) return;
       lastSavedKey = claveConfirmada;   // Incluye el ACK; las acciones en vuelo siguen pendientes.
+      copiaGuardar(snapshot(),snapKey()===claveConfirmada);
       if (typeof showSaved === "function") showSaved();
       return;
     } catch (e) { if(UID!==saveUid)return;if (intento === 0) await sleepMs(1500); else {console.warn("saveFarm sin conexión (reintenta solo):", e && e.message);if(typeof showSaveError==='function')showSaveError('Sin confirmar');} }
@@ -1711,7 +1796,7 @@ async function porteroRechazo(det) {
       localStorage.setItem('gf-rechazo-respaldo-'+SB_REF+'-'+uid+'-'+Date.now(),JSON.stringify({cuenta:uid,data:snapshot()}));
       SAVE_BASES.set(uid, data.updated_at || null);
       hydrate(data.data);
-      copiaGuardar(snapshot());                 // la copia local también vuelve a la aceptada
+      copiaGuardar(snapshot(),true);                 // la copia local también vuelve a la aceptada
       lastSavedKey = snapKey();                 // nada pendiente: lo de más ya no está
       if (typeof refreshHud === "function") refreshHud();
       if (typeof syncSlots === "function") syncSlots();
