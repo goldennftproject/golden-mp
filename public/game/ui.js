@@ -2673,9 +2673,19 @@ function refreshProduccionGranja() {
   const clave = foco && foco.getAttribute && (foco.getAttribute("data-prod-premium")!==null?'golden:'+foco.getAttribute("data-prod-premium"):foco.getAttribute("data-prod-pause") || foco.getAttribute("data-prod-buy"));
   const fuenteFoco = foco && foco.getAttribute && foco.getAttribute('data-prod-source');
   const libres = produccionHayCupo();
+  const items = produccionItems(), pausadas = items.filter(o => produccionPausada(o)).length;
   const premium=produccionPremiumHistorial(),propios=(premium||[]).filter(c=>c.nodo!==null).length;
   let h = '<div class="resumen-menu"><span><b>'+produccionUsados()+'/'+produccionCapacidad()+'</b>cupos usados</span><span><b>'+Math.max(0,produccionCapacidad()-produccionUsados())+'</b>cupos libres</span><span><b>'+(G.produccion.vale||0)+'</b>vales de nodo</span>'+(propios?'<span><b>'+produccionPremiumUsados()+'/'+propios+'</b>cupos propios Golden</span>':'')+'</div><h3>Capacidad productiva · ' + produccionUsados() + '/' + produccionCapacidad() + '</h3>' +
     '<p class="sub">1 nodo activo = 1 cupo · cada expansión suma 1.</p>';
+  const avisoHtml = pausadas ? '<div class="row cfgsec prod-pausadas" role="status"><span><b>Hay ' + pausadas + (pausadas === 1 ? ' producción pausada.' : ' producciones pausadas.') + '</b><small class="motivo-accion">Revisa la gestión para elegir qué reactivar.</small></span><button class="ghost sm" id="prod-ver-pausadas" type="button">Ver pausadas</button></div>' : '';
+  let avisoPausadas = $("cob-paused-notice");
+  const jornada = $("cob-jornada");
+  if (!avisoPausadas && jornada && jornada.parentNode && typeof document.createElement === "function") {
+    avisoPausadas = document.createElement("div"); avisoPausadas.id = "cob-paused-notice";
+    jornada.parentNode.insertBefore(avisoPausadas, jornada);
+  }
+  if (avisoPausadas) avisoPausadas.innerHTML = avisoHtml;
+  else h += avisoHtml;
   const vipGranja = produccionVipActivo();
   h += '<div class="row"><span>' + (vipGranja ? 'VIP · +' + produccionVipCupos() + ' cupos · hasta ' + new Date(G.produccion.vipHasta).toLocaleString('es-UY') : 'Sin VIP · VIP: +25% de capacidad (mínimo 2 cupos) durante 30 días') + '</span>' +
     '<button class="green sm" id="prod-vip-comprar" ' + (vipGranja || G.golden < PRODUCCION_VIP_PRECIO ? 'disabled' : '') + '>' + (vipGranja ? 'VIP activo' : 'Comprar · ' + PRODUCCION_VIP_PRECIO + ' $Golden') + '</button></div>' +
@@ -2702,13 +2712,23 @@ function refreshProduccionGranja() {
     h += '<details id="'+id+'"><summary>'+titulo+'</summary><p class="sub">'+nota+'</p><div class="fbtns">'+claves.map(filaNodo).join('')+'</div></details>';
   }
   h += '<p class="sub">Cada nodo necesita un cupo y emplazamiento disponible dentro de tu terreno. Su primera carga empieza a recuperarse al activarlo.</p>'+produccionPremiumHtml()+'<details id="prod-gestion"><summary>Gestionar producción activa y pausada</summary><div style="max-height:260px;overflow:auto;padding:4px">';
-  for (const o of produccionItems()) {
+  for (const o of items.slice().sort((a, b) => Number(produccionPausada(b)) - Number(produccionPausada(a)))) {
     const pausa = produccionPausada(o);
     const propio=produccionPremiumEsNodo(o.i,o.type);
-    h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (propio?' · cupo propio Golden':'') + (pausa ? ' · pausada' : ' · activa') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" ' + (pausa && !libres && !propio ? 'disabled' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
+    const bloqueada = pausa && !libres && !propio, motivoId = 'prod-pausa-motivo-' + produccionClave(o).replace(':', '-');
+    h += '<div class="row" style="justify-content:space-between;margin:6px 0"><span>' + escapeHtml(o.label) + (propio?' · cupo propio Golden':'') + (pausa ? ' · pausada' : ' · activa')
+      + (bloqueada ? '<small class="motivo-accion" id="' + motivoId + '">Sin cupo libre: pausa otra producción o expande.</small>' : '') + '</span><button class="ghost sm" data-prod-pause="' + produccionClave(o) + '" '
+      + (bloqueada ? 'disabled aria-describedby="' + motivoId + '" title="Sin cupo libre: pausa otra producción o expande."' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
   }
   cont.innerHTML = h + '</div></details><hr>';
-  for (const d of cont.querySelectorAll("details[id]:not(.ayuda-menu)")) d.open = abiertos.has(d.id) ? abiertos.get(d.id) : d.id === 'prod-elegir' || d.id === 'prod-vip-elegir';
+  for (const d of cont.querySelectorAll("details[id]:not(.ayuda-menu)")) d.open = abiertos.has(d.id) ? abiertos.get(d.id) : d.id === 'prod-elegir' || d.id === 'prod-vip-elegir' || d.id === 'prod-gestion' && pausadas > 0;
+  const verPausadas = $("prod-ver-pausadas");
+  if (verPausadas) verPausadas.onclick = () => {
+    const gestion = $("prod-gestion"); if (!gestion) return;
+    gestion.open = true;
+    if (typeof gestion.scrollIntoView === "function") gestion.scrollIntoView({ block: "nearest" });
+    const resumen = gestion.querySelector("summary"); if (resumen) resumen.focus({ preventScroll: true });
+  };
   cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => {
     if (produccionFuenteNodo(b.dataset.prodBuy) !== b.dataset.prodSource) {
       toast('La opción cambió. Revisa los vales, regalos y precios actuales.');refreshProduccionGranja();return false;

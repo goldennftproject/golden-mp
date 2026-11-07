@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Producciones pausadas visibles en el Cobertizo — 06/11/2026
+
+Dirección autoriza corregir, probar y publicar el aviso de pausas: aparece arriba del Cobertizo con acceso a la gestión, que abre inicialmente y coloca primero las pausadas; si falta cupo, Reactivar explica el motivo. Respeta el cierre manual y los nodos con cupo propio Golden. Conserva nodos, capacidad, tiempos, economía y partidas. Ver PAUSAS-VISIBLES-COBERTIZO-20261106.md.
+
 ## Nivel de Combate visible en la Herrería — 06/11/2026
 
 Dirección autoriza mostrar el nivel requerido de cada arma, desactivar Forjar cuando falta Combate, probar y publicar. El catálogo usa los mismos niveles que la fabricación y explica el nivel actual cuando falta. Conserva costes, enfriamientos, escala, armas obtenidas y partidas. Ver FORJA-NIVEL-COMBATE-20261106.md.
