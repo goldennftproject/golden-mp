@@ -1,32 +1,36 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; base-uri 'none'; form-action 'none'">
-  <title>Golden Farm · Revisar copias locales</title>
-  <style>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://ulspkdaljeuleqqdokfk.supabase.co; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Golden Farm · Copias para Suren</title><style>
     *{box-sizing:border-box}body{margin:0;background:#213e28;color:#46321f;font:16px/1.5 system-ui,-apple-system,sans-serif}main{width:min(880px,100%);margin:30px auto;padding:0 18px 32px}.brand{color:#f5d17b;font:700 21px Georgia,serif;letter-spacing:1px;margin-bottom:12px}.panel{padding:24px;background:#f8edcf;border:3px solid #a7773c;border-radius:8px;box-shadow:0 6px 18px #0003}h1{font:700 30px/1.2 Georgia,serif;margin:0 0 14px}h2{font:700 21px Georgia,serif;margin:0 0 12px}p{margin:0 0 12px}.sub{font-size:14px;color:#735b3f}.privacy,.notice{padding:13px 15px;border:1px solid #c9ac7b;background:#fff8e5;border-radius:5px;margin:16px 0}.notice{border-color:#b78234;background:#fff0cc}.origin{overflow-wrap:anywhere;font-size:13px;margin-top:5px}button,select{font:inherit}button{cursor:pointer;border:2px solid #526f2b;border-radius:5px;background:linear-gradient(#819b46,#55732d);color:#fff8df;padding:10px 16px;font-weight:700;box-shadow:inset 0 0 0 1px #c7d493}button:disabled{cursor:default;background:#ddd1b2;border-color:#baa581;color:#76664d;box-shadow:none}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #397b98;outline-offset:3px}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.results{margin-top:24px;padding-top:22px;border-top:1px solid #cfb990}.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}select{max-width:100%;padding:8px;background:#fff9e8;color:#46321f;border:1px solid #ad8b57;border-radius:4px}.candidate{position:relative;display:grid;grid-template-columns:22px 1fr;gap:10px;margin:10px 0;padding:14px;border:1px solid #ccb080;border-radius:5px;background:#fffbf0;cursor:pointer}.candidate:has(input:checked){outline:2px solid #638735;background:#f4f5da}.candidate input{width:18px;height:18px;margin:4px 0 0;accent-color:#56752d}.candidate strong,.candidate small{display:block}.candidate small{font-size:13px;color:#765d40;margin-top:4px}.warning{color:#8a4c16!important}.confirm{display:flex;gap:9px;align-items:flex-start;margin:18px 0}.confirm input{width:19px;height:19px;flex:0 0 auto;margin-top:3px;accent-color:#56752d}.selected{font-size:14px;min-height:22px}#status{white-space:pre-line;overflow-wrap:anywhere;margin-top:16px}#status[data-tone="error"]{color:#9a361e}footer{font-size:12px;color:#d4d9bc;margin:16px 3px}[hidden]{display:none!important}@media(max-width:560px){main{margin:16px auto;padding:0 10px 22px}.panel{padding:18px 14px}h1{font-size:26px}.candidate{padding:12px 9px}button{width:100%}}
-  </style>
-</head>
-<body>
+
+    main{width:min(780px,100%);margin-top:clamp(20px,7vh,76px)}.panel{padding:clamp(22px,4vw,38px)}h1{font-size:clamp(29px,5vw,38px)}.intro{max-width:52ch;margin-bottom:22px;color:#6c5437}.primary{min-height:58px;font-size:19px;width:100%;margin:4px 0 12px}.micro{font-size:13px;color:#755f43;text-align:center}.bundle-progress{min-height:24px;margin:15px 0 0;font-size:15px}.bundle-progress[data-tone="error"]{color:#9a361e}.bundle-result{margin-top:22px;padding:17px;border:1px solid #8a9c59;border-radius:6px;background:#f1f3da}.bundle-result h2{margin:0 0 7px}.bundle-result p{margin:0}.bundle-result a{color:inherit}details{margin-top:20px;border-top:1px solid #d4bd92;padding-top:15px}summary{cursor:pointer;font-size:14px;font-weight:700;color:#6f5130}details p{font-size:14px;margin-top:12px}.details-body{margin-top:14px}.bundle-list{padding-left:21px;font-size:14px;color:#6c5437}.owner-choice{padding:16px;margin-top:16px;background:#fff8e6;border:1px solid #c7a879;border-radius:5px}.owner-choice select{width:100%;margin-bottom:10px}.owner-choice button{width:100%}.privacy{margin-top:12px;font-size:13px}.manual-wrap .actions button{font-size:14px}.manual-wrap .results{margin-top:16px}.manual-wrap .candidate strong{font-size:14px}
+</style></head><body>
 <main>
   <div class="brand">GOLDEN FARM</div>
   <section class="panel">
-    <h1>Revisar copias de tu partida</h1>
-    <p>Puedes buscar los respaldos que el juego haya conservado en este navegador y descargar <b>una copia elegida</b> para que el soporte la revise.</p>
-    <div class="privacy">
-      <p>La búsqueda empieza cuando pulses el botón. Sólo lee respaldos de Golden Farm de este navegador. No inicia sesión, no consulta el servidor y no cambia la partida ni los respaldos.</p>
-      <p class="sub">No restaura progreso ni envía archivos automáticamente. Una descarga puede contener tu partida completa: guárdala y compártela sólo por un canal privado que hayas acordado con el soporte.</p>
-      <div class="origin">Origen de esta página: <b id="origin"></b></div>
-    </div>
-    <div class="notice" id="origin-notice" hidden>Esta página debe abrirse desde el mismo sitio donde jugaste Golden Farm. Una copia descargada o abierta en otro sitio no puede ver esos respaldos.</div>
+    <h1>Copias para Suren</h1>
+    <p class="intro">Todas tus copias en un archivo, listas para revisar el progreso.</p>
+    <div class="notice" id="origin-notice" hidden>Esta página debe abrirse desde el mismo sitio donde jugaste Golden Farm.</div>
+    <button type="button" id="download-all" class="primary">Descargar todo para Suren</button>
+    <p class="micro">No cambia tu partida. El archivo se descarga en tu dispositivo.</p>
+    <p id="bundle-progress" class="bundle-progress" role="status" aria-live="polite"></p>
+    <section id="bundle-owner-choice" class="owner-choice" hidden>
+      <label for="bundle-owner">¿De qué cuenta son las copias que querés revisar?</label>
+      <select id="bundle-owner" aria-label="Cuenta para el archivo completo"></select>
+      <button type="button" id="download-owner">Descargar esta cuenta para Suren</button>
+    </section>
+    <section id="bundle-result" class="bundle-result" hidden>
+      <h2 id="bundle-result-title"></h2><p id="bundle-reference" class="sub"></p>
+      <details id="bundle-details"><summary>Qué contiene el archivo</summary><ul class="bundle-list" id="bundle-triage"></ul><p>Para revisar primero:</p><ul class="bundle-list" id="bundle-priority"></ul></details>
+    </section>
+    <details class="manual-wrap"><summary>Ver copias por separado</summary><div class="details-body">
     <div class="actions"><button type="button" id="scan">Buscar copias en este navegador</button><span class="sub">No hace falta cerrar ni borrar tu granja.</span></div>
     <section class="results" id="results" hidden>
       <h2>Copias encontradas</h2>
       <p class="sub" id="summary"></p>
-      <p class="sub">Cada código identifica al dueño registrado en el respaldo. Esta herramienta no lee la sesión actual: si aparecen varias cuentas, selecciona únicamente una copia que reconozcas como tuya.</p>
+      <p class="sub">Cada código identifica al dueño registrado en el respaldo. Esta vista individual sólo lee las copias locales. Selecciona una copia que reconozcas como tuya.</p>
       <div class="actions" id="batch-controls" hidden><button type="button" id="previous-batch" disabled>Anteriores 40</button><span class="sub" id="batch-status"></span><button type="button" id="next-batch" disabled>Siguientes 40</button></div>
       <p class="sub" id="batch-note" hidden>Cada lote se lee sólo cuando lo solicitas. Al cambiar de lote se borran la selección y la confirmación anteriores.</p>
       <div class="filters"><label for="account">Mostrar cuenta:</label><select id="account" aria-label="Filtrar cuenta"><option value="all">Todas las copias encontradas</option></select></div>
@@ -35,13 +39,22 @@
       <label class="confirm"><input id="confirm" type="checkbox"><span>Reconozco la copia elegida como de mi cuenta y quiero descargarla para su revisión. Entiendo que esto no recupera ni modifica mi granja.</span></label>
       <button type="button" id="download" disabled>Descargar copia elegida</button>
     </section>
-    <p id="status" role="status" aria-live="polite"></p>
+
+      <p id="status" role="status" aria-live="polite"></p>
+    </div></details>
+    <details><summary>Cómo se cuidan tus datos</summary>
+      <div class="privacy"><p>La lectura empieza al pulsar un botón. El archivo completo reúne copias válidas de una sola cuenta. Si tenés sesión abierta, consulta tu partida del servidor con esa sesión, sólo para leerla; no inicia una sesión nueva ni cambia datos.</p>
+      <p>El archivo no incluye contraseñas ni tokens de acceso. No se envía automáticamente y no restaura ninguna copia. Compartilo únicamente con Suren o con el soporte por privado.</p><div class="origin">Sitio: <b id="origin"></b></div></div>
+    </details>
   </section>
-  <footer>Herramienta de diagnóstico de sólo lectura. Las marcas de reinicio y las fechas se muestran como evidencia para revisar; ninguna copia se considera autorizada para restaurar por tener más nivel o recursos.</footer>
+  <footer>Las diferencias orientan la revisión. Tener más objetos o Plata en una copia no demuestra por sí solo una pérdida.</footer>
 </main>
+
+<script src="game/backup-compare.js"></script>
 <script>
 (function(){
   'use strict';
+  const SB_ORIGIN='https://ulspkdaljeuleqqdokfk.supabase.co',PUBLIC_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc3BrZGFsamV1bGVxcWRva2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MDk5NTMsImV4cCI6MjEwNDk4NTk1M30.HRtJ0kEX6kxAZl2uUhNur2czVmbwCl2jtEcM50p0EsA";
   const PROJECT='ulspkdaljeuleqqdokfk',MAX_KEYS=4096,MAX_CANDIDATES=40,MAX_BYTES=1000000,MAX_NODES=60000,MAX_DEPTH=40;
   const UUID='[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
   const ownerPattern=new RegExp('^'+UUID+'$','i');
@@ -88,7 +101,7 @@
     const ownerCode=owner?(await hash(PROJECT+'|'+owner)).slice(0,8).toUpperCase():'SIN-DUEÑO';
     const nick=typeof envelope.nick==='string'?envelope.nick.slice(0,50):'';
     const numericAt=finiteNumber(capturedAt)&&capturedAt>=946684800000&&capturedAt<=Date.now()+86400000?capturedAt:null;
-    return{...desc,owner,ownerCode,nick,capturedAt:numericAt,originalAt,preservedAt,preservationReason:desc.type==='carga'&&typeof envelope.origen==='string'?envelope.origen.slice(0,100):null,serverReset:desc.type==='carga'&&finiteNumber(envelope.reinicioServidor)?envelope.reinicioServidor:null,reset,level:data.level,plata:data.plata,golden:data.golden??0,plots:Number.isInteger(data.plotsOwned)?data.plotsOwned:null,resources:Object.keys(data.res).length,fingerprint:await hash(raw),data};
+    return{...desc,owner,ownerCode,nick,capturedAt:numericAt,originalAt,preservedAt,preservationReason:desc.type==='carga'&&typeof envelope.origen==='string'?envelope.origen.slice(0,100):null,serverReset:desc.type==='carga'&&finiteNumber(envelope.reinicioServidor)?envelope.reinicioServidor:null,reset,level:data.level,plata:data.plata,golden:data.golden??0,plots:Number.isInteger(data.plotsOwned)?data.plotsOwned:null,resources:Object.keys(data.res).length,confirmed:envelope.confirmada===true,version:versionStamp(envelope.version),baseServidor:versionStamp(envelope.baseServidor),versionLocal:versionStamp(envelope.versionLocal),versionRemota:versionStamp(envelope.versionRemota),base:versionStamp(envelope.base),fingerprint:await hash(raw),data};
   }
   const dateText=at=>at===null?'Fecha no disponible':new Date(at).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+' · '+new Date(at).toISOString().replace('T',' ').replace('.000Z',' UTC');
   const accountText=c=>'Cuenta '+(c.ownerCode==='SIN-DUEÑO'?'sin identificar':c.ownerCode.slice(0,4)+'-'+c.ownerCode.slice(4))+(c.nick?' · '+c.nick:'');
@@ -132,9 +145,134 @@
     }catch(error){status(error.message==='changed'?'La copia cambió desde la búsqueda. Vuelve a buscar antes de descargar; no se exportó una versión diferente.':'No se pudo preparar la copia elegida. No se modificó ningún dato.','error');}
     finally{if(objectUrl){const url=objectUrl;setTimeout(()=>URL.revokeObjectURL(url),1000);}busy=false;$('scan').disabled=false;updateDownload();updatePager();}
   }
+
+  const AUTH_KEY='sb-'+PROJECT+'-auth-token',MAX_AUTH_BYTES=100000,MAX_TOTAL_RAW=64*1024*1024,MAX_BUNDLE_BYTES=32*1024*1024;
+  let pendingBundle=null;
+  const versionStamp=value=>typeof value==='string'&&value.length<=50&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)&&Number.isFinite(Date.parse(value))?value:null;
+  const bundleStatus=(message,tone='')=>{$('bundle-progress').textContent=message;$('bundle-progress').dataset.tone=tone;};
+  const engine=()=>{const api=window.GFBackupCompare;if(!api||typeof api.analyze!=='function'||typeof api.choose!=='function')throw Error('engine');return api;};
+  function bundleBusy(value){
+    busy=value;$('download-all').disabled=value||!allowedOrigins.has(location.origin);$('download-owner').disabled=value;
+    $('scan').disabled=value||!allowedOrigins.has(location.origin);$('download').disabled=value||!selected||!$('confirm').checked;
+    $('download-all').textContent=value?'Preparando archivo…':'Descargar todo para Suren';updatePager();
+  }
+  function requireOrigin(){if(!allowedOrigins.has(location.origin))throw Error('origin');if(!crypto.subtle)throw Error('crypto');}
+  function assertSnapshot(data){
+    if(!plain(data)||!Number.isInteger(data.level)||data.level<1||data.level>10000||!plain(data.res)||!finiteNumber(data.plata)||data.plata<0)throw Error('remote_invalid');
+    if(data.golden!==undefined&&(!finiteNumber(data.golden)||data.golden<0))throw Error('remote_invalid');safeTree(data);
+  }
+  async function fetchJson(url,token){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+    try{
+      const response=await fetch(url,{method:'GET',headers:{apikey:PUBLIC_KEY,Authorization:'Bearer '+token},signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
+      if(!response.ok)throw Error('remote_unavailable');
+      const declared=Number(response.headers?.get?.('content-length')||0);if(declared>MAX_BYTES)throw Error('remote_limit');
+      const body=await response.text();if(new TextEncoder().encode(body).byteLength>MAX_BYTES)throw Error('remote_limit');return JSON.parse(body);
+    }finally{clearTimeout(timer);}
+  }
+  async function readReference(){
+    let raw;try{raw=localStorage.getItem(AUTH_KEY);}catch{throw Error('storage_read');}
+    const proof={raw:raw??null};
+    if(!raw)return{reference:null,owner:null,proof,notice:'Sin sesión abierta: se usarán las copias de este navegador.'};
+    let session;try{if(new TextEncoder().encode(raw).byteLength>MAX_AUTH_BYTES)throw Error('auth_limit');session=JSON.parse(raw);}catch{return{reference:null,owner:null,proof,notice:'Se usarán las copias de este navegador.'};}
+    const token=session&&session.access_token;
+    if(typeof token!=='string'||token.length<20||token.length>20000||!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token))return{reference:null,owner:null,proof,notice:'Se usarán las copias de este navegador.'};
+    let owner=null;
+    try{
+      const user=await fetchJson(SB_ORIGIN+'/auth/v1/user',token);
+      if(localStorage.getItem(AUTH_KEY)!==raw)throw Error('session_changed');
+      if(!plain(user)||typeof user.id!=='string'||!ownerPattern.test(user.id))throw Error('remote_invalid');owner=user.id.toLowerCase();
+      const rows=await fetchJson(SB_ORIGIN+'/rest/v1/farms?user_id=eq.'+encodeURIComponent(owner)+'&select=data,updated_at,name&limit=1',token);
+      if(localStorage.getItem(AUTH_KEY)!==raw)throw Error('session_changed');
+      if(!Array.isArray(rows)||rows.length!==1||typeof rows[0].updated_at!=='string'||!Number.isFinite(Date.parse(rows[0].updated_at)))throw Error('remote_unavailable');
+      const row=rows[0];assertSnapshot(row.data);const code=(await hash(PROJECT+'|'+owner)).slice(0,8).toUpperCase();
+      return{reference:{owner,ownerCode:code,nick:typeof row.name==='string'?row.name.slice(0,50):'',data:row.data,source:'server',confirmed:true,version:row.updated_at,capturedAt:Date.now()},owner,proof,notice:''};
+    }catch(error){if(error.message==='session_changed')throw error;return{reference:null,owner,proof,notice:'No se pudo consultar la partida actual; el archivo incluirá las copias locales.'};}
+  }
+  function assertSession(proof){if(proof&&localStorage.getItem(AUTH_KEY)!==proof.raw)throw Error('session_changed');}
+  async function collectAll(owner){
+    if(localStorage.length>MAX_KEYS)throw Error('storage_limits');
+    const keys=[];for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i),desc=typeof key==='string'?descriptor(key):null;if(desc)keys.push(desc);}
+    let rawBytes=0,invalid=0,other=0,unowned=0;const records=[],omissions=[];
+    for(let i=0;i<keys.length;i++){
+      const desc=keys[i];if(owner&&desc.ownerBound&&desc.keyOwner!==owner){other++;continue;}
+      let raw;
+      let recordBytes=0;
+      try{raw=readStorage(desc.key);if(typeof raw!=='string')throw Error('missing');recordBytes=new TextEncoder().encode(raw).byteLength;rawBytes+=recordBytes;}catch{throw Error('storage_read');}
+      if(rawBytes>MAX_TOTAL_RAW)throw Error('raw_limit');
+      if(recordBytes>MAX_BYTES)throw Error('record_limit');
+      try{const c=await parse(desc.key,raw);if(!c.owner){unowned++;omissions.push({...desc,reason:'owner_unidentified'});continue;}if(owner&&c.owner!==owner){other++;continue;}records.push(c);}catch(error){if(error.message==='limits')throw Error('record_limit');invalid++;omissions.push({...desc,reason:'invalid_or_sensitive'});}
+      if(i%20===0)bundleStatus('Revisando copias… '+(i+1)+'/'+keys.length);
+    }
+    for(const c of records){c.olderReset=!!c.reset&&records.some(x=>x.owner===c.owner&&x.reset!==null&&x.reset>c.reset);}
+    records.sort((a,b)=>(b.capturedAt??0)-(a.capturedAt??0)||a.key.localeCompare(b.key));
+    return{records,recognizedKeys:keys.length,rawBytes,invalid,other,unowned,omissions};
+  }
+  function localReference(records,owner){
+    const current=records.find(c=>c.owner===owner&&c.type==='copia');
+    if(!current)return null;
+    return{owner:current.owner,ownerCode:current.ownerCode,nick:current.nick,data:current.data,source:'local',confirmed:false,version:current.baseServidor,capturedAt:current.capturedAt,localAcknowledged:current.confirmed,sourceKey:current.key,sourceSha256:current.fingerprint};
+  }
+  function exportSource(c){return{key:c.key,type:c.type,capturedAt:c.capturedAt,sha256:c.fingerprint,resetMarker:c.reset,originalAt:c.originalAt,preservedAt:c.preservedAt,preservationReason:c.preservationReason,serverResetMarker:c.serverReset,localAcknowledged:c.confirmed,version:c.version,baseServidor:c.baseServidor,versionLocal:c.versionLocal,versionRemota:c.versionRemota,base:c.base};}
+  function referencePayload(ref){if(!ref)return null;return{account:{id:ref.owner,code:ref.ownerCode},source:ref.source,confirmedNow:ref.source==='server'&&ref.confirmed===true,capturedAt:ref.capturedAt,serverVersion:ref.version||null,localAcknowledged:ref.localAcknowledged===true,sourceKey:ref.sourceKey||null,sourceSha256:ref.sourceSha256||null,snapshot:ref.data};}
+  function comparisonPayload(c,ref){if(!ref)return null;const a=engine().analyze(c,ref);return{compatible:a.compatible,reason:a.reason,changed:a.changed,progressSignals:a.progressSignals,inventorySignals:a.inventorySignals,summary:a.summary,score:a.score,progressBehind:a.progressBehind,nonMonetaryChanged:a.nonMonetaryChanged};}
+  function showBundleSummary(data){
+    $('bundle-result').hidden=false;$('bundle-result-title').textContent='Listo: '+data.copies.length+' copia'+(data.copies.length===1?'':'s')+' en un archivo';
+    $('bundle-reference').textContent=data.currentReference?.source==='server'?'Incluye la partida actual del servidor.':'Incluye las copias disponibles de este navegador.';
+    const list=$('bundle-triage');list.replaceChildren();
+    const first=document.createElement('li');first.textContent='Todas las copias válidas de '+data.account.label+'.';list.append(first);
+    const report=document.createElement('li');report.textContent='Fechas, diferencias de progreso y orden sugerido para revisarlas.';list.append(report);
+    const notes=data.scope.invalidSkipped+data.scope.unownedExcluded;
+    if(notes){const note=document.createElement('li');note.textContent=notes+' registro(s) no incluidos por formato inválido o dueño sin identificar; quedan anotados en el informe.';list.append(note);}
+    const priority=$('bundle-priority');priority.replaceChildren();
+    for(const key of data.comparisonSummary.priorityKeys){const c=data.copies.find(item=>item.source.key===key);if(!c)continue;const li=document.createElement('li');li.textContent=dateText(c.source.capturedAt)+' · '+(data.comparisonSummary.priorityReasons[key]||'Para revisar');priority.append(li);}
+  }
+  async function finishBundle(collected,remote,owner){
+    requireOrigin();assertSession(remote.proof);
+    const records=collected.records.filter(c=>c.owner===owner);if(!records.length)throw Error('no_copies');
+    const ref=remote.reference&&remote.reference.owner===owner?remote.reference:localReference(records,owner);
+    const api=engine();const choice=ref?api.choose(records,ref):{keys:[],reasons:{},message:'Sin partida actual de referencia; se incluyen todas las copias para comparar.',hasMoreProgress:false,evaluated:records.length};
+    const code=records[0].ownerCode,label=records.find(c=>c.nick)?.nick||'Cuenta '+code.slice(0,4)+'-'+code.slice(4);
+    const copies=records.map(c=>({account:{id:c.owner,code:c.ownerCode},source:exportSource(c),warnings:warnings(c),comparison:comparisonPayload(c,ref),snapshot:c.data}));
+    const omissions=collected.omissions.filter(item=>!item.ownerBound||item.keyOwner===null||item.keyOwner===owner).map(item=>({key:item.key,type:item.type,keyAt:item.keyAt,reason:item.reason,accountAttribution:item.ownerBound&&item.keyOwner===owner?'same_account':'unknown'}));
+    const payload={schema:2,kind:'goldenfarm-backup-review-bundle',project:PROJECT,origin:location.origin,exportedAt:new Date().toISOString(),account:{id:owner,code,label},currentReference:referencePayload(ref),copies,
+      comparisonSummary:{purpose:'Prioridad para revisión; no autoriza una restauración.',priorityKeys:choice.keys,priorityReasons:choice.reasons,message:choice.message,hasMoreProgress:choice.hasMoreProgress,evaluated:choice.evaluated},
+      scope:{completeForAccount:collected.invalid===0&&collected.unowned===0,completeValidCopies:true,truncated:false,validCopies:copies.length,recognizedKeys:collected.recognizedKeys,otherAccountsExcluded:collected.other+collected.records.filter(c=>c.owner!==owner).length,unownedExcluded:collected.unowned,invalidSkipped:collected.invalid,omissions,unattributedOmissionCount:omissions.filter(item=>item.accountAttribution==='unknown').length,readRawBytes:collected.rawBytes,referenceSource:ref?.source||'unavailable',serverReferenceConfirmed:ref?.source==='server'&&ref.confirmed===true},
+      warnings:[...(remote.notice?[remote.notice]:[]),'Todas las copias son evidencia para revisar; ninguna se restaura automáticamente.','Una copia con más objetos puede reflejar materiales que después se gastaron.']};
+    const text=JSON.stringify(payload)+'\n';if(new TextEncoder().encode(text).byteLength>MAX_BUNDLE_BYTES)throw Error('bundle_limit');
+    assertSession(remote.proof);
+    const blob=new Blob([text],{type:'application/json'}),url=URL.createObjectURL(blob);
+    try{const link=document.createElement('a');link.href=url;link.download='goldenfarm-para-Suren-'+code+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';document.body.append(link);link.click();link.remove();}
+    finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
+    showBundleSummary(payload);bundleStatus('Pasale el archivo descargado a Suren.'+(collected.invalid+collected.unowned?' '+(collected.invalid+collected.unowned)+' registro(s) no pudieron incluirse; el informe lo indica.':''));pendingBundle=null;$('bundle-owner-choice').hidden=true;
+  }
+  function showOwnerChoice(collected,remote){
+    const owners=[...new Set(collected.records.map(c=>c.owner))],select=$('bundle-owner');select.replaceChildren();
+    for(const owner of owners){const c=collected.records.find(x=>x.owner===owner);select.add(new Option(accountText(c),c.ownerCode));}
+    pendingBundle={collected,remote};$('bundle-owner-choice').hidden=false;bundleStatus('Elegí tu cuenta para preparar un solo archivo con sus copias.');
+  }
+  function bundleError(error){
+    const messages={origin:'Abrí esta página desde el mismo sitio donde jugás.',crypto:'Este navegador no puede preparar el archivo de revisión.',session_changed:'La cuenta cambió mientras se preparaba el archivo. Vuelve a intentarlo.',storage_limits:'Hay demasiados datos para preparar un archivo seguro. Pedile ayuda a Suren.',record_limit:'Una copia supera el tamaño seguro de lectura. No se descargó un paquete incompleto; pedile ayuda a Suren.',raw_limit:'Las copias superan el tamaño seguro de lectura. No se descargó un paquete incompleto; pedile ayuda a Suren.',bundle_limit:'Las copias superan el tamaño de un archivo seguro. No se descargó un paquete incompleto; pedile ayuda a Suren.',no_copies:'No hay copias válidas de esta cuenta en este navegador.',engine:'No se pudo cargar la comparación. Recargá esta página y vuelve a intentarlo.'};
+    bundleStatus(messages[error.message]||'No se pudo preparar el archivo. Las partidas y las copias siguen intactas.','error');
+  }
+  async function downloadAll(){
+    if(busy)return;bundleBusy(true);pendingBundle=null;$('bundle-owner-choice').hidden=true;$('bundle-result').hidden=true;bundleStatus('Preparando todas las copias…');
+    try{
+      requireOrigin();engine();const remote=await readReference();assertSession(remote.proof);
+      const collected=await collectAll(remote.owner);assertSession(remote.proof);
+      let owner=remote.owner;
+      if(!owner){owner=collected.records.find(c=>c.type==='copia')?.owner||null;}
+      if(!owner){const owners=[...new Set(collected.records.map(c=>c.owner))];if(owners.length===1)owner=owners[0];else if(owners.length>1){showOwnerChoice(collected,remote);return;}}
+      if(!owner)throw Error('no_copies');await finishBundle(collected,remote,owner);
+    }catch(error){pendingBundle=null;bundleError(error);}finally{bundleBusy(false);}
+  }
+  async function downloadOwner(){
+    if(busy||!pendingBundle)return;const pending=pendingBundle,code=$('bundle-owner').value,owner=pending.collected.records.find(c=>c.ownerCode===code)?.owner;if(!owner)return;
+    bundleBusy(true);try{await finishBundle(pending.collected,pending.remote,owner);}catch(error){pendingBundle=null;bundleError(error);}finally{bundleBusy(false);}
+  }
+  $('download-all').disabled=!allowedOrigins.has(location.origin);$('download-all').addEventListener('click',downloadAll);$('download-owner').addEventListener('click',downloadOwner);
+
   $('origin').textContent=location.origin;$('origin-notice').hidden=allowedOrigins.has(location.origin);$('scan').disabled=!allowedOrigins.has(location.origin);
   $('scan').addEventListener('click',()=>scan());$('previous-batch').addEventListener('click',()=>scan(pageOffset-MAX_CANDIDATES));$('next-batch').addEventListener('click',()=>scan(pageOffset+MAX_CANDIDATES));$('download').addEventListener('click',download);$('confirm').addEventListener('change',updateDownload);$('account').addEventListener('change',()=>{selected=null;$('confirm').checked=false;render();});
 })();
-</script>
-</body>
-</html>
+</script></body></html>

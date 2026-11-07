@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Copias para Suren en un clic — 07/11/2026
+
+Dirección pide que la página compare las copias con el progreso actual y precisa: «Que de un solo clic se descargue todo eso. No que tengas que seleccionar uno por uno para descargar cada una». El botón «Descargar todo para Suren» reúne todas las copias válidas de una misma cuenta, la referencia actual disponible y el informe de diferencias en un JSON. La prioridad de revisión no elimina copias del paquete. Si hay sesión, sólo consulta la partida propia; no modifica partidas, cuentas, almacenamiento ni sesión, no envía el archivo y no restaura automáticamente. Se señalan omisiones y límites sin afirmar completitud falsa. Ver COPIAS-PARA-SUREN-20261107.md.
+
 ## Reintentos del guardado habitual — 07/11/2026
 
 Dirección precisa: «¿ya quedó solucionado que a Nico no le guarde el avance, o sólo lo de actualizar? Fijate que pueda seguir jugando y que se le guarde bien». El guardado ordinario conserva la petición exacta por cuenta cuando se pierde la respuesta y comprueba esa misma escritura antes de enviar otra. Tras confirmarla guarda el avance posterior sin hidratar encima ni adoptar versiones ajenas; operaciones, salida y actualización no aceptan un ACK antiguo mientras quede un envío actual pendiente. Un conflicto real mantiene un aviso visible. Se conserva la política de cinco segundos de inactividad y no se restaura ni compensa ninguna cuenta automáticamente. La revisión de capacidad es de sólo lectura. Ver INCIDENTE-PROGRESO-20261107.md.
