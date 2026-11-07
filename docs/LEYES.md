@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Reintentos del guardado habitual — 07/11/2026
+
+Dirección precisa: «¿ya quedó solucionado que a Nico no le guarde el avance, o sólo lo de actualizar? Fijate que pueda seguir jugando y que se le guarde bien». El guardado ordinario conserva la petición exacta por cuenta cuando se pierde la respuesta y comprueba esa misma escritura antes de enviar otra. Tras confirmarla guarda el avance posterior sin hidratar encima ni adoptar versiones ajenas; operaciones, salida y actualización no aceptan un ACK antiguo mientras quede un envío actual pendiente. Un conflicto real mantiene un aviso visible. Se conserva la política de cinco segundos de inactividad y no se restaura ni compensa ninguna cuenta automáticamente. La revisión de capacidad es de sólo lectura. Ver INCIDENTE-PROGRESO-20261107.md.
+
 ## Guardado antes de actualizar y copias de diagnóstico — 07/11/2026
 
 Dirección pide: «Fíjate bien qué ha sucedido y si puedes recuperar el progreso, si solo pasó con Nico o con muchos más». Se revisan guardados y conflictos sin modificar cuentas. La actualización espera confirmación del estado actual y conserva la partida ante errores; las copias pendientes se archivan antes de hidratar el servidor. La herramienta de copias locales sólo busca y descarga una copia elegida por el jugador. La recuperación de progreso requiere evidencia y comparación con los avances posteriores; no se restaura automáticamente. Se mantiene el autoguardado de cinco segundos por inactividad. Ver INCIDENTE-PROGRESO-20261107.md.

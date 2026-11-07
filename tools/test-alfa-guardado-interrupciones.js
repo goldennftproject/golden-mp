@@ -1,9 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),path=require('path');
-const root=path.resolve(__dirname,'..'),source=fs.readFileSync(root+'/public/game/save.js','utf8');
+const root=process.env.GF_TEST_ROOT||path.resolve(__dirname,'..'),source=fs.readFileSync(process.env.GF_SAVE_CANDIDATE||root+'/public/game/save.js','utf8');
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
 function entorno(){
- const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.js':'','game/save.js':source.replace('window.SAVE_READY = initSave();','window.SAVE_READY = Promise.resolve();')});
+ const {ctx:c}=require(path.join(root,'tools/arrancar-el-juego.contexto')).arrancar(root,{'game/main.js':'','game/save.js':source.replace('window.SAVE_READY = initSave();','window.SAVE_READY = Promise.resolve();')});
  const run=s=>vm.runInContext(s,c),timers=new Map(),signals=[];let now=1800000000000,id=0;
  c.Date=class extends Date{constructor(...a){super(...(a.length?a:[now]));}static now(){return now;}};c.nowMs=()=>now;
  c.setTimeout=(f,ms)=>{timers.set(++id,{at:now+ms,f});return id;};c.clearTimeout=id=>timers.delete(id);
@@ -19,11 +19,11 @@ function entorno(){
  assert.equal(done,true,'la cola debe liberarse aunque la red no responda');await blocked;
  assert.equal(requests.length,2);assert.equal(requests[0].op,requests[1].op,'reintentar usa el mismo recibo');assert.equal(e.run('lastSavedKey'),null);assert.ok(!e.signals.includes('ok'));assert.ok(e.signals.some(s=>/confirm|conexión/i.test(s)));assert.equal(e.run('SAVE_EN_CURSO'),null);
  // La red vuelve: se guarda lo pendiente sin perder recursos ni relojes.
- e.c.qaSb.functions.invoke=async(_,p)=>({data:{ok:true,updated_at:'v2'}});e.c.G.res.madera=7;await e.c.saveFarm();assert.equal(e.run("SAVE_CONFIRMACIONES.get('qa')"),1);assert.equal(e.c.G.res.madera,7);assert.equal(e.run('lastSavedKey'),e.c.snapKey());
+ let restored=0;const restoredBodies=[];e.c.qaSb.functions.invoke=async(_,p)=>{restoredBodies.push(p.body);return{data:{ok:true,updated_at:'v'+(++restored+1)}};};e.c.G.res.madera=7;await e.c.saveFarm();assert.equal(e.run("SAVE_CONFIRMACIONES.get('qa')"),2,'confirma primero la petición retenida y después el progreso actual');assert.equal(restoredBodies[0].op,requests[0].op);assert.equal(restoredBodies[0].data.res.madera,0);assert.equal(restoredBodies[1].data.res.madera,7);assert.notEqual(restoredBodies[1].op,restoredBodies[0].op);assert.equal(e.c.G.res.madera,7);assert.equal(e.run('lastSavedKey'),e.c.snapKey());
  // La respuesta se pierde después del commit: se repite la misma operación, no se duplica.
- e=entorno();let first,commits=0,ops=new Set();requests=[];
- e.c.qaSb={functions:{invoke:async(_,p)=>{requests.push(p.body);if(!ops.has(p.body.op)){ops.add(p.body.op);commits++;return new Promise(r=>first=r);}return{data:{ok:true,updated_at:'v2',repetido:true}};}}};e.run('sb=qaSb');
- const lost=e.c.saveFarm(true);await e.advance(17000);await lost;assert.equal(commits,1);assert.equal(requests.length,2);assert.equal(e.run("SAVE_CONFIRMACIONES.get('qa')"),1);first({data:{ok:true,updated_at:'vieja'}});await flush();assert.equal(e.run("SAVE_BASES.get('qa')"),'v2','una respuesta tardía no retrocede la versión');
+ e=entorno();let first,commits=0,repeatReads=0,remoteRow,ops=new Set();requests=[];
+ e.c.qaSb={functions:{invoke:async(_,p)=>{requests.push(p.body);if(!ops.has(p.body.op)){ops.add(p.body.op);commits++;remoteRow={name:p.body.name,data:{...JSON.parse(JSON.stringify(p.body.data)),_saveOp:p.body.op},updated_at:'v2'};return new Promise(r=>first=r);}return{data:{ok:true,updated_at:'v2',repetido:true}};}},from:table=>{assert.equal(table,'farms');return{select:()=>({eq:(column,uid)=>{assert.equal(column,'user_id');assert.equal(uid,'qa');return{maybeSingle:async()=>{repeatReads++;return{data:JSON.parse(JSON.stringify(remoteRow))};}};}})};}};e.run('sb=qaSb');
+ const lost=e.c.saveFarm(true);await e.advance(17000);await lost;assert.equal(repeatReads,1,'ACK repetido se prueba con lectura íntegra de la misma operación');assert.equal(commits,1);assert.equal(requests.length,2);assert.equal(e.run("SAVE_CONFIRMACIONES.get('qa')"),1);first({data:{ok:true,updated_at:'vieja'}});await flush();assert.equal(e.run("SAVE_BASES.get('qa')"),'v2','una respuesta tardía no retrocede la versión');
  // Ningún OK incompleto ni puerta histórica puede producir una confirmación falsa.
  for(const result of [{data:{ok:true}},{data:null,error:{context:{status:503}}}]){
   e=entorno();let direct=0;e.c.qaSb={functions:{invoke:async()=>result},from:()=>{direct++;return{upsert:async()=>({error:null})};}};e.run('sb=qaSb');const p=e.c.saveFarm(true);await e.advance(2000);await p;

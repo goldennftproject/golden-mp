@@ -1,6 +1,6 @@
 'use strict';
-const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{JSDOM}=require('jsdom');
-const root=path.resolve(__dirname,'..'),save=fs.readFileSync(path.join(root,'public/game/save.js'),'utf8'),{ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.js':'','game/save.js':save.replace('window.SAVE_READY = initSave();','window.SAVE_READY = Promise.resolve();')});
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=process.env.GF_TEST_ROOT||path.resolve(__dirname,'..'),{JSDOM}=require(path.join(root,'node_modules/jsdom')),save=fs.readFileSync(path.join(root,'public/game/save.js'),'utf8'),{ctx:c}=require(path.join(root,'tools/arrancar-el-juego.contexto')).arrancar(root,{'game/main.js':'','game/save.js':save.replace('window.SAVE_READY = initSave();','window.SAVE_READY = Promise.resolve();')});
 c.document=new JSDOM(fs.readFileSync(path.join(root,'public/index.html'),'utf8')).window.document;const run=s=>vm.runInContext(s,c),b=()=>c.document.getElementById('gm-guardar'),txt=()=>c.document.getElementById('gm-guardado').textContent;
 function setup(){run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;MERCADO_EN_CURSO=null;SAVE_EN_CURSO=null;SAVE_CONFLICTOS.clear();SAVE_CONFIRMACIONES.clear();SAVE_BASES.set('qa','2026-10-24T12:00:00.000Z');");}
 (async()=>{
@@ -15,7 +15,18 @@ function setup(){run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;MERCADO_EN_CURSO=n
  setup();let finish;const pending=new Promise(r=>finish=r);c.qaPending=pending;run('SAVE_EN_CURSO=qaPending');calls=0;c.saveFarm=async()=>{calls++;run("SAVE_CONFIRMACIONES.set('qa',2)");};p=c.guardarAhora();assert.equal(calls,0);run("SAVE_CONFIRMACIONES.set('qa',1);SAVE_EN_CURSO=null");finish();await p;assert.equal(calls,1);assert.match(txt(),/Guardado confirmado/,'esperar autosave no sustituye el guardado solicitado');
  assert.equal(b().dataset.estado,'ok');
  setup();run('SOLO_LOCAL=true');calls=0;await c.guardarAhora();assert.equal(calls,0);assert.equal(b().dataset.estado,'error');
- assert.ok(save.includes('guardado||Date.now()-actividad<5000'));assert.ok(save.includes('window.addEventListener("beforeunload", () => { saveFarm(); })'));
+ assert.ok(save.includes('guardado||Date.now()-actividad<5000'));// Ejecutar los handlers reales: antes de confirmar se guarda al salir; tras el ACK
+ // del mismo periodo inactivo no se duplica. Otra interacción habilita la salida otra vez.
+ const handlers={},autoStart=save.indexOf('function startAutosave() {'),autoEnd=save.indexOf('// arranca la sesión',autoStart);
+ assert.ok(autoStart>=0&&autoEnd>autoStart);let autoAt=1800000000000,autoCalls=0,autoTick,key=1;
+ const auto={Date:{now:()=>autoAt},UID:'qa',CARGA_OK:true,SOLO_LOCAL:false,saveTimer:null,SAVE_CONFLICTOS:new Set(),SAVE_EN_CURSO:null,MERCADO_EN_CURSO:null,SAVE_CONFIRMACIONES:new Map(),lastSavedKey:null,
+  document:{visibilityState:'visible',addEventListener:(name,fn)=>{handlers[name]=fn;}},window:{addEventListener:(name,fn)=>{handlers[name]=fn;}},setInterval:fn=>{autoTick=fn;return 1;},guardadoTienePendiente:()=>false,snapKey:()=>String(key),
+  saveFarm:async()=>{autoCalls++;auto.SAVE_CONFIRMACIONES.set('qa',(auto.SAVE_CONFIRMACIONES.get('qa')||0)+1);auto.lastSavedKey=String(key);}};
+ vm.runInNewContext(save.slice(autoStart,autoEnd)+'\nstartAutosave();',auto);
+ handlers.beforeunload();await Promise.resolve();assert.equal(autoCalls,1,'salir antes del ACK inactivo intenta guardar');
+ handlers.pointerdown();key++;autoAt+=5000;await autoTick();assert.equal(autoCalls,2,'cinco segundos inactivo confirman el ciclo');
+ handlers.beforeunload();auto.document.visibilityState='hidden';handlers.visibilitychange();await Promise.resolve();assert.equal(autoCalls,2,'salir u ocultar tras ACK no duplica el guardado');
+ auto.document.visibilityState='visible';handlers.pointerdown();key++;handlers.beforeunload();await Promise.resolve();assert.equal(autoCalls,3,'nueva interacción habilita guardar antes de salir');
  setup();c.estadoGuardar('ok','Guardado confirmado');const n=c.document.getElementById('chat-msgs').children.length;c.estadoGuardar('ok','Guardado confirmado');assert.equal(c.document.getElementById('chat-msgs').children.length,n,'no inunda el chat con confirmaciones consecutivas');assert.match(c.document.getElementById('chat-msgs').textContent,/Guardado confirmado/);assert.match(c.document.getElementById('log').textContent,/Guardado confirmado/);
  c.showSaving();assert.equal(b().getAttribute('aria-busy'),'true');c.showSaved();assert.equal(b().dataset.estado,'ok');c.showSaveError('Sin confirmar');assert.equal(b().dataset.estado,'error');assert.match(b().title,/sin confirmar/);
  const ui=fs.readFileSync(path.join(root,'public/game/ui.js'),'utf8');assert.ok(ui.includes('guardar.onclick=guardarAhora'));

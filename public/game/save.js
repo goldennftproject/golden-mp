@@ -48,6 +48,7 @@ async function miReferido(codigo) {
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
 const SAVE_BASES = new Map(), SAVE_CONFLICTOS = new Set();
 const SAVE_CONFIRMACIONES = new Map();
+const SAVE_PENDIENTES = new Map(); // Petición ordinaria exacta hasta un ACK probado; separada por cuenta.
 let SAVE_EN_CURSO = null, SAVE_OTRA = false;
 var RECARGA_GUARDANDO = false; // Sólo difiere el latido pasivo del HUD mientras se confirma la recarga.
 let MERCADO_GLOBAL = false, MERCADO_CACHE = null, MERCADO_REFRESCANDO = null, MERCADO_INTENTO = 0, MERCADO_EN_CURSO = null;
@@ -225,7 +226,7 @@ async function economiaSolicitar(detalle) {
   MERCADO_EN_CURSO=(async()=>{
     try{
       await conTope(flush,15000,'guardado previo al objeto');
-      if(UID!==uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid)||0)<=confirmadas || !SAVE_BASES.get(uid)){toast('No se pudo sincronizar; no se operó');if(detalle.usdt)usdtMensaje('El guardado previo no se ha confirmado. Pulsa el disquete y vuelve a comprobar el mismo pago. No envíes USDT de nuevo.');return;}
+      if(UID!==uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid)||0)<=confirmadas || guardadoTienePendiente(uid) || !SAVE_BASES.get(uid)){toast('No se pudo sincronizar; no se operó');if(detalle.usdt)usdtMensaje('El guardado previo no se ha confirmado. Pulsa el disquete y vuelve a comprobar el mismo pago. No envíes USDT de nuevo.');return;}
       if(detalle.usdt)usdtMensaje('Verificando la transacción en BNB Smart Chain…');
       const body={cuenta:uid,...detalle,base:SAVE_BASES.get(uid),op:window.crypto.randomUUID()};
       mercadoMarcarPendiente(uid,body);
@@ -314,7 +315,7 @@ function mercadoSistemaVender(item, cantidad, moneda) {
   const flush = saveFarm(true);
   MERCADO_EN_CURSO = (async () => {
     await conTope(flush, 15000, "guardado previo a venta");
-    if (UID !== uid || SAVE_CONFLICTOS.has(uid) || !SAVE_BASES.get(uid) || (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmaciones || (G.res[item] || 0) < cantidad) {
+    if (UID !== uid || SAVE_CONFLICTOS.has(uid) || !SAVE_BASES.get(uid) || (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmaciones || guardadoTienePendiente(uid) || (G.res[item] || 0) < cantidad) {
       toast("No se pudo sincronizar la granja. No se envió la venta."); return;
     }
     const body = { accion: "vender", item, cantidad, moneda, minimo, base: SAVE_BASES.get(uid), op: window.crypto.randomUUID() };
@@ -687,6 +688,9 @@ function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "functi
      3. DERIVAR  — calcular lo que no se guarda (vida máxima, paso del tutorial, regalos).
    Regla: si algo LEE otra parte del estado, no va en la fase 1.                                 */
 function hydrate(d) {
+  // Una hidratación elegida cambia de contexto: jamás reanudar después una petición anterior.
+  // Sus callers de recuperación/carga conservan la copia local antes de reemplazarla.
+  if(UID)SAVE_PENDIENTES.delete(UID);
   G.actividadGranja=null;G.actividadAcciones={};
   actividadGranjaRecibir(d&&d.actividadGranja);
   G.logrosV2=null;G.logrosAcciones={};logrosRecibir(d&&d.logrosV2);
@@ -1462,12 +1466,13 @@ async function loadFarm() {
         return true;
       }
       // Cuenta verificada sin granja: inicio limpio. Nunca se sube una copia huérfana.
+      SAVE_PENDIENTES.delete(uid);
       estadoDeCero(); window.NICK = null; CUENTA_PREVIA = false;
       SAVE_BASES.set(uid,null);SAVE_CONFLICTOS.delete(uid);
       CARGA_OK = true;
       const confirmaciones = SAVE_CONFIRMACIONES.get(uid) || 0;
       await saveFarm(true);
-      if (UID !== uid || (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmaciones) {
+      if (UID !== uid || (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmaciones || guardadoTienePendiente(uid)) {
         CARGA_OK = false; CARGA_FALLO = true;
       }
       return false;
@@ -1650,7 +1655,7 @@ async function incursionSincronizarTutorial(zona) {
   const uid=UID,antes=SAVE_CONFIRMACIONES.get(uid)||0;
   if(!uid||!CARGA_OK||SOLO_LOCAL||!incursionDisponiblePorTutorial(zona)){toast('La prueba de incursión sólo está disponible durante el tutorial.');return false;}
   await saveFarm(true);
-  if(UID!==uid||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(uid)||!SAVE_BASES.get(uid)||(SAVE_CONFIRMACIONES.get(uid)||0)<=antes||!incursionDisponiblePorTutorial(zona)){
+  if(UID!==uid||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(uid)||!SAVE_BASES.get(uid)||(SAVE_CONFIRMACIONES.get(uid)||0)<=antes||guardadoTienePendiente(uid)||!incursionDisponiblePorTutorial(zona)){
     if(UID===uid)toast('No se pudo confirmar el paso del tutorial. Guarda y vuelve a intentarlo.');
     return false;
   }
@@ -1661,7 +1666,7 @@ async function incursionSincronizarTutorial(zona) {
    saveFarm también resuelve cuando falla o hay conflicto; no alcanza con await solo. */
 function recargaSigueConfirmada(ticket) {
   return !!(ticket&&ticket.uid===UID&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&
-    !SAVE_EN_CURSO&&!MERCADO_EN_CURSO&&SAVE_BASES.get(UID)===ticket.base&&
+    !SAVE_EN_CURSO&&!MERCADO_EN_CURSO&&!guardadoTienePendiente(UID)&&SAVE_BASES.get(UID)===ticket.base&&
     lastSavedKey===ticket.key&&snapKey()===ticket.key);
 }
 async function prepararRecargaSegura() {
@@ -1681,22 +1686,96 @@ async function prepararRecargaSegura() {
   finally{RECARGA_GUARDANDO=false;}
 }
 
+function guardadoTienePendiente(uid=UID) { return SAVE_PENDIENTES.has(uid); }
+function guardadoHuellaPeticion(data, raiz=true) {
+  if(Array.isArray(data))return data.map(x=>guardadoHuellaPeticion(x,false));
+  if(!data||typeof data!=='object')return data;
+  const result=Object.create(null);
+  // Sólo libros que el guardado normal recalcula o proyecta desde el servidor.
+  // Saldos, recursos, entregas, recibos, energía, nodos y reinicio se comparan completos.
+  const derivados=new Set(['_saveOp','_economiaControl','actividadGranja','actividadAcciones','logrosV2','logrosAcciones','logros','incursionTutorialUsada']);
+  for(const k of Object.keys(data).sort())if(!raiz||!derivados.has(k))result[k]=guardadoHuellaPeticion(data[k],false);
+  return result;
+}
+function guardadoMismoContenido(peticion,fila) {
+  const esperada=JSON.parse(JSON.stringify(peticion.body.data)),remota=fila.data;
+  // Defaults vacíos que protegerEconomia añade a snapshots antiguos; no elimina stock.
+  if(esperada.mkPend===undefined&&Array.isArray(remota.mkPend)&&remota.mkPend.length===0)esperada.mkPend=[];
+  if(esperada.farmXpEdificios===undefined&&remota.farmXpEdificios===0)esperada.farmXpEdificios=0;
+  const energia=esperada.energiaGranja,aceptada=remota.energiaGranja;
+  const base=Date.parse(peticion.body.base),commit=Date.parse(fila.updated_at);
+  if(energia&&aceptada&&Number.isFinite(energia.at)&&Number.isFinite(energia.actual)&&Number.isFinite(commit)){
+    // En una fila válida energia.at <= updated_at. Reproducir el transporte exacto
+    // del handler, usando el modelo compartido del cliente cuando la muestra avanza.
+    // El mínimo adicional contra el saldo previo del servidor NO se adivina: si recorta
+    // más que este cálculo, el resultado no coincide y se mantiene el bloqueo.
+    const at=Math.min(commit,Math.max(0,Number.isFinite(base)?base:0,energia.at));
+    let actual;
+    if(energia.at<at)actual=energiaModelo(esperada,at);
+    else {
+      const hasta=Math.max(at,energia.at),fin=Number(esperada.produccion?.vipHasta)||0;
+      const adelantada=(Math.max(0,Math.min(hasta,fin)-at)*100+Math.max(0,hasta-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
+      actual=Math.max(0,energia.actual-adelantada);
+    }
+    if(aceptada.actual===actual&&aceptada.at===at){energia.actual=actual;energia.at=at;}
+  }
+  return JSON.stringify(guardadoHuellaPeticion(remota))===JSON.stringify(guardadoHuellaPeticion(esperada));
+}
+async function guardadoReconocerPropio(uid,peticion,versionEsperada=null) {
+  if(UID!==uid||SAVE_PENDIENTES.get(uid)!==peticion)return null;
+  const {data,error}=await conTope(sb.from('farms').select('data,name,updated_at').eq('user_id',uid).maybeSingle(),15000,'comprobar el mismo guardado');
+  if(UID!==uid||SAVE_PENDIENTES.get(uid)!==peticion)return null;
+  if(error)throw Error('No se pudo comprobar el guardado pendiente');
+  if(!data?.data||typeof data.updated_at!=='string'||!data.updated_at||data.data._saveOp!==peticion.body.op||
+    (versionEsperada&&data.updated_at!==versionEsperada)||data.name!==peticion.body.name||
+    Number(data.data.reinicio||0)!==Number(peticion.body.data.reinicio||0)||
+    !guardadoMismoContenido(peticion,data))return null;
+  return {ok:true,updated_at:data.updated_at,actividadGranja:data.data.actividadGranja,logrosV2:data.data.logrosV2,incursionTutorialUsada:data.data.incursionTutorialUsada===true};
+}
 function saveFarm(force) {
+  // Una llamada durante el arranque no reserva una cola que pueda tragarse el primer
+  // guardado válido al terminar la carga (por ejemplo, kitReclamar antes de UID).
+  if(!CARGA_OK&&!SOLO_LOCAL){console.warn('saveFarm bloqueado: la granja no se llegó a cargar');return Promise.resolve();}
+  const cuentaSolicitud=UID;
   if (MERCADO_EN_CURSO) {
     if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
-    return MERCADO_EN_CURSO.then(() => saveFarm(force));
+    return MERCADO_EN_CURSO.then(() => UID===cuentaSolicitud?saveFarm(force):undefined);
   }
   if (SAVE_CONFLICTOS.has(UID)) { if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot()); return Promise.resolve(); }
+  let colaAnterior=null;
   if (SAVE_EN_CURSO) {
-    SAVE_OTRA = true;
-    if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
-    return SAVE_EN_CURSO;
+    const anterior=SAVE_EN_CURSO;
+    if(anterior.cuentaGuardado!==cuentaSolicitud){
+      // Reservar la cola nueva ahora: el caller puede bloquear después MERCADO_EN_CURSO
+      // mientras espera este preguardado. Reentrar saveFarm entonces esperaría a sí mismo.
+      colaAnterior=anterior;
+      if(CARGA_OK||SOLO_LOCAL)copiaGuardar(snapshot());
+    }else{
+      SAVE_OTRA = true;
+      if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
+      return anterior;
+    }
   }
-  SAVE_EN_CURSO = Promise.resolve().then(async () => {
-    do { SAVE_OTRA = false; await saveFarmReal(force); force = true; }
-    while (SAVE_OTRA && !SAVE_CONFLICTOS.has(UID));
-  }).finally(() => { SAVE_EN_CURSO = null; });
-  return SAVE_EN_CURSO;
+  const cuentaCola=cuentaSolicitud;
+  const espera=colaAnterior?colaAnterior.catch(()=>undefined):Promise.resolve();
+  const cola = espera.then(async () => {
+    if(UID!==cuentaCola||SAVE_EN_CURSO!==cola)return;
+    let puestaAlDia=false,confirmado=false;
+    do {
+      if(UID!==cuentaCola||SAVE_EN_CURSO!==cola)return;
+      SAVE_OTRA=false;
+      const resultado=await saveFarmReal(force);force=true;
+      if(UID!==cuentaCola||SAVE_EN_CURSO!==cola)return;
+      confirmado=confirmado||resultado?.confirmado===true;
+      // Tras confirmar una petición retenida de otro ciclo, guardar una vez el avance
+      // posterior. Un latido pasivo nunca provoca un bucle de catch-up ilimitado.
+      if(resultado?.confirmado&&resultado.reanudada&&resultado.requiereActual&&!puestaAlDia&&UID===cuentaCola){SAVE_OTRA=true;puestaAlDia=true;}
+    } while (SAVE_OTRA && UID===cuentaCola && !SAVE_CONFLICTOS.has(UID));
+    if(confirmado&&UID===cuentaCola&&!guardadoTienePendiente(cuentaCola)&&!SAVE_CONFLICTOS.has(cuentaCola)&&typeof showSaved==='function')showSaved();
+  }).finally(() => { if(SAVE_EN_CURSO===cola)SAVE_EN_CURSO=null; });
+  Object.defineProperty(cola,'cuentaGuardado',{value:cuentaCola});
+  SAVE_EN_CURSO=cola;
+  return cola;
 }
 async function saveFarmReal(force) {
   /* 25/8 — EL ORDEN DE ESTAS TRES LÍNEAS ERA EL BUG, Y ERA DE LOS CAROS.
@@ -1715,63 +1794,72 @@ async function saveFarmReal(force) {
   // guardar un estado que nunca se hidrató sería fabricar la pérdida, no evitarla.
   // 25/8: …salvo en SOLO_LOCAL, donde SÍ hubo hydrate (de la copia de este navegador). Ahí lo
   // que falta no es el hydrate: es haber leído la nube. Se guarda acá y no se sube — ver abajo.
-  if (!CARGA_OK && !SOLO_LOCAL) { console.warn("saveFarm bloqueado: la granja no se llegó a cargar"); return; }
-  const key = snapKey();
-  let claveConfirmada=key;
-  if (!force && key === lastSavedKey) return;   // nada que guardar: ni siquiera muestra el indicador
-  copiaGuardar(snapshot());   // la copia local se deja SIEMPRE — y ahora « siempre » es verdad
-  /* la puerta de la NUBE, que es distinta de la de arriba. En SOLO_LOCAL no se sube ni aunque la
-     conexión vuelva a mitad de partida: subir sin haber leído es justo lo que borró una granja
-     el 24/8. Se subirá en la próxima carga, cuando se pueda LEER primero. */
-  if (SOLO_LOCAL) return;
-  if (!sb || !UID) { avisarSinNube(); return; }
-  const saveUid = UID;
-  const op = window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
-  const cuerpo = { jornada:1, name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), data: JSON.parse(JSON.stringify(snapshot())), op, ...(SAVE_BASES.has(saveUid) ? { base: SAVE_BASES.get(saveUid) } : {}) };
-  if (typeof showSaving === "function") showSaving();
-  // hasta 2 intentos inmediatos; si fallan, lastSavedKey no se actualiza y el autosave reintenta al próximo ciclo
-  for (let intento = 0; intento < 2; intento++) {
-    try {
-      if(UID!==saveUid)return;
-      // El portero es la única escritura autorizada. La transición de agosto terminó:
-      // RLS ya impide el upsert directo. Un ACK necesita la versión real del servidor.
-        const { data: r, error: fe } = await alfaInvocarGuardado(cuerpo);
-        if(UID!==saveUid)return;
-        if (!fe && r && r.ok && typeof r.updated_at==='string' && r.updated_at) { const sinCambiosEnVuelo=snapKey()===key; buffCdConfirmar(cuerpo.data.buffs); actividadGranjaRecibir(r.actividadGranja,true); logrosRecibir(r.logrosV2); if(r.incursionTutorialUsada===true)G.incursionTutorialUsada=true; if(sinCambiosEnVuelo)claveConfirmada=snapKey(); if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar(); if(isOpen('ov-logros'))refreshLogros(); SAVE_BASES.set(saveUid, r.updated_at); SAVE_CONFIRMACIONES.set(saveUid, (SAVE_CONFIRMACIONES.get(saveUid) || 0) + 1); if(!USDT_OCUPADO)USDT_REINTENTO_AT=0; usdtProgramarPendiente(); }
-        else if (fe) {
-          /* 14/9 — EL PORTERO EN MODO RECHAZO. Un 422 no es « portero caído »: es el portero
-             diciendo que NO. Hasta hoy caía al camino viejo (que la PARTE 2 ya cerró: 403) y el
-             autosave reintentaba cada minuto para siempre, con la partida local cada vez más
-             lejos de la aceptada. Ahora: se vuelve a la última granja que el portero aceptó, se
-             dice por qué, y el guardado deja de intentar hasta que algo cambie de verdad. */
-          const st = fe.context && fe.context.status;
-          if (st === 409) {
-            let detalle; try { detalle = await fe.context.json(); } catch (e) {}
-            SAVE_CONFLICTOS.add(saveUid);
-            try { mercadoMarcarPendiente(saveUid, { tipo: "conflicto-guardado" }); } catch (e) {}
-            if (UID === saveUid) {
-              copiaGuardar(snapshot());
-              if (typeof showSaveError === "function") showSaveError();
-              log(detalle && detalle.economia ? "El servidor bloqueó una operación económica: " + (detalle.sospechas || []).join(" · ") + ". No se borró tu progreso local. Recarga para sincronizar; el respaldo se conserva aparte." : "Otra sesión guardó una versión diferente. No se sobrescribió ninguna granja. Tu progreso actual queda en el respaldo local; cierra la otra sesión antes de volver a cargar.", "warn");
-              toast(detalle && detalle.economia ? "Operación económica bloqueada; respaldo local conservado" : "Conflicto de guardado: progreso conservado en este navegador");
-            }
-            return;
+  if (!CARGA_OK && !SOLO_LOCAL) { console.warn('saveFarm bloqueado: la granja no se llegó a cargar'); return; }
+  const saveUid=UID,actualKey=snapKey();
+  let peticion=SAVE_PENDIENTES.get(saveUid),reanudada=!!peticion;
+  if(!peticion&&!force&&actualKey===lastSavedKey)return;
+  copiaGuardar(snapshot());
+  if(SOLO_LOCAL)return;
+  if(!sb||!saveUid){avisarSinNube();return;}
+  if(!peticion){
+    const op=window.crypto&&window.crypto.randomUUID?window.crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+    const body={jornada:1,name:(typeof nombreLucido==='function'?nombreLucido():(window.NICK||'Granjero')),data:JSON.parse(JSON.stringify(snapshot())),op,...(SAVE_BASES.has(saveUid)?{base:SAVE_BASES.get(saveUid)}:{})};
+    peticion={uid:saveUid,body,key:actualKey};SAVE_PENDIENTES.set(saveUid,peticion);
+  }
+  const cuerpo=peticion.body,key=peticion.key;
+  if(typeof showSaving==='function')showSaving();
+  for(let intento=0;intento<2;intento++){
+    try{
+      if(UID!==saveUid||SAVE_PENDIENTES.get(saveUid)!==peticion)return;
+      let {data:r,error:fe}=await alfaInvocarGuardado(cuerpo);
+      if(UID!==saveUid||SAVE_PENDIENTES.get(saveUid)!==peticion)return;
+      let detalle;
+      if(fe?.context?.status===409){
+        try{detalle=await fe.context.json();}catch{}
+        // Dos invocaciones del MISMO UUID pueden competir en CAS tras un timeout.
+        // Sólo la fila íntegra de esa petición permite reconocer el ACK propio.
+        if(!detalle?.economia){const propia=await guardadoReconocerPropio(saveUid,peticion);if(propia){r=propia;fe=null;}}
+      }else if(!fe&&r?.ok&&r.repetido===true){
+        const propia=await guardadoReconocerPropio(saveUid,peticion,r.updated_at);
+        if(propia)r=propia;
+        else fe={context:{status:409,json:async()=>({conflicto:true})}};
+      }
+      if(UID!==saveUid||SAVE_PENDIENTES.get(saveUid)!==peticion)return;
+      if(!fe&&r?.ok&&typeof r.updated_at==='string'&&r.updated_at){
+        let claveConfirmada=key;
+        const sinCambiosEnVuelo=snapKey()===key;
+        buffCdConfirmar(cuerpo.data.buffs);actividadGranjaRecibir(r.actividadGranja,true);logrosRecibir(r.logrosV2);
+        if(r.incursionTutorialUsada===true)G.incursionTutorialUsada=true;
+        if(sinCambiosEnVuelo)claveConfirmada=snapKey();
+        if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar();if(isOpen('ov-logros'))refreshLogros();
+        SAVE_BASES.set(saveUid,r.updated_at);SAVE_CONFIRMACIONES.set(saveUid,(SAVE_CONFIRMACIONES.get(saveUid)||0)+1);
+        SAVE_PENDIENTES.delete(saveUid);lastSavedKey=claveConfirmada;
+        if(!USDT_OCUPADO)USDT_REINTENTO_AT=0;usdtProgramarPendiente();
+        copiaGuardar(snapshot(),snapKey()===claveConfirmada);
+        return {confirmado:true,reanudada,requiereActual:snapKey()!==claveConfirmada};
+      }
+      if(fe){
+        const st=fe.context&&fe.context.status;
+        if(st===409){
+          if(!detalle)try{detalle=await fe.context.json();}catch{}
+          SAVE_CONFLICTOS.add(saveUid);
+          try{mercadoMarcarPendiente(saveUid,{tipo:'conflicto-guardado'});}catch{}
+          if(UID===saveUid){
+            copiaGuardar(snapshot());if(typeof showSaveError==='function')showSaveError();
+            log(detalle?.economia?'El servidor bloqueó una operación económica: '+(detalle.sospechas||[]).join(' · ')+'. No se borró tu progreso local.':'La versión del servidor no coincide con el guardado pendiente. No se sobrescribió ninguna granja; se conserva tu progreso local.','warn');
+            toast(detalle?.economia?'Operación económica bloqueada; respaldo local conservado':'Guardado sin sincronizar: progreso conservado en este navegador');
           }
-          if (st === 422) {
-            let det = null; try { det = await fe.context.json(); } catch (e) {}
-            await porteroRechazo(det);
-            return;
-          }
-          console.warn("portero:", (fe && fe.message) || fe);
-          throw fe;
+          return;
         }
-        else throw Error('Guardado sin versión confirmada');
-      if (UID !== saveUid) return;
-      lastSavedKey = claveConfirmada;   // Incluye el ACK; las acciones en vuelo siguen pendientes.
-      copiaGuardar(snapshot(),snapKey()===claveConfirmada);
-      if (typeof showSaved === "function") showSaved();
-      return;
-    } catch (e) { if(UID!==saveUid)return;if (intento === 0) await sleepMs(1500); else {console.warn("saveFarm sin conexión (reintenta solo):", e && e.message);if(typeof showSaveError==='function')showSaveError('Sin confirmar');} }
+        if(st===422){let det=null;try{det=await fe.context.json();}catch{}await porteroRechazo(det);return;}
+        throw fe;
+      }
+      throw Error('Guardado sin versión confirmada');
+    }catch(e){
+      if(UID!==saveUid||SAVE_PENDIENTES.get(saveUid)!==peticion)return;
+      if(intento===0)await sleepMs(1500);
+      else {console.warn('saveFarm sin conexión (reintenta la misma petición):',e&&e.message);if(typeof showSaveError==='function')showSaveError('Sin confirmar');}
+    }
   }
 }
 
@@ -2020,7 +2108,7 @@ async function cerrarSesion() {
     const uid = UID, antes = SAVE_CONFIRMACIONES.get(uid) || 0;
     if (typeof saveFarm !== "function") return { error: "no se pudo confirmar el guardado; sigues conectado" };
     await saveFarm(true);
-    if (UID !== uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid) || 0) <= antes)
+    if (UID !== uid || SAVE_CONFLICTOS.has(uid) || (SAVE_CONFIRMACIONES.get(uid) || 0) <= antes || guardadoTienePendiente(uid))
       return { error: "no se pudo confirmar el guardado; sigues conectado" };
     const salida = await conTope(sb.auth.signOut({scope:"local"}), 10000, "cerrar sesión");
     if (salida && salida.error) return { error: "no se pudo cerrar la sesión; vuelve a intentarlo" };
@@ -2221,9 +2309,9 @@ function startAutosave() {
   let actividad=Date.now(),guardado=false,intento=0,ciclo=0;
   for(const tipo of ['pointerdown','pointermove','keydown','input','wheel'])document.addEventListener(tipo,()=>{actividad=Date.now();guardado=false;ciclo++;},{passive:true});
   saveTimer = setInterval(async () => {
-    if(guardado||Date.now()-actividad<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||SAVE_EN_CURSO||MERCADO_EN_CURSO||snapKey()===lastSavedKey)return;
+    if(guardado||Date.now()-actividad<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||SAVE_EN_CURSO||MERCADO_EN_CURSO||(!guardadoTienePendiente(UID)&&snapKey()===lastSavedKey))return;
     intento=Date.now();const uid=UID,vuelta=ciclo,antes=SAVE_CONFIRMACIONES.get(uid)||0;
-    try{await saveFarm();if(UID===uid&&ciclo===vuelta&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes)guardado=true;}catch{}
+    try{await saveFarm();if(UID===uid&&ciclo===vuelta&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes&&!guardadoTienePendiente(uid))guardado=true;}catch{}
   },1000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && !guardado) saveFarm(); });
   window.addEventListener("beforeunload", () => { if (!guardado) saveFarm(); });

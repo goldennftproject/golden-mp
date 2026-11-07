@@ -53,7 +53,7 @@ async function ruletasGirar(modo,precioEsperado){
   let enviado=false;
   try{
    await conTope(flush,15000,'guardado previo al giro');
-   if(UID!==uid||SAVE_CONFLICTOS.has(uid)||(SAVE_CONFIRMACIONES.get(uid)||0)<=confirmadas||!SAVE_BASES.get(uid))throw Error('No se confirmó el guardado. No se giró ni se cobró.');
+   if(UID!==uid||SAVE_CONFLICTOS.has(uid)||(typeof guardadoTienePendiente==='function'&&guardadoTienePendiente(uid))||(SAVE_CONFIRMACIONES.get(uid)||0)<=confirmadas||!SAVE_BASES.get(uid))throw Error('No se confirmó el guardado. No se giró ni se cobró.');
    const p={cuenta:uid,base:SAVE_BASES.get(uid),op:window.crypto.randomUUID(),ruleta:{modo,precioEsperado}};
    mercadoMarcarPendiente(uid,p);
    const body={accion:'girar',cuenta:uid,base:p.base,op:p.op,modo,precioEsperado};

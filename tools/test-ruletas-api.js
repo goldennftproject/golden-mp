@@ -1,8 +1,8 @@
 /* Puente real + saveFarm real, con red/almacenamiento simulados; nunca usa cuentas reales. */
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const repo=fs.existsSync(path.join(__dirname,'../public/game/ruletas-api.js'))?path.resolve(__dirname,'..'):'C:/Users/pauli/Desktop/01_Proyectos/golden/golden-mp';
-const api=fs.readFileSync(path.join(repo,'public/game/ruletas-api.js'),'utf8'),save=fs.readFileSync(path.join(repo,'public/game/save.js'),'utf8');
-const saveFunctions=save.slice(save.indexOf('function saveFarm(force) {'),save.indexOf('/* ============ EL PORTERO DIJO QUE NO'));
+const api=fs.readFileSync(path.join(repo,'public/game/ruletas-api.js'),'utf8'),save=fs.readFileSync(process.env.GF_SAVE_CANDIDATE||path.join(repo,'public/game/save.js'),'utf8');
+const saveFunctions=save.slice(save.indexOf('function guardadoTienePendiente('),save.indexOf('/* ============ EL PORTERO DIJO QUE NO'));
 const helperNames=['mercadoPendiente','mercadoMarcarPendiente','mercadoLimpiarPendiente'];
 const helpers=helperNames.map(name=>save.split(/\r?\n/).find(l=>l.startsWith('function '+name+'('))).join('\n');
 assert(saveFunctions.includes('async function saveFarmReal'));assert(helpers.includes('localStorage.setItem'));
@@ -13,7 +13,7 @@ function respuesta(extra={}){return {ok:true,data:{...plain(initial),golden:99},
 function montar(opts={}){
  const storage=opts.storage||new Map(),invokes=[],saves=[],hydrated=[],backups=[],locks=[],unlocks=[],warnings=[];let serial=0;
  const context={console:{log(){},warn(...x){warnings.push(x);},error(){}},JSON,Date,Math,Promise,Map,Set,Error,Number,
-  UID:'a',SB_REF:'qa-project',CARGA_OK:true,SOLO_LOCAL:false,SAVE_BASES:new Map([['a',BASE]]),SAVE_CONFIRMACIONES:new Map([['a',0]]),SAVE_CONFLICTOS:new Set(),SAVE_EN_CURSO:null,SAVE_OTRA:false,MERCADO_EN_CURSO:null,
+  UID:'a',SB_REF:'qa-project',CARGA_OK:true,SOLO_LOCAL:false,SAVE_BASES:new Map([['a',BASE]]),SAVE_CONFIRMACIONES:new Map([['a',0]]),SAVE_CONFLICTOS:new Set(),SAVE_PENDIENTES:new Map(),SAVE_EN_CURSO:null,SAVE_OTRA:false,MERCADO_EN_CURSO:null,
   G:plain(initial),lastSavedKey:JSON.stringify(initial),USDT_OCUPADO:false,USDT_REINTENTO_AT:0,
   window:{crypto:{randomUUID:()=>`00000000-0000-4000-8000-${String(++serial).padStart(12,'0')}`}},
   localStorage:{getItem(k){if(opts.readFail)throw Error('storage unreadable');return storage.get(k)||null;},setItem(k,v){if(opts.writeFail)throw Error('storage full');storage.set(k,v);},removeItem(k){storage.delete(k);}},

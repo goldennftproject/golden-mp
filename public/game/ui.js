@@ -6482,11 +6482,13 @@ function showSaving() {
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
 }
 function showSaveError(motivo) {
-  if(!guardadoManualEnCurso)estadoGuardar('error',typeof motivo==='string'?'Guardado '+motivo.toLowerCase()+'. Revisa la conexión.':'Guardado rechazado. Revisa el registro.');
+  const detenido=typeof UID!=='undefined'&&UID&&typeof SAVE_CONFLICTOS!=='undefined'&&SAVE_CONFLICTOS.has(UID);
+  if(!guardadoManualEnCurso)estadoGuardar('error',detenido?'Guardado detenido. Conserva esta pestaña y revisa el disquete.':typeof motivo==='string'?'Guardado '+motivo.toLowerCase()+'. Revisa la conexión.':'Guardado rechazado. Revisa el registro.');
   const el = $("saveind"); if (!el) return;
-  el.className = "show"; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = typeof motivo==='string'?motivo:"Rechazado"; clearTimeout(el._t);
+  el.className = detenido?'show save-blocked':'show'; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = detenido?'Guardado detenido · revisa el disquete':typeof motivo==='string'?motivo:"Rechazado"; clearTimeout(el._t);
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
-  el._t = setTimeout(() => { el.classList.remove("show"); if (typeof placeSaveIndPc === "function") placeSaveIndPc(); }, 4000);
+  // Un conflicto no desaparece como un aviso de éxito: permanece hasta resolverlo.
+  if(!detenido)el._t = setTimeout(() => { el.classList.remove("show"); if (typeof placeSaveIndPc === "function") placeSaveIndPc(); }, 4000);
 }   // 14/9: el portero dijo que no
 function showSaved() {
   if(!guardadoManualEnCurso)estadoGuardar('ok','Guardado confirmado');
@@ -6900,6 +6902,7 @@ function avisoGuardadoPanel(tipo,texto){
   }
 }
 function estadoGuardar(tipo,texto=''){
+  if(tipo==='ok'||tipo===''){const aviso=$('saveind');if(aviso?.classList.contains('save-blocked')){clearTimeout(aviso._t);aviso.classList.remove('show','save-blocked');}}
   const b=$('gm-guardar'),e=$('gm-guardado');
   if(b){b.dataset.estado=tipo;b.disabled=tipo==='saving';b.setAttribute('aria-busy',String(b.disabled));b.title=texto?texto+(tipo==='saving'?'':' · Clic para guardar'):'Guardar ahora';}
   if(e)e.textContent=texto;
@@ -6911,7 +6914,7 @@ async function guardarAhora(){
   const disponible=()=>UID===uid&&uid&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(uid);
   const fallo=()=>estadoGuardar('error','No se pudo confirmar. Revisa la conexión y vuelve a intentar.');
   if(uid&&CARGA_OK&&!SOLO_LOCAL&&SAVE_CONFLICTOS.has(uid)){
-    fallo();askConfirm('Hay un conflicto de guardado. Cierra otras sesiones del juego. Se conservará un respaldo local y continuarás desde la última versión aceptada por el servidor. Los cambios locales pendientes no se fusionan. ¿Recuperar sin recargar la página?',async()=>{
+    fallo();askConfirm('El guardado quedó detenido para proteger las dos versiones. Se conservará un respaldo local. Cargar la versión del servidor sustituirá esta sesión; los cambios locales pendientes no se fusionan. ¿Continuar?',async()=>{
       if(guardadoManualEnCurso)return;guardadoManualEnCurso=true;estadoGuardar('saving','Consultando el guardado del servidor…');
       try{const ok=await recuperarGuardadoServidor();if(UID===uid)ok?estadoGuardar('ok','Versión del servidor recuperada'):fallo();}finally{guardadoManualEnCurso=false;}
     },{title:'Recuperar guardado',yes:'Cargar versión del servidor',no:'Cancelar'});return;
@@ -6925,7 +6928,7 @@ async function guardarAhora(){
     const antes=SAVE_CONFIRMACIONES.get(uid)||0;
     await saveFarm(true);
     if(UID!==uid)return;
-    if(disponible()&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes)estadoGuardar('ok','Guardado confirmado');else fallo();
+    if(disponible()&&!(typeof guardadoTienePendiente==='function'&&guardadoTienePendiente(uid))&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes)estadoGuardar('ok','Guardado confirmado');else fallo();
   }catch{if(UID===uid)fallo();}
   finally{guardadoManualEnCurso=false;if(UID!==uid)estadoGuardar('');}
 }
