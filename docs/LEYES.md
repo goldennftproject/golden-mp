@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Tutorial de pausas y ayuda para conseguir bronce — 07/11/2026
+
+Dirección autoriza agregar, probar y publicar la práctica de pausar y reactivar y la ayuda para conseguir bronce, conservando el progreso. La lección contextual tras cosechar usa una parcela vacía y los controles manuales del Cobertizo; no desplaza índices ni reinicia tutoriales completados. La expansión ofrece Conseguir bronce y la ayuda distingue cupo, terreno, fuente de compra/regalo y requisitos para minar. Se conservan cuentas, partidas, contadores, tiempos, economía y sistemas pausados. Ver TUTORIAL-PAUSAS-Y-BRONCE-20261107.md.
+
 ## Copias para Suren en un clic — 07/11/2026
 
 Dirección pide que la página compare las copias con el progreso actual y precisa: «Que de un solo clic se descargue todo eso. No que tengas que seleccionar uno por uno para descargar cada una». El botón «Descargar todo para Suren» reúne todas las copias válidas de una misma cuenta, la referencia actual disponible y el informe de diferencias en un JSON. La prioridad de revisión no elimina copias del paquete. Si hay sesión, sólo consulta la partida propia; no modifica partidas, cuentas, almacenamiento ni sesión, no envía el archivo y no restaura automáticamente. Se señalan omisiones y límites sin afirmar completitud falsa. Ver COPIAS-PARA-SUREN-20261107.md.

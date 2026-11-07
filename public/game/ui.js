@@ -1817,6 +1817,12 @@ function refreshExpandir() {
       '<span class="cant ' + (ok ? "ok" : "falta") + '">' + fmt(tengo) + "/" + fmt(pide) + "</span></div>";
   }
   reqs.innerHTML = h;
+  if (G.produccion && ex.costo.bronce > costoTengo('bronce')) {
+    const ayuda = document.createElement('button');
+    ayuda.id = 'exd-conseguir-bronce'; ayuda.type = 'button'; ayuda.className = 'ghost sm';
+    ayuda.textContent = 'Conseguir bronce'; ayuda.onclick = abrirAyudaBronce;
+    reqs.appendChild(ayuda);
+  }
   /* lo que trae, con su lámina: las vetas en dorado — son el dato que decide */
   if (trae) {
     const SPR = { capacidad: "sk_farming", parcela: "plot", arbol: "tree", roca: "node_stone",
@@ -2665,11 +2671,53 @@ function confirmarColocacionProduccionPremium(id,cx,by) {
     if(!terminada&&ov&&Observer){observer=new Observer(()=>{if(!enviando&&!ov.classList.contains('show'))finalizar(false);});observer.observe(ov,{attributes:true,attributeFilter:['class']});}
   });
 }
+/* Ayuda de navegación: abre los controles existentes, sin comprar ni cambiar producciones. */
+function produccionVerGestion(clave) {
+  const gestion = $('prod-gestion'); if (!gestion) return;
+  gestion.open = true;
+  const destino = clave ? Array.from(gestion.querySelectorAll('[data-prod-pause]')).find(b => b.dataset.prodPause === clave) : gestion.querySelector('summary');
+  const foco = destino && !destino.disabled ? destino : gestion.querySelector('summary');
+  foco?.scrollIntoView?.({block:'nearest'}); foco?.focus({preventScroll:true});
+}
+function produccionVerBronce() {
+  const boton = document.querySelector('#prod-granja [data-prod-buy="bronce"]'); if (!boton) return;
+  const grupo = boton.closest('details'); if (grupo) grupo.open = true;
+  const foco = boton.disabled ? $('prod-motivo-bronce') : boton;
+  if (foco) { if (boton.disabled) foco.tabIndex = -1; foco.scrollIntoView?.({block:'nearest'}); foco.focus({preventScroll:true}); }
+}
+function abrirAyudaBronce() {
+  closeOv('ov-expandir'); openOv('ov-cobertizo');
+  const ayuda = $('prod-ayuda-bronce'); if (!ayuda) return;
+  ayuda.open = true;
+  const compra = document.querySelector('#prod-granja [data-prod-buy="bronce"]');
+  if (compra?.closest('details')) compra.closest('details').open = true;
+  const resumen = ayuda.querySelector('summary'); resumen?.scrollIntoView?.({block:'nearest'}); resumen?.focus({preventScroll:true});
+}
+function produccionAyudaBronceHtml(items, libres) {
+  const vetas = items.filter(o => o.type === 'ore' && GF.WORLD_OBJECTS[o.i]?.ore === 'bronce');
+  const activa = vetas.find(o => !produccionPausada(o)), pausada = vetas.find(o => produccionPausada(o));
+  const duracion = fmtDur(ORE_DEF.bronce.cd * 1000 * vipTiempoMult());
+  const pd = PICK_DEF[picoQueHaceFalta({type:'ore',ore:'bronce'})];
+  const receta = Object.keys(pd.cost).map(k => pd.cost[k]+' '+(RES_LABEL[k]||k).toLowerCase()).concat(pd.plata ? [pd.plata+' Plata'] : []).join(' + ');
+  let paso;
+  if (activa) paso = 'Ya tienes una veta de bronce activa. Recoge su carga cuando esté lista; cada carga se recupera en '+duracion+'.';
+  else if (pausada) paso = 'Tu veta de bronce está pausada. '+(libres ? 'Puedes reactivarla en la gestión.' : 'Primero libera 1 cupo pausando otra producción.');
+  else paso = 'Activa una veta desde granja nivel 3: '+(produccionFuenteNodo('bronce') === 'vip' ? 'puedes usar un nodo incluido del VIP.' : 'cuesta 180 Plata; el vale básico no incluye vetas.')+' Su primera carga tarda '+duracion+'.';
+  let h = '<details class="ayuda-menu" id="prod-ayuda-bronce"><summary>Cómo conseguir bronce</summary><p class="sub">'+escapeHtml(paso)+'</p>';
+  if (!activa && !libres) h += '<p class="sub">Capacidad completa. Pausar libera 1 cupo y conserva el nodo, los cultivos y el tiempo pendiente. No libera terreno.</p><button class="ghost sm" type="button" id="prod-bronce-liberar">Ver qué pausar</button>';
+  if (pausada && !activa) h += '<button class="ghost sm" type="button" id="prod-bronce-pausada" data-bronce-clave="'+produccionClave(pausada)+'">Ver mi veta pausada</button>';
+  if (!activa && !pausada) {
+    if (produccionEmplazamiento('bronce') < 0) h += '<p class="sub">No hay un emplazamiento de bronce libre. Revisa si está ocupado para despejarlo en modo edición, o expande para abrir otro. Pausar no crea espacio físico.</p>';
+    h += '<button class="ghost sm" type="button" id="prod-bronce-ver-veta">Ver opción de bronce</button>';
+  }
+  return h+'<p class="sub">Para picar: Minería nivel '+oreNivelReq('bronce')+' (tienes '+nivelOficio('mining')+') y '+escapeHtml(pd.label)+'. Fabrícalo en la Herrería con '+escapeHtml(receta)+'. No necesitas bronce para fabricar ese pico.</p></details>';
+}
 function refreshProduccionGranja() {
   // Reliquias se gestiona en su propio panel, no en el Cobertizo.
   const cont = $("prod-granja"); if (!cont || !G.produccion) return;
-  const abiertos = new Map(Array.from(cont.querySelectorAll("details[id]:not(.ayuda-menu)")).map(d => [d.id, d.open]));
+  const abiertos = new Map(Array.from(cont.querySelectorAll("details[id]:not(.ayuda-menu), #prod-ayuda-bronce")).map(d => [d.id, d.open]));
   const foco = typeof document !== "undefined" && document.activeElement;
+  const ayudaFoco = foco && cont.contains(foco) && (foco.id && /^prod-(bronce-|motivo-bronce$)/.test(foco.id) ? foco.id : foco.matches?.('#prod-ayuda-bronce>summary') ? 'prod-ayuda-bronce' : '');
   const clave = foco && foco.getAttribute && (foco.getAttribute("data-prod-premium")!==null?'golden:'+foco.getAttribute("data-prod-premium"):foco.getAttribute("data-prod-pause") || foco.getAttribute("data-prod-buy"));
   const fuenteFoco = foco && foco.getAttribute && foco.getAttribute('data-prod-source');
   const libres = produccionHayCupo();
@@ -2706,13 +2754,17 @@ function refreshProduccionGranja() {
     ['vip','prod-vip-elegir','Elegir nodos incluidos del VIP','Cada elección consume un regalo VIP. Los vales de expansión se usan primero para los nodos básicos.'],
     ['plata','prod-comprar','Comprar nodos con Plata','Estas compras usan Plata y no consumen vales de expansión.']
   ];
+  h += produccionAyudaBronceHtml(items, libres);
   for (const [fuente,id,titulo,nota] of grupos) {
     const claves = Object.keys(tipos).filter(k => produccionFuenteNodo(k) === fuente);
     if (!claves.length) continue;
     h += '<details id="'+id+'"><summary>'+titulo+'</summary><p class="sub">'+nota+'</p><div class="fbtns">'+claves.map(filaNodo).join('')+'</div></details>';
   }
-  h += '<p class="sub">Cada nodo necesita un cupo y emplazamiento disponible dentro de tu terreno. Su primera carga empieza a recuperarse al activarlo.</p>'+produccionPremiumHtml()+'<details id="prod-gestion"><summary>Gestionar producción activa y pausada</summary><div style="max-height:260px;overflow:auto;padding:4px">';
-  for (const o of items.slice().sort((a, b) => Number(produccionPausada(b)) - Number(produccionPausada(a)))) {
+  const practicaPausa = typeof tutoPracticaPausa === 'function' && tutoPracticaPausa();
+  h += '<p class="sub">Cada nodo necesita un cupo y emplazamiento disponible dentro de tu terreno. Su primera carga empieza a recuperarse al activarlo.</p>'+produccionPremiumHtml()+'<details id="prod-gestion"><summary>Gestionar producción activa y pausada</summary>'+
+    (practicaPausa ? '<p class="sub" id="prod-practica-pausa" role="status">'+escapeHtml(practicaPausa.txt)+'. Los tiempos se detienen mientras está pausada.</p>' : '')+'<div style="max-height:260px;overflow:auto;padding:4px">';
+  const parcelaVacia = o => o.type === 'plot' && !((window.farmScene?.plots?.[o.i] || G.plots[o.i])?.cropKey);
+  for (const o of items.slice().sort((a, b) => Number(produccionPausada(b)) - Number(produccionPausada(a)) || Number(parcelaVacia(b)) - Number(parcelaVacia(a)))) {
     const pausa = produccionPausada(o);
     const propio=produccionPremiumEsNodo(o.i,o.type);
     const bloqueada = pausa && !libres && !propio, motivoId = 'prod-pausa-motivo-' + produccionClave(o).replace(':', '-');
@@ -2721,7 +2773,7 @@ function refreshProduccionGranja() {
       + (bloqueada ? 'disabled aria-describedby="' + motivoId + '" title="Sin cupo libre: pausa otra producción o expande."' : '') + '>' + (pausa ? 'Reactivar' : 'Pausar') + '</button></div>';
   }
   cont.innerHTML = h + '</div></details><hr>';
-  for (const d of cont.querySelectorAll("details[id]:not(.ayuda-menu)")) d.open = abiertos.has(d.id) ? abiertos.get(d.id) : d.id === 'prod-elegir' || d.id === 'prod-vip-elegir' || d.id === 'prod-gestion' && pausadas > 0;
+  for (const d of cont.querySelectorAll("details[id]:not(.ayuda-menu), #prod-ayuda-bronce")) d.open = abiertos.has(d.id) ? abiertos.get(d.id) : d.id === 'prod-elegir' || d.id === 'prod-vip-elegir' || d.id === 'prod-gestion' && pausadas > 0;
   const verPausadas = $("prod-ver-pausadas");
   if (verPausadas) verPausadas.onclick = () => {
     const gestion = $("prod-gestion"); if (!gestion) return;
@@ -2729,6 +2781,9 @@ function refreshProduccionGranja() {
     if (typeof gestion.scrollIntoView === "function") gestion.scrollIntoView({ block: "nearest" });
     const resumen = gestion.querySelector("summary"); if (resumen) resumen.focus({ preventScroll: true });
   };
+  const liberarBronce = $('prod-bronce-liberar'); if (liberarBronce) liberarBronce.onclick = () => produccionVerGestion();
+  const verVetaBronce = $('prod-bronce-ver-veta'); if (verVetaBronce) verVetaBronce.onclick = produccionVerBronce;
+  const vetaPausada = $('prod-bronce-pausada'); if (vetaPausada) vetaPausada.onclick = () => produccionVerGestion(vetaPausada.dataset.bronceClave);
   cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => {
     if (produccionFuenteNodo(b.dataset.prodBuy) !== b.dataset.prodSource) {
       toast('La opción cambió. Revisa los vales, regalos y precios actuales.');refreshProduccionGranja();return false;
@@ -2749,6 +2804,9 @@ function refreshProduccionGranja() {
     const b = Array.from(cont.querySelectorAll("[data-prod-pause], [data-prod-buy], [data-prod-premium]")).find(b => !b.disabled && (b.dataset.prodPause === clave || b.dataset.prodBuy === clave && (!fuenteFoco || b.dataset.prodSource === fuenteFoco) || 'golden:'+b.dataset.prodPremium === clave));
     if (b) { const d = b.closest("details"); if (d) d.open = true; b.focus({ preventScroll: true }); }
     else { const s = cont.querySelector('#prod-elegir>summary,#prod-vip-elegir>summary,#prod-comprar>summary,#prod-gestion>summary') || cont.querySelector("summary"); if (s) s.focus({ preventScroll: true }); }
+  } else if (ayudaFoco) {
+    const f = ayudaFoco === 'prod-ayuda-bronce' ? cont.querySelector('#prod-ayuda-bronce>summary') : $(ayudaFoco);
+    if (f) { if (ayudaFoco === 'prod-motivo-bronce') f.tabIndex = -1; f.focus({preventScroll:true}); }
   }
 }
 var VISITAS_PEDIDO = 0;
@@ -4191,7 +4249,8 @@ function guiaEtiquetaMostrar(destino){
   // «Ver» señala el control; no promete construir, cocinar o recoger al pulsar esta guía.
   if(destino&&GF.scene&&GF.scene!=='farm')return 'Ver mapa';
   if(destino?.panel==='ov-cobertizo'&&destino.ui==='#prod-elegir>summary')return 'Elegir nodo';
-  if(destino?.panel==='ov-cobertizo'&&destino.ui==='#prod-gestion>summary')return 'Ver producción';
+  if(destino?.panel==='ov-cobertizo'&&destino.ui?.replace(/\s/g,'')==='#prod-gestion>summary')return 'Ver producción';
+  if(destino?.practicaPausa)return 'Ver parcela';
   if(destino?.panel==='ov-cocina'){
     if(destino.ui==='#ck-recoger')return 'Ver plato listo';
     if(destino.ui==='#ck-cola')return 'Ver olla';
@@ -4408,7 +4467,7 @@ function tutoSync(force) {
   const sub = (st && !st.brujula && typeof tutoSub === "function") ? tutoSub() : null;
   /* 19/9: y el texto de la brújula también, que es lo que cambia cuando el jugador cobra un plano o
      compra la expansión — sin esto la barra se quedaría con la sugerencia vieja hasta el próximo F5 */
-  const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done + ":" + (sub ? sub.txt : "") + ":" + (st && st.brujula ? st.txt : "")) : "-";
+  const sig = G.tuto ? (G.tuto.step + ":" + (st && st.res ? tutoTiene(st) : (G.tuto.n || 0)) + ":" + !!G.tuto.done + ":" + (sub ? sub.txt : "") + ":" + (st ? [st.id,st.ui,st.txt].join('|') : "")) : "-";
   if (!force && sig === _tutoSig) { tutoHighlight(); return; }   // 13/8: el resaltado se re-aplica aunque el paso no cambie (los paneles se redibujan y lo pierden)
   _tutoSig = sig;
   tutoRefresh();

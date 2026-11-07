@@ -2862,6 +2862,7 @@ function produccionAlternar(clave) {
   const fuente = item.type === "plot" ? (sc && sc.plots && sc.plots[item.i]) || G.plots[item.i] || {state:"dry"}
     : (sc && sc.objs && sc.objs.find(o => o.i === item.i)) || (G.nodos || {})[produccionNodoKey(item.i)] || {};
   const pausa = G.produccion.pausas[clave], t = nowMs();
+  const practicaAntes = tutoPracticaPausa();
   if (pausa) {
     if (!produccionPremiumEsNodo(item.i,item.type) && !produccionHayCupo()) { toast("Capacidad completa: pausa otra producción o expande."); return false; }
     const copia = {...pausa.estado}, delta = Math.max(0, t - pausa.at);
@@ -2879,6 +2880,7 @@ function produccionAlternar(clave) {
   if (sc && sc.syncPlots) sc.syncPlots();
   if (fuente.spr && fuente.spr.setAlpha) fuente.spr.setAlpha(pausa ? 1 : 0.5);
   if (fuente.sprite && fuente.sprite.setAlpha) fuente.sprite.setAlpha(pausa ? 1 : 0.5);
+  tutoPracticaPausaRegistrar(clave, !!pausa, practicaAntes);
   if (typeof refreshCobertizo === "function") refreshCobertizo();
   if (typeof refreshHud === "function") refreshHud();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -3601,7 +3603,7 @@ function tutoTxt(st) {
    mantenía el boost vivo para siempre). */
 var TUTO_BOOST = 0.12;   // los timers del objetivo corren a ~1/8 del tiempo real
 function tutoBoost(clase) {
-  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  const st = tutoPasoJuego();
   if (!st) return 1;
   const mapa = {
     papa:  ["plant", "harvest", "sell", "buyseed"],   // el arranque entero fluye (silver/plant2 retirados)
@@ -3627,12 +3629,60 @@ var TUTO_VER = 15;   // v15 (22/9): el primer encargo es una entrega de prueba, 
                      // v13 (15/8): paso 0 nuevo — el kit de bienvenida se retira del BAÚL
 function tutoActivo() {
   const st = G.tuto && !G.tuto.done ? TUTO_STEPS[G.tuto.step] : null;
+  const practica = tutoPracticaPausa();
+  if (practica) return practica;
   // Paso contextual sin insertar índices: los tutoriales guardados mantienen su posición.
   if (st && st.id.startsWith("place_") && G.espacioV === 4 && !tutoCabePlano(st.id.slice(6))) {
     const e=expansionSiguiente();
     if(e) return {id:"espacio_inicial",n:1,txt:"Necesitas espacio para el plano: cultiva y reúne los materiales de la expansión " + e.n + " (nivel " + e.nivel + "). Comprala en Mercado → Adornos y espera a que termine la obra.",target:"market",panel:"ov-market",ui:"#exp-comprar"};
   }
   return st;
+}
+// Lección adicional sin insertar índices ni cambiar la versión de tutorial guardada.
+// Consultarla no modifica la partida: sólo una pausa/reactivación manual exitosa la registra.
+function tutoPracticaPausa() {
+  if (!G.tuto || G.tuto.done || !G.produccion) return null;
+  const paso = TUTO_STEPS[G.tuto.step], marca = G.tuto.pausaPractica;
+  if (!paso || marca && marca.fase === "hecho") return null;
+  if (marca && marca.fase === "reactivar" && /^p:\d+$/.test(marca.clave || "")) {
+    const item = produccionItems().find(o => produccionClave(o) === marca.clave);
+    if (item && produccionPausada(item)) {
+      const libre = produccionItems().filter(o => !produccionPausada(o) && !produccionPremiumEsNodo(o.i,o.type)).length < produccionCapacidad();
+      return {id:"produccion_reactivar",n:1,practicaPausa:true,clave:marca.clave,panel:"ov-cobertizo",
+        ui:libre?'[data-prod-pause="'+marca.clave+'"]':"#prod-gestion > summary",
+        txt:libre?"Liberaste 1 cupo sin perder la parcela. Ahora reactiva la Parcela "+(item.i+1)+" en Menú ☰ → Cobertizo"
+          :"Para reactivar la Parcela "+(item.i+1)+", pausa otra producción en Menú ☰ → Cobertizo: no hay cupo libre"};
+    }
+  }
+  if (paso.id !== "sell") return null;
+  const sc = typeof window !== "undefined" && window.farmScene;
+  const item = produccionItems().find(o => {
+    if (o.type !== "plot" || produccionPausada(o)) return false;
+    const p = sc && sc.plots && sc.plots[o.i] || G.plots[o.i];
+    return !p || p.state === "dry" && !p.cropKey;
+  });
+  if (!item) return null; // Si volvió a plantar, la guía principal sigue disponible sin exigir una pausa.
+  const clave = produccionClave(item);
+  return {id:"produccion_pausar",n:1,practicaPausa:true,clave,panel:"ov-cobertizo",ui:'[data-prod-pause="'+clave+'"]',
+    txt:"Abre el Menú ☰ → Cobertizo y pausa la Parcela "+(item.i+1)+" vacía para liberar 1 cupo"};
+}
+function tutoPracticaPausaRegistrar(clave, reactivada, antes) {
+  if (!G.tuto) return;
+  const marca = G.tuto.pausaPractica;
+  if (reactivada && marca && marca.fase === "reactivar" && marca.clave === clave) {
+    G.tuto.pausaPractica = {fase:"hecho"};
+    log("Ya sabes pausar y reactivar. Conservas nodos y cultivos; sus tiempos se detienen durante la pausa. Si necesitas bronce con la capacidad llena, pausa otra producción para liberar 1 cupo.","good");
+    toast("¡Parcela reactivada! Puedes liberar cupo para bronce pausando otra producción.");
+  } else if (!reactivada && antes && antes.id === "produccion_pausar" && antes.clave === clave) {
+    G.tuto.pausaPractica = {fase:"reactivar",clave};
+  } else return;
+  if (typeof tutoRefresh === "function") tutoRefresh();
+}
+// La mini lección sólo cambia la guía visible. Las acciones, cantidades y ayudas del
+// recorrido original siguen perteneciendo a su paso guardado, incluso si actúa fuera de orden.
+function tutoPasoJuego() {
+  const st = tutoActivo();
+  return st && st.practicaPausa ? TUTO_STEPS[G.tuto.step] : st;
 }
 function tutoCabePlano(tipo) {
   if ((G.built && G.built[tipo]) || (G.obras && G.obras[tipo])) return true;
@@ -3902,7 +3952,7 @@ function tutoTerminar() {
 }
 function tutoAutoSkip() {
   for (let i = 0; i < TUTO_STEPS.length + 2; i++) {
-    const st = tutoActivo(); if (!st) return;
+    const st = tutoPasoJuego(); if (!st) return;
     if (!tutoHecho(st)) return;
     G.tuto.step++; G.tuto.n = 0;
     if (G.tuto.step >= TUTO_STEPS.length) { G.tuto.done = true; tutoTerminar(); return; }
@@ -3911,12 +3961,12 @@ function tutoAutoSkip() {
 // paso de RECURSO: se cumple solo cuando tenés la cantidad que pide la receta siguiente
 function tutoCheckRes() {
   tutoSyncEstadoCosecha();
-  const st = tutoActivo();
+  const st = tutoPasoJuego();
   if (!st || !st.res) return;
   if (tutoTiene(st) >= tutoNeed(st)) tutoDone(st);
 }
 function tutoEvent(tipo) {
-  const st = tutoActivo(); if (!st || st.res) return;
+  const st = tutoPasoJuego(); if (!st || st.res) return;
   const acepta = st.id === tipo;
   if (!acepta) return;
   G.tuto.n = (G.tuto.n || 0) + 1;
@@ -4540,7 +4590,7 @@ function incCupoHoy() {
 function incActiva() { return G.incursion || null; }
 function incFalta() { const i = incActiva(); return i ? Math.max(0, i.endAt - nowMs()) : 0; }
 function incursionDisponiblePorTutorial(zona = "zn1") {
-  const st = typeof tutoActivo === "function" ? tutoActivo() : null;
+  const st = tutoPasoJuego();
   return !!(zona === "zn1" && st && st.id === "incursion" && !G.incursionTutorialUsada && !incActiva() && statGet("incursion") === 0);
 }
 function incSalir(zona) {
@@ -7836,7 +7886,7 @@ function rollLoot(def) {
 }
 var TUTO_PITY = 4;              // muertes hasta que el botín del paso cae garantizado
 function tutoPity(def, out) {
-  const st = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  const st = tutoPasoJuego();
   if (!st || !st.res || !def || !def.loot || !def.loot[st.res]) return;   // solo en un paso de "traé X"
   if (typeof tutoTiene === "function" && tutoTiene(st) >= tutoNeed(st)) return;   // ya lo tiene: nada que compensar
   G.tuto = G.tuto || {};
@@ -8604,7 +8654,7 @@ function ventaMinGolden(res) {
   return lo;
 }
 function sellItem(res) {
-  const paso = (typeof tutoActivo === "function") ? tutoActivo() : null;
+  const paso = tutoPasoJuego();
   if (paso && paso.id === "sell") marketCur = "plata";   // el arranque enseña la moneda del bucle, no la premium
   if(marketCur!=='plata'){toast('La venta paga Plata. Usa el Banco para cambiar por Golden.');return;}
   const inp = $("mq-"+res); let q = Math.floor(parseFloat(inp && inp.value) || 0);
