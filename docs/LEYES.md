@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Dos ruletas tras vista previa aprobada — 06/11/2026
+
+Dirección autoriza implementar y publicar «hazlo» tras revisar la demo. Jackpot: bote inicial único de 10 Golden, ticket de 1, reparto 80% bote/20% reserva y probabilidad fija de 0,2%; paga completo y sólo abre otro bote con reserva suficiente. Objetos: 3 gratis + 2 pagos de 100/200 Plata por día UTC, máximo 5, con probabilidades y cantidades de la vista aprobada. Sorteo criptográfico y transacción en servidor, CAS, precio confirmado, recibos permanentes y cancelación de operaciones inciertas. Los premios no se pierden por bolsa llena o arma duplicada. Se conservan partidas, compras, herramientas, equipamiento y sistemas pausados; no activa retiros, canje ni modifica el estudio económico. Ver RULETAS-20261106.md.
+
 ## Lista de jugadores sobre la Tienda — 06/11/2026
 
 Dirección autoriza corregir y publicar la lista de conectados. Sale del contexto del HUD para aparecer sobre la Tienda y debajo de las ventanas; ajusta ancho, alto y posición al viewport, conservando scroll, cierre y foco. Mantiene nombres públicos, contador, cuentas únicas y servicio de presencia. Sin cambios de economía, jugadores ni guardado. Ver LISTA-JUGADORES-VISIBLE-20261106.md.

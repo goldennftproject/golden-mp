@@ -194,6 +194,9 @@ async function visitaConsultar(accion,destino){
 let RECUPERANDO_GUARDADO=false;
 async function recuperarGuardadoServidor(){
  const uid=UID;if(RECUPERANDO_GUARDADO||!sb||!uid||!CARGA_OK||SOLO_LOCAL||!SAVE_CONFLICTOS.has(uid))return false;
+ if(typeof ruletasTieneReciboPendiente==='function'&&ruletasTieneReciboPendiente(uid)){
+  try{await ruletasConsultar();toast('Giro comprobado y guardado sincronizado.');return true;}catch(e){toast(e?.message||'No se pudo comprobar el giro; se conserva el bloqueo.');return false;}
+ }
  RECUPERANDO_GUARDADO=true;const desbloquear=mercadoBloquearPantalla('Recuperando el guardado del servidor…');
  try{
    if(MERCADO_EN_CURSO)await MERCADO_EN_CURSO;if(SAVE_EN_CURSO)await SAVE_EN_CURSO;
@@ -1447,7 +1450,9 @@ async function loadFarm() {
         hydrate(data.data);
         window.NICK = data.name ? String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/,"") || data.name : null;
         CARGA_OK = true;
-        copiaGuardar(snapshot()); mercadoLimpiarPendiente(uid);
+        copiaGuardar(snapshot());
+        if(typeof ruletasTieneReciboPendiente==='function'&&ruletasTieneReciboPendiente(uid))SAVE_CONFLICTOS.add(uid);
+        else mercadoLimpiarPendiente(uid);
         lastSavedKey = snapKey();
         setTimeout(() => { if (typeof torneoPodioCheck === "function") torneoPodioCheck(); },4000);
         setTimeout(()=>{if(UID===uid)usdtConsultar(true);},0);

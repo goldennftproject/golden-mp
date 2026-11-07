@@ -4372,6 +4372,15 @@ function mkSacar(kind, key, n) {
   return true;
 }
 function mkPoner(kind, key, n, payload) {
+  if(kind==='pick'){
+    const def=Object.prototype.hasOwnProperty.call(PICK_DEF,key)?PICK_DEF[key]:null;
+    if(!def||key==='wood'||!Number.isSafeInteger(n)||n<=0)return false;
+    const anterior=G.picks,usos=Number(anterior?.dur?.[key]||0),cantidad=n*def.dur;
+    if(!Number.isSafeInteger(usos)||usos<0||!Number.isSafeInteger(cantidad)||usos+cantidad>99*def.dur)return false;
+    G.picks={...(anterior||{}),owned:{...(anterior?.owned||{}),[key]:true},dur:{...(anterior?.dur||{}),[key]:usos+cantidad}};
+    if(canonicalStacks().length>invSlots()){if(anterior===undefined)delete G.picks;else G.picks=anterior;return false;}
+    return true;
+  }
   if (kind === "armor") {
     if (n !== 1 || !armorPieza(key) || (G.armor || {})[key] || !payload || !Number.isFinite(payload.dur) || payload.dur < 0 || payload.dur > ARMOR_DUR_MAX) return false;
     G.armor = G.armor || {}; G.armorDur = G.armorDur || {}; G.armorOff = G.armorOff || {};
@@ -4408,7 +4417,7 @@ function mkPendCobrar() {
   const quedan = []; let dados = 0;
   for (const p of G.mkPend) { if (mkPoner(p.kind, p.item, p.qty, p.payload)) dados++; else quedan.push(p); }
   G.mkPend = quedan;
-  if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s) del Comercio entre jugadores.", "good"); toast("+" + dados + " entrega(s)"); }
+  if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s).", "good"); toast("+" + dados + " entrega(s)"); }
   else toast("Sigue sin entrar — libera espacio en la bolsa");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshP2P === "function" && isOpen("ov-p2p")) refreshP2P();
