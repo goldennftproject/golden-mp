@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Varias armas por forja y comercio — 08/11/2026
+
+Dirección autoriza forjar y comprar varias espadas iguales, probar y publicar. Forjar otra mantiene recetas, Plata, Combate y enfriamiento; el servidor confirma coste, XP y entrega con recibo/CAS. Cada copia conserva durabilidad, mejoras y runas, ocupa una casilla y no sustituye la pieza anterior ni suma atributos con otras. El comercio permite armas repetidas con su transacción y ficha existentes; las armaduras mantienen su regla previa. Se conserva todo el progreso y los sistemas pausados, sin compensaciones automáticas. Ver ARMAS-MULTIPLES-20261108.md.
+
 ## Entregas de armas y requisitos del Establo — 08/11/2026
 
 Dirección pide solucionar el rechazo con bolsa 15/35 y el reporte de compra de Alpaca. Las armas repetidas de entregas confirmadas se conservan como copias independientes que ocupan casillas, sin sustituir el arma actual; su cambio se confirma en servidor con CAS e idempotencia. La bolsa y las entregas muestran nombres y motivos reales. El Establo muestra y aplica los mismos requisitos existentes de alimento, Cultivo, Ganadería, cupo y Plata antes de confirmar. Se preservan fichas, runas, precios, premios, cuentas, progreso y sistemas pausados; sin restauraciones ni compensaciones nuevas. Ver ENTREGAS-ARMAS-Y-ESTABLO-20261108.md.

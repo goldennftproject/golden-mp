@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 11;       // 08/11: copias de armas independientes y cambio autoritativo sin perder fichas.
+const VERSION = 12;       // 08/11: forja repetida autoritativa, con entregas, coste y enfriamiento confirmados.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -647,6 +647,53 @@ function repuestoOperacion(prev,p,op){
   data.weaponSparesOps=[...ops,{op,id:p.id}].slice(-20);
   return {data};
 }
+// La forja comparte los mismos veinte modelos y costes vigentes de ARM_DEF.
+const FORJA_RAREZAS=['madera','piedra','bronce','oro','diamante'];
+const FORJA_MATERIALES=['madera','piedra','barra_bronce','barra_oro','diamante'];
+const FORJA_DUR=[80,100,240,270,300],FORJA_CD=[3,5,8,12,18],FORJA_LVL=[1,4,8,12,16];
+const FORJA_TIPOS={espada:{primQ:5,secQ:3,plata:[10,25,60,140,320]},hacha:{primQ:6,secQ:3,plata:[10,30,70,170,385]},mazo:{primQ:8,secQ:4,plata:[15,40,90,210,480]},arco:{primQ:4,secQ:2,plata:[10,20,50,110,255]}};
+function forjaModelo(id){
+  if(typeof id!=='string')return null;
+  const m=/^(espada|hacha|mazo|arco)_(madera|piedra|bronce|oro|diamante)$/.exec(id);if(!m)return null;
+  const td=FORJA_TIPOS[m[1]],ri=FORJA_RAREZAS.indexOf(m[2]),cost={[FORJA_MATERIALES[ri]]:td.primQ};
+  if(ri>0)cost[FORJA_MATERIALES[ri-1]]=(cost[FORJA_MATERIALES[ri-1]]||0)+td.secQ;
+  return {cost,plata:td.plata[ri],dur:FORJA_DUR[ri],cd:FORJA_CD[ri],lvl:FORJA_LVL[ri],xp:10+ri*4};
+}
+function forjaCombateNivel(xp){
+  let lvl=1,acc=0;while(lvl<150){const need=Math.round(21*Math.pow(lvl,1.70));if(num(xp)<acc+need)break;acc+=need;lvl++;}return lvl;
+}
+function forjaOperacion(prev,p,ahora,op){
+  const w=forjaModelo(p?.id);if(!w)return {error:'Modelo de arma inválido'};
+  const ops=prev.forjaOps===undefined?[]:prev.forjaOps;if(!Array.isArray(ops))return {error:'Recibos de forja inválidos'};
+  const recibo=ops.find(r=>r?.op===op);
+  if(recibo)return recibo.id===p.id?{data:JSON.parse(JSON.stringify(prev)),repetido:true}:{error:'Recibo reutilizado para otra arma'};
+  if(!prev.armasUnlocked&&p.id!=='espada_madera')return {error:'Desbloquea la sección de Armas primero'};
+  if(forjaCombateNivel(prev.combatXp)<w.lvl)return {error:'Esta arma requiere Combate '+w.lvl};
+  if(num(prev.armCd?.[p.id])>ahora)return {error:'La forja se enfría; espera antes de forjar otra copia'};
+  for(const [k,q] of Object.entries(w.cost))if(num(prev.res?.[k])<q)return {error:'Te faltan materiales para forjar'};
+  if(num(prev.plata)<w.plata)return {error:'Te falta Plata para forjar'};
+  // Fabricar cuesta cero energía en el catálogo actual; se conserva el mismo tick.
+  const data=JSON.parse(JSON.stringify(prev));
+  for(const [k,q] of Object.entries(w.cost))data.res[k]-=q;
+  data.plata-=w.plata;data.energiaGranja={v:1,actual:energiaServidor(prev,ahora),at:ahora};
+  data.skills={...(repuestoMapa(data.skills)?data.skills:{})};data.skills.crafting=num(data.skills.crafting)+w.xp;
+  data.armCd={...(repuestoMapa(data.armCd)?data.armCd:{}),[p.id]:ahora+w.cd*1000};
+  data.mkPend=[...(Array.isArray(data.mkPend)?data.mkPend:[]),{kind:'arm',item:p.id,qty:1,payload:{dur:w.dur}}];
+  data.forjaOps=[...ops,{op,id:p.id}].slice(-20);
+  return {data};
+}
+function protegerForja(antes,next,errores){
+  const ops=antes.forjaOps===undefined?[]:antes.forjaOps;
+  if(next.forjaOps===undefined&&antes.forjaOps!==undefined)next.forjaOps=JSON.parse(JSON.stringify(ops));
+  const nuevas=next.forjaOps===undefined?[]:next.forjaOps;
+  if(!Array.isArray(ops)||!Array.isArray(nuevas)||!mismoJSON(ops,nuevas))errores.push('Los recibos de forja sólo se escriben en el servidor');
+  // Antes del primer recibo se admite el cliente histórico. Tras forjar en servidor,
+  // nadie puede reiniciar sus relojes mediante un guardado. Prestigio los conserva.
+  if(Array.isArray(ops)&&ops.length){
+    if(next.armCd===undefined&&antes.armCd!==undefined)next.armCd=JSON.parse(JSON.stringify(antes.armCd));
+    if(!mismoJSON(antes.armCd,next.armCd))errores.push('El enfriamiento de forja sólo cambia en el servidor');
+  }
+}
 function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   picosUnificarEstado(next);
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
@@ -677,6 +724,7 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   if(!Array.isArray(next.mkPend))errores.push('Entregas pendientes inválidas');
   else for(const entrega of next.mkPend){const i=pendientes.findIndex((p,i)=>!usados.has(i)&&mismoJSON(p,entrega));if(i<0){errores.push('Las entregas pendientes sólo se crean en el servidor');break;}usados.add(i);}
   protegerRepuestos(antes,next,pendientes,usados,errores);
+  protegerForja(antes,next,errores);
   const ritmo=next.farmXpRitmo,ancla=antes.farmXpRitmo||{v:1,tala:Math.max(0,num(antes.skills?.tala)),mining:Math.max(0,num(antes.skills?.mining))};
   if((ritmo||antes.farmXpRitmo)&&(!ritmo||!mismoJSON(ritmo,ancla)))errores.push('No se puede modificar el ancla de XP aceptada');
 
@@ -1069,7 +1117,7 @@ Deno.serve(async (req) => {
       return json(data);
     }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
-    if(body?.repuesto || body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
+    if(body?.forja || body?.repuesto || body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
       const a=body.artefacto;
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
@@ -1077,7 +1125,7 @@ Deno.serve(async (req) => {
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
-      const r=body.repuesto ? repuestoOperacion(row.data,body.repuesto,body.op) : body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      const r=body.forja ? forjaOperacion(row.data,body.forja,ahora,body.op) : body.repuesto ? repuestoOperacion(row.data,body.repuesto,body.op) : body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
       if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,premio:r.premio,repetido:true,granja:granjaVisitada});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);

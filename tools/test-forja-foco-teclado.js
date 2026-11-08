@@ -13,7 +13,7 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
 console.log("\nLA HERRERÍA GUARDA FOCO SÓLO PARA ENTER/ESPACIO\n");
 {
   const tramo = UI.slice(ini, fin);
-  ok("los refrescos de un lote se posponen hasta la última fila", /FORGE_FOCO_EN_ACCION/.test(tramo) && /finally \{ FORGE_FOCO_EN_ACCION = false; forgeReponerFocoPc/.test(tramo));
+  ok("los refrescos de un lote se posponen hasta la última fila", /FORGE_FOCO_EN_ACCION/.test(tramo) && /FORGE_FOCO_EN_ACCION = false; forgeReponerFocoPc/.test(tramo));
   ok("móvil no recibe foco programático", /window\.innerWidth <= 640/.test(tramo));
 }
 

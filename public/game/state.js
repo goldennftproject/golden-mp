@@ -14,7 +14,7 @@ const G = {
   treesOpen: [0], rocksOpen: [0],  // economía gradual: los otros nodos se eligen, no nacen todos activos
   produccion: { v: 1, base: 5, nodos: {}, pausas: {}, vale: 0, valesV: 2, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] },
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
-  weaponSpares: {}, weaponSparesOps: [], weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
+  weaponSpares: {}, weaponSparesOps: [], forjaOps: [], weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamFullAt: 0, stamLastAt: 0, stamRec: null, // regeneración continua con reloj persistente
   stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, logrosV2:null, logrosAcciones:{}, infraestructura:null, farmXpEdificios:0, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
@@ -6976,7 +6976,6 @@ var ARMA_ENTRADA = "espada_madera";
 function craftWeapon(id) {
   const w = ARM_DEF[id]; if (!w) return;
   if (!G.armasUnlocked && id !== ARMA_ENTRADA) { toast("Desbloquea la sección de Armas primero"); return; }
-  if (G.weapons[id]) { toast("Ya tienes " + w.label); return; }
   /* 9/9 — ACÁ HABÍA PUESTO UNA PUERTA DE NIVEL DE OFICIO, Y LA SAQUÉ DESPUÉS DE MEDIRLA.
      La idea era buena y el hueco es real (ver oficiosSinContenido): Espada, Hacha, Mazo y Arco
      suben de nivel sin abrir nada. Atarles las cinco rarezas parecía la forma obvia de darles
@@ -7016,9 +7015,11 @@ function craftWeapon(id) {
   if (armCdLeft(id) > 0) { toast("La forja se enfría — " + fmtSecs(Math.ceil(armCdLeft(id) / 1000))); return; }
   if (!canAfford(w.cost)) { toast("Te faltan materiales"); return; }
   if (G.plata < w.plata) { toast("Te falta plata"); return; }
+  if(typeof sb !== 'undefined' && sb && typeof forjaSolicitar === 'function') return forjaSolicitar(id);
   if (!energiaGranjaPagar('craft')) return;
+  // Local simulations use the same independent-copy delivery as confirmed server forging.
+  if (!mkPoner('arm', id, 1, { dur: w.dur }, { pendiente:true })) { toast("Falta espacio en la bolsa para otra arma"); return; }
   payCost(w.cost); G.plata -= w.plata;
-  G.weapons[id] = { dur: w.dur };
   G.armCd = G.armCd || {}; G.armCd[id] = nowMs() + w.cd * 1000;
   if (!G.gear.arma) G.gear.arma = id;
   addXp("crafting", 10 + w.ri * 4);

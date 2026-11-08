@@ -56,7 +56,7 @@ begin
    if m.seller=p_uid or m.sold_to is not null then raise exception 'La publicación ya no está disponible'; end if;
    if p_detalle->>'price' is null or (p_detalle->>'price')::numeric<>m.price then raise exception 'El precio cambió; revisá la publicación'; end if;
    if coalesce((d->>'plata')::numeric,0)<m.price then raise exception 'Te falta Plata'; end if;
-   if m.kind in('arm','armor') and (coalesce(d->case when m.kind='arm' then 'weapons' else 'armor' end,'{}')?m.item or exists(select 1 from jsonb_array_elements(pend) p where p->>'kind'=m.kind and p->>'item'=m.item)) then raise exception 'Ya tenés esa pieza'; end if;
+   if m.kind='armor' and (coalesce(d->'armor','{}')?m.item or exists(select 1 from jsonb_array_elements(pend) p where p->>'kind'='armor' and p->>'item'=m.item)) then raise exception 'Ya tenés esa pieza'; end if;
    update public.market set sold_to=p_uid,sold_at=clock_timestamp() where id=m.id;
    d:=jsonb_set(d,'{plata}',to_jsonb((d->>'plata')::numeric-m.price));
   elsif a='retirar' then

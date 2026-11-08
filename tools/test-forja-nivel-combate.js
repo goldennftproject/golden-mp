@@ -105,11 +105,34 @@ check("un arma que ya pertenece al jugador se puede equipar y reparar aunque fal
   const equip = ctx.document.querySelector('[data-eqarm="' + id + '"]');
   assert(equip && !equip.disabled);
   assert(labelFor(equip).textContent.includes("Combate Nv. 16"));
-  assert.equal(button(id), null, "no ofrece duplicar un arma propia");
+  assert.equal(button(id).disabled, true, "otra copia conserva el requisito de Combate");
+  assert.equal(button(id).textContent, "Forjar otra");
   assert.equal(ctx.document.querySelector('[data-rarm="' + id + '"]').disabled, false);
   equip.click();
   assert.equal(G.gear.arma, id);
   assert.equal(ctx.document.querySelector('[data-eqarm="' + id + '"]'), null);
+});
+
+check("las veinte armas propias ofrecen otra copia con el mismo coste sin reemplazar la ficha", () => {
+  for (const id of X.ARM_ORDER) {
+    const w = X.ARM_DEF[id]; reset(w.lvl);
+    G.weapons[id] = { dur: w.dur - 1, plus: 3, sockets: ['fuego'] };
+    const before = JSON.stringify(G.weapons[id]); render();
+    const forge = button(id), equip = ctx.document.querySelector('[data-eqarm="' + id + '"]');
+    assert(forge && !forge.disabled, id + ': Forjar otra disponible');
+    assert.equal(forge.textContent, 'Forjar otra'); assert(equip && !equip.disabled);
+    assert(forge.closest('.forge-row').textContent.includes('Coste por arma:'), id + ': coste por copia visible');
+    assert.equal(JSON.stringify(G.weapons[id]), before);
+  }
+});
+
+check("la espada propia de entrada conserva el enfriamiento aunque la sección siga cerrada", () => {
+  reset(1); G.armasUnlocked = false; G.weapons[X.ARMA_ENTRADA] = { dur: 9 }; render();
+  assert.equal(button(X.ARMA_ENTRADA).textContent, 'Forjar otra');
+  G.armCd[X.ARMA_ENTRADA] = ctx.nowMs() + 60000; render();
+  assert.equal(button(X.ARMA_ENTRADA), null);
+  const equip = ctx.document.querySelector('[data-eqarm="' + X.ARMA_ENTRADA + '"]');
+  assert(equip && !equip.disabled); assert(equip.closest('.fbtns').querySelector('button').disabled);
 });
 
 dom.window.close();

@@ -244,6 +244,10 @@ async function economiaSolicitar(detalle) {
       if(error || !data || !data.ok || UID!==uid){SAVE_CONFLICTOS.add(uid);toast('Resultado sin confirmar. Recarga con conexión para consultar el servidor.');if(detalle.usdt&&UID===uid)usdtMensaje('Resultado sin confirmar. Recarga para sincronizar y comprueba la misma transacción; no repitas el pago.');return;}
       if(!data.data||typeof data.updated_at!=='string')throw Error('Operación sin guardado confirmado');
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot(),true);mercadoLimpiarPendiente(uid);
+      if(detalle.forja){
+        toast('Arma forjada; entrega confirmada','success','fabricar');
+        return data;
+      }
       if(detalle.repuesto){
         toast('Repuesto equipado; tus otras armas se conservan en la bolsa','success','equipo');
         return data;
@@ -257,6 +261,28 @@ async function economiaSolicitar(detalle) {
     }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid){toast('No se pudo completar la operación; comprueba la conexión');if(detalle.usdt)usdtMensaje('No se pudo completar la comprobación. El pago no debe repetirse; revisa el guardado y consulta el mismo hash.');}}
   })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(detalle.produccionPremium&&isOpen('ov-cobertizo'))refreshCobertizo();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();usdtProgramarPendiente();});
   return MERCADO_EN_CURSO;
+}
+async function forjaSolicitar(id){
+  const uid=UID,w=ARM_DEF[id],teniaArma=!!(G.weapons&&G.weapons[id]);if(!w)return;
+  const antes=skillInfo(G.skills.crafting,'crafting').lvl;
+  const resultado=await economiaSolicitar({forja:{id}});
+  if(!resultado||UID!==uid)return resultado;
+  if(mkPendCount())mkPendCobrar();
+  // The server already charged the recipe and awarded XP; these are only feedback hooks.
+  if(!teniaArma&&!G.gear.arma&&G.weapons[id])G.gear.arma=id;
+  const despues=skillInfo(G.skills.crafting,'crafting').lvl;
+  if(despues>antes){
+    log(SKILL_NAME.crafting+' subió a nivel '+despues+'.','good');
+    if(window.celebrate)celebrate({title:'¡NIVEL '+despues+'!'+(despues-antes>1?' (+'+(despues-antes)+')':''),sub:SKILL_NAME.crafting});
+    else{toast(SKILL_NAME.crafting+' nivel '+despues);if(window.sfx)sfx('level');}
+    if(typeof oficiosSync==='function')oficiosSync(false);
+  }
+  if(typeof passEvent==='function')passEvent('crafting');
+  log('Forjaste '+w.label+'.','gold');forgeWork();
+  if(typeof tutoEvent==='function')tutoEvent('craftarm');
+  refreshForge();if(typeof syncSlots==='function')syncSlots();if(isOpen('ov-inv'))refreshInv();if(isOpen('ov-skills'))refreshSkills();refreshHud();
+  if(typeof saveFarm==='function')await saveFarm(true);
+  return resultado;
 }
 async function mercadoP2POperar(detalle){
   const resultado=await economiaSolicitar({p2p:detalle});
@@ -662,7 +688,7 @@ function snapshot() {
     modoPelea: G.modoPelea,   /* 8/9: perseguir o parado — es preferencia, no estado del viaje */
     incursionTutorialUsada: G.incursionTutorialUsada === true,
     stats: G.stats, statsBase: G.statsBase, actividadGranja:G.actividadGranja, actividadAcciones:G.actividadAcciones, chestCap: G.chestCap, edif2: G.edif2, cosmeticos: G.cosmeticos, animals: G.animals, armor: G.armor, armorDur: G.armorDur, armorEq: G.armorEq, ofrendaPts: G.ofrendaPts, ofrendaLog: G.ofrendaLog, nodoUsos: G.nodoUsos, cosEq: G.cosEq, incursion: G.incursion, incDia: G.incDia, zonaCdHasta: G.zonaCdHasta, zonaViaje: G.zonaViaje, lombDia: G.lombDia, decos: G.decos, decoBolsa: G.decoBolsa, godHand: G.godHand, zonasVistas: G.zonasVistas, visto: nowMs(), dummyTrain: G.dummyTrain, swordOwned: G.swordOwned, bowOwned: G.bowOwned, swordWoodOwned: G.swordWoodOwned, gear: G.gear,
-    armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons, weaponSpares: G.weaponSpares || {}, weaponSparesOps: G.weaponSparesOps || [],
+    armasUnlocked: G.armasUnlocked, editVisto: G.editVisto, treesOpen: G.treesOpen, rocksOpen: G.rocksOpen, firstCropDone: G.firstCropDone, weapons: G.weapons, weaponSpares: G.weaponSpares || {}, weaponSparesOps: G.weaponSparesOps || [], forjaOps: G.forjaOps || [],
     dishes: G.dishes, cooking: G.cooking, horno: G.horno, chests: G.chests, dummyUsedAt: G.dummyUsedAt,   // 24/8: la cola del Horno
     armCd: G.armCd, mkPend: G.mkPend,
     layoutPlots: G.layoutPlots, layoutPond: G.layoutPond, ghInv: G.ghInv,
@@ -695,6 +721,8 @@ function hydrate(d) {
   const repuestos=weaponSparesCopiar(d&&d.weaponSpares);
   if(d&&d.weaponSparesOps!=null&&!Array.isArray(d.weaponSparesOps))throw new Error('Recibos de repuestos inválidos; conserva la copia y vuelve a sincronizar.');
   const repuestosOps=JSON.parse(JSON.stringify(d&&d.weaponSparesOps||[]));
+  if(d&&d.forjaOps!=null&&!Array.isArray(d.forjaOps))throw new Error('Recibos de forja inválidos; conserva la copia y vuelve a sincronizar.');
+  const forjaOps=JSON.parse(JSON.stringify(d&&d.forjaOps||[]));
   // Una hidratación elegida cambia de contexto: jamás reanudar después una petición anterior.
   // Sus callers de recuperación/carga conservan la copia local antes de reemplazarla.
   if(UID)SAVE_PENDIENTES.delete(UID);
@@ -966,7 +994,7 @@ function hydrate(d) {
   G.swordWoodOwned = d.swordWoodOwned === true;
   // ARMAS NUEVAS (doc 2/8) + migración de las viejas: madera→espada_madera, "de Hierro"(bronce)→espada_bronce, arco→arco_madera
   G.weapons = (d.weapons && typeof d.weapons === "object") ? d.weapons : {};
-  G.weaponSpares=repuestos;G.weaponSparesOps=repuestosOps;
+  G.weaponSpares=repuestos;G.weaponSparesOps=repuestosOps;G.forjaOps=forjaOps;
   if (!d.weapons) {
     if (d.swordWoodOwned) G.weapons.espada_madera = { dur: 40 };
     if (d.swordOwned) G.weapons.espada_bronce = { dur: 60 };
@@ -1712,6 +1740,7 @@ function guardadoMismoContenido(peticion,fila) {
   if(esperada.farmXpEdificios===undefined&&remota.farmXpEdificios===0)esperada.farmXpEdificios=0;
   if(esperada.weaponSpares===undefined&&remota.weaponSpares&&typeof remota.weaponSpares==='object'&&!Array.isArray(remota.weaponSpares)&&Object.keys(remota.weaponSpares).length===0)esperada.weaponSpares={};
   if(esperada.weaponSparesOps===undefined&&Array.isArray(remota.weaponSparesOps)&&remota.weaponSparesOps.length===0)esperada.weaponSparesOps=[];
+  if(esperada.forjaOps===undefined&&Array.isArray(remota.forjaOps)&&remota.forjaOps.length===0)esperada.forjaOps=[];
   const energia=esperada.energiaGranja,aceptada=remota.energiaGranja;
   const base=Date.parse(peticion.body.base),commit=Date.parse(fila.updated_at);
   if(energia&&aceptada&&Number.isFinite(energia.at)&&Number.isFinite(energia.actual)&&Number.isFinite(commit)){

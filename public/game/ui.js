@@ -3691,10 +3691,18 @@ function forgeReponerFocoPc(card) {
 }
 function forgeAccionConFocoPc(ev, selectores, accion) {
   forgeGuardarFocoPc(ev, selectores);
-  if (!FORGE_FOCO_PC) { accion(); return; }
+  if (!FORGE_FOCO_PC) return accion();
   FORGE_FOCO_EN_ACCION = true;
-  try { accion(); }
-  finally { FORGE_FOCO_EN_ACCION = false; forgeReponerFocoPc($("ov-forge")); }
+  let resultado, pendiente = false;
+  try {
+    resultado = accion();
+    if (resultado && typeof resultado.finally === "function") {
+      pendiente = true;
+      return resultado.finally(() => { FORGE_FOCO_EN_ACCION = false; forgeReponerFocoPc($("ov-forge")); });
+    }
+    return resultado;
+  }
+  finally { if (!pendiente) { FORGE_FOCO_EN_ACCION = false; forgeReponerFocoPc($("ov-forge")); } }
 }
 function faltaReceta(cost,plata){
  const f=Object.keys(cost||{}).filter(k=>(G.res[k]||0)<cost[k]).map(k=>fmtDec(cost[k]-(G.res[k]||0))+' '+(RES_LABEL[k]||k));
@@ -3796,11 +3804,11 @@ function refreshForge() {
     if (we) {
       const own = G.weapons && G.weapons[ARMA_ENTRADA], eqNow = G.gear.arma === ARMA_ENTRADA;
       const cs = Object.keys(we.cost).map(k => resIc(k) + " " + we.cost[k]).join(" · ") + " · " + coinIc("plata") + " " + we.plata;
-      const puede = nivelArmaOk(we) && canAfford(we.cost) && G.plata >= we.plata;
-      const btn = own
-        ? (eqNow ? '<button class="ghost sm" disabled>Equipada</button>'
-                 : '<button class="ghost sm" data-eqarm="' + ARMA_ENTRADA + '">Equipar</button>')
-        : '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-carm="' + ARMA_ENTRADA + '">Forjar</button>';
+      const puede = nivelArmaOk(we) && canAfford(we.cost) && G.plata >= we.plata, cdL = armCdLeft(ARMA_ENTRADA);
+      const btn = (cdL > 0 ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(cdL / 1000)) + '</button>'
+        : '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-carm="' + ARMA_ENTRADA + '">' + (own ? 'Forjar otra' : 'Forjar') + '</button>')
+        + (own ? (eqNow ? '<button class="ghost sm" disabled>Equipada</button>'
+                 : '<button class="ghost sm" data-eqarm="' + ARMA_ENTRADA + '">Equipar</button>') : '');
       armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(we.sprite || ARM_TIPO_DEF[we.tipo].sprite) + '"></div>' +
         '<div class="finfo"><div class="fnm">' + we.label + '</div>' +
         '<div class="fds">Tu primera arma — con ella se entra a la Zona Negra</div>' +
@@ -3825,16 +3833,12 @@ function refreshForge() {
         const cs = Object.keys(w.cost).map(k => resIc(k) + " " + w.cost[k]).join(" · ") + " · " + coinIc("plata") + " " + w.plata;
         const eqNow = G.gear.arma === id;
         const plusTag = (typeof armPlus === "function" && armPlus(id)) ? " +" + armPlus(id) : "";
-        let btns = "";
-        if (own) {
-          btns = eqNow ? '<button class="ghost sm" disabled>Equipada</button>' : '<button class="ghost sm" data-eqarm="' + id + '">Equipar</button>';
-        } else {
-          const cdL = armCdLeft(id);
-          btns = cdL > 0 ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(cdL / 1000)) + '</button>'
-            : '<button class="green sm" ' + (nivelArmaOk(w) && canAfford(w.cost) && G.plata >= w.plata ? "" : "disabled")
-              + (nivelArmaOk(w) ? '' : ' title="Requiere Combate nivel ' + w.lvl + '; tienes ' + nivelCombate + '"') + ' data-carm="' + id + '">Forjar</button>';
-        }
-        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(w.sprite || td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + (w.buffVal ? td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] : 'sin bono — en madera es un palo') + '</div>' + nivelArmaHtml(w) + '<div class="fds">' + (own ? 'Reparación en la pestaña Reparar' : 'Coste: ' + cs) + '</div></div><div class="fbtns">' + btns + '</div></div>';
+        const cdL = armCdLeft(id);
+        let btns = cdL > 0 ? '<button class="green sm" disabled>' + fmtSecs(Math.ceil(cdL / 1000)) + '</button>'
+          : '<button class="green sm" ' + (nivelArmaOk(w) && canAfford(w.cost) && G.plata >= w.plata ? "" : "disabled")
+            + (nivelArmaOk(w) ? '' : ' title="Requiere Combate nivel ' + w.lvl + '; tienes ' + nivelCombate + '"') + ' data-carm="' + id + '">' + (own ? 'Forjar otra' : 'Forjar') + '</button>';
+        if (own) btns += eqNow ? '<button class="ghost sm" disabled>Equipada</button>' : '<button class="ghost sm" data-eqarm="' + id + '">Equipar</button>';
+        armas += '<div class="forge-row ' + (eqNow ? "eq" : "") + '"><div class="fic"><img src="' + GF.spr(w.sprite || td.sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + plusTag + (own ? ' <span class="tag">' + G.weapons[id].dur + '/' + w.dur + '</span>' : '') + '</div><div class="fds">Daño ' + w.min + '–' + w.max + ' · ' + (w.buffVal ? td.buffLabel + ' ' + w.buffVal + (tipo === "arco" ? "/s" : "%") + ' ' + BUFF_DESC[tipo] : 'sin bono — en madera es un palo') + '</div>' + nivelArmaHtml(w) + '<div class="fds">' + 'Coste por arma: ' + cs + (own ? ' · Cada copia conserva sus usos y mejoras. Reparación en Reparar.' : '') + '</div></div><div class="fbtns">' + btns + '</div></div>';
       });
     });
   }
@@ -7514,7 +7518,7 @@ async function refreshP2P(actualizar=false) {
   // entregas pendientes (compras/retiros que no entraron en la bolsa): nunca se pierden
   if (typeof mkPendCount === "function" && mkPendCount() > 0) {
     h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">Entregas pendientes (' + mkPendCount() + ')</div>' +
-      '<div class="fds">Compras, retiros o premios por recoger.</div>' +
+      '<div class="fds">Compras, retiros, forjas o premios por recoger.</div>' +
       (typeof mkPendDetalle === 'function' ? (G.mkPend || []).map(p => '<div class="fds">' + escapeHtml(mkPendDetalle(p)) + '</div>').join('') : '') + '</div>' +
       '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
   }
