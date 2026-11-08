@@ -149,14 +149,15 @@ class BootScene extends Phaser.Scene {
     L.push(["animal_feed_marker", P + "animal_feed_marker.png?v=1"]);
     L.push(["pet_gallina", P + "pet_gallina.png"]);   // mascota "Pinta" del cofre de login (10/8)
     for (let i = 0; i < 8; i++) L.push(["pet_gallina_walk_" + i, P + "pet_gallina_walk_" + i + ".png?v=1"]);
+    L.push(["player_grave", P + "player_grave.png?v=1"]);
     return L;
   }
 
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
-    this.load.image("__atlas", "assets/atlas.png?v=56");
-    this.load.json("__atlasmap", "assets/atlas.json?v=56");
+    this.load.image("__atlas", "assets/atlas.png?v=57");
+    this.load.json("__atlasmap", "assets/atlas.json?v=57");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
     // segunda vuelta de descarga en cada carga del juego.

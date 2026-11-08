@@ -55,6 +55,7 @@ async function miReferido(codigo) {
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;
 const SAVE_BASES = new Map(), SAVE_CONFLICTOS = new Set();
 const SAVE_CONFIRMACIONES = new Map();
+const SAVE_GRAVE_REBASES = new Map();
 const SAVE_PENDIENTES = new Map(); // Petición ordinaria exacta hasta un ACK probado; separada por cuenta.
 let SAVE_EN_CURSO = null, SAVE_OTRA = false;
 var RECARGA_GUARDANDO = false; // Sólo difiere el latido pasivo del HUD mientras se confirma la recarga.
@@ -203,6 +204,17 @@ async function visitaConsultar(accion,destino){
 let RECUPERANDO_GUARDADO=false;
 async function recuperarGuardadoServidor(){
  const uid=UID;if(RECUPERANDO_GUARDADO||!sb||!uid||!CARGA_OK||SOLO_LOCAL||!SAVE_CONFLICTOS.has(uid))return false;
+ if(window.GoldenGraves&&GoldenGraves.hasPending(uid)){
+  try{const scene=window.GAME?.scene?.getScene?.('forest');await GoldenGraves.reconcile(scene);toast('Operación comprobada; progreso conservado.');return true;}
+  catch(e){toast(e?.message||'No se pudo comprobar; se conserva el recibo.');return false;}
+ }
+ // Una petición protegida puede verificarse otra vez, pero nunca se sustituye su avance local.
+ if(G._graveProtocol===1&&SAVE_PENDIENTES.has(uid)){
+  SAVE_CONFLICTOS.delete(uid);
+  try{await saveFarm(true);return !SAVE_CONFLICTOS.has(uid)&&!SAVE_PENDIENTES.has(uid);}
+  catch{SAVE_CONFLICTOS.add(uid);return false;}
+ }
+
  if(typeof ruletasTieneReciboPendiente==='function'&&ruletasTieneReciboPendiente(uid)){
   try{await ruletasConsultar();toast('Giro comprobado y guardado sincronizado.');return true;}catch(e){toast(e?.message||'No se pudo comprobar el giro; se conserva el bloqueo.');return false;}
  }
@@ -656,6 +668,7 @@ async function initSave() {
       session = data.session;
     }
     if (!session || !session.user) return false;
+    if(UID!==session.user.id&&window.GoldenGraves)GoldenGraves.reset();
     UID = session.user.id;
     SESION_ACTUAL = session;
     marcarCuenta(session);   // nuestra copia de la llave, para la próxima vez
@@ -691,6 +704,7 @@ function snapshot() {
     recientes: G.recientes,   /* 8/9: los tres últimos usados sobreviven al F5 */
     conts: G.conts,           /* 8/9 t: los contenedores que tenés guardados en la granja */
     cont: G.cont,             /* 8/9 t: el árbol que llevás puesto — se pierde al morir, no al recargar */
+    _graveProtocol: G._graveProtocol === 1 ? 1 : undefined,
     tumba: G.tumba,           /* 8/9: tu cuerpo en la zona — sus 10 min son de reloj real */
     modoPelea: G.modoPelea,   /* 8/9: perseguir o parado — es preferencia, no estado del viaje */
     incursionTutorialUsada: G.incursionTutorialUsada === true,
@@ -711,7 +725,7 @@ function snapshot() {
     torneoPodioCobrado: G.torneoPodioCobrado, tituloPesca: G.tituloPesca, lombricario: G.lombricario };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
-function snapKey() { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: {...snapshot(),visto:0,energiaGranja:{...G.energiaGranja,at:0}} }); }
+function snapKey(data=snapshot()) { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: {...data,visto:0,energiaGranja:{...data.energiaGranja,at:0}} }); }
 
 /* ============ CARGAR UNA PARTIDA, EN TRES FASES (20/8) ==============================
    Dirección: "cada cosa que tocamos rompe otras".
@@ -959,10 +973,13 @@ function hydrate(d) {
   /* 8/9 — la tumba viaja con su hora de vencimiento: los diez minutos corren con el juego
      cerrado, así que volver al día siguiente encuentra el cuerpo deshecho, como debe ser. */
   G.modoPelea = (d.modoPelea === "parado") ? "parado" : "perseguir";   // 8/9
-  G.tumba = (d.tumba && Array.isArray(d.tumba.items) && d.tumba.hasta > 0)
-    ? { zona: d.tumba.zona || null, x: +d.tumba.x || 0, y: +d.tumba.y || 0,
-        hasta: +d.tumba.hasta || 0, items: d.tumba.items.filter(e => e && e.k && e.n > 0).slice(0, 20) }
-    : null;
+  G._graveProtocol=d._graveProtocol===1?1:undefined;
+  G.tumba=(d.tumba&&Array.isArray(d.tumba.items)&&d.tumba.hasta>0)?{
+    ...JSON.parse(JSON.stringify(d.tumba)),zona:d.tumba.zona||null,x:+d.tumba.x||0,y:+d.tumba.y||0,hasta:+d.tumba.hasta||0,
+    items:d.tumba.items.filter(e=>e&&e.k&&e.n>0).map(e=>JSON.parse(JSON.stringify(e))),
+    ...(typeof d.tumba.id==='string'?{id:d.tumba.id}:{}),
+    ...(Number.isSafeInteger(d.tumba.revision)?{revision:d.tumba.revision}: {})
+  }:null;
   G.armor = (d.armor && typeof d.armor === "object") ? d.armor : {};
   /* 14/9 — la durabilidad llegó después que las armaduras. Un guardado viejo no la trae, y
      armorDur() lee « sin entrada = entera », así que el que ya tenía su set no se lo encuentra
@@ -1465,6 +1482,7 @@ async function loadFarm() {
       if ([401,403,404].includes(e.status) || ["user_not_found","session_not_found","refresh_token_not_found"].includes(e.code)) {
         try { await conTope(sb.auth.signOut({scope:"local"}), 3000, "cerrar acceso inválido"); } catch (_) {}
         try { localStorage.removeItem(GF_CUENTA_KEY); } catch (_) {}
+        if(window.GoldenGraves)GoldenGraves.reset();
         UID = null; SESION_ACTUAL = null; CUENTA_PREVIA = false; PUERTA_EMAIL = true;
         window.NICK = null;
         estadoDeCero();
@@ -1501,7 +1519,7 @@ async function loadFarm() {
         window.NICK = data.name ? String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/,"") || data.name : null;
         CARGA_OK = true;
         copiaGuardar(snapshot(),true);
-        if(typeof ruletasTieneReciboPendiente==='function'&&ruletasTieneReciboPendiente(uid))SAVE_CONFLICTOS.add(uid);
+        if((typeof ruletasTieneReciboPendiente==='function'&&ruletasTieneReciboPendiente(uid))||(window.GoldenGraves&&GoldenGraves.hasPending(uid)))SAVE_CONFLICTOS.add(uid);
         else mercadoLimpiarPendiente(uid);
         lastSavedKey = snapKey();
         setTimeout(() => { if (typeof torneoPodioCheck === "function") torneoPodioCheck(); },4000);
@@ -1767,6 +1785,26 @@ function guardadoMismoContenido(peticion,fila) {
   }
   return JSON.stringify(guardadoHuellaPeticion(remota))===JSON.stringify(guardadoHuellaPeticion(esperada));
 }
+
+function guardadoAplicarCalavera(uid,peticion,proof){
+ if(!window.GoldenGraveRebase||UID!==uid||SAVE_PENDIENTES.get(uid)!==peticion)return null;
+ const current=snapshot();
+ const r=GoldenGraveRebase.prepare({uid,currentUid:UID,liveBase:SAVE_BASES.get(uid),pending:peticion,live:current,proof,now:Date.now(),verifyAcceptedSnapshot:guardadoMismoContenido});
+ if(!r.ok)return null;
+ if((SAVE_GRAVE_REBASES.get(uid)||0)>=3)return null;
+ localStorage.setItem('gf-calavera-ajuste-'+SB_REF+'-'+uid+'-'+Date.now(),JSON.stringify({cuenta:uid,data:current,base:SAVE_BASES.get(uid),pendiente:peticion.body,prueba:proof}));
+ if(UID!==uid||SAVE_PENDIENTES.get(uid)!==peticion)return null;
+ G.tumba=r.grave===null?null:JSON.parse(JSON.stringify(r.grave));
+ SAVE_GRAVE_REBASES.set(uid,(SAVE_GRAVE_REBASES.get(uid)||0)+1);
+ SAVE_BASES.set(uid,r.base);SAVE_OTRA=true;
+ if(window.GoldenGraves&&typeof GoldenGraves.invalidateOwn==='function')GoldenGraves.invalidateOwn(r.grave);
+ if(r.mode==='retryNew'){
+  SAVE_PENDIENTES.delete(uid);copiaGuardar(snapshot());
+  return {retry:true};
+ }
+ return {ack:{ok:true,updated_at:r.base,actividadGranja:proof.currentData.actividadGranja,logrosV2:proof.currentData.logrosV2,incursionTutorialUsada:proof.currentData.incursionTutorialUsada===true}};
+}
+
 async function guardadoReconocerPropio(uid,peticion,versionEsperada=null) {
   if(UID!==uid||SAVE_PENDIENTES.get(uid)!==peticion)return null;
   const {data,error}=await conTope(sb.from('farms').select('data,name,updated_at').eq('user_id',uid).maybeSingle(),15000,'comprobar el mismo guardado');
@@ -1783,6 +1821,7 @@ function saveFarm(force) {
   // guardado válido al terminar la carga (por ejemplo, kitReclamar antes de UID).
   if(!CARGA_OK&&!SOLO_LOCAL){console.warn('saveFarm bloqueado: la granja no se llegó a cargar');return Promise.resolve();}
   const cuentaSolicitud=UID;
+  if(window.GoldenGraves&&GoldenGraves.hasPending(cuentaSolicitud))SAVE_CONFLICTOS.add(cuentaSolicitud);
   if (MERCADO_EN_CURSO) {
     if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
     return MERCADO_EN_CURSO.then(() => UID===cuentaSolicitud?saveFarm(force):undefined);
@@ -1803,6 +1842,7 @@ function saveFarm(force) {
     }
   }
   const cuentaCola=cuentaSolicitud;
+  SAVE_GRAVE_REBASES.set(cuentaCola,0);
   const espera=colaAnterior?colaAnterior.catch(()=>undefined):Promise.resolve();
   const cola = espera.then(async () => {
     if(UID!==cuentaCola||SAVE_EN_CURSO!==cola)return;
@@ -1849,7 +1889,7 @@ async function saveFarmReal(force) {
   if(!sb||!saveUid){avisarSinNube();return;}
   if(!peticion){
     const op=window.crypto&&window.crypto.randomUUID?window.crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
-    const body={jornada:1,name:(typeof nombreLucido==='function'?nombreLucido():(window.NICK||'Granjero')),data:JSON.parse(JSON.stringify(snapshot())),op,...(SAVE_BASES.has(saveUid)?{base:SAVE_BASES.get(saveUid)}:{})};
+    const body={graveProtocol:1,jornada:1,name:(typeof nombreLucido==='function'?nombreLucido():(window.NICK||'Granjero')),data:JSON.parse(JSON.stringify(snapshot())),op,...(SAVE_BASES.has(saveUid)?{base:SAVE_BASES.get(saveUid)}:{})};
     peticion={uid:saveUid,body,key:actualKey};SAVE_PENDIENTES.set(saveUid,peticion);
   }
   const cuerpo=peticion.body,key=peticion.key;
@@ -1862,9 +1902,19 @@ async function saveFarmReal(force) {
       let detalle;
       if(fe?.context?.status===409){
         try{detalle=await fe.context.json();}catch{}
+        if(detalle?.graveProof){
+          const cambio=guardadoAplicarCalavera(saveUid,peticion,detalle.graveProof);
+          if(cambio?.retry)return {confirmado:false,requiereActual:true,rebase:true};
+          if(cambio?.ack){r=cambio.ack;fe=null;}
+        }
         // Dos invocaciones del MISMO UUID pueden competir en CAS tras un timeout.
         // Sólo la fila íntegra de esa petición permite reconocer el ACK propio.
-        if(!detalle?.economia){const propia=await guardadoReconocerPropio(saveUid,peticion);if(propia){r=propia;fe=null;}}
+        if(fe&&!detalle?.economia){const propia=await guardadoReconocerPropio(saveUid,peticion);if(propia){r=propia;fe=null;}}
+      }else if(!fe&&r?.ok&&r.repetido===true&&r.graveProof){
+        const cambio=guardadoAplicarCalavera(saveUid,peticion,r.graveProof);
+        if(cambio?.retry)return {confirmado:false,requiereActual:true,rebase:true};
+        if(cambio?.ack)r=cambio.ack;
+        else fe={context:{status:409,json:async()=>({conflicto:true})}};
       }else if(!fe&&r?.ok&&r.repetido===true){
         const propia=await guardadoReconocerPropio(saveUid,peticion,r.updated_at);
         if(propia)r=propia;

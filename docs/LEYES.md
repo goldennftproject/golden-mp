@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Calaveras compartidas y guía privada — 08/11/2026
+
+Dirección aprueba la ilustración, el nombre y plazo al pasar el cursor, clic izquierdo para recoger por cualquier jugador y flecha sólo para el dueño. Derrota y entrega se confirman en servidor con recibo, CAS y conservación del equipo; el guardado incorpora sólo cambios de tumba demostrados sin reemplazar avances posteriores. Conserva plazos, reglas y partidas, tumbas privadas históricas, sistemas pausados y tareas canceladas. Ver CALAVERAS-COMPARTIDAS-20261108.md.
+
+
 ## Cierre automático del sorteo de referidos — 08/11/2026
 
 Dirección pide terminar la participación al llegar el plazo anunciado. La base de datos corta al finalizar las 23:59 de Uruguay/Argentina del 8/11, conserva los hechos previos y sella la copia final automáticamente. Mantiene las bases, máximo cinco boletos y los referidos permanentes; no sortea ni paga premios. La vista muestra estado y boletos propios sin sondeos. Se preservan cuentas, partidas y tareas canceladas. Ver CIERRE-AUTOMATICO-REFERIDOS-20261108.md.

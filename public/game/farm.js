@@ -419,7 +419,24 @@ class FarmScene extends Phaser.Scene {
     }
     this.rebuildCollisions();
     GF.scene = "farm";
-    window.farmScene = this;   // para refrescar la flecha del tutorial desde la UI
+    window.farmScene = this;
+    if (window.GoldenGraveGuide) {
+      GoldenGraveGuide.attach(this, {
+        getOwnGrave: () => window.GoldenGraves && GoldenGraves.usesServer() ? GoldenGraves.own() : typeof tumba==='function' ? tumba() : null,
+        isMine: grave => grave.mine === true || !grave.id
+      });
+      const graveGuideTick = () => GoldenGraveGuide.update(this);
+      this.events.on("postupdate", graveGuideTick);
+      this.events.once("shutdown", () => {
+        this.events.off("postupdate", graveGuideTick);
+        GoldenGraveGuide.clear(this);
+        if(window.GoldenGraves)GoldenGraves.clear(this);
+      });
+    }
+    if (window.GoldenGraves && GoldenGraves.usesServer()) {
+      GoldenGraves.load(this).catch(() => {});
+    }
+   // para refrescar la flecha del tutorial desde la UI
     this.ultimaAccion = nowMs();   // el reloj del "jugador perdido" arranca al entrar a la escena
     if (window.syncPlacingUI) syncPlacingUI(false);   // 13/8: la escena arranca sin nada "en la mano"
     this.time.delayedCall(400, () => { if (typeof tutoSync === "function") tutoSync(true); else this.updateTutoArrow(); });   // cartel + flecha del tutorial

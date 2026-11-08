@@ -6,8 +6,8 @@
 <title>Golden Farm</title>
 <!-- El atlas es lo más pesado del juego (386 KB con 329 sprites). Se empieza a bajar YA,
      en paralelo con el login y la carga de la partida, en vez de esperar a que Phaser arranque. -->
-<link rel="preload" as="image" href="assets/atlas.png?v=56">
-<link rel="preload" as="fetch" href="assets/atlas.json?v=56" crossorigin>
+<link rel="preload" as="image" href="assets/atlas.png?v=57">
+<link rel="preload" as="fetch" href="assets/atlas.json?v=57" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://ulspkdaljeuleqqdokfk.supabase.co" crossorigin>
 <style>
@@ -291,6 +291,7 @@
   #toast.show{opacity:1}
   #prompt{position:fixed;left:50%;bottom:156px;transform:translateX(-50%);z-index:7;background:rgba(20,25,15,.82);color:#ffe9a8;padding:1px 10px;border-radius:9px;font-size:13px;font-weight:700;opacity:0;transition:opacity .15s;pointer-events:none;border:1px solid #6a5a2a}
   #prompt.show{opacity:1}
+  #prompt.cuerpo-ayuda{max-width:calc(100vw - 36px);box-sizing:border-box;text-align:center;white-space:normal;line-height:1.4;padding:7px 12px}
 
   .ov{position:fixed;inset:0;z-index:var(--ov-frente,10);display:none;pointer-events:none}
   /* El foco dinámico es una mejora de escritorio. En móvil se conserva el apilado compacto
@@ -2571,8 +2572,8 @@
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
     const GF_BUILD = "20260928-163402";
-    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/save.js","game/ui.js","game/ruletas-api.js","game/ruletas.js","game/news.js","game/novedades.js","game/lighting.js","game/visual-v2.js","game/world-lights.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/concept-finish.js","game/adaptive-layout.js","game/market-window.js","game/boot.js",
-                   "game/farm.js","game/reference-world.js","game/reference-camera-ui.js","game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
+    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/graves-api.js", "game/grave-rebase.js", "game/save.js","game/ui.js","game/ruletas-api.js","game/ruletas.js","game/news.js","game/novedades.js","game/lighting.js","game/visual-v2.js","game/world-lights.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/concept-finish.js","game/adaptive-layout.js","game/market-window.js","game/boot.js",
+                   "game/farm.js","game/reference-world.js","game/reference-camera-ui.js","game/grave-guide.js", "game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
        entrar »). El cargador de abajo pide un archivo, espera a que llegue, pide el siguiente:
        doce idas y vueltas al servidor PUESTAS UNA DETRÁS DE OTRA antes de que corra la primera

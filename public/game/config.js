@@ -1,5 +1,6 @@
 /* Golden Farm · configuración compartida (layout en TILES, alineado a la grilla) */
 window.GF = window.GF || {};
+GF.GRAVES_SHARED_ENABLED = true; // La disponibilidad real la confirma el servidor.
 GF.FASE_JUEGO = 'alpha'; // Cambiar sólo en el lanzamiento aprobado, junto al estado del servidor.
 GF.ALTAR_ACTIVO = false; // Pausa de alfa reversible: no borrar edificios, planos ni materiales guardados.
 GF.esAltarOculto = tipo => !GF.ALTAR_ACTIVO && ["altar", "ofrendas", "ov-altar", "ov-ofrendas"].includes(tipo);

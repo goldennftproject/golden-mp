@@ -173,7 +173,7 @@ console.log("\nAL CAMBIAR DE ESCENA, LA VENTANITA NO PUEDE QUEDAR FLOTANDO");
      es el único límite que cubre muerte, portal y regreso a la granja sin tres parches sueltos. */
   const FOREST = fs.readFileSync(path.join(RAIZ, "public", "game", "forest.js"), "utf8");
   const inicio = FOREST.indexOf("create() {");
-  const trozo = FOREST.slice(inicio, inicio + 1200);
+  const trozo = FOREST.slice(inicio, FOREST.indexOf('// 10/8', inicio));
   ok("al apagarse el Bosque se cierra el panel fijo del cadáver",
     /events\.once\(["']shutdown["'],\s*\(\)\s*=>\s*\{[\s\S]*?this\.cerrarCuerpo\(\)/.test(trozo));
   ok("y se apaga el pulso de Combate que pertenece a la Zona",

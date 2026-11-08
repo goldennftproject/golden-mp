@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 12;       // 08/11: forja repetida autoritativa, con entregas, coste y enfriamiento confirmados.
+const VERSION = 13;       // 08/11: forja repetida autoritativa, con entregas, coste y enfriamiento confirmados.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -1043,6 +1043,28 @@ function esDeCero(n) {
   for (const k in (n.res || {})) if (num(n.res[k]) > 0) return false;
   return true;
 }
+
+/* La tumba compartida sólo nace o se recoge en una operación confirmada. El guardado habitual
+   conserva su identidad; no admite que una pestaña antigua cobre o rehaga su copia. */
+function graveCanonical(value) {
+ if(Array.isArray(value))return value.map(graveCanonical);
+ if(!value||typeof value!=='object')return value;
+ return Object.fromEntries(Object.keys(value).sort().map(k=>[k,graveCanonical(value[k])]));
+}
+function graveOrdinaryGuard(prev,next,protocol,ahora) {
+ if(prev?._graveProtocol!==1){
+  delete next._graveProtocol;
+  if(next.tumba?.id)return 'La calavera no pertenece a esta versión confirmada de la partida';
+  return null;
+ }
+ next._graveProtocol=1;
+ if(protocol!==1)return 'Actualizá el juego para conservar la calavera compartida; tu avance local sigue protegido';
+ const before=prev.tumba??null,after=next.tumba??null;
+ if(JSON.stringify(graveCanonical(before))===JSON.stringify(graveCanonical(after)))return null;
+ if(before&&Number.isFinite(before.hasta)&&before.hasta<=ahora&&after===null)return null;
+ return 'La calavera cambió en el servidor. Conservá tu avance y comprobá el guardado';
+}
+
 /* === FIN REGLAS === */
 
 const CORS = {
@@ -1161,10 +1183,27 @@ Deno.serve(async (req) => {
     if (readError) return json({ error: "No se pudo leer la granja anterior. No se escribió nada." }, 503);
     // Una pestaña anterior al reinicio global no puede resucitar su progreso.
     if (Number(prevRow?.data?.reinicio || 0) > Number(data.reinicio || 0)) return json({ error: "La cuenta se reinició. Recargá para comenzar de cero.", conflicto: true }, 409);
+    if (prevRow?.data?._graveProtocol === 1 && body?.graveProtocol !== 1) return json({error:"Actualizá el juego para guardar esta partida con calaveras compartidas. Se conserva tu copia local.",conflicto:true,actualizar:true},409);
     const op = body?.op;
     if (op != null && (typeof op !== "string" || !/^[a-zA-Z0-9._-]{8,100}$/.test(op))) return json({ error: "Identificador de operación inválido" }, 400);
-    if (op && prevRow?.data?._saveOp === op) return json({ ok: true, repetido: true, updated_at: prevRow.updated_at, actividadGranja:prevRow.data.actividadGranja,logrosV2:prevRow.data.logrosV2,incursionTutorialUsada:prevRow.data.incursionTutorialUsada===true });
-    if (Object.prototype.hasOwnProperty.call(body, "base") && body.base !== (prevRow?.updated_at ?? null)) return json({ error: "Otra sesión guardó una versión diferente", conflicto: true }, 409);
+    if (op && prevRow?.data?._saveOp === op) {
+      let graveProof=null;
+      if(prevRow?.data?._graveProtocol===1&&body?.graveProtocol===1&&typeof body.base==='string'&&body.base!==prevRow.updated_at){
+        const proof=await admin.rpc('gf_graves_save_proof',{p_uid:uid,p_base:body.base,p_op:op,p_tumba:data.tumba??null});
+        if(!proof.error&&proof.data?.ok===true)graveProof=proof.data;
+      }
+      return json({ok:true,repetido:true,updated_at:prevRow.updated_at,actividadGranja:prevRow.data.actividadGranja,logrosV2:prevRow.data.logrosV2,incursionTutorialUsada:prevRow.data.incursionTutorialUsada===true,...(graveProof?{graveProof}: {})});
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "base") && body.base !== (prevRow?.updated_at ?? null)) {
+      let graveProof=null;
+      if(prevRow?.data?._graveProtocol===1&&body?.graveProtocol===1&&typeof body.base==='string'&&typeof op==='string'){
+        const proof=await admin.rpc('gf_graves_save_proof',{p_uid:uid,p_base:body.base,p_op:op,p_tumba:data.tumba??null});
+        if(!proof.error&&proof.data?.ok===true)graveProof=proof.data;
+      }
+      return json({error:"Otra sesión guardó una versión diferente",conflicto:true,...(graveProof?{graveProof}: {})},409);
+    }
+    const graveNo=graveOrdinaryGuard(prevRow?.data??null,data,body?.graveProtocol,Date.now());
+    if(graveNo)return json({error:graveNo,conflicto:true,calavera:true},409);
     const ahora = new Date(Math.max(Date.now(), prevRow?.updated_at ? new Date(prevRow.updated_at).getTime() + 1 : 0));
     const elapsedSeg = prevRow?.updated_at ? (ahora.getTime() - new Date(prevRow.updated_at).getTime()) / 1000 : 0;
 

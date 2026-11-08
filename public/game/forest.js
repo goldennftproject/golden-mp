@@ -14,11 +14,13 @@ class ForestScene extends Phaser.Scene {
        ofreciendo una acción de esta Zona. Limpiarlos en este límite cubre muerte, portal entre
        zonas y vuelta a la granja de una vez. */
     this.events.once("shutdown", () => {
+      if (window.GoldenGraveGuide) GoldenGraveGuide.clear(this);
+      if (window.GoldenGraves && typeof GoldenGraves.clear === "function") GoldenGraves.clear(this);
       this.cerrarCuerpo();
       const cbar = document.getElementById("cbar");
       if (cbar) cbar.classList.remove("fight");
       const prompt = document.getElementById("prompt");
-      if (prompt) prompt.classList.remove("show");
+      if (prompt) { prompt.classList.remove("show"); prompt.classList.remove("cuerpo-ayuda"); }
     });
 
     // 10/8: la Zona Negra dejó de ser un solo bosque. El mapa que se arma sale de ZONA_DEF:
@@ -115,6 +117,7 @@ class ForestScene extends Phaser.Scene {
     this.updateAura();   // aura cosmética, si la tenés encendida (después de limpiar el cacheado)
     this._nav = null; this.holdLast = null; this.holdPend = null; this.pathStuck = 0; this.leaving = false;
     this.target = null; this.nextAuto = 0; this.path = null; this.hold = null; this.autoOn = false;
+    this._graveDeathPending = false; this._graveDeathPromise = null; this._graveDeathFinishedOp = null;
     // el botín tirado sobrevive mientras dure la sesión: si volvés al Bosque, sigue ahí
     /* 8/9 — CADA COSA EN SU MAPA. Ni los drops ni los cuerpos guardaban a qué zona pertenecían,
        así que al entrar a cualquier otra se redibujaban TODOS y se podían recoger allí: el botín
@@ -126,7 +129,7 @@ class ForestScene extends Phaser.Scene {
     GF.forestDrops.filter(g => g.zona === this.zonaKey).forEach(g => { g.spr = this.dropSprite(g); });
     /* los CUERPOS también sobreviven al ir y volver: los que aún guardan botín (o nadie revisó)
        se redibujan con sus brillos; los revisados y vacíos no vuelven — ya se estaban yendo */
-    GF.forestCuerpos = (GF.forestCuerpos || []).filter(c => !c.revisado || c.drops.length);
+    GF.forestCuerpos = (GF.forestCuerpos || []).filter(c => !c.graveId && (!c.revisado || c.drops.length));
     GF.forestCuerpos.forEach(c => { if (c.zona == null) c.zona = this.zonaKey; });
     GF.forestCuerpos.filter(c => c.zona === this.zonaKey).forEach(c => this.dibujarCuerpo(c));
     /* 8/9: TU cuerpo, si moriste acá y todavía estás a tiempo. Se re-crea como un cuerpo más
@@ -134,13 +137,16 @@ class ForestScene extends Phaser.Scene {
        pero su contenido vive en G.tumba, porque los diez minutos son de reloj real y tienen que
        correr con el juego cerrado. */
     this.montarTumba();
+    if (window.GoldenGraveGuide) GoldenGraveGuide.attach(this, window.GoldenGraves ? {getOwnGrave: () => GoldenGraves.own(), isMine: t => t.mine === true} : undefined);
     this.input.mouse.disableContextMenu();
 
     // clic izquierdo: ir hacia el monstruo (y fijarlo) o moverse · clic DERECHO: atacar (detalles 338)
     this.input.on("pointerdown", (pt) => {
       if (clicDeInterfaz(pt)) return;   // 24/8: un clic sobre un panel no manda al granjero a caminar (ver config.js)
       if (GF.uiOpen) return;
-      const wx = pt.worldX, wy = pt.worldY;
+      const camera = this.cameras && this.cameras.main;
+      const point = camera && typeof camera.getWorldPoint === "function" ? camera.getWorldPoint(pt.x, pt.y) : { x: pt.worldX, y: pt.worldY };
+      const wx = point.x, wy = point.y;
       let hit = null, bd = 1e9;
       for (const m of this.monsters) { if (m.dead) continue; const b = m.spr.getBounds(); if (Phaser.Geom.Rectangle.Contains(b, wx, wy)) { const d = Math.hypot(m.cx - wx, m.by - wy); if (d < bd) { bd = d; hit = m; } } }
       /* clic DERECHO: fijar y AUTO-atacar (detalles viernes). Y 31/8: derecho al VACÍO suelta el
@@ -208,6 +214,64 @@ class ForestScene extends Phaser.Scene {
     toast("La Zona Negra — cuanto más profundo, más peligro");
     log("Entraste a la Zona Negra. Los monstruos fuertes viven a la derecha.", "info");
     refreshHud();
+    if (window.GoldenGraves) {
+      if (GoldenGraves.usesServer()) this.actualizarCalaverasCompartidas().catch(() => {});
+      if (GoldenGraves.hasPending()) GoldenGraves.showRecovery(this);
+      else if (G.hp <= 0 && this.derrotaCompartidaActiva()) this.iniciarMuerteCompartida().catch(() => {});
+    }
+  }
+
+  actualizarCalaverasCompartidas() {
+    if (!window.GoldenGraves || !GoldenGraves.usesServer()) return Promise.resolve(false);
+    return GoldenGraves.load(this).catch(e => { toast(e.message || "No se pudieron actualizar las calaveras"); throw e; });
+  }
+  tumbaDelServidor() {
+    const t = typeof tumba === "function" ? tumba() : null;
+    return G._graveProtocol === 1 || !!(t && t.id);
+  }
+  derrotaCompartidaActiva() {
+    return G._graveProtocol === 1 || !!(window.GoldenGraves && typeof GoldenGraves.deathUsesServer === "function" && GoldenGraves.deathUsesServer());
+  }
+  iniciarMuerteCompartida(reintentar = false) {
+    if (this._graveDeathPromise) return this._graveDeathPromise;
+    if (!this.derrotaCompartidaActiva() || this.leaving) return Promise.resolve(null);
+    if (!window.GoldenGraves) { this._graveDeathPending = true; if (this.scene && typeof this.scene.pause === "function") this.scene.pause(); toast("El regreso requiere conexión al servidor. Recargá para comprobarlo."); return Promise.resolve(null); }
+    if (GoldenGraves.hasPending() || (this._graveDeathPending && !reintentar)) {
+      this._graveDeathPending = true; GoldenGraves.showRecovery(this); return Promise.resolve(null);
+    }
+    this._graveDeathPending = true;
+    const uidMuerte = typeof UID !== "undefined" ? UID : null;
+    this.autoOn = false; this.hold = null; this.moveTarget = null; this.path = null;
+    if (this.target) this.clearTarget();
+    // No se toca armadura, equipo ni tumba aquí. El servidor confirma todo con el mismo UUID.
+    this._graveDeathPromise = GoldenGraves.die(this).then(r => {
+      if (r && !r.cancelado && (typeof UID === "undefined" || UID === uidMuerte)) this.finalizarMuerteCompartida(r);
+      return r;
+    }).catch(e => {
+      if (typeof UID === "undefined" || UID === uidMuerte) GoldenGraves.showRecovery(this, e.message);
+      throw e;
+    }).finally(() => { this._graveDeathPromise = null; });
+    return this._graveDeathPromise;
+  }
+  finalizarMuerteCompartida(r) {
+    if (!r?.ok || r.cancelado || r.receipt?.action !== "morir" || this.leaving || this._graveDeathFinishedOp === r.receipt.op) return false;
+    this._graveDeathFinishedOp = r.receipt.op; this._graveDeathPending = false;
+    if (window.GoldenGraves) GoldenGraves.hideRecovery(this);
+    const summary = r.receipt.summary;
+    if (summary?.armadura?.rotas?.length) log("Tu armadura se rompió al caer: " + summary.armadura.rotas.join(", ") + ".", "bad");
+    else if (summary?.armadura?.gastadas?.length) log("Tu armadura perdió durabilidad al caer.", "bad");
+    const tumbaConfirmada = r.data && r.data.tumba;
+    if (r.receipt.graveId && tumbaConfirmada && tumbaConfirmada.id === r.receipt.graveId && Array.isArray(tumbaConfirmada.items) && tumbaConfirmada.items.length && tumbaConfirmada.hasta > nowMs()) {
+      const segundos = Math.ceil((tumbaConfirmada.hasta - nowMs()) / 1000);
+      const queda = Math.floor(segundos / 60) + ":" + String(segundos % 60).padStart(2, "0");
+      log("Regreso confirmado. Tu calavera sigue donde caíste; te quedan " + queda + " para recuperar las pertenencias que conserva.", "bad");
+      toast("Regreso confirmado — calavera: " + queda);
+    }
+    else if (r.receipt.graveId) { log("Regreso confirmado. Esa calavera ya no está disponible.", "info"); toast("Regreso confirmado — esa calavera ya no está disponible"); }
+    else { log("Te derrotaron en la Zona Negra; regresaste sin pertenencias caídas.", "bad"); toast("Regreso confirmado"); }
+    if (r.receipt.viajeResumen && typeof mostrarResumenZona === "function") mostrarResumenZona(r.receipt.viajeResumen);
+    // Vida, salida del viaje, penalización y depósito ya están guardados en el ACK del servidor.
+    this.leaving = true; irAEscena(this, "farm"); return true;
   }
 
   // Sólo representación: se mantiene la paleta propia de cada zona y no se toca su mapa.
@@ -508,22 +572,12 @@ class ForestScene extends Phaser.Scene {
      perdió es parte del trato. */
   montarTumba() {
     if (typeof tumba !== "function") return;
+    if (this.tumbaDelServidor()) return;
+    // El plazo sigue corriendo dentro de la misma escena, no sólo al volver a entrar.
+    this.actualizarTumbaCuerpos();
     const t = tumba();
     if (!t) return;
     if (t.zona && t.zona !== this.zonaKey) return;          // moriste en otra zona: allá te espera
-    if (!tumbaViva()) {
-      if (t.items && t.items.length) {
-        /* 8/9: se dice QUÉ se deshizo con el cuerpo. Enterarse de que perdiste la mochila es una
-           cosa; enterarse de que perdiste además el casco es otra, y el jugador tiene que poder
-           reconstruir por qué su equipo está incompleto sin adivinarlo. */
-        const eq = t.items.filter(e => e.kind === "gear" || e.kind === "arm" || e.kind === "armorset").length;
-        log("☠️ Tu cuerpo se deshizo: perdiste " + t.items.length + " cosa(s)" +
-            (eq ? ", " + eq + " de ellas equipo que llevabas puesto" : "") + ". Los " + TUMBA_MIN + " minutos se acabaron.", "bad");
-        toast("Tu cuerpo se deshizo — perdiste lo que tenía");
-      }
-      tumbaLimpiar();
-      return;
-    }
     GF.forestCuerpos = GF.forestCuerpos || [];
     /* 8/9 — TU CUERPO ES UNO SOLO, y esto duplicaba objetos. Esta función corre en CADA create()
        de la escena, y empujaba un cuerpo nuevo con una copia entera de G.tumba.items; el filtro
@@ -538,15 +592,72 @@ class ForestScene extends Phaser.Scene {
       if (!c0.mia) return true;
       if (c0.spr) { try { c0.spr.destroy(); } catch (e) {} }
       if (c0.brillo) { try { c0.brillo.destroy(); } catch (e) {} }
+      this.apagarBrillos(c0);
       return false;
     });
     const c = { x: t.x, y: t.y, key: "__tumba", label: "tu cuerpo", sprite: null, zona: this.zonaKey,
-                drops: t.items.slice(), revisado: false, mia: true };
+                drops: t.items.slice(), revisado: false, mia: true, _tumbaHasta: t.hasta,
+                _nombreTumba: typeof NICK === "string" ? NICK.trim().slice(0, 80) : "" };
     this.dibujarCuerpo(c);
     GF.forestCuerpos.push(c);
     this._tumbaCuerpo = c;
     const min = Math.ceil(tumbaQueda() / 60000);
     log("☠️ Tu cuerpo sigue ahí con " + t.items.length + " cosa(s). Te quedan ~" + min + " min para recuperarlo.", "info");
+  }
+  tumbaCoincide(c, t) {
+    return !!(c && c.mia && t && c._tumbaHasta === t.hasta && c.x === t.x && c.y === t.y &&
+      c.zona === (t.zona || this.zonaKey));
+  }
+  retirarCuerpo(c) {
+    const i = (GF.forestCuerpos || []).indexOf(c);
+    if (i >= 0) GF.forestCuerpos.splice(i, 1);
+    if (this._cuerpoAbierto === c) this.cerrarCuerpo();
+    if (this._tumbaCuerpo === c) this._tumbaCuerpo = null;
+    this.apagarBrillos(c);
+    if (c.spr) { try { c.spr.destroy(); } catch (e) {} }
+    c._retirado = true;
+    c.drops = [];
+  }
+  actualizarTumbaCuerpos() {
+    if (typeof tumba !== "function") return;
+    for (const c of (GF.forestCuerpos || []).slice()) if (c.graveId && c.zona === this.zonaKey && c.until <= nowMs()) this.retirarCuerpo(c);
+    if (this.tumbaDelServidor()) {
+      for (const c of (GF.forestCuerpos || []).slice()) if (c.mia && !c.graveId) this.retirarCuerpo(c);
+      return;
+    }
+    const t = tumba();
+    const viva = !!(t && t.items.length && t.hasta > nowMs());
+    for (const c of (GF.forestCuerpos || []).slice()) {
+      // Los reflejos vacíos conservan su despedida de 90 s; los que aún ofrecen botín necesitan
+      // seguir siendo el reflejo de ESTA tumba. Una segunda muerte no da vida al cuerpo anterior.
+      if (!c.graveId && c.mia && (c.drops.length || !c._despedidaProgramada) && (!viva || !this.tumbaCoincide(c, t))) this.retirarCuerpo(c);
+    }
+    if (t && !viva && tumba() === t) {
+      if (t.items.length) {
+        const eq = t.items.filter(e => e.kind === "gear" || e.kind === "arm" || e.kind === "armorset").length;
+        log("☠️ Tu cuerpo se deshizo: perdiste " + t.items.length + " cosa(s)" +
+          (eq ? ", " + eq + " de ellas equipo que llevabas puesto" : "") + ". Los " + TUMBA_MIN + " minutos se acabaron.", "bad");
+        toast("Tu cuerpo se deshizo — perdiste lo que tenía");
+      }
+      tumbaLimpiar();
+    }
+  }
+  validarCuerpo(c) {
+    if (!c || c._retirado || (c.zona != null && c.zona !== this.zonaKey)) return false;
+    // Las tumbas compartidas requieren la confirmación del servidor, nunca una copia local de drops.
+    // Su ruta GoldenGraves.claim se conecta junto con el protocolo de entrega confirmado.
+    if (c.graveId) return false;
+    if (!c.mia) return true;
+    if (this.tumbaDelServidor() || (window.GoldenGraves && GoldenGraves.hasPending())) { toast("Esta calavera requiere comprobar su recibo en el servidor"); return false; }
+    const t = typeof tumba === "function" ? tumba() : null;
+    if (this.tumbaCoincide(c, t) && t.items.length && t.hasta > nowMs()) {
+      c.drops = t.items.slice(); // el estado manda, nunca una copia anterior del panel.
+      return true;
+    }
+    this.actualizarTumbaCuerpos();
+    if (!c._despedidaProgramada) this.retirarCuerpo(c);
+    toast("Tu cuerpo ya no tiene pertenencias disponibles para recuperar");
+    return false;
   }
   crearCuerpo(m, drops) {
     GF.forestCuerpos = GF.forestCuerpos || [];
@@ -564,9 +675,28 @@ class ForestScene extends Phaser.Scene {
         .setTint(0x8f8f8f).setAlpha(0.95).setDepth(c.y - 1);
       c.spr.setScale(Math.min(1, 36 / Math.max(c.spr.width, 1)));
     } else {
-      c.spr = this.add.text(c.x, c.y, "💀", { fontSize: "15px" }).setOrigin(0.5, 1).setDepth(c.y - 1);
+      c.spr = this.dibujarCalavera(c);
     }
     if (!c.revisado) this.brillosDe(c);
+  }
+  dibujarCalavera(c) {
+    if (this.textures.exists("player_grave")) {
+      const s = this.add.image(c.x, c.y, "player_grave").setOrigin(0.5, 1).setDepth(c.y - 1);
+      s.setScale(32 / Math.max(s.width, 1));
+      return s;
+    }
+    // Respaldo dibujado: no depende de la fuente de emojis del dispositivo ni de otra descarga.
+    if (this.add.graphics) {
+      const g = this.add.graphics({ x: c.x, y: c.y - 14 }).setDepth(c.y - 1);
+      g.lineStyle(6, 0x573922, 1).lineBetween(-12, 10, 12, -5).lineBetween(-12, -5, 12, 10);
+      g.lineStyle(3, 0xead3a0, 1).lineBetween(-12, 10, 12, -5).lineBetween(-12, -5, 12, 10);
+      g.fillStyle(0x573922, 1).fillRoundedRect(-10, -14, 20, 20, 7);
+      g.fillStyle(0xf1dcaf, 1).fillRoundedRect(-8, -12, 16, 18, 6);
+      g.fillStyle(0x573922, 1).fillCircle(-4, -4, 2.7).fillCircle(4, -4, 2.7).fillTriangle(0, -1, -2, 3, 2, 3);
+      return g;
+    }
+    // Los arneses sin renderer usan la misma identidad de textura, sin introducir un emoji.
+    return this.add.image(c.x, c.y, "player_grave").setOrigin(0.5, 1).setDepth(c.y - 1);
   }
   /* los brillitos: tres destellos titilando a destiempo. Son EL aviso — sin texto — de que el
      cuerpo todavía no se revisó, y por eso mueren en el momento exacto en que se revisa. */
@@ -591,14 +721,71 @@ class ForestScene extends Phaser.Scene {
     return Math.hypot(c.x - this.hero.x, c.y - this.hero.y) <= GF.TILE * 1.6;
   }
   cuerpoEnPunto(wx, wy) {
-    let mejor = null, bd = 22;
+    let mejor = null, bd = Infinity;
     for (const c of (GF.forestCuerpos || [])) {
+      // Los cuerpos de otros mapas sobreviven en la lista, pero no están bajo este cursor.
+      if (c.zona != null && c.zona !== this.zonaKey) continue;
+      if (c._retirado) continue;
+      if (c.spr && (c.spr.visible === false || c.spr.active === false)) continue;
       const d = Math.hypot(c.x - wx, c.y - wy);
-      if (d < bd) { bd = d; mejor = c; }
+      const b = c.spr && typeof c.spr.getBounds === "function" ? c.spr.getBounds() : null;
+      const enSprite = b && wx >= b.x && wy >= b.y && wx <= b.x + b.width && wy <= b.y + b.height;
+      // Se pulsa lo dibujado, con el margen anterior de 22 px para iconos pequeños.
+      if (!enSprite && d >= 22) continue;
+      if (d < bd || (d === bd && c.mia && mejor && !mejor.mia)) { bd = d; mejor = c; }
     }
     return mejor;
   }
+  cuerpoBajoCursor() {
+    const pt = this.input && this.input.activePointer;
+    if (!pt || pt.wasTouch || pt.pointerType === "touch" || pt.isDown || pt.withinGame === false) return null;
+    if (this.input.manager && this.input.manager.isOver === false) return null;
+    if (typeof clicDeInterfaz === "function" && clicDeInterfaz(pt)) return null;
+    const cam = this.cameras && this.cameras.main;
+    // La cámara sigue al personaje aunque el ratón esté quieto: worldX puede ser del gesto anterior.
+    const p = cam && typeof cam.getWorldPoint === "function" ? cam.getWorldPoint(pt.x, pt.y) : { x: pt.worldX, y: pt.worldY };
+    return this.cuerpoEnPunto(p.x, p.y);
+  }
+  ayudaCuerpo(c) {
+    const nombre = c.ownerName || c._nombreTumba;
+    const jugador = !!(c.mia || c.graveId), drops = Array.isArray(c.drops) ? c.drops : [];
+    const partes = [c.mia ? "Tu calavera" : c.graveId ? "Calavera de " + (nombre || "otro jugador") : "Cuerpo de " + c.label];
+    let ms = null;
+    if (c.graveId && c.until != null) {
+      const until = typeof c.until === "number" ? c.until : Date.parse(c.until);
+      if (Number.isFinite(until)) ms = Math.max(0, until - nowMs());
+    } else if (c.mia && drops.length && typeof tumba === "function") {
+      const t = tumba();
+      if (this.tumbaCoincide(c, t)) ms = Math.max(0, t.hasta - nowMs());
+    } else if (c._despedidaTimer && typeof c._despedidaTimer.getRemaining === "function") {
+      ms = Math.max(0, c._despedidaTimer.getRemaining());
+    } else if (Number.isFinite(c._despedidaEn) && this.time) {
+      ms = Math.max(0, c._despedidaEn - this.time.now);
+    }
+    if (ms != null) {
+      const segundos = Math.ceil(ms / 1000), minutos = Math.floor(segundos / 60);
+      partes.push("Desaparece en " + minutos + ":" + String(segundos % 60).padStart(2, "0"));
+    }
+    if (c.revisado && !drops.length && !c.graveId) partes.push("Vacío");
+    else {
+      partes.push(jugador ? "Clic izquierdo para recoger" : "Clic izquierdo: revisar");
+      if (!this.cuerpoAlAlcance(c)) partes.push("Acercate para " + (jugador ? "recoger" : "revisarlo"));
+      if (!jugador && !c.revisado) partes.push("Revisalo para ver si tiene botín");
+    }
+    return partes.join(" · ");
+  }
   revisarCuerpo(c) {
+    if (c?.graveId) {
+      if (typeof hayOvPcAbierto === "function" && hayOvPcAbierto()) { toast("Cierra la ventana antes de recoger"); return; }
+      if (!this.cuerpoAlAlcance(c)) { toast("Acercate a la calavera para recoger"); return; }
+      if (!window.GoldenGraves) { toast("No se pudo conectar la recogida; tus pertenencias se conservan"); return; }
+      return GoldenGraves.claim(c, this).then(r => {
+        if (r.receipt?.noFit) toast(G.cont ? "Contenedor lleno — las pertenencias siguen en la calavera" : "Necesitás un contenedor para recoger");
+        else toast("Recogida confirmada");
+        return r;
+      }).catch(e => { toast(e.message); return null; });
+    }
+    if (!this.validarCuerpo(c)) return;
     /* Una tarjeta normal de PC no pausa la Zona, pero revisar abre otra tarjeta contextual en
        capa alta. Si se permitiera, el primer clic sobre la ventana inferior sólo la cerraría y
        parecería perdido. La comprobación va ANTES de marcar el cuerpo como revisado: intentar
@@ -607,6 +794,11 @@ class ForestScene extends Phaser.Scene {
       toast("Cierra la ventana antes de revisar el cuerpo"); return;
     }
     if (!this.cuerpoAlAlcance(c)) { toast("Estás demasiado lejos"); return; }   // la regla de Tibia, con sus palabras
+    // La calavera ofrece recoger; los cadáveres de monstruos conservan su revisión.
+    if (c.mia) {
+      if (!c.revisado) { c.revisado = true; this.apagarBrillos(c); }
+      this.recogerCuerpo(c); return;
+    }
     if (!c.revisado) { c.revisado = true; this.apagarBrillos(c); }
     if (!c.drops.length) {
       /* el aviso va en la interfaz, no flotando sobre el bicho — es lo pedido */
@@ -619,6 +811,7 @@ class ForestScene extends Phaser.Scene {
   /* la ventanita del cuerpo: qué tiene y el botón de recogerlo. HTML y no escena, porque es
      GESTIÓN (mirar y decidir), no acción — la misma línea que separó los aparejos de la pesca. */
   abrirCuerpo(c) {
+    if (!this.validarCuerpo(c)) return;
     /* Red de seguridad para futuros llamadores directos: revisarCuerpo ya hace esta puerta
        antes de mutar el estado, pero abrir el panel también debe ser incapaz de colarse sobre
        un overlay normal de escritorio. */
@@ -628,7 +821,7 @@ class ForestScene extends Phaser.Scene {
     const el = document.getElementById("cuerpo-panel"); if (!el) return;
     this._cuerpoAbierto = c;
     const tit = document.getElementById("cuerpo-tit");
-    if (tit) tit.textContent = "Cuerpo de " + c.label;
+    if (tit) tit.textContent = c.mia ? "Tu calavera" : (c.ownerName || c._nombreTumba) ? "Calavera de " + (c.ownerName || c._nombreTumba) : "Cuerpo de " + c.label;
     const lista = document.getElementById("cuerpo-items");
     if (lista) lista.innerHTML = c.drops.map(d => {
       const nom = d.kind === "gear" ? ((GEAR_DEF[d.k] && GEAR_DEF[d.k].label) || d.k)
@@ -661,6 +854,7 @@ class ForestScene extends Phaser.Scene {
     this._cuerpoAbierto = null;
   }
   recogerCuerpo(c) {
+    if (!this.validarCuerpo(c)) return;
     if (!this.cuerpoAlAlcance(c)) { toast("Estás demasiado lejos"); this.cerrarCuerpo(); return; }
     /* 8/9 (dirección) — EL BOTÍN VA AL MORRAL DE CAZA, no a la bolsa. Es el modelo de Tibia,
        investigado antes de escribirlo: lo que sacás del CADÁVER entra al contenedor de botín.
@@ -673,7 +867,11 @@ class ForestScene extends Phaser.Scene {
     for (const d of c.drops) {
       /* 8/9 (tanda 4): el `w` viaja. Si el cuerpo es el TUYO puede tener un arma con su
          durabilidad, su +N y sus runas; recogerla en cero sería recoger otra arma. */
-      const ok = raiz && contMeter(raiz, d.kind || "res", d.k, d.n, d.w ? { w: d.w } : null);
+      const extra = {};
+      if (d.w != null) extra.w = d.w;
+      if (Array.isArray(d.piezas)) extra.piezas = d.piezas.slice();
+      if (d.dur && typeof d.dur === "object") extra.dur = { ...d.dur };
+      const ok = raiz && contMeter(raiz, d.kind || "res", d.k, d.n, extra);
       if (!ok) quedan.push(d);   // contenedor lleno: lo que no cupo SE QUEDA en el cuerpo, no se pierde
     }
     c.drops = quedan;
@@ -697,7 +895,11 @@ class ForestScene extends Phaser.Scene {
   }
   /* revisado y sin nada dentro: el cuerpo se va solo a los 90 segundos */
   despedirCuerpo(c) {
-    this.time.delayedCall(90000, () => {
+    // Varios clics sobre el mismo cuerpo vacío no reinician ni multiplican su despedida.
+    if (c._despedidaProgramada) return;
+    c._despedidaProgramada = true;
+    c._despedidaEn = this.time.now + 90000;
+    c._despedidaTimer = this.time.delayedCall(90000, () => {
       const i = (GF.forestCuerpos || []).indexOf(c);
       if (i >= 0) GF.forestCuerpos.splice(i, 1);
       if (c.spr) this.tweens.add({ targets: c.spr, alpha: 0, duration: 600, onComplete: () => c.spr.destroy() });
@@ -1322,6 +1524,8 @@ class ForestScene extends Phaser.Scene {
   }
 
   hurtHero(dmg, fisico) {
+    if (this._graveDeathPending) return;
+    if (G.hp <= 0 && this.derrotaCompartidaActiva()) { this.iniciarMuerteCompartida().catch(() => {}); return; }
     // set de Fibra completo: % de evasión (el golpe pasa de largo)
     if (typeof evadeChance === "function" && Math.random() < evadeChance()) { this.floatHero("Esquivaste", "#a8d8ff"); return; }
     if (fisico && typeof blockHit === "function") {
@@ -1369,6 +1573,7 @@ class ForestScene extends Phaser.Scene {
       if (typeof saveFarm === "function") saveFarm();
     }
     if (G.hp <= 0) {
+      if (this.derrotaCompartidaActiva()) { this.iniciarMuerteCompartida().catch(() => {}); return; }
       /* 8/9 (dirección) — LA MUERTE POR FIN CUESTA ALGO, y es recuperable: « si te matan se te
          cae la bag, pero tu cuerpo queda en el piso por 10 minutos donde puedes recoger todo ».
          ORDEN CRÍTICO: la tumba se queda con el morral ANTES de zonaSalir, porque zonaSalir lo
@@ -1445,6 +1650,7 @@ class ForestScene extends Phaser.Scene {
 
   updateReal(time, deltaMs) {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
+    this.actualizarTumbaCuerpos();
     const dt = deltaMs / 1000, k = this.keys, hero = this.hero, t = nowMs();
     /* Igual que en la granja: un control HTML activo es dueño de W/A/S/D, flechas y Espacio.
        El mundo y una persecución ya iniciada continúan, pero el texto no se traduce en un gesto
@@ -1601,6 +1807,7 @@ class ForestScene extends Phaser.Scene {
 
     this.updateMonsters(dt, t);
     this.updatePrompt();
+    if (window.GoldenGraveGuide) GoldenGraveGuide.update(this);
   }
 
   updateMonsters(dt, t) {
@@ -1710,6 +1917,7 @@ class ForestScene extends Phaser.Scene {
 
   updatePrompt() {
     const el = $("prompt"); if (!el) return;
+    el.classList.remove("cuerpo-ayuda");
     /* En PC las ventanas normales no pausan la Zona, pero tampoco deben dejar un CTA de ataque
        asomándose por detrás de una tarjeta. La granja ya aplica esta regla; acá faltaba la misma
        puerta y el texto podía leerse como si se pudiera atacar a través del panel. */
@@ -1721,6 +1929,13 @@ class ForestScene extends Phaser.Scene {
     const cuerpo = typeof window !== "undefined" && window.innerWidth > 640 && document.getElementById("cuerpo-panel");
     const cuerpoAbierto = !!(cuerpo && cuerpo.classList.contains("show"));
     if (GF.uiOpen || hayVentana || cuerpoAbierto || this.action) { el.classList.remove("show"); return; }
+    const cuerpoHover = this.cuerpoBajoCursor();
+    if (cuerpoHover) {
+      el.textContent = this.ayudaCuerpo(cuerpoHover);
+      el.classList.add("cuerpo-ayuda");
+      el.classList.add("show");
+      return;
+    }
     const m = this.nearestMonster(60);
     const far = !m && canShoot() ? this.nearestMonster(190) : null;
     if (m) {
