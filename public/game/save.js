@@ -1435,7 +1435,12 @@ function derivarEstado(d) {
   } catch (e) { console.warn("cierre del viaje a la zona:", e); }
   try { if (typeof regalosSync === "function") regalosSync(); } catch (e) {}   // guardados viejos: recalcula lo que le corresponde por su nivel
   if (typeof applyCombatHp === "function") applyCombatHp();   // vida máxima: ahora sí ve gear y weapons
-  if (typeof d.hp === "number") G.hp = Math.max(1, Math.min(G.hpMax, d.hp));
+  // Una derrota guardada en un viaje válido sigue pendiente tras recargar. El mínimo
+  // histórico de un punto era una resurrección local y bloqueaba su confirmación.
+  // Sólo los datos cargados acreditan el cero: un recibo local no puede crear una muerte.
+  const zonaDerrota = d.zonaViaje && d.zonaViaje.pos && d.zonaViaje.pos.zona;
+  const derrotaPendiente = d.hp === 0 && typeof zonaDerrota === "string" && typeof ZONA_DEF !== "undefined" && Object.prototype.hasOwnProperty.call(ZONA_DEF, zonaDerrota) && !!ZONA_DEF[zonaDerrota];
+  if (typeof d.hp === "number") G.hp = Math.max(derrotaPendiente ? 0 : 1, Math.min(G.hpMax, d.hp));
   if (typeof tutoMigrar === "function") tutoMigrar();   // salta los pasos ya cumplidos, con los datos delante
   if (typeof tutoSync === "function") tutoSync(true);   // el cartel y la flecha, con el paso definitivo
 }

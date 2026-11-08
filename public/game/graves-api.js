@@ -130,6 +130,14 @@
     for (const c of (GF.forestCuerpos || []).slice()) if (c.graveId && c.zona === scene.zonaKey && typeof scene.retirarCuerpo === "function") scene.retirarCuerpo(c);
     GF.forestCuerpos = (GF.forestCuerpos || []).filter(c => !c.graveId);
   }
+  function sceneAvailable(scene) {
+    if (!scene) return false;
+    if (!scene.sys || typeof scene.sys.isActive !== "function") return true;
+    // El diálogo pausa Forest mientras llega la lectura. Paused sigue siendo esta escena;
+    // sleeping/stopped/shutdown no pueden instalar respuestas ni iniciar un regreso.
+    return scene.sys.isActive() || (typeof scene.sys.isPaused === "function" ? scene.sys.isPaused() :
+      !!(scene.scene && typeof scene.scene.isPaused === "function" && scene.scene.isPaused()));
+  }
   async function load(scene) {
     const uid = session(), generation = ++sequence;
     scene._graveRequestGeneration = generation;
@@ -138,7 +146,7 @@
     try {
       const data = await invoke({accion: "estado", cuenta: uid, zona: zone});
       if (UID !== uid || scene._graveRequestGeneration !== generation || generation !== sequence ||
-        (scene.sys && typeof scene.sys.isActive === "function" && !scene.sys.isActive())) return false;
+        !sceneAvailable(scene)) return false;
       next = safeMarkers(data, uid);
     } catch (e) {
       // Una incorporación nueva necesita un estado vigente verificado. Un fallo viejo no puede
@@ -215,7 +223,7 @@
     recoveryScenes.add(scene);
     if (typeof button.focus === "function") button.focus();
     button.onclick = async () => {
-      if (button.disabled) return;
+      if (button.disabled || scene._graveRecovery !== root || scene._graveRecoveryUid !== uid || !sceneAvailable(scene)) return;
       button.disabled = true;
       try {
         if (UID !== uid) throw Error("La cuenta cambió. Volvé a abrir la partida correcta.");
@@ -223,9 +231,17 @@
           const r = await reconcile(scene);
           if (!r) throw Error("El recibo necesita revisión; se conserva tu progreso.");
           if (r.cancelado) showRecovery(scene, "El regreso no se había confirmado. Podés confirmarlo ahora sin repetir ninguna recogida.");
-        } else if (typeof scene.iniciarMuerteCompartida === "function") await scene.iniciarMuerteCompartida(true);
+        } else if (typeof scene.iniciarMuerteCompartida === "function") {
+          // Una cuenta aún no incorporada necesita estado verificado. Si la lectura inicial
+          // falló, este mismo botón la reintenta, sin crear ni repetir un UUID de muerte.
+          if (!deathUsesServer()) await load(scene);
+          if (UID !== uid || scene._graveRecovery !== root || !sceneAvailable(scene)) return;
+          if (!deathUsesServer()) throw Error("No se pudo habilitar el regreso en el servidor. Tu progreso se conserva; volvé a intentar confirmarlo.");
+          const r = await scene.iniciarMuerteCompartida(true);
+          if (!r) throw Error("El regreso no se confirmó. Tu progreso se conserva; volvé a intentar confirmarlo.");
+        }
         else throw Error("Volvé a abrir la Zona Negra para confirmar este regreso.");
-      } catch (e) { if (UID === uid) showRecovery(scene, e.message); }
+      } catch (e) { if (UID === uid && scene._graveRecovery === root && sceneAvailable(scene)) showRecovery(scene, e.message); }
       finally { button.disabled = false; }
     };
   }

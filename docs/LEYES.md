@@ -2,7 +2,7 @@
 
 ## Regreso de calaveras e inventario transportable — 08/11/2026
 
-Dirección pide revisar el bloqueo de Tecnopartes. La validación acepta todas las familias que ya admite el portal; conserva usos, cantidades y metadatos. La interfaz difiere sus latidos mientras confirma calaveras y libera un UUID cancelado sólo con bases coincidentes, sin hidratar ni anunciar un guardado inexistente. Se conserva el avance, los recibos y las reglas de muerte; sin compensaciones ni cambios administrativos de cuentas. Ver REGRESO-TECNOPARTES-20261108.md.
+Dirección pide revisar el bloqueo de Tecnopartes. La validación acepta todas las familias que ya admite el portal; conserva usos, cantidades y metadatos. La interfaz difiere sus latidos mientras confirma calaveras y libera un UUID cancelado sólo con bases coincidentes, sin hidratar ni anunciar un guardado inexistente. Se conserva el avance, los recibos y las reglas de muerte; sin compensaciones ni cambios administrativos de cuentas. La carga conserva vida cero acreditada por los datos de un viaje válido, admite el estado de una escena pausada y prueba ambos botones desde una carga completa. Ver REGRESO-TECNOPARTES-20261108.md.
 
 
 ## Calaveras compartidas y guía privada — 08/11/2026

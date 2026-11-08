@@ -216,7 +216,7 @@ class ForestScene extends Phaser.Scene {
     refreshHud();
     if (window.GoldenGraves) {
       if (GoldenGraves.usesServer()) this.actualizarCalaverasCompartidas().catch(() => {});
-      if (GoldenGraves.hasPending()) GoldenGraves.showRecovery(this);
+      if (GoldenGraves.hasPending() || (G.hp <= 0 && GoldenGraves.usesServer())) GoldenGraves.showRecovery(this);
       else if (G.hp <= 0 && this.derrotaCompartidaActiva()) this.iniciarMuerteCompartida().catch(() => {});
     }
   }
