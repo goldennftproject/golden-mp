@@ -1654,10 +1654,11 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "ofrendas") return "Altar de Ofrendas";
     if (o.type === "cofre") return "Cofre de depósito";
     if (o.type === "dummy") {
-      if (typeof dummyEntrenando === "function" && dummyEntrenando()) return "Entrenando… clic para cobrar la XP acumulada";
-      { const aid = armaEq(); if (!aid || ARM_DEF[aid].tipo === "arco") return "Muñeco de entrenamiento — equipa un arma cuerpo a cuerpo"; }
+      if (typeof dummyEntrenando === "function" && dummyEntrenando()) return "Entrenando… clic para cobrar los golpes acumulados";
+      const aid = armaEq(); if (!aid || ARM_DEF[aid].tipo === "arco") return "Muñeco de entrenamiento — equipa un arma cuerpo a cuerpo";
+      const habilidad = SKILL_NAME[armSkillKey(ARM_DEF[aid].tipo)];
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
-      return dleft > 0 ? "El muñeco descansa — vuelve en " + fmtDur(dleft) : "Entrenar espada (+" + DUMMY_XP + " XP)";
+      return dleft > 0 ? "El muñeco descansa — vuelve en " + fmtDur(dleft) : "Entrenar " + habilidad + " (+" + DUMMY_XP + " golpes)";
     }
     if (o.type === "fish") {
       /* Y que se vea SIN tener que hacer clic: el rótulo del cursor dice el descanso igual que lo
@@ -1907,11 +1908,12 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "boya") { if (typeof refreshBoya === "function") refreshBoya(); return openOv("ov-boya"); }
     if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
     if (o.type === "dummy") {
-      if (typeof dummyEntrenando === "function" && dummyEntrenando()) { dummyCobrar(); return; }   // volviste: cobrás la XP acumulada
+      if (typeof dummyEntrenando === "function" && dummyEntrenando()) { dummyCobrar(); return; }   // volviste: cobrás los golpes acumulados
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
-      askConfirm(dleft > 0
-          ? "El muñeco descansa (vuelve en " + fmtDur(dleft) + "), pero puedes dejar al granjero entrenando: cobras la XP del tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h."
-          : "¿Entrenas ahora (+" + DUMMY_XP + " XP y 4 h de descanso) o dejas al granjero entrenando mientras no estás?",
+      askConfirm((dleft > 0
+          ? "El muñeco descansa (vuelve en " + fmtDur(dleft) + "), pero puedes dejar al granjero entrenando: acumulas golpes del arma por el tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h."
+          : "¿Entrenas ahora (+" + DUMMY_XP + " golpes del arma equipada y 4 h de descanso) o dejas al granjero entrenando mientras no estás?") +
+        " Entrenar mejora la habilidad del arma; Combate sube al derrotar enemigos.",
         () => { if (dleft > 0) { toast("El muñeco descansa — vuelve en " + fmtDur(dleft)); return; } this.trainDummy(o); },
         { title: "Muñeco de entrenamiento", yes: dleft > 0 ? "Cerrar" : "Entrenar ahora", yesClass: dleft > 0 ? "ghost" : "green",
           no: "Dejar entrenando", noClass: "gold", onNo: () => dummyIniciar() });
@@ -4720,7 +4722,7 @@ class FarmScene extends Phaser.Scene {
     return false;
   }
 
-  // entrenar con el dummy: 3 espadazos, XP de Espada y cooldown de 4 horas
+  // entrenar con el dummy: 3 espadazos, golpes de la habilidad equipada y cooldown de 4 horas
   trainDummy(o) {
     const aid = armaEq();
     if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipa un arma cuerpo a cuerpo (espada, hacha o mazo)"); return; }
@@ -4745,9 +4747,9 @@ class FarmScene extends Phaser.Scene {
       if (hits < 3) this.time.delayedCall(280, swing);
       else {
         const sk = armSkillKey(ARM_DEF[aid].tipo);
-        addXp(sk, DUMMY_XP);
-        log("Entrenaste con el muñeco: +" + DUMMY_XP + " XP de " + SKILL_NAME[sk] + ". Vuelve en 4h. " + G.weapons[aid].dur + "/" + ARM_DEF[aid].dur, "gold");
-        toast("+" + DUMMY_XP + " XP de " + SKILL_NAME[sk]);
+        addTries(sk, DUMMY_XP);
+        log("Entrenaste con el muñeco: +" + DUMMY_XP + " golpes de " + SKILL_NAME[sk] + ". Vuelve en 4h. " + G.weapons[aid].dur + "/" + ARM_DEF[aid].dur, "gold");
+        toast("+" + DUMMY_XP + " golpes de " + SKILL_NAME[sk]);
         refreshHud(); if (typeof saveFarm === "function") saveFarm();
       }
     };

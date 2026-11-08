@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Entrenamiento normal del muñeco — 08/11/2026
+
+Dirección autoriza corregir y publicar la entrega de treinta puntos del arma en el muñeco y revisar a Nico y otros posibles afectados. Se usa el contador de golpes de habilidad y se aclara su diferencia con Combate. Se conservan espera, desgaste, equipo, entrenamiento prolongado y progreso. La compensación no se deduce de un historial inexistente ni se aplica sobrescribiendo sesiones activas. Ver MUNECO-ENTRENAMIENTO-20261108.md.
+
 ## Aviso de cierre de referidos — 08/11/2026
 
 Dirección autoriza el aviso nuevo en Discord, Noticias del juego y Telegram y exige horario local automático en Discord. Se preservan las bases, premios y plazo del sorteo; se anuncia revisión y publicación de boletos posteriores al cierre, sin prometer automatismos ni modificar elegibilidad, cuentas o tareas. Se conservan noticias anteriores y recibos por destino. Ver AVISO-CIERRE-REFERIDOS-20261108.md.

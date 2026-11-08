@@ -1,0 +1,11 @@
+# Entrenamiento del muñeco — 08/11/2026
+
+Dirección autoriza corregir, probar y publicar el entrenamiento normal del muñeco y pide revisar la compensación de Nico y otros afectados. El fallo reproducido llamaba a `addXp`, que descarta los oficios de arma tras su migración a intentos: anunciaba treinta puntos, consumía dos de durabilidad y activaba cuatro horas de espera sin otorgar progreso.
+
+El entrenamiento normal usa ahora `addTries` con los treinta golpes ya configurados. El cursor, la confirmación, el aviso y el registro muestran la habilidad del arma correspondiente. La confirmación aclara que entrenar mejora esa habilidad, mientras Combate sube al derrotar enemigos. Se conservan la espera de cuatro horas, el desgaste, la ficha y mejoras del arma, el entrenamiento prolongado y todos los guardados.
+
+La nueva prueba ejecuta los métodos reales de la escena para espada, hacha y mazo; comprueba entrega única, espera, última durabilidad, rechazo de arco o arma rota, conservación del equipo y la separación entre habilidad y Combate. También valida primer minuto, tasa y tope del entrenamiento prolongado. Pasan además las regresiones de habilidades por intentos y experiencia de Combate.
+
+La revisión de Nico comprobó avance guardado de Combate y Espada, y las veintiséis observaciones de sus copias anteriores explican el cambio de 108/136 a 118/136 en Combate. No contienen un registro completo de sesiones manuales. Quince cuentas tenían uso registrado del muñeco al revisar el incidente, pero la misma marca también se escribe al iniciar el entrenamiento prolongado, que sí paga. Por ello no permite calcular exactamente la pérdida individual ni afirmar que esas quince cuentas perdieron el mismo importe.
+
+La compensación se evalúa aparte: no se restauran partidas antiguas, no se altera la XP global de Combate y no se suma un importe histórico inventado. Un ajuste directo durante una sesión activa produciría un conflicto de versión; cualquier entrega deberá conservar avances en curso y tener un recibo que impida duplicados. La evidencia y decisiones quedan en `work/nico-combate-20261108` del espacio de trabajo. Esta publicación no modifica cuentas ni reactiva tareas periódicas.
