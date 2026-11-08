@@ -35,6 +35,13 @@ function capturarReferido() {
  } catch(e) { return ''; }
 }
 const REFERIDO_REGISTRO = capturarReferido();
+function normalizarEventoReferidos(e) {
+ if (!e || e.id!=='referidos-20261108' || !['open','closed'].includes(e.status)) return null;
+ const fin=typeof e.ends_at==='string'?Date.parse(e.ends_at):NaN,ahora=typeof e.server_now==='string'?Date.parse(e.server_now):NaN;
+ if (fin!==1794193200000 || !Number.isFinite(ahora) || !Number.isSafeInteger(e.tickets) || e.tickets<0 || e.tickets>5 || !Number.isSafeInteger(e.my_qualified) || e.my_qualified<e.tickets) return null;
+ if (e.status==='open'&&ahora>=fin) return null;
+ return {id:e.id,status:e.status,ends_at:new Date(fin).toISOString(),server_now:new Date(ahora).toISOString(),tickets:e.tickets,my_qualified:e.my_qualified};
+}
 async function miReferido(codigo) {
  const uid=UID;
  if (!sb || !uid) throw new Error('Inicia sesión para ver tu enlace.');
@@ -42,7 +49,7 @@ async function miReferido(codigo) {
  if (UID!==uid) throw new Error('La cuenta ha cambiado.');
  if (error) throw new Error(error.message || 'No se pudo consultar el enlace.');
  if (!data || !/^[A-F0-9]{16}$/.test(data.code)) throw new Error('No se pudo consultar el enlace.');
- return {inviter:data.inviter_code||null,code:data.code,registered:Number(data.registered)||0,url:'https://goldenfarm.onrender.com/?ref='+data.code};
+ return {inviter:data.inviter_code||null,code:data.code,registered:Number(data.registered)||0,url:'https://goldenfarm.onrender.com/?ref='+data.code,event:normalizarEventoReferidos(data.event)};
 }
 
 let sb = null, UID = null, saveTimer = null, lastSavedKey = null;

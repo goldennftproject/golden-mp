@@ -218,6 +218,7 @@ function refrescarGuiaTrasCerrarOv(cerro) {
   tutoHighlight();
 }
 function closeOv(id) {
+  if(id==='ov-config'&&typeof prepararReferidos.cancelarEvento==='function')prepararReferidos.cancelarEvento();
   if (id === "ov-noticias" && window.GoldenNews) window.GoldenNews.closeImage();
   /* 8/9: cerrar la puerta de la Zona por la × devuelve todo a la granja, igual que « Volver ».
      Dejar el contenedor cargado sería más « fiel » (en Tibia preparás la mochila y te vas cuando
@@ -6169,36 +6170,59 @@ async function copiarInformeAlfa(){
 }
 /* ---- configuración ---- */
 function prepararReferidos() {
- const ver=$('cfg-referido-ver'),copiar=$('cfg-referido-copiar'),estado=$('cfg-referido-status'),box=$('cfg-referido-resultado'),input=$('cfg-referido-link'),asignar=$('cfg-referido-asignar'),codigo=$('cfg-referido-codigo'),manual=$('cfg-referido-manual');
+ if (typeof prepararReferidos.cancelarEvento==='function') prepararReferidos.cancelarEvento();
+ const ver=$('cfg-referido-ver'),copiar=$('cfg-referido-copiar'),estado=$('cfg-referido-status'),box=$('cfg-referido-resultado'),input=$('cfg-referido-link'),asignar=$('cfg-referido-asignar'),codigo=$('cfg-referido-codigo'),manual=$('cfg-referido-manual'),evento=$('cfg-referido-evento');
  if (!ver || !copiar || !estado || !box || !input || !asignar || !codigo || !manual) return;
- box.hidden=true; manual.hidden=true; input.value=''; codigo.value=''; estado.textContent=''; ver.disabled=false; asignar.disabled=false;
+ const cuenta=typeof UID!=='undefined'?UID:null;
+ let activo=true,timer=null,actual=null,desde=0,peticion=0;
+ const reloj=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+ const vigente=()=>activo&&ver.isConnected&&(typeof UID!=='undefined'?UID:null)===cuenta;
+ const detener=()=>{if(timer!==null&&typeof clearTimeout==='function')clearTimeout(timer);timer=null;};
+ const cancelar=()=>{activo=false;peticion++;detener();document.removeEventListener('visibilitychange',visibilidad);if(evento&&prepararReferidos.cancelarEvento===cancelar){evento.textContent='';evento.hidden=true;}};
+ const pintarEvento=()=>{
+  detener();if(!evento)return;
+  if(!vigente()){cancelar();return;}
+  evento.hidden=false;
+  if(!actual){evento.textContent='Estado del sorteo no disponible. Puedes seguir usando las invitaciones.';return;}
+  const restante=Date.parse(actual.ends_at)-Date.parse(actual.server_now)-Math.max(0,reloj()-desde);
+  const cerrado=actual.status==='closed'||restante<=0;
+  const hasta=new Date(Date.parse(actual.ends_at)-1).toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  evento.textContent=cerrado?'Sorteo de referidos: cerrado · Tus boletos: '+actual.tickets+'/5 · Pendiente de revisión y sorteo.':'Sorteo de referidos: abierto · Participación hasta '+hasta+' (hora local) · Tus boletos: '+actual.tickets+'/5.';
+  if(!cerrado&&!document.hidden&&typeof setTimeout==='function')timer=setTimeout(pintarEvento,Math.min(2147483647,Math.max(1,restante)));
+ };
+ function visibilidad(){if(document.hidden)detener();else if(actual)pintarEvento();}
+ prepararReferidos.cancelarEvento=cancelar;
+ document.addEventListener('visibilitychange',visibilidad);
+ box.hidden=true;manual.hidden=true;input.value='';codigo.value='';estado.textContent='';ver.disabled=false;asignar.disabled=false;
+ if(evento){evento.hidden=true;evento.textContent='';}
  const mostrar=r=>{
-  input.value=r.url; box.hidden=false;
+  input.value=r.url;box.hidden=false;
   $('cfg-referido-datos').textContent='ID: '+r.code+' · Registros confirmados: '+r.registered;
   $('cfg-referido-invitador').textContent=r.inviter?'Tu invitador: '+r.inviter:'Todavía no tienes invitador.';
-  manual.hidden=!!r.inviter;
+  manual.hidden=!!r.inviter;actual=r.event||null;desde=reloj();pintarEvento();
  };
  ver.onclick=async()=>{
-  ver.disabled=true; estado.textContent='Consultando…'; box.hidden=true;
-  try {const r=await miReferido();if(!ver.isConnected)return;mostrar(r);estado.textContent='';}
-  catch(e){estado.textContent=e.message||'No se pudo consultar. Inténtalo de nuevo.';}
-  finally {ver.disabled=false;}
+  const solicitud=++peticion;detener();ver.disabled=true;estado.textContent='Consultando…';box.hidden=true;if(evento)evento.hidden=true;
+  try{const r=await miReferido();if(!vigente()||solicitud!==peticion)return;mostrar(r);estado.textContent='';}
+  catch(e){if(vigente()&&solicitud===peticion){estado.textContent=e.message||'No se pudo consultar. Inténtalo de nuevo.';actual=null;}}
+  finally{if(vigente()&&solicitud===peticion)ver.disabled=false;}
  };
  asignar.onclick=async()=>{
   const code=codigo.value.trim().toUpperCase();
   if(!/^[A-F0-9]{16}$/.test(code)){estado.textContent='Introduce un código de 16 letras y números.';return;}
   if(!confirm('¿Asignar este código como tu invitador? No podrás cambiarlo después.'))return;
-  asignar.disabled=true;ver.disabled=true;estado.textContent='Guardando referido…';
-  try {const r=await miReferido(code);if(!asignar.isConnected)return;mostrar(r);estado.textContent='Referido asignado.';}
-  catch(e){estado.textContent=e.message||'No se pudo guardar. Inténtalo de nuevo.';}
-  finally{asignar.disabled=false;ver.disabled=false;}
+  const solicitud=++peticion;detener();asignar.disabled=true;ver.disabled=true;estado.textContent='Guardando referido…';
+  try{const r=await miReferido(code);if(!vigente()||solicitud!==peticion)return;mostrar(r);estado.textContent='Referido asignado.';}
+  catch(e){if(vigente()&&solicitud===peticion){estado.textContent=e.message||'No se pudo guardar. Inténtalo de nuevo.';if(actual)pintarEvento();}}
+  finally{if(vigente()&&solicitud===peticion){asignar.disabled=false;ver.disabled=false;}}
  };
  copiar.onclick=async()=>{
-  if (!input.value) return;
-  try {await navigator.clipboard.writeText(input.value);estado.textContent='Enlace copiado.';}
-  catch(e){input.focus();input.select();estado.textContent='Selecciona y copia el enlace.';}
+  if(!vigente()||!input.value)return;
+  try{await navigator.clipboard.writeText(input.value);if(vigente())estado.textContent='Enlace copiado.';}
+  catch(e){if(vigente()){input.focus();input.select();estado.textContent='Selecciona y copia el enlace.';}}
  };
 }
+
 let PERFIL_SOLICITUD=0;
 function refreshPerfil() {
   const actual=$('perfil-nombre-actual'),input=$('perfil-nombre'),guardar=$('perfil-guardar'),estado=$('perfil-status'),discord=$('perfil-discord'),gestionar=$('perfil-discord-gestionar');

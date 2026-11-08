@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Cierre automático del sorteo de referidos — 08/11/2026
+
+Dirección pide terminar la participación al llegar el plazo anunciado. La base de datos corta al finalizar las 23:59 de Uruguay/Argentina del 8/11, conserva los hechos previos y sella la copia final automáticamente. Mantiene las bases, máximo cinco boletos y los referidos permanentes; no sortea ni paga premios. La vista muestra estado y boletos propios sin sondeos. Se preservan cuentas, partidas y tareas canceladas. Ver CIERRE-AUTOMATICO-REFERIDOS-20261108.md.
+
 ## Entrenamiento normal del muñeco — 08/11/2026
 
 Dirección autoriza corregir y publicar la entrega de treinta puntos del arma en el muñeco y revisar a Nico y otros posibles afectados. Se usa el contador de golpes de habilidad y se aclara su diferencia con Combate. Se conservan espera, desgaste, equipo, entrenamiento prolongado y progreso. La compensación no se deduce de un historial inexistente ni se aplica sobrescribiendo sesiones activas. Ver MUNECO-ENTRENAMIENTO-20261108.md.
