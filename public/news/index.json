@@ -1,6 +1,15 @@
 {
   "items": [
     {
+      "id": "2026-11-08-cierre-referidos",
+      "title": "Cierre del sorteo de referidos · 8 de noviembre",
+      "date": "2026-11-08",
+      "alt": "Guía de Golden Farm para compartir tu enlace y asignar el código de quien te invitó desde Menú → Configuración → Invitar amigos. Códigos ficticios de ejemplo.",
+      "image": "/news/golden-farm-guia-referidos.jpg",
+      "content": "Hoy, **8 de noviembre de 2026, a las 23:59 de Uruguay y Argentina (UTC−3)**, cierra la participación en el sorteo de referidos.\n\n🎟️ Cada referido con **correo confirmado y nivel 3 de granja antes del cierre** da **1 boleto**, con un máximo de **5 boletos por persona**.\n\n🎁 **20 USD en premios: 10 + 5 + 5**, para **tres ganadores distintos**.\n\n🔗 Tu enlace está en **Menú → Configuración → Invitar amigos → Ver mi enlace → Copiar enlace**. Si llegaste sin invitador, puedes añadir su código allí una sola vez.\n\nParticipación gratuita, sin compras ni depósitos. El equipo, las cuentas de pruebas y las multicuentas quedan fuera.\n\nDespués del cierre revisaremos las participaciones y publicaremos los boletos antes de realizar el sorteo.\n\n🎮 https://goldenfarm.onrender.com/\n\n📋 [Bases del sorteo](https://discord.com/channels/1564640221063024763/1564643673889841243/1566975815072358452)",
+      "discordUrl": "https://discord.com/channels/1564640221063024763/1564643673889841243/1569059314625421463"
+    },
+    {
       "id": "2026-11-07-ruletas-y-mejoras",
       "title": "Novedades de Golden Farm",
       "date": "2026-11-07",

@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Aviso de cierre de referidos — 08/11/2026
+
+Dirección autoriza el aviso nuevo en Discord, Noticias del juego y Telegram y exige horario local automático en Discord. Se preservan las bases, premios y plazo del sorteo; se anuncia revisión y publicación de boletos posteriores al cierre, sin prometer automatismos ni modificar elegibilidad, cuentas o tareas. Se conservan noticias anteriores y recibos por destino. Ver AVISO-CIERRE-REFERIDOS-20261108.md.
+
 ## Varias armas por forja y comercio — 08/11/2026
 
 Dirección autoriza forjar y comprar varias espadas iguales, probar y publicar. Forjar otra mantiene recetas, Plata, Combate y enfriamiento; el servidor confirma coste, XP y entrega con recibo/CAS. Cada copia conserva durabilidad, mejoras y runas, ocupa una casilla y no sustituye la pieza anterior ni suma atributos con otras. El comercio permite armas repetidas con su transacción y ficha existentes; las armaduras mantienen su regla previa. Se conserva todo el progreso y los sistemas pausados, sin compensaciones automáticas. Ver ARMAS-MULTIPLES-20261108.md.
