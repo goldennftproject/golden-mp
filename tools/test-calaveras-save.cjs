@@ -150,6 +150,7 @@ test('real V13 guard rejects new deadlines/coordinates, removed IDs, altered qua
     const next = plain(prev); const result = change(next.tumba); if (result === null) next.tumba = null;
     assert.equal(typeof rules.graveOrdinaryGuard(prev, plain(next), 1, NOW), 'string');
     const s = factory({ user_id: 'qa', name: 'QA', updated_at: BASE, data: plain(prev) });
+    s.ctx.Date=class extends Date { constructor(...args){super(...(args.length?args:[NOW]));} static now(){return NOW;} };
     const r = await s.call({ base: BASE, op: randomUUID(), graveProtocol: 1, name: 'QA', data: next });
     assert.equal(r.status, 409); assert.equal(s.writes(), 0); assert.deepEqual(s.row().data, prev);
   }

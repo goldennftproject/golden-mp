@@ -2,7 +2,7 @@
    Inputs must come from locked/CAS-verified farms/grave rows, never from a client body.
    Keep this transaction-planning helper separate from the commit/receipt operation. */
 const capacities=Object.freeze(Object.assign(Object.create(null),{bag:8,backpack:20}));
-const kinds=new Set(['res','seed','fish','dish','arm','armorset','gear','cont']);
+const kinds=new Set(['res','seed','fish','dish','arm','armor','armorset','gear','cont','pick','tool','cana']);
 const clone=v=>JSON.parse(JSON.stringify(v));
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const keyOK=k=>typeof k==='string'&&k.length>=1&&k.length<=100&&!['__proto__','constructor','prototype'].includes(k);

@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Regreso de calaveras e inventario transportable — 08/11/2026
+
+Dirección pide revisar el bloqueo de Tecnopartes. La validación acepta todas las familias que ya admite el portal; conserva usos, cantidades y metadatos. La interfaz difiere sus latidos mientras confirma calaveras y libera un UUID cancelado sólo con bases coincidentes, sin hidratar ni anunciar un guardado inexistente. Se conserva el avance, los recibos y las reglas de muerte; sin compensaciones ni cambios administrativos de cuentas. Ver REGRESO-TECNOPARTES-20261108.md.
+
+
 ## Calaveras compartidas y guía privada — 08/11/2026
 
 Dirección aprueba la ilustración, el nombre y plazo al pasar el cursor, clic izquierdo para recoger por cualquier jugador y flecha sólo para el dueño. Derrota y entrega se confirman en servidor con recibo, CAS y conservación del equipo; el guardado incorpora sólo cambios de tumba demostrados sin reemplazar avances posteriores. Conserva plazos, reglas y partidas, tumbas privadas históricas, sistemas pausados y tareas canceladas. Ver CALAVERAS-COMPARTIDAS-20261108.md.

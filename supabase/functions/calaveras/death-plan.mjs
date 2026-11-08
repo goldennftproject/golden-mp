@@ -5,6 +5,7 @@ const clone=v=>JSON.parse(JSON.stringify(v));
 const own=(v,k)=>Object.prototype.hasOwnProperty.call(v||{},k);
 const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const capacities=Object.freeze(Object.assign(Object.create(null),{bag:8,backpack:20}));
+const kinds=new Set(['res','seed','fish','dish','arm','armor','armorset','gear','cont','pick','tool','cana']);
 const gearKeys=new Set(['botas_cuero','casco_cuero','pechera_cuero','escudo_madera','casco_hierro','escudo_hierro','pechera_hierro']);
 const armorPieces=['yelmo','pecho','pantalones','botas','guantes'];
 const armorSets=new Set(['fibra','piel','cuero','colmillo']);
@@ -18,7 +19,7 @@ function flatten(c,depth=1){
  const out=[];
  for(const e of c.items){
   if(object(e)&&capacities[e.c]&&Array.isArray(e.items))out.push(...flatten(e,depth+1));
-  else{if(!object(e)||typeof e.kind!=='string'||typeof e.k!=='string'||!Number.isFinite(e.n)||e.n<=0)throw Error('Invalid canonical carried item');out.push(clone(e));}
+  else{if(!object(e)||!kinds.has(e.kind)||typeof e.k!=='string'||!Number.isFinite(e.n)||e.n<=0)throw Error('Invalid canonical carried item');out.push(clone(e));}
  }
  return out;
 }

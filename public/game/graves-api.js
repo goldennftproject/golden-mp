@@ -3,6 +3,7 @@
   "use strict";
   if (typeof GF.GRAVES_SHARED_ENABLED !== "boolean") GF.GRAVES_SHARED_ENABLED = false;
   let cache = {uid: null, enabled: false, markers: [], ownGraveId: null}, sequence = 0;
+  let activeUid = null;
   const recoveryScenes = new Set();
   const uuid = v => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
   const enrolled = () => typeof G !== "undefined" && G._graveProtocol === 1;
@@ -32,6 +33,10 @@
       for (let i = 0; i < localStorage.length; i++) if (localStorage.key(i)?.startsWith(prefix)) return true;
       return false;
     } catch { return true; }
+  }
+  function busy() {
+    let uid; try { uid = UID; } catch { return false; }
+    return !!uid && (activeUid === uid || hasPending(uid) || [...recoveryScenes].some(scene => scene._graveRecoveryUid === uid));
   }
   function markPending(uid, p) {
     localStorage.setItem(journalKey(uid, p.op), JSON.stringify(p));
@@ -74,6 +79,14 @@
     if (Object.prototype.hasOwnProperty.call(r.data, "tumba")) invalidateOwn(r.data.tumba);
     if (guardadoTienePendiente(uid)) throw Error("Hay un guardado sin confirmar. Se conserva el recibo de la calavera.");
     const liveBase = SAVE_BASES.get(uid), liveKey = snapKey();
+    // Un UUID sellado como cancelado no cambió la partida. No hay un ACK económico que hidratar:
+    // conservar íntegro el estado local, aunque el reloj o una acción legítima lo hayan avanzado.
+    if (r.cancelado && liveBase === p.base && r.updated_at === p.base) {
+      if (liveKey !== p.beforeKey) backup(uid, p);
+      clearPending(uid, p);
+      if (!hasPending(uid) && !mercadoPendiente(uid)) SAVE_CONFLICTOS.delete(uid);
+      return;
+    }
     // Una pestaña recién cargada puede tener YA el resultado actual: no volver a hidratarlo.
     if (liveBase === r.updated_at && liveKey === lastSavedKey) {
       clearPending(uid, p); if (!hasPending(uid)) SAVE_CONFLICTOS.delete(uid); SAVE_OTRA = false;
@@ -174,6 +187,7 @@
     if (scene) scene._graveRecoveryInert = null;
     if (resume && scene?._graveRecoveryResume) scene._graveRecoveryResume();
     if (scene) scene._graveRecoveryResume = null;
+    if (scene) scene._graveRecoveryUid = null;
     recoveryScenes.delete(scene);
   }
   function showRecovery(scene, message) {
@@ -197,6 +211,7 @@
     scene._graveRecoveryInert.forEach(([el]) => { el.inert = true; });
     document.body.appendChild(root);
     scene._graveRecovery = root;
+    scene._graveRecoveryUid = uid;
     recoveryScenes.add(scene);
     if (typeof button.focus === "function") button.focus();
     button.onclick = async () => {
@@ -215,7 +230,7 @@
     };
   }
   function clear(scene) { scene._graveRequestGeneration = ++sequence; hideRecovery(scene); }
-  function reset() { ++sequence; for (const scene of [...recoveryScenes]) hideRecovery(scene); cache = {uid: null, enabled: false, markers: [], ownGraveId: null}; }
+  function reset() { ++sequence; activeUid = null; for (const scene of [...recoveryScenes]) hideRecovery(scene); cache = {uid: null, enabled: false, markers: [], ownGraveId: null}; }
   async function perform(action, payload, scene) {
     const uid = session();
     if (MERCADO_EN_CURSO || hasPending(uid) || mercadoPendiente(uid) || SAVE_CONFLICTOS.has(uid)) throw Error("Hay otra operación pendiente. Comprobá su recibo o revisá el guardado antes de continuar.");
@@ -223,13 +238,15 @@
     const resume = pause(scene), unlock = mercadoBloquearPantalla(action === "morir" ? "Confirmando la derrota y conservando tus pertenencias…" : "Confirmando la recogida en el servidor…");
     if (scene?.hero && typeof zonaGuardarPos === "function") zonaGuardarPos(scene.hero.x, scene.hero.y);
     const confirmed = SAVE_CONFIRMACIONES.get(uid) || 0, flush = saveFarm(true);
+    activeUid = uid;
     let recoveryError = null;
     MERCADO_EN_CURSO = (async () => {
       let sent = false;
       try {
         await conTope(flush, 15000, "guardado previo a recoger");
         if (UID !== uid || SAVE_CONFLICTOS.has(uid) || guardadoTienePendiente(uid) || (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmed || !SAVE_BASES.get(uid)) throw Error("No se confirmó el guardado. No se recogió la calavera.");
-        const p = {cuenta: uid, op: window.crypto.randomUUID(), createdAt: Date.now(), base: SAVE_BASES.get(uid), beforeKey: snapKey(), calavera: {action, ...payload}};
+        const beforeSnapshot = JSON.parse(JSON.stringify(snapshot()));
+        const p = {cuenta: uid, op: window.crypto.randomUUID(), createdAt: Date.now(), base: SAVE_BASES.get(uid), beforeSnapshot, beforeKey: snapKey(beforeSnapshot), calavera: {action, ...payload}};
         markPending(uid, p); // Si el recibo no puede persistirse, no se envía la mutación.
         sent = true;
         const r = await invoke({accion: action, cuenta: uid, op: p.op, base: p.base, ...payload});
@@ -243,7 +260,7 @@
         throw e;
       }
     })().finally(() => {
-      MERCADO_EN_CURSO = null; unlock();
+      MERCADO_EN_CURSO = null; if (activeUid === uid) activeUid = null; unlock();
       if (recoveryError && UID === uid && scene) { scene._graveRecoveryResume ||= resume; showRecovery(scene, recoveryError.message); }
       else resume();
     });
@@ -267,6 +284,7 @@
     if (!p) return null;
     if (MERCADO_EN_CURSO) throw Error("Espera a que termine la operación en curso.");
     const resume = pause(scene), unlock = mercadoBloquearPantalla("Comprobando el mismo recibo de calavera…");
+    activeUid = uid;
     let recoveryError = null;
     MERCADO_EN_CURSO = (async () => {
       try {
@@ -278,7 +296,7 @@
         acknowledge(uid, p, r); return r;
       } catch (e) { SAVE_CONFLICTOS.add(uid); recoveryError = e; throw e; }
     })().finally(() => {
-      MERCADO_EN_CURSO = null; unlock();
+      MERCADO_EN_CURSO = null; if (activeUid === uid) activeUid = null; unlock();
       if (recoveryError && UID === uid && scene) { scene._graveRecoveryResume ||= resume; showRecovery(scene, recoveryError.message); }
       else resume();
     });
@@ -296,5 +314,5 @@
     hideRecovery(scene, true);
     if (UID === uid) try { await load(scene); } catch { if (typeof toast === "function") toast("Recibo confirmado. Actualizá la vista de calaveras cuando vuelva la conexión."); } return result;
   }
-  window.GoldenGraves = {usesServer, deathUsesServer, enrolled, enabled: () => usesServer() && cache.uid === UID && cache.enabled, pending, hasPending, load, clear, reset, claim, die, reconcile, own, invalidateOwn, showRecovery, hideRecovery};
+  window.GoldenGraves = {usesServer, deathUsesServer, enrolled, busy, enabled: () => usesServer() && cache.uid === UID && cache.enabled, pending, hasPending, load, clear, reset, claim, die, reconcile, own, invalidateOwn, showRecovery, hideRecovery};
 })();
