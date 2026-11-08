@@ -80,6 +80,13 @@
   $('[data-r-recoger]').textContent='Entregas pendientes ('+entregas+')';$('[data-r-recoger]').disabled=ocupada||pendiente()||!entregas;
   $('.gf-entregas').classList.toggle('gf-entregas-pendientes',entregas>0);
   $('.gf-entregas>span').textContent=entregas?'Por recoger: aún no están en tu bolsa. Pulsa Entregas pendientes para recibir lo que quepa.':'Los premios de objetos se recogen aquí. Si no caben, se conservan.';
+  let detalleEntregas=$('.gf-entregas-detalle');
+  if(!detalleEntregas){detalleEntregas=document.createElement('details');detalleEntregas.className='gf-entregas-detalle';$('.gf-entregas').after(detalleEntregas);}
+  detalleEntregas.replaceChildren();detalleEntregas.hidden=!entregas;
+  if(entregas&&typeof mkPendDetalle==='function'){
+   const resumen=document.createElement('summary');resumen.textContent='Ver lo que tienes por recoger';detalleEntregas.append(resumen);detalleEntregas.open=entregas<=3;
+   for(const p of G.mkPend||[]){const fila=document.createElement('p');fila.textContent=mkPendDetalle(p);detalleEntregas.append(fila);}
+  }
   if(estado){
    const g=estado.config.golden,o=estado.config.objetos,e=n(g.escala)||10000,p=n(g.pesoJackpot);
    $('[data-pot]').textContent=fmt(estado.bote);$('[data-reserve]').textContent=fmt(estado.reserva);$('[data-r-probabilidad]').textContent=pct(p,e)+' de jackpot por giro';$('[data-r-ticket]').textContent='Ticket: '+fmt(g.ticket)+' Golden';

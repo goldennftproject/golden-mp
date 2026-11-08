@@ -47,10 +47,12 @@ test('rollback conserva también la ausencia previa de picks o de sus mapas',()=
  }
 });
 
-test('arma duplicada mantiene su desgaste, mejoras y runas; el premio se entrega una vez tras liberar la pieza',()=>{
- const {c}=setup();const old={dur:13,plus:3,sockets:['fuego']};c.G.weapons.espada_madera=clone(old);c.G.mkPend=[{kind:'arm',item:'espada_madera',qty:1,payload:{dur:80}}];const pend=clone(c.G.mkPend);
- assert.equal(c.mkPendCobrar(),0);assert.deepEqual(clone(c.G.weapons.espada_madera),old);assert.deepEqual(clone(c.G.mkPend),pend);
- delete c.G.weapons.espada_madera;assert.equal(c.mkPendCobrar(),1);assert.equal(c.G.weapons.espada_madera.dur,80);assert.equal(c.G.mkPend.length,0);assert.equal(c.mkPendCobrar(),0);assert.equal(c.G.weapons.espada_madera.dur,80);
+test('arma duplicada conserva desgaste, mejoras y runas actuales; el premio íntegro se recibe una vez como repuesto',()=>{
+ const {c}=setup(),old={dur:13,plus:3,sockets:['fuego']};c.G.weapons.espada_madera=clone(old);
+ const premio={kind:'arm',item:'espada_madera',qty:1,payload:{dur:80}};c.G.mkPend=[clone(premio)];
+ assert.equal(c.mkPendCobrar(),1);assert.deepEqual(clone(c.G.weapons.espada_madera),old);assert.equal(c.G.mkPend.length,0);
+ const ids=Object.keys(c.G.weaponSpares);assert.equal(ids.length,1);assert.deepEqual(clone(c.G.weaponSpares[ids[0]]),{key:'espada_madera',w:{dur:80}});
+ const repuestos=clone(c.G.weaponSpares);assert.equal(c.mkPendCobrar(),0);assert.deepEqual(clone(c.G.weaponSpares),repuestos);assert.deepEqual(clone(c.G.weapons.espada_madera),old);
 });
 
 test('reclamar un premio real queda limpio en portero; inventar, aumentar o duplicar una entrega es rechazado',()=>{

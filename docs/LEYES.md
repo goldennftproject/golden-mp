@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Entregas de armas y requisitos del Establo — 08/11/2026
+
+Dirección pide solucionar el rechazo con bolsa 15/35 y el reporte de compra de Alpaca. Las armas repetidas de entregas confirmadas se conservan como copias independientes que ocupan casillas, sin sustituir el arma actual; su cambio se confirma en servidor con CAS e idempotencia. La bolsa y las entregas muestran nombres y motivos reales. El Establo muestra y aplica los mismos requisitos existentes de alimento, Cultivo, Ganadería, cupo y Plata antes de confirmar. Se preservan fichas, runas, precios, premios, cuentas, progreso y sistemas pausados; sin restauraciones ni compensaciones nuevas. Ver ENTREGAS-ARMAS-Y-ESTABLO-20261108.md.
+
 ## Tutorial de pausas y ayuda para conseguir bronce — 07/11/2026
 
 Dirección autoriza agregar, probar y publicar la práctica de pausar y reactivar y la ayuda para conseguir bronce, conservando el progreso. La lección contextual tras cosechar usa una parcela vacía y los controles manuales del Cobertizo; no desplaza índices ni reinicia tutoriales completados. La expansión ofrece Conseguir bronce y la ayuda distingue cupo, terreno, fuente de compra/regalo y requisitos para minar. Se conservan cuentas, partidas, contadores, tiempos, economía y sistemas pausados. Ver TUTORIAL-PAUSAS-Y-BRONCE-20261107.md.

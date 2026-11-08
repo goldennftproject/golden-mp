@@ -2288,6 +2288,15 @@ let dndActive = false;   // no re-renderizar mientras se arrastra
 function durColor(pct) { return pct > 50 ? "#8fd06a" : pct > 20 ? "#e0c76a" : "#e0705a"; }
 function itemView(d) {
   if (!d) return null;
+  if (d.kind === "arm_spare") {
+    const rep = G.weaponSpares && G.weaponSpares[d.key], def = rep && ARM_DEF[rep.key];
+    if (!def) return { sprite: null, emoji: "⚔️", label: "Repuesto no disponible", dur: null };
+    return { sprite: def.sprite || ARM_TIPO_DEF[def.tipo].sprite, emoji: "⚔️",
+      glow: rep.w.dur <= 0 ? "rota" : undefined,
+      label: def.label + (rep.w.plus ? " +" + rep.w.plus : "") + " · repuesto · durabilidad " + rep.w.dur + "/" + def.dur + " · clic para usar; conserva el arma actual",
+      dur: Math.max(0, Math.min(100, Math.round(rep.w.dur / def.dur * 100))) };
+  }
+  if (!d) return null;
   if (d.kind === "armor") {
     const p = armorPieza(d.key); if (!p || !armorTiene(p.set, p.pieza)) return null;
     return { sprite: 'armor_' + p.set + '_' + p.pieza, emoji: '🛡️', label: mkNombre('armor', d.key) + ' · durabilidad ' + armorDur(p.set, p.pieza) + '/' + ARMOR_DUR_MAX + ' · clic para equipar', dur: armorDur(p.set, p.pieza) / ARMOR_DUR_MAX * 100 };
@@ -2301,7 +2310,8 @@ function itemView(d) {
     return null;   // la azada se retiró del juego (31/7)
   }
   if (d.kind === "arm") {
-    const w = ARM_DEF[d.key], own = G.weapons && G.weapons[d.key];
+    const w = ARM_DEF[d.key], own = (G.weapons && G.weapons[d.key]) ||
+      Object.values(G.weaponSpares || {}).find(r => r && r.key === d.key)?.w;
     if (!w || !own) return null;
     /* 27/8 (diseñador) — UN ARMA ROTA TIENE QUE VERSE ROTA.
        « agregar un icono de espada arma rota cuando se rompa el arma ».
@@ -2433,6 +2443,8 @@ function invCellHtml(d, i, rem, zone) {
     ? ' data-inv-seed="1" role="button" tabindex="0" aria-label="' + escapeHtml("Seleccionar semilla de " + v.label) +
       '" aria-pressed="' + (G.selSeed === d.key ? "true" : "false") + '"'
     : "";
+  const repuestoAttrs = d.kind === "arm_spare"
+    ? ' data-inv-spare="1" role="button" tabindex="0" aria-label="' + escapeHtml(v.label) + '"' : "";
   // 10/8: cada familia lleva su color de borde (k-res, k-seed, k-fish, k-dish, k-tool…), para
   // reconocer de qué es una casilla sin tener que leer el tooltip.
   /* 2/9 (dirección, con la captura de Tibia: « cuando un ítem tiene una rareza en particular,
@@ -2442,7 +2454,8 @@ function invCellHtml(d, i, rem, zone) {
      escalera cambia sola. Lo común no se pinta: si todo brilla, no brilla nada. */
   const rar = (typeof rarezaDe === "function") ? rarezaDe(d.kind, d.key) : null;
   const rc = (rar && rar !== "comun") ? " r-" + rar : "";
-  return `<div class="slot filled k-${d.kind}${rc}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}"${semillaAttrs} title="${v.label}${semillaElegible ? " — seleccionar para plantar" : ""}${d.kind === "dish" || d.kind === "res" || d.kind === "seed" || d.kind === "fish" ? " — clic derecho (o dedo apretado) lo manda a la barra" : ""}">${itemIcon(v)}${cnt}${durBar(v)}</div>`;
+  const repuestoMarca = d.kind === "arm_spare" ? '<span class="cnt" aria-hidden="true">R</span>' : '';
+  return `<div class="slot filled k-${d.kind === "arm_spare" ? "arm" : d.kind}${rc}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}"${semillaAttrs}${repuestoAttrs} title="${escapeHtml(v.label)}${semillaElegible ? " — seleccionar para plantar" : ""}${d.kind === "dish" || d.kind === "res" || d.kind === "seed" || d.kind === "fish" ? " — clic derecho (o dedo apretado) lo manda a la barra" : ""}">${itemIcon(v)}${cnt}${repuestoMarca}${durBar(v)}</div>`;
 }
 function bindTrash() {
   const tr = $("inv-trash"); if (!tr || tr._bound) return; tr._bound = true;
@@ -2466,6 +2479,7 @@ function bolsaFirma() {
   RECIPE_ORDER.forEach(k => { const n = Math.floor((G.dishes && G.dishes[k]) || 0); if (n) s += "d" + k + n + "|"; });
   s += "a" + toolCount("axe");
   PICK_ORDER.forEach(id => { const n = pickCount(id); if (n) s += "p" + id + n + "|"; });
+  s += "w" + JSON.stringify([G.weapons, G.weaponSpares, G.gear && G.gear.arma]);
   return s;
 }
 function syncBolsaAbierta() {
@@ -2581,7 +2595,7 @@ function refreshInv() {
     c.addEventListener("click", () => invCellClick(+c.dataset.slot));
     bindALaBarra(c, () => G.slots[+c.dataset.slot]);   // clic derecho o dedo apretado → a la barra
   });
-  grilla.querySelectorAll("[data-inv-seed]").forEach(c => {
+  grilla.querySelectorAll("[data-inv-seed], [data-inv-spare]").forEach(c => {
     activarAccionConTeclado(c, () => invCellClick(+c.dataset.slot));
   });
   enfocarSemillaBolsaPc(grilla, focoSemilla);
@@ -3045,8 +3059,26 @@ function cobertizoClick(d) {
   else if (d.kind === "chest") { if (window.FARM && FARM.placeChestFromBag) FARM.placeChestFromBag(); }
 }
 
+let armaRepuestoEnCurso = false;
+async function usarArmaRepuesto(id) {
+  if (armaRepuestoEnCurso) return false;
+  if (typeof enZona === "function" && enZona()) { toast("Vuelve a la granja para usar este repuesto"); return false; }
+  if (!G.weaponSpares || !Object.prototype.hasOwnProperty.call(G.weaponSpares, id)) return false;
+  if (typeof economiaSolicitar !== "function") return false;
+  armaRepuestoEnCurso = true;
+  try {
+    const r = await economiaSolicitar({ repuesto: { id } });
+    if (!r || !r.ok) return false;
+    syncSlots(); refreshHud();
+    if (isOpen("ov-inv")) refreshInv();
+    if (isOpen("ov-equip")) refreshEquip();
+    if (isOpen("ov-forge")) refreshForge();
+    return true;
+  } finally { armaRepuestoEnCurso = false; }
+}
 function invCellClick(i) {
   const d = G.slots[i]; if (!d) return;
+  if (d.kind === "arm_spare") { usarArmaRepuesto(d.key); return; }
   if (d.kind === "armor") { armorAlternarPieza(d.key); return; }
   if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitas Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("Plantando: " + CROP_DEF[d.key].label); }
   else if (d.kind === "arm") {   // clic = EQUIPAR (para tirarla, la papelera). Antes se borraba de una: bug reportado
@@ -3105,6 +3137,7 @@ function renderInvExpand() {
 /* ---- barra de accesos directos (hotbar de 10 huecos) ---- */
 function hotItemExists(d) {
   if (!d) return false;
+  if (d.kind === "arm_spare") return !!(G.weaponSpares && G.weaponSpares[d.key]);
   if (d.kind === "tool") { if (d.key === "sword") return G.swordOwned; if (d.key === "bow") return G.bowOwned; return !toolLost(d.key); }
   if (d.kind === "pick") return !!G.picks.owned[d.key];
   /* mismo motivo: en la Zona « existe » es « lo llevo encima », y lo que no llevás sale opaco */
@@ -3219,6 +3252,7 @@ function hotSelect(i) {
       toast("Eso es de la granja — aquí solo tienes lo que cargaste en el contenedor");
       refreshHotbar(); return;
     }
+    if (d.kind === "arm_spare") { usarArmaRepuesto(d.key); return; }
     if (d.kind === "pick" && G.picks.owned[d.key]) equipPick(d.key);
     else if (d.kind === "seed" && cropUnlocked(d.key)) selectSeed(d.key);
     else if (d.kind === "dish") eatDish(d.key);
@@ -5016,7 +5050,7 @@ function refreshEstablo() {
   if (cupoEl) cupoEl.textContent = "Lugares: " + animalesTotal() + "/" + establoCupo() + " (cada nivel de Ganadería suma uno, hasta " + ESTABLO_CUPO_MAX + ").";
   let h = '<div class="info">La ganadería produce materiales para fabricar, no plata automática. Sus materiales no se venden al comprador del sistema. Produce según lo que necesites y reserva plata para semillas y expansiones.</div>';
   ANIMAL_ORDER.forEach(k => {
-    const d = ANIMAL_DEF[k], a = animalDe(k), abierto = animalUnlocked(k);
+    const d = ANIMAL_DEF[k], a = animalDe(k), abierto = animalUnlocked(k), compraMotivo = animalCompraMotivo(k);
     /* 14/9 — LA RACIÓN SE DICE EN LA FILA. Con « Come Zanahoria » alcanzaba mientras todos
        comieran una unidad; desde la ración de dirección el conejo come 20 y el jugador no tiene
        cómo saberlo mirando el establo. Ahora la fila dice la cantidad, y más abajo dice cuántas
@@ -5029,8 +5063,8 @@ function refreshEstablo() {
         '<div class="fds">Come ' + come + ' · produce ' + RES_LABEL[d.mat] + ' (' + animalPorCiclo(k) + ' cada ' + fmtSecs(d.cicloH * 3600) + ')</div>' +
         '<div class="fds">Desbloquea la armadura de ' + d.armadura + '</div>' +
         /* 18/8: el establo dice en la cara qué te falta. Si es nivel, no es un botón gris mudo. */
-        (abierto ? '' : '<div class="fds" style="color:#8a5a1a">🔒 Ganadería nivel ' + animalNivelReq(k) + ' (tienes ' + nivelOficio("ganaderia") + ')</div>') + '</div>' +
-        '<div class="fbtns"><button class="green sm" ' + (abierto && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' + (!abierto ? 'Nivel ' + animalNivelReq(k) : lleno ? 'Establo lleno' : 'Comprar · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';
+        (compraMotivo ? '<div class="fds" style="color:#8a5a1a">' + compraMotivo + '</div>' : '') + '</div>' +
+        '<div class="fbtns"><button class="green sm" ' + (!compraMotivo ? "" : "disabled") + ' data-buyani="' + k + '">' + ('Comprar · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';
       return;
     }
     /* 8/9 (dirección, con la captura del establo: « los animales se alimentan por separado, y
@@ -5079,15 +5113,17 @@ function refreshEstablo() {
     }
     /* la compra vive en su propia fila al pie de la especie: es del ESTABLO, no de un bicho */
     h += '<div class="forge-row"><div class="fic">' + establoAnimalIc(k, d) + '</div><div class="finfo">' +
-      '<div class="fds">' + d.label + ' ×' + cant + ' · produce ' + RES_LABEL[d.mat] + ' (' + animalPorCiclo(k) + ' cada ' + fmtSecs(d.cicloH * 3600) + ' por animal)</div></div>' +
-      '<div class="fbtns"><button class="green sm" ' + (!tope && !lleno && G.plata >= animalPrecio(k) ? "" : "disabled") + ' data-buyani="' + k + '">' +
-        (tope ? 'Tope ' + ANIMAL_MAX : lleno ? 'Establo lleno' : 'Otro · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';
+      '<div class="fds">' + d.label + ' ×' + cant + ' · produce ' + RES_LABEL[d.mat] + ' (' + animalPorCiclo(k) + ' cada ' + fmtSecs(d.cicloH * 3600) + ' por animal)</div>' +
+      (compraMotivo ? '<div class="fds" style="color:#8a5a1a">' + compraMotivo + '</div>' : '') + '</div>' +
+      '<div class="fbtns"><button class="green sm" ' + (!compraMotivo ? "" : "disabled") + ' data-buyani="' + k + '">' +
+        ('Otro · ' + coinIc("plata") + fmt(animalPrecio(k))) + '</button></div></div>';
   });
 
   h += '<div class="info">Materiales: ' + ANIMAL_ORDER.map(k => RES_LABEL[ANIMAL_DEF[k].mat] + " <b>" + (G.res[ANIMAL_DEF[k].mat] || 0) + "</b>").join(" · ") + '</div>';
   box.innerHTML = h;
   box.querySelectorAll("[data-buyani]").forEach(b => b.onclick = () => {
-    const k = b.dataset.buyani, d = ANIMAL_DEF[k];
+    const k = b.dataset.buyani, d = ANIMAL_DEF[k], compraMotivo = animalCompraMotivo(k);
+    if (compraMotivo) { toast(compraMotivo); refreshEstablo(); return; }
     const costeSemillas = Math.min(...d.come.map(c => (CROP_DEF[c].seedCost || 0) * (d.racion || 1)));
     askConfirm("Comprar " + d.label + " cuesta " + fmt(animalPrecio(k)) + " de plata. Cada ciclo requiere " + (d.racion || 1) + " unidad(es) de " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ". Cultivar esa ración cuesta desde " + fmt(costeSemillas) + " de plata en semillas, además de energía y parcelas. Produce " + RES_LABEL[d.mat] + ", no plata automática; ese material no se vende al comprador del sistema. ¿Comprar?",
       () => comprarAnimal(k), { title: "Comprar " + d.label, yes: "Comprar", yesClass: "green", no: "Cancelar", noClass: "red" });
@@ -7478,7 +7514,8 @@ async function refreshP2P(actualizar=false) {
   // entregas pendientes (compras/retiros que no entraron en la bolsa): nunca se pierden
   if (typeof mkPendCount === "function" && mkPendCount() > 0) {
     h += '<div class="forge-row eq"><div class="finfo"><div class="fnm">Entregas pendientes (' + mkPendCount() + ')</div>' +
-      '<div class="fds">Compras o retiros por recoger. Libera espacio si hace falta y reclamalos.</div></div>' +
+      '<div class="fds">Compras, retiros o premios por recoger.</div>' +
+      (typeof mkPendDetalle === 'function' ? (G.mkPend || []).map(p => '<div class="fds">' + escapeHtml(mkPendDetalle(p)) + '</div>').join('') : '') + '</div>' +
       '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
   }
   if (p2pTab === "vender") {

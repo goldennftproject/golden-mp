@@ -14,7 +14,7 @@ const G = {
   treesOpen: [0], rocksOpen: [0],  // economía gradual: los otros nodos se eligen, no nacen todos activos
   produccion: { v: 1, base: 5, nodos: {}, pausas: {}, vale: 0, valesV: 2, vipHasta: 0, vipAplicado: false, vipUnico: 1, orden: [] },
   gear: { casco: null, armadura: null, botas: null, escudo: null, arma: null, municion: false },
-  weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
+  weaponSpares: {}, weaponSparesOps: [], weapons: {},                   // doc 2/8: armas nuevas — id ("espada_madera") -> { dur }
   stam: null, stamAcc: 0, stamFullAt: 0, stamLastAt: 0, stamRec: null, // regeneración continua con reloj persistente
   stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, logrosV2:null, logrosAcciones:{}, infraestructura:null, farmXpEdificios:0, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
@@ -4421,7 +4421,70 @@ function mkSacar(kind, key, n) {
   else if (kind === "armor") { delete G.armor[key]; if (G.armorDur) delete G.armorDur[key]; if (G.armorOff) delete G.armorOff[key]; applyCombatHp(); }
   return true;
 }
-function mkPoner(kind, key, n, payload) {
+// Individual spare instances retain their full metadata. Only confirmed pending
+// deliveries may create one locally; switching uses the authoritative operation.
+function weaponSparesCopiar(stock) {
+  if (stock == null) return {};
+  if (typeof stock !== 'object' || Array.isArray(stock)) throw new Error('Repuestos inválidos; conserva la copia y vuelve a sincronizar.');
+  for (const [id,r] of Object.entries(stock)) {
+    if (!/^r-[a-z0-9._-]{1,78}$/i.test(id) || !r || typeof r !== 'object' || Array.isArray(r) ||
+        typeof r.key !== 'string' || !Object.prototype.hasOwnProperty.call(ARM_DEF,r.key) ||
+        !r.w || typeof r.w !== 'object' || Array.isArray(r.w) || !Number.isFinite(r.w.dur) || r.w.dur < 0)
+      throw new Error('Repuestos inválidos; conserva la copia y vuelve a sincronizar.');
+  }
+  return JSON.parse(JSON.stringify(stock));
+}
+function weaponSpareAgregar(key,w) {
+  if (!Object.prototype.hasOwnProperty.call(ARM_DEF,key) || !w || typeof w !== 'object' || Array.isArray(w) || !Number.isFinite(w.dur) || w.dur < 0) return false;
+  const existia=Object.prototype.hasOwnProperty.call(G,'weaponSpares'),anterior=G.weaponSpares;
+  let stock;try{stock=weaponSparesCopiar(anterior);}catch(e){return false;}
+  const base='r-'+(typeof window.crypto?.randomUUID==='function' ? window.crypto.randomUUID() : Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
+  let id=base,i=0;while(Object.prototype.hasOwnProperty.call(stock,id))id=base+'-'+(++i);
+  stock[id]={key,w:JSON.parse(JSON.stringify(w))};G.weaponSpares=stock;
+  if(canonicalStacks().length>invSlots()){if(existia)G.weaponSpares=anterior;else delete G.weaponSpares;return false;}
+  return true;
+}
+function mkPendEstado(p) {
+  const invalid={codigo:'invalida',texto:'No se puede recoger esta entrega; se conserva para revisión.'};
+  if(!p||typeof p!=='object')return invalid;
+  const {kind,item:key,qty:n,payload}=p;let antes=0,despues=0,cuenta=true,repuesto=false;
+  if(kind==='pick'){
+    const def=Object.prototype.hasOwnProperty.call(PICK_DEF,key)?PICK_DEF[key]:null;
+    if(!def||key==='wood'||!Number.isSafeInteger(n)||n<=0)return invalid;
+    const usos=Number(G.picks?.dur?.[key]||0),cantidad=n*def.dur;
+    if(!Number.isSafeInteger(usos)||usos<0||!Number.isSafeInteger(cantidad))return invalid;
+    if(usos+cantidad>99*def.dur)return {codigo:'limite_picos',texto:'El lote supera el límite de 99 picos de este tipo. Los '+n+' se conservan pendientes.'};
+    antes=G.picks?.owned?.[key]?Math.max(0,Math.floor(usos)):0;despues=usos+cantidad;
+  }else if(kind==='armor'){
+    if(n!==1||!armorPieza(key)||!payload||!Number.isFinite(payload.dur)||payload.dur<0||payload.dur>ARMOR_DUR_MAX)return invalid;
+    if((G.armor||{})[key])return {codigo:'duplicada',texto:'Ya tienes esta pieza de armadura. La entrega se conserva pendiente.'};
+    despues=1;
+  }else{
+    if(!['res','seed','dish','fish','arm'].includes(kind)||!Number.isFinite(n)||n<=0)return invalid;
+    const campo={res:'res',seed:'seeds',dish:'dishes',fish:'fish',arm:'weapons'}[kind],previo=(G[campo]||{})[key];
+    if(kind==='arm'){
+      if(n!==1)return invalid;
+      if(previo){
+        if(!Object.prototype.hasOwnProperty.call(ARM_DEF,key)||!payload||typeof payload!=='object'||Array.isArray(payload)||!Number.isFinite(payload.dur)||payload.dur<0)return invalid;
+        try{weaponSparesCopiar(G.weaponSpares);}catch(e){return invalid;}
+        repuesto=true;
+      }
+      despues=1;cuenta=ARM_ORDER.includes(key);
+    }else{
+      antes=Math.max(0,Math.floor(previo||0));despues=Math.max(0,Math.floor((previo||0)+n));
+      cuenta=kind==='fish'||(kind==='res'?ITEM_RES_ORDER:kind==='seed'?CROP_ORDER:RECIPE_ORDER).includes(key);
+    }
+  }
+  const extra=cuenta?Math.ceil(despues/99)-Math.ceil(antes/99):0;
+  if(canonicalStacks().length+extra>invSlots())return {codigo:'espacio',texto:'Falta espacio en la bolsa para esta entrega. Se conserva pendiente.'};
+  return {codigo:'disponible',texto:repuesto?'Listo para recoger como repuesto; conserva el arma actual.':'Listo para recoger.'};
+}
+function mkPendDetalle(p) {
+  const nombre=p&&typeof p.item==='string'?mkNombre(p.kind,p.item):'Entrega';
+  return (p&&Number.isFinite(p.qty)?p.qty+' × ':'')+nombre+': '+mkPendEstado(p).texto;
+}
+
+function mkPoner(kind, key, n, payload, opciones) {
   if(kind==='pick'){
     const def=Object.prototype.hasOwnProperty.call(PICK_DEF,key)?PICK_DEF[key]:null;
     if(!def||key==='wood'||!Number.isSafeInteger(n)||n<=0)return false;
@@ -4444,7 +4507,8 @@ function mkPoner(kind, key, n, payload) {
   G[campo] = G[campo] || {};
   const existia = Object.prototype.hasOwnProperty.call(G[campo],key), antes = G[campo][key];
   if (kind === 'arm') {
-    if (n !== 1 || antes) return false;
+    if (n !== 1) return false;
+    if (antes) return opciones?.pendiente === true ? weaponSpareAgregar(key,payload) : false;
     G[campo][key] = payload || {dur:ARM_DEF[key] ? ARM_DEF[key].dur : 40};
   } else G[campo][key] = (antes || 0) + n;
   if (canonicalStacks().length > invSlots()) {
@@ -4465,10 +4529,12 @@ function mkPendCount() { return (G.mkPend || []).length; }
 function mkPendCobrar() {
   if (!G.mkPend || !G.mkPend.length) { toast("No tienes nada pendiente"); return 0; }
   const quedan = []; let dados = 0;
-  for (const p of G.mkPend) { if (mkPoner(p.kind, p.item, p.qty, p.payload)) dados++; else quedan.push(p); }
+  for (const p of G.mkPend) { if (mkPoner(p.kind, p.item, p.qty, p.payload, {pendiente:true})) dados++; else quedan.push(p); }
   G.mkPend = quedan;
-  if (dados) { log("Reclamaste " + dados + " entrega(s) pendiente(s).", "good"); toast("+" + dados + " entrega(s)"); }
-  else toast("Sigue sin entrar — libera espacio en la bolsa");
+  if (dados) log("Reclamaste " + dados + " entrega(s) pendiente(s).", "good");
+  const aviso = dados ? "+" + dados + " entrega(s)" : "";
+  toast(aviso + (quedan.length ? (aviso ? "; quedan " + quedan.length + ". " : "") + mkPendDetalle(quedan[0]) : ""));
+  for (const p of quedan) log(mkPendDetalle(p), "bad");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
   if (typeof refreshP2P === "function" && isOpen("ov-p2p")) refreshP2P();
   if (typeof saveFarm === "function") saveFarm(true);
@@ -6194,31 +6260,27 @@ function animalFelicidad(k) {
   const l = animalLista(k); if (!l.length) return 0;
   return Math.round(l.reduce((s, a) => s + animalFelizDe(a), 0) / l.length);
 }
-function comprarAnimal(k) {
-  /* 18/8 (dirección): la skill de GANADERÍA abre los animales. La alpaca desde el principio; el
-     conejo, el toro y el jabalí según vas cuidando el establo. */
-  if (typeof animalUnlocked === "function" && !animalUnlocked(k)) {
-    toast("Necesitas Ganadería nivel " + animalNivelReq(k) + " para " + (ANIMAL_DEF[k] ? ANIMAL_DEF[k].label : k));
-    return;
-  }
-  const d = ANIMAL_DEF[k]; if (!d) { console.warn("[comprarAnimal] especie inexistente:", k); return; }
-  if (!(G.built && G.built.establo)) { toast("Primero construye el Establo"); return; }
-  /* 2/9 — LA OTRA MITAD de la dieta estricta: un animal cuya comida no podés cultivar es una
-     trampa (la alpaca se abre a Ganadería 1 y el trigo pide Cultivo 6 — ese era el agujero que
-     la regla genérica del 14/8 tapaba con parche). Ahora la tienda es honesta: si no podés
-     producir NINGUNO de sus cultivos ni tenés existencias, no te lo vende, y te dice qué falta. */
+// La ficha y la compra usan las mismas condiciones: el motivo se muestra antes de confirmar.
+function animalCompraMotivo(k) {
+  const d = Object.prototype.hasOwnProperty.call(ANIMAL_DEF, k) ? ANIMAL_DEF[k] : null;
+  if (!d) return "Animal inexistente";
+  if (typeof animalUnlocked === "function" && !animalUnlocked(k))
+    return "Necesitas Ganadería nivel " + animalNivelReq(k) + " para " + d.label;
+  if (!(G.built && G.built.establo)) return "Primero construye el Establo";
   const puedeComer = d.come.some(c => (G.res[c] || 0) > 0 || (typeof cropUnlocked === "function" && cropUnlocked(c)));
-  if (!puedeComer) {
-    toast(d.label + " solo come " + d.come.map(c => CROP_DEF[c].label).join(" o ") + " — necesitas Cultivo nivel " +
-      Math.min.apply(null, d.come.map(c => CROP_DEF[c].lvl || 1)) + " para alimentarla");
-    return;
-  }
-  const tengo = animalCant(k);
-  if (tengo >= ANIMAL_MAX) { toast("Ya tienes " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)"); return; }
-  /* 22/8: el cupo TOTAL sale del nivel de Ganadería (2 al arrancar, +1 por nivel, techo 20) */
-  if (animalesTotal() >= establoCupo()) { toast("El establo está lleno (" + establoCupo() + " lugares) — Ganadería " + (nivelOficio("ganaderia") + 1) + " suma uno más"); return; }
+  if (!puedeComer) return "Para comprar " + d.label + ", necesitas Cultivo nivel " +
+    Math.min.apply(null, d.come.map(c => CROP_DEF[c].lvl || 1)) + " o tener " +
+    d.come.map(c => CROP_DEF[c].label).join(" o ") + " en la bolsa.";
+  if (animalCant(k) >= ANIMAL_MAX) return "Ya tienes " + ANIMAL_MAX + " " + d.label.toLowerCase() + " (el tope)";
+  if (animalesTotal() >= establoCupo()) return "El establo está lleno (" + establoCupo() + " lugares) — Ganadería " + (nivelOficio("ganaderia") + 1) + " suma uno más";
   const precio = animalPrecio(k);
-  if (G.plata < precio) { toast("Te falta plata (" + precio + ")"); return; }
+  if (G.plata < precio) return "Te falta plata (" + precio + ")";
+  return "";
+}
+function comprarAnimal(k) {
+  const motivo = animalCompraMotivo(k);
+  if (motivo) { toast(motivo); return; }
+  const d = ANIMAL_DEF[k], tengo = animalCant(k), precio = animalPrecio(k);
   G.plata -= precio;
   animalLista(k).push({ desde: nowMs(), feliz: 50, comidoAt: nowMs(), prodAt: nowMs() });
   log("Compraste " + d.label + " por " + precio + " de plata (ahora tienes " + animalCant(k) + "). Alimentalo con " + d.come.map(c => CROP_DEF[c].label).join(" o ") + ".", "gold");
@@ -8278,6 +8340,7 @@ function bolsaCuentas() {
   for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) add("arm", id, 1);
   for (const set of ARMOR_ORDER) for (const pieza of ARMOR_SLOTS) if (armorTiene(set, pieza) && !armorActiva(set, pieza)) add("armor", armorKey(set, pieza), 1);
   PICK_ORDER.forEach(id => add("pick", id, pickCount(id)));
+  for (const id of Object.keys(G.weaponSpares || {})) add("arm_spare",id,1);
   /* las cañas de la v4 no se gastan: se TIENEN. Por eso la cuenta es 1 y no « usos », y por eso
      la bolsa las muestra sin número — un contador que siempre dice 1 es ruido. */
   if (typeof CANA_V4_ORDER !== "undefined")
@@ -8321,7 +8384,10 @@ function bolsaFoto() {
     if (r) contAplanar(r).forEach(e => { const k = e.kind + ":" + e.k; m[k] = (m[k] || 0) + e.n; });
     return m;
   }
-  bolsaCuentas().forEach(x => { m[x.kind + ":" + x.key] = x.n; });
+  bolsaCuentas().forEach(x => {
+    const kind=x.kind==='arm_spare'?'arm':x.kind,key=x.kind==='arm_spare'?G.weaponSpares?.[x.key]?.key:x.key;
+    if(key){const k=kind+':'+key;m[k]=(m[k]||0)+x.n;}
+  });
   /* 8/9 (Suren): al décimo, no al entero. Con Math.floor, vender un pez de 0,6 no producía
      ningún chip —la resta daba cero— y el segundo escupía « +1 » de golpe: el margen contaba
      una historia falsa sobre lo que acababa de pasar. */
@@ -8404,7 +8470,7 @@ function recientesCant(kind, key) {
 function canonicalStacks() {
   const list = [];
   bolsaCuentas().forEach(x => {
-    if (x.kind === "arm" || x.kind === "cana") { list.push({ kind: x.kind, key: x.key }); return; }
+    if (x.kind === "arm" || x.kind === "arm_spare" || x.kind === "cana") { list.push({ kind: x.kind, key: x.key }); return; }
     let n = x.n; while (n > 0) { list.push({ kind: x.kind, key: x.key }); n -= 99; }
   });
   return list;
@@ -8799,6 +8865,7 @@ var RAREZA_PICK = { stone: "comun", bronze: "poco_comun", iron: "raro", gold: "e
                     diamond: "legendario", netherite: "mitico" };
 var RAREZA_CANA = { junco: "comun", bambu: "poco_comun", hierro: "raro", oro: "epico", abuelo: "legendario" };
 function rarezaDe(kind, key) {
+  if(kind==='arm_spare'){key=G.weaponSpares?.[key]?.key;kind='arm';}
   if (!key) return null;
   if (kind === "fish") {
     /* la clave de la bolsa puede venir como especie@kg (2/9) — y los fósiles de la v2 SON su

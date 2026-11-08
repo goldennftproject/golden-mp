@@ -18,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 10;       // 05/11: energía/snapshot coherentes, tala en vuelo y testigos CD hasta ACK.
+const VERSION = 11;       // 08/11: copias de armas independientes y cambio autoritativo sin perder fichas.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -600,6 +600,53 @@ function xpGranjaOficios(d){
  const parte=(k,antes,despues)=>{const xp=Math.max(0,Number(s[k])||0);if(!a)return xp*antes;const corte=Math.max(0,Number(a[k])||0);return Math.min(xp,corte)*antes+Math.max(0,xp-corte)*despues;};
  return parte('tala',15,1.5)+parte('mining',20,2);
 }
+// Los repuestos conservan fichas completas fuera del arma activa. Sólo se crean
+// al recoger una entrega aceptada; cambiarlos de mano requiere la operación CAS.
+function repuestoIdValido(id){return typeof id==='string' && /^r-[a-z0-9._-]{1,78}$/i.test(id);}
+function repuestoMapa(v){return !!v && typeof v==='object' && !Array.isArray(v);}
+function repuestoFichaValida(e){
+  return repuestoMapa(e) && Object.keys(e).length===2 && Object.prototype.hasOwnProperty.call(e,'key') && Object.prototype.hasOwnProperty.call(e,'w') &&
+    typeof e.key==='string' && /^[a-z][a-z0-9_]{0,99}$/.test(e.key) && !['__proto__','constructor','prototype'].includes(e.key) &&
+    repuestoMapa(e.w) && Number.isFinite(e.w.dur) && e.w.dur>=0;
+}
+function protegerRepuestos(antes,next,pendientes,retenidas,errores){
+  const prev=antes.weaponSpares===undefined?{}:antes.weaponSpares;
+  if(next.weaponSpares===undefined&&antes.weaponSpares!==undefined)next.weaponSpares=JSON.parse(JSON.stringify(prev));
+  const actual=next.weaponSpares===undefined?{}:next.weaponSpares;
+  if(!repuestoMapa(prev)||!repuestoMapa(actual))errores.push('Repuestos de armas inválidos');
+  else{
+    const consumidas=new Set();
+    for(const id of Object.keys(prev))if(!Object.prototype.hasOwnProperty.call(actual,id)||!mismoJSON(prev[id],actual[id]))errores.push('Los repuestos sólo se cambian mediante una operación confirmada');
+    for(const id of Object.keys(actual)){
+      if(Object.prototype.hasOwnProperty.call(prev,id))continue;
+      const e=actual[id];
+      if(!repuestoIdValido(id)||!repuestoFichaValida(e)){errores.push('Repuesto de arma inválido');continue;}
+      const i=pendientes.findIndex((p,i)=>!retenidas.has(i)&&!consumidas.has(i)&&p?.kind==='arm'&&p.item===e.key&&p.qty===1&&mismoJSON(p.payload,e.w));
+      if(i<0)errores.push('Los repuestos nuevos requieren una entrega de arma confirmada');else consumidas.add(i);
+    }
+  }
+  const ops=antes.weaponSparesOps===undefined?[]:antes.weaponSparesOps;
+  if(next.weaponSparesOps===undefined&&antes.weaponSparesOps!==undefined)next.weaponSparesOps=JSON.parse(JSON.stringify(ops));
+  const siguientesOps=next.weaponSparesOps===undefined?[]:next.weaponSparesOps;
+  if(!Array.isArray(ops)||!Array.isArray(siguientesOps)||!mismoJSON(ops,siguientesOps))errores.push('Los recibos de repuestos sólo se escriben en el servidor');
+}
+function repuestoOperacion(prev,p,op){
+  if(!repuestoMapa(p)||!repuestoIdValido(p.id))return {error:'Repuesto inválido'};
+  const ops=Array.isArray(prev.weaponSparesOps)?prev.weaponSparesOps:[];
+  const recibo=ops.find(r=>r?.op===op);
+  if(recibo)return recibo.id===p.id?{data:JSON.parse(JSON.stringify(prev)),repetido:true}:{error:'Recibo reutilizado para otro repuesto'};
+  if(prev.zonaViaje)return {error:'Vuelve a la granja para cambiar un repuesto'};
+  const mapa=prev.weaponSpares;
+  if(!repuestoMapa(mapa)||!Object.prototype.hasOwnProperty.call(mapa,p.id)||!repuestoFichaValida(mapa[p.id]))return {error:'Este repuesto ya no está disponible'};
+  const data=JSON.parse(JSON.stringify(prev)),e=data.weaponSpares[p.id],key=e.key;
+  data.weapons=repuestoMapa(data.weapons)?data.weapons:{};
+  const activa=Object.prototype.hasOwnProperty.call(data.weapons,key)?data.weapons[key]:null;
+  data.weapons[key]=e.w;
+  if(activa)data.weaponSpares[p.id]={key,w:activa};else delete data.weaponSpares[p.id];
+  data.gear={...(repuestoMapa(data.gear)?data.gear:{}),arma:key};
+  data.weaponSparesOps=[...ops,{op,id:p.id}].slice(-20);
+  return {data};
+}
 function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   picosUnificarEstado(next);
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
@@ -629,6 +676,7 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   if(next.mkPend===undefined)next.mkPend=JSON.parse(JSON.stringify(pendientes));
   if(!Array.isArray(next.mkPend))errores.push('Entregas pendientes inválidas');
   else for(const entrega of next.mkPend){const i=pendientes.findIndex((p,i)=>!usados.has(i)&&mismoJSON(p,entrega));if(i<0){errores.push('Las entregas pendientes sólo se crean en el servidor');break;}usados.add(i);}
+  protegerRepuestos(antes,next,pendientes,usados,errores);
   const ritmo=next.farmXpRitmo,ancla=antes.farmXpRitmo||{v:1,tala:Math.max(0,num(antes.skills?.tala)),mining:Math.max(0,num(antes.skills?.mining))};
   if((ritmo||antes.farmXpRitmo)&&(!ritmo||!mismoJSON(ritmo,ancla)))errores.push('No se puede modificar el ancla de XP aceptada');
 
@@ -1021,7 +1069,7 @@ Deno.serve(async (req) => {
       return json(data);
     }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
-    if(body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
+    if(body?.repuesto || body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
       const a=body.artefacto;
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
@@ -1029,7 +1077,7 @@ Deno.serve(async (req) => {
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
-      const r=body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      const r=body.repuesto ? repuestoOperacion(row.data,body.repuesto,body.op) : body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
       if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,premio:r.premio,repetido:true,granja:granjaVisitada});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);

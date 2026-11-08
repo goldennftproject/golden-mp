@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('nod
 const {JSDOM}=require('jsdom'),root=path.resolve(__dirname,'..');
 const ctx=require('./arrancar-el-juego.contexto').arrancar(root).ctx,run=s=>vm.runInContext(s,ctx);
 const dom=new JSDOM(fs.readFileSync(path.join(root,'public/index.html'),'utf8'),{url:'http://localhost/'});ctx.document=dom.window.document;
-run('estadoDeCero();G.plata=9999;refreshEstablo();');
+run('estadoDeCero();G.built.establo=true;G.res.trigo=1;G.plata=9999;refreshEstablo();');
 const box=dom.window.document.getElementById('establo-list');
 assert.match(box.textContent,/no plata automática/);assert.match(box.textContent,/no se venden al comprador del sistema/);
 assert.ok(!dom.window.document.getElementById('ov-establo').textContent.includes('Cuanto más feliz, más produce'),'sin promesa antigua de producción por felicidad');
