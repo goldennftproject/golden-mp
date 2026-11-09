@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Parcelas identificadas y pausa en su propio suelo — 09/11/2026
+
+El propietario autoriza terminar las pruebas y publicar números estables de parcela, coincidentes con el Cobertizo, y corregir el anclaje de «Pausada» para que aparezca dentro de su propia parcela. Es una mejora de presentación: conserva índices, posiciones, cultivos, pausas, relojes, capacidad y partidas. Los números no se guardan como datos de jugador. Ver PARCELAS-NUMERADAS-20261109.md.
+
 ## Historial privado automático de guardado — 09/11/2026
 
 El propietario autoriza implementar, probar y publicar un historial privado y acotado de guardados aceptados, propuestas rechazadas y copias locales propias anteriores a hidratar, sin nuevas descargas manuales al jugador. Autenticación, propiedad, etapa de partida, privacidad, retención y cuotas se comprueban en servidor; los fallos del soporte no rechazan el guardado habitual. Las evidencias locales o rechazadas nunca se aceptan, fusionan ni restauran automáticamente. Se preservan partidas, reglas, cuentas, arte, sistemas pausados y estudio USDT. Ver HISTORIAL-GUARDADO-20261109.md.

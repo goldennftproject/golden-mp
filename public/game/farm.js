@@ -4890,6 +4890,41 @@ class FarmScene extends Phaser.Scene {
     return ocultas;
   }
 
+  // Visual identity only: i + 1 is also the Cobertizo's Parcela number.
+  textoIdentidadParcela(o, texto) {
+    if (!texto || !o || o.type !== "plot" || o.state === "locked" ||
+        !Number.isInteger(o.i) || o.i < 0 || o.i >= (G.plotsOwned || 3)) return texto;
+    return "Parcela " + (o.i + 1) + " · " + texto;
+  }
+
+  actualizarNumerosParcelas() {
+    const zoom = this.cameras.main.zoom || 1, T = GF.TILE;
+    for (const pl of this.plots || []) {
+      const visible = pl.i < (G.plotsOwned || 3) && pl.state !== "locked" &&
+        !pl.oculto && pl.ground && pl.ground.visible !== false && T * zoom >= 18;
+      if (!visible) { if (pl.numeroParcela) pl.numeroParcela.setVisible(false); continue; }
+      if (!pl.numeroParcela) {
+        pl.numeroParcela = this.add.text(0, 0, String(pl.i + 1), {
+          fontFamily: "system-ui", fontSize: "11px", fontStyle: "bold", color: "#fff3d2",
+          backgroundColor: "#50321c", padding: { x: 3, y: 1 },
+          stroke: "#291a10", strokeThickness: 1
+        }).setOrigin(0, 0).setDepth(9991);
+      }
+      const n = pl.numeroParcela;
+      // At constant screen size a two-digit badge must still fit its plot, with a margin.
+      if (n.width + 4 > T * zoom) { n.setVisible(false); continue; }
+      const x = pl.cx - T / 2 + 2 / zoom, y = pl.by - T / 2 + 2 / zoom;
+      if (n.x !== x || n.y !== y) n.setPosition(x, y);
+      if (pl.numeroParcelaZoom !== zoom) { n.setScale(1 / zoom); pl.numeroParcelaZoom = zoom; }
+      const pausada = typeof produccionPausada === "function" && produccionPausada(pl);
+      if (pl.numeroParcelaPausada !== pausada) {
+        n.setColor(pausada ? "#ffdc81" : "#fff3d2");
+        pl.numeroParcelaPausada = pausada;
+      }
+      if (!n.visible) n.setVisible(true);
+    }
+  }
+
   // brillo de interacción: hover del cursor + cercanía del granjero (capa aditiva sobre el sprite)
   updateHoverFx() {
     if (!this.hoverFx) {
@@ -5430,6 +5465,7 @@ class FarmScene extends Phaser.Scene {
   }
   // pinta la parcela según su estado (para restaurar tras un refresh)
   applyPlotVisual(pl) {
+    if (pl.timer) pl.timer.setScale(1);   // reactivation restores the normal timer scale immediately
     if (pl.state === "growing") {
       this.showGrowing(pl);
       // el guardado manda; si es una partida vieja sin el dato, se calcula con el multiplicador real
@@ -6270,6 +6306,7 @@ class FarmScene extends Phaser.Scene {
     this.worldLights?.sync({objects:this.objs,adornos:this.adornos,built:G.built,
       forgeLit:(G.forgeLitUntil||0)>t,atmosphere:window.GoldenLighting?.atmosphere?.()},t);
     this.tickVapor(t);      // vapor de la Cocina y chispas del Altar mejorado
+    this.actualizarNumerosParcelas();   // matching IDs without changing production
     this.updateHoverFx();   // brillo sobre lo interactuable (hover + cercanía)
     // clic sostenido: aplicar el destino que quedó pendiente por el freno del recálculo
     if (this.hold && this.hold.active && this.holdPend && t - (this.holdAt || 0) > 130) {
@@ -6301,10 +6338,19 @@ class FarmScene extends Phaser.Scene {
     for (const pl of this.plots) {
       if (produccionPausada(pl)) {
         if (pl.spr) pl.spr.setAlpha(0.5);
-        if (pl.timer) pl.timer.setText("⏸ Pausada").setVisible(true);
+        if (pl.timer) {
+          const suelo = pl.ground;
+          const centro = suelo ? suelo.x : pl.cx;
+          const abajo = suelo ? suelo.y + suelo.displayHeight / 2 : pl.by + GF.TILE / 2;
+          pl.timer.setText("⏸ Pausada");
+          const ancho = Math.max(1, (suelo ? suelo.displayWidth : GF.TILE) - 4);
+          pl.timer.setScale(Math.min(1, ancho / Math.max(1, pl.timer.width)))
+            .setPosition(centro, abajo - 2).setDepth(pl.by + 3).setVisible(true);
+        }
         if (pl.barraG) pl.barraG.clear();
         continue;
       }
+      if (pl.timer) pl.timer.setScale(1);   // the paused label never shrinks the normal crop timer
       // 2/8: MARCHITADO DESACTIVADO (pedido del diseñador) — el cultivo listo ya no se pudre
       if (pl.state === "ready" && pl.witherAt) { pl.witherAt = 0; this.syncPlots(); }
       this.barraCultivo(pl, t);   // barrita + tiempo restante, SIEMPRE visible mientras crece (como SFL)
@@ -6579,7 +6625,7 @@ class FarmScene extends Phaser.Scene {
       const objetivo = hit || agua;
       const base = objetivo ? (agua ? this.textoPescaPC() : this.textoPromptPC(objetivo)) : "";
       const bloqueo = objetivo ? this.bloqueoPrompt(objetivo) : null;
-      const texto = this.textoBloqueoPrompt(bloqueo, base);
+      const texto = this.textoIdentidadParcela(objetivo, this.textoBloqueoPrompt(bloqueo, base));
       if (texto) { el.textContent = texto; el.classList.add("show"); }
       else el.classList.remove("show");
       return;
@@ -6590,7 +6636,7 @@ class FarmScene extends Phaser.Scene {
     const objetivo = o || agua;
     const t2 = objetivo ? (agua ? this.textoPescaPC() : this.textoPromptPC(objetivo)) : "";
     const bloqueo = objetivo ? this.bloqueoPrompt(objetivo) : null;
-    const texto = this.textoBloqueoPrompt(bloqueo, t2);
+    const texto = this.textoIdentidadParcela(objetivo, this.textoBloqueoPrompt(bloqueo, t2));
     if (texto) {
       el.textContent = texto + (bloqueo && !bloqueo.ok ? "" : "  ·  [E]");
       el.classList.add("show");
