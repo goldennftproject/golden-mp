@@ -21,3 +21,11 @@ Además, Forest solicita el estado de calaveras y abre el modal que pausa la esc
 Las pruebas nuevas cargan la sesión y la fila sintética desde cero, pulsan los dos controles reales, exigen un UUID nuevo sólo después de comprobar la cancelación y llegan a la granja con la confirmación del servidor. También cubren estado retrasado por la pausa, personajes vivos con un recibo antiguo y vida cero fuera de un viaje válido. Se añade comprobación con Phaser y DOM de navegador. Estas pruebas no sustituyen la confirmación de Tecnopartes; el regreso real se registra por separado.
 
 Si se recarga después de comprobar la cancelación y ya no queda un recibo, Forest también pausa la derrota pendiente y presenta Confirmar. No depende de que la lectura asíncrona de estado termine antes de crear la escena. Se cubre esa recarga intermedia con los mismos controles, sin provocar una muerte privada ni liberar un personaje con vida cero.
+
+## Informe local del rechazo después de recargar
+
+Un video posterior muestra la comprobación seguida por el rechazo de versión local. El propietario confirma que hubo recarga previa. El servidor sigue conservando la misma partida y sólo el recibo cancelado original. Una diferencia de formato de fecha reproduce ese mensaje, pero todavía no está demostrada en el cliente real; no se cambia la comparación ni se relajan las guardas a partir de esa hipótesis.
+
+El modal incorpora Descargar informe para Suren. Genera un JSON local con la versión cargada, operación, bases exactas y resultado de las comprobaciones del último ACK. Sólo exporta campos permitidos, sin datos de inventario, snapshots, huellas completas de la partida, credenciales ni identificador de cuenta. No envía el archivo ni inicia solicitudes; el jugador decide compartirlo. Se respeta el aislamiento por cuenta y se retiran los metadatos al reiniciar la sesión del módulo.
+
+El informe no invoca snapshot ni snapKey: esas funciones pueden normalizar cosméticos antiguos. Reutiliza los booleanos capturados a partir de la única clave que el ACK ya calculaba. Descargar conserva la partida, la base, el journal, la pausa y las guardas. No constituye una corrección del rechazo ni una confirmación del regreso real.
