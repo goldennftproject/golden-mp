@@ -2692,6 +2692,125 @@ function confirmarColocacionProduccionPremium(id,cx,by) {
     if(!terminada&&ov&&Observer){observer=new Observer(()=>{if(!enviando&&!ov.classList.contains('show'))finalizar(false);});observer.observe(ov,{attributes:true,attributeFilter:['class']});}
   });
 }
+// A paused production opens a reviewable choice; opening or cancelling never changes the farm.
+var PRODUCCION_REACTIVACION_UI = null;
+function produccionAbrirReactivacion(objeto) {
+  const clave = typeof objeto === "string" ? objeto : typeof produccionClave === "function" ? produccionClave(objeto) : "";
+  const ov = $("ov-confirm"), titulo = $("cf-title"), mensaje = $("cf-msg"), si = $("cf-yes"), no = $("cf-no");
+  if (!/^[np]:\d+$/.test(clave) || !ov || !titulo || !mensaje || !si || !no ||
+      typeof askConfirm !== "function" || typeof document.createElement !== "function" ||
+      typeof produccionPlanReactivar !== "function" || typeof produccionReactivarConCambio !== "function") return false;
+  // askConfirm's legacy missing-dialog fallback executes onYes. Never delegate a mutation to it.
+  if (ov.classList.contains("show")) { toast("Termina o cancela la confirmación abierta."); return false; }
+  const uid = typeof UID !== "undefined" ? UID : null, estado = G, libro = G.produccion;
+  const escena = window.farmScene || window.FARM, parcelas = escena?.plots, objetos = escena?.objs;
+  const inicio = G.iniciado, reinicio = Number(G.reinicio || 0);
+  function sincronizacion() {
+    if (!uid || typeof UID === "undefined" || UID !== uid) return "Vuelve a entrar en tu cuenta para reactivar la producción.";
+    if (typeof CARGA_OK === "undefined" || !CARGA_OK || typeof SOLO_LOCAL !== "undefined" && SOLO_LOCAL ||
+        typeof SAVE_BASES === "undefined" || !SAVE_BASES.get(uid)) return "Espera a que tu granja esté sincronizada.";
+    if (typeof SAVE_CONFLICTOS !== "undefined" && SAVE_CONFLICTOS.has(uid) ||
+        typeof guardadoTienePendiente === "function" && guardadoTienePendiente(uid) ||
+        typeof mercadoPendiente === "function" && mercadoPendiente(uid) ||
+        window.GoldenGraves?.hasPending?.(uid)) return "Revisa el guardado pendiente antes de cambiar la producción.";
+    if (typeof SAVE_EN_CURSO !== "undefined" && SAVE_EN_CURSO || typeof SAVE_OTRA !== "undefined" && SAVE_OTRA ||
+        typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) return "Espera a que termine el guardado actual.";
+    return "";
+  }
+  function contexto() {
+    return G === estado && G.produccion === libro && G.iniciado === inicio && Number(G.reinicio || 0) === reinicio &&
+      escena && (window.farmScene || window.FARM) === escena && escena.plots === parcelas && escena.objs === objetos &&
+      !escena.leaving && !escena.action && (typeof escena.sys?.isActive !== "function" || escena.sys.isActive() || escena.sys.isPaused?.());
+  }
+  let motivo = sincronizacion();
+  if (!contexto()) motivo = "Vuelve a abrir esta opción desde tu granja cuando termine la acción actual.";
+  if (motivo) { toast(motivo); return false; }
+  let plan;
+  try { plan = produccionPlanReactivar(clave); } catch (_) { return false; }
+  if (!plan?.ok || !plan.destino || plan.destino.clave !== clave) { toast(plan?.motivo || "Esta producción ya no se puede reactivar."); return false; }
+  if (PRODUCCION_REACTIVACION_UI) PRODUCCION_REACTIVACION_UI();
+  let cerrado = false, ocupado = false, elegido = null, cuerpo = null, resumen = null, aviso = null, observador = null;
+  const token = {};
+  function elemento(tag, texto, estilo) {
+    const n = document.createElement(tag); if (texto != null) n.textContent = texto;
+    if (estilo) Object.assign(n.style, estilo); return n;
+  }
+  function limpiar() {
+    if (cerrado) return; cerrado = true; observador?.disconnect();
+    if (ov._produccionReactivacion === token) delete ov._produccionReactivacion;
+    if (si.onclick === confirmar) { si.disabled = false; si.onclick = null; }
+    if (PRODUCCION_REACTIVACION_UI === limpiar) PRODUCCION_REACTIVACION_UI = null;
+  }
+  function vigente() {
+    return !cerrado && ov._produccionReactivacion === token && ov.classList.contains("show") &&
+      $("ov-confirm") === ov && $("cf-msg") === mensaje && $("cf-yes") === si &&
+      si.onclick === confirmar && cuerpo && mensaje.contains(cuerpo);
+  }
+  function mostrar(nuevo, cambio) {
+    plan = nuevo; elegido = null; mensaje.textContent = "";
+    cuerpo = elemento("div", null); cuerpo.setAttribute("data-produccion-reactivar", clave);
+    cuerpo.appendChild(elemento("p", plan.destino.label + " está pausada.", {margin:"0 0 8px",fontWeight:"700"}));
+    cuerpo.appendChild(elemento("p", "Cupos ocupados " + plan.usados + "/" + plan.capacidad + ".", {margin:"0 0 4px",fontWeight:"700"}));
+    cuerpo.appendChild(elemento("p", "Parcelas, árboles, rocas y vetas comparten cupo.", {margin:"0 0 10px"}));
+    if (plan.requiereCambio) {
+      cuerpo.appendChild(elemento("p", "Elige qué producción pausar para liberar un cupo. Se conservan cultivos, cargas y tiempos.", {margin:"0 0 8px"}));
+      const lista = elemento("fieldset", null, {border:"0",padding:"0",margin:"0",maxHeight:"min(220px, 32vh)",overflowY:"auto",overscrollBehavior:"contain"});
+      lista.setAttribute("aria-label", "Producción que se pausará");
+      const filas = [];
+      for (const opcion of plan.opciones || []) {
+        if (!/^[np]:\d+$/.test(opcion.clave)) continue;
+        const fila = elemento("label", null, {display:"flex",gap:"8px",alignItems:"flex-start",background:"#f1e5c4",border:"1px solid #d5ad70",borderRadius:"6px",padding:"8px",margin:"0 0 6px",fontSize:"13px"});
+        const radio = elemento("input", null, {margin:"3px 0 0",flex:"0 0 auto"}); radio.type = "radio"; radio.name = "produccion-reactivar"; radio.value = opcion.clave; radio.checked = false;
+        const texto = elemento("span", null, {minWidth:"0"}); texto.appendChild(elemento("strong", opcion.label, {display:"block",fontWeight:"600"}));
+        texto.appendChild(elemento("small", opcion.estado, {display:"block",fontSize:"12px",marginTop:"2px"}));
+        radio.onchange = () => {
+          if (!vigente() || ocupado || !radio.checked) return;
+          elegido = opcion.clave; resumen.textContent = "Se pausa " + opcion.label + " → se reactiva " + plan.destino.label + ".";
+          for (const [otra, otro] of filas) { otra.style.background = otro === radio ? "#e5edcf" : "#f1e5c4"; otra.style.borderColor = otro === radio ? "#6f8c48" : "#d5ad70"; }
+          aviso.textContent = ""; si.disabled = false;
+        };
+        fila.appendChild(radio); fila.appendChild(texto); lista.appendChild(fila); filas.push([fila, radio]);
+      }
+      cuerpo.appendChild(lista);
+    } else cuerpo.appendChild(elemento("p", (plan.usados < plan.capacidad ? "Hay un cupo libre." : "Esta producción tiene cupo propio.") + " Puedes reactivarla sin pausar otra producción.", {margin:"0 0 8px"}));
+    resumen = elemento("p", plan.requiereCambio ? "Elige una producción para ver el cambio." : "Se reactiva " + plan.destino.label + " sin pausar otra producción.", {background:"#fff8e6",border:"1px solid #b68b4e",padding:"8px",margin:"10px 0 0",fontSize:"13px"});
+    resumen.setAttribute("role", "status"); resumen.setAttribute("aria-live", "polite"); cuerpo.appendChild(resumen);
+    aviso = elemento("p", cambio || "", {color:"#7f311b",margin:"8px 0 0"}); aviso.setAttribute("role", "status"); cuerpo.appendChild(aviso);
+    mensaje.appendChild(cuerpo); si.textContent = plan.requiereCambio ? "Pausar y reactivar" : clave.startsWith("p:") ? "Reactivar parcela" : "Reactivar producción";
+    si.disabled = !!plan.requiereCambio;
+  }
+  function confirmar() {
+    if (!vigente() || ocupado) return;
+    const error = sincronizacion();
+    if (error || !contexto()) { aviso.textContent = error || "La granja cambió. Cierra y vuelve a abrir esta opción."; si.disabled = true; return; }
+    let actual;
+    try { actual = produccionPlanReactivar(clave); } catch (_) { actual = null; }
+    if (!actual?.ok || actual.destino?.clave !== clave) { aviso.textContent = actual?.motivo || "La producción cambió. Vuelve a revisar el Cobertizo."; si.disabled = true; return; }
+    if (actual.usados !== plan.usados || actual.capacidad !== plan.capacidad || actual.requiereCambio !== plan.requiereCambio ||
+        actual.requiereCambio && elegido && !(actual.opciones || []).some(o => o.clave === elegido)) {
+      mostrar(actual, "La capacidad o la producción cambió. Revisa de nuevo la elección."); return;
+    }
+    if (actual.requiereCambio && !elegido) { si.disabled = true; return; }
+    ocupado = true; si.disabled = true;
+    let cambio = false;
+    try { cambio = produccionReactivarConCambio(clave, actual.requiereCambio ? elegido : null) === true; }
+    catch (_) { cambio = false; }
+    if (cambio) { cerrarConfirmacionLocal(); limpiar(); return; }
+    ocupado = false;
+    let siguiente; try { siguiente = produccionPlanReactivar(clave); } catch (_) {}
+    if (siguiente?.ok) mostrar(siguiente, "No se pudo confirmar el cambio. Revisa el Cobertizo y el indicador de guardado.");
+    else { aviso.textContent = siguiente?.motivo || "No se pudo reactivar. Revisa el Cobertizo y el guardado."; si.disabled = true; }
+  }
+  askConfirm("", () => {}, {title:clave.startsWith("p:") ? "Reactivar parcela" : "Reactivar producción",yes:plan.requiereCambio ? "Pausar y reactivar" : "Reactivar parcela",yesClass:"green",no:"Cancelar",onNo:limpiar});
+  if ($("ov-confirm") !== ov || $("cf-msg") !== mensaje || $("cf-yes") !== si || !ov.classList.contains("show")) return false;
+  ov._produccionReactivacion = token; si.onclick = confirmar; PRODUCCION_REACTIVACION_UI = limpiar; mostrar(plan);
+  const Observer = typeof MutationObserver === "function" ? MutationObserver : document.defaultView?.MutationObserver;
+  if (Observer) { observador = new Observer(() => { if (!vigente()) limpiar(); }); observador.observe(ov, {attributes:true,attributeFilter:["class"]}); observador.observe(mensaje, {childList:true}); }
+  return true;
+}
+if (typeof window !== "undefined") window.produccionAbrirReactivacion = produccionAbrirReactivacion;
+
+
 /* Ayuda de navegación: abre los controles existentes, sin comprar ni cambiar producciones. */
 function produccionVerGestion(clave) {
   const gestion = $('prod-gestion'); if (!gestion) return;

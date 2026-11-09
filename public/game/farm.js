@@ -851,6 +851,7 @@ class FarmScene extends Phaser.Scene {
         // Sin esto, tocando rápido (que es como se juega) se perdían golpes y se sentía trabado.
         const soltoDerecho = pt.rightButtonReleased() || (pt.event && pt.event.button === 2);   // 21/8: misma armadura que en pointerdown
         if (!arrastro && !soltoDerecho) {
+          if (hit && this.abrirReactivacionParcela(hit)) return;
           if (this.action) {
             // 16/8 (dirección: "me frena para talar rápido"): con ACT_IMPACTO = 0 el golpe YA
             // pegó en el primer frame — lo que queda de la acción es SOLO animación. Si volvés
@@ -1525,6 +1526,7 @@ class FarmScene extends Phaser.Scene {
   // llegar a interactWith(). No cambia ninguna regla: reutiliza la puerta real.
   bloqueoPrompt(o) {
     if (!o) return null;
+    if (o.type === "plot" && o.state !== "locked" && typeof produccionPausada === "function" && produccionPausada(o)) return { ok: true };
     const rotulo = (x) => this.promptText(x);
     if (o.type === "portal") {
       const cerrada = (typeof zonaPuertaCerrada === "function") ? zonaPuertaCerrada() : null;   // 26/9: descanso O incursión en curso
@@ -1579,6 +1581,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   textoPromptPC(o) {
+    if (o && o.type === "plot" && typeof produccionPausada === "function" && produccionPausada(o)) return "⏸ Pausada · clic: reactivar";
     if (o && o.type === "plot" && o.state === "dry") {
       const cd = CROP_DEF[this.semillaParaPlantar()];
       return "Plantar " + (cd ? cd.label : "cultivo");
@@ -1587,7 +1590,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   promptText(o) {
-    if (typeof produccionPausada === "function" && produccionPausada(o)) return "⏸ Producción pausada · reactivar en Cobertizo";
+    if (typeof produccionPausada === "function" && produccionPausada(o)) return o.type === "plot" ? "⏸ Pausada · reactivar" : "⏸ Producción pausada · reactivar en Cobertizo";
     const cd = nowMs() < o.readyAt;
     if (o.type === "boar") return "Espantar jabalí";
     if (o.type === "animal") {
@@ -1729,7 +1732,24 @@ class FarmScene extends Phaser.Scene {
     if (juntoAlAgua && typeof pescaAparejosAbrir === "function") pescaAparejosAbrir(true);
   }
 
+  // Opening this selector never plants, harvests or changes production by itself.
+  abrirReactivacionParcela(o) {
+    if (!o || o.type !== "plot" || o.state === "locked" || !Number.isInteger(o.i) ||
+        o.i < 0 || o.i >= (G.plotsOwned || 3) ||
+        typeof produccionPausada !== "function" || !produccionPausada(o)) return false;
+    if (GF.editMode || GF.uiOpen || (typeof anyOvOpen === "function" && anyOvOpen())) return true;
+    // Consume the gesture and any queued farming; confirming requires a fresh click afterwards.
+    this.hold = null; this.holdPend = null; this.buffer = null;
+    this.clickHit = null; this.clickPond = false;
+    this.pendingObj = null; this.moveTarget = null; this.path = null;
+    if (typeof this.clearQueue === "function") this.clearQueue();
+    if (typeof produccionAbrirReactivacion === "function") produccionAbrirReactivacion(produccionClave(o));
+    else toast("Producción pausada. Reactívala en el Cobertizo.");
+    return true;
+  }
+
   interactWith(o) {
+    if (this.abrirReactivacionParcela(o)) return;
     if (o.type === "portal") {
       // 10/8: descanso entre viajes, y se abre el "viaje" para poder resumirlo al volver
       const cerrada = (typeof zonaPuertaCerrada === "function") ? zonaPuertaCerrada() : null;   // 26/9: descanso O incursión en curso
@@ -1996,7 +2016,10 @@ class FarmScene extends Phaser.Scene {
 
   startAction(kind, o) {
     produccionVipTick();
-    if (["chop", "mine", "plant", "harvest"].includes(kind) && produccionPausada(o)) { toast("Producción pausada. Reactivala en el Cobertizo."); return; }
+    if (["chop", "mine", "plant", "harvest"].includes(kind) && produccionPausada(o)) {
+      if (!this.abrirReactivacionParcela(o)) toast("Producción pausada. Reactivala en el Cobertizo.");
+      return;
+    }
     this.moveTarget = null;
     if (GF.NO_WALK && o && o.cx != null) {   // granja de un clic: el granjero (invisible) trabaja donde clickeaste
       this.hero.setPosition(o.cx + (kind === "fish" ? 0 : 22), (o.by != null ? o.by : o.by2) + 4);

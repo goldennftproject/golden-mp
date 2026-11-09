@@ -2898,6 +2898,114 @@ function produccionAlternar(clave) {
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }
+// Read-only source/state helpers for an explicit, single-save production replacement.
+function produccionFuenteReactivacion(item, sc) {
+  return item.type === "plot" ? sc && sc.plots && sc.plots[item.i] || G.plots && G.plots[item.i] || {state:"dry"}
+    : sc && sc.objs && sc.objs.find(o => o.i === item.i) || (G.nodos || {})[produccionNodoKey(item.i)] || {};
+}
+function produccionEstadoReactivacion(item, fuente, t) {
+  if (item.type === "plot") return ({dry:"Vacía",growing:"Cultivo creciendo",ready:"Lista para cosechar",withered:"Cultivo para limpiar"})[fuente.state] || "Parcela disponible";
+  return fuente.readyAt && fuente.readyAt > t ? "Recuperándose" : "Disponible";
+}
+function produccionPlanReactivar(clave) {
+  const plan = {ok:false,motivo:"",destino:null,usados:0,capacidad:0,requiereCambio:false,opciones:[]};
+  const fallo = motivo => Object.assign(plan,{motivo});
+  const p = G.produccion;
+  if (!p || p.v !== 1 || !p.pausas || typeof p.pausas !== "object" || Array.isArray(p.pausas)) return fallo("La producción no está sincronizada. Vuelve a abrir el Cobertizo.");
+  const base = p.base, expansiones = G.expansiones || 0, t = nowMs();
+  if (!Number.isFinite(base) || base < 0 || !Number.isInteger(expansiones) || expansiones < 0 || produccionPremiumHistorial() === null) return fallo("Revisa la capacidad de producción antes de reactivar.");
+  plan.capacidad = base + expansiones + (p.vipHasta > t ? produccionVipCupos() : 0);
+  const items = produccionItems(), sc = typeof window === "undefined" ? null : window.farmScene;
+  const propio = item => produccionPremiumEsNodo(item.i,item.type);
+  plan.usados = items.filter(item => !p.pausas[produccionClave(item)] && !propio(item)).length;
+  if (typeof clave !== "string" || !/^[np]:\d+$/.test(clave)) return fallo("Elige una producción válida para reactivar.");
+  const destino = items.find(item => produccionClave(item) === clave);
+  if (!destino) return fallo("Esa producción ya no pertenece a tu granja.");
+  plan.destino = {clave,label:destino.label};
+  const fuente = produccionFuenteReactivacion(destino,sc), pausa = p.pausas[clave];
+  if (fuente.state === "locked" || fuente.locked || fuente.oculto) return fallo("Esa producción todavía no está disponible en tu terreno.");
+  if (!pausa) return fallo("Esa producción ya está activa.");
+  if (!pausa.estado || typeof pausa.estado !== "object" || Array.isArray(pausa.estado) || !Number.isFinite(pausa.at) || pausa.at < 0) return fallo("No se pudo leer la pausa. Vuelve a sincronizar la granja.");
+  const camposPausa = ["readyAt","halfAt","cdIni","witherAt","state","cropKey","growTotal"];
+  if (Object.keys(pausa.estado).some(k => !camposPausa.includes(k))) return fallo("La pausa contiene datos que no se pueden reactivar. Vuelve a sincronizar la granja.");
+  if (destino.type === "plot" && (!Array.isArray(G.plots) || !["dry","growing","ready","withered"].includes(pausa.estado.state))) return fallo("No se pudo leer el cultivo pausado. Vuelve a sincronizar la granja.");
+  if (pausa.estado.cropKey != null && (typeof pausa.estado.cropKey !== "string" || !CROP_DEF[pausa.estado.cropKey])) return fallo("No se pudo leer el cultivo pausado. Vuelve a sincronizar la granja.");
+  for (const k of ["readyAt","halfAt","cdIni","witherAt","growTotal"]) if (pausa.estado[k] != null && (!Number.isFinite(pausa.estado[k]) || pausa.estado[k] < 0)) return fallo("Los tiempos de la pausa no están sincronizados.");
+  plan.requiereCambio = !propio(destino) && plan.usados >= plan.capacidad;
+  if (!plan.requiereCambio) { plan.ok = true; return plan; }
+  if (plan.usados > plan.capacidad) return fallo("Hay más producciones activas que cupos. Revisa la gestión antes de reactivar.");
+  plan.opciones = items.filter(item => {
+    if (produccionClave(item) === clave || p.pausas[produccionClave(item)] || propio(item)) return false;
+    const actual = produccionFuenteReactivacion(item,sc);
+    return actual.state !== "locked" && !actual.locked && !actual.oculto;
+  }).map(item => ({clave:produccionClave(item),label:item.label,estado:produccionEstadoReactivacion(item,produccionFuenteReactivacion(item,sc),t)}));
+  if (!plan.opciones.length) return fallo("No hay otra producción activa que pueda liberar este cupo.");
+  plan.ok = true;
+  return plan;
+}
+function produccionReactivarConCambio(destinoClave, origenClave) {
+  const fallo = motivo => { if (typeof toast === "function") toast(motivo); return false; };
+  const sc = typeof window === "undefined" ? null : window.farmScene;
+  if (sc && sc.action) return fallo("Termina o cancela la acción antes de cambiar la producción.");
+  const plan = produccionPlanReactivar(destinoClave);
+  if (!plan.ok) return fallo(plan.motivo);
+  if (plan.requiereCambio ? !plan.opciones.some(o => o.clave === origenClave) : origenClave != null) return fallo(plan.requiereCambio ? "Elige una producción activa para pausar y liberar el cupo." : "Ahora hay un cupo libre. Revisa la reactivación sin pausar otra producción.");
+  const items = produccionItems(), destino = items.find(o => produccionClave(o) === destinoClave);
+  const origen = plan.requiereCambio ? items.find(o => produccionClave(o) === origenClave) : null;
+  const fuente = produccionFuenteReactivacion(destino,sc), fuenteOrigen = origen && produccionFuenteReactivacion(origen,sc);
+  const pausa = G.produccion.pausas[destinoClave], t = nowMs(), copia = {...pausa.estado}, delta = Math.max(0,t - pausa.at);
+  for (const k of ["readyAt","halfAt","cdIni","witherAt"]) if (copia[k]) copia[k] += delta;
+  const practicaAntes = tutoPracticaPausa();
+  const p = G.produccion, mapaPausas = p.pausas;
+  const guardarCampos = (obj,claves) => claves.map(k => [k,Object.getOwnPropertyDescriptor(obj,k)]);
+  const restaurarCampos = (obj,campos) => { for (const [k,descriptor] of campos) { if (descriptor) Object.defineProperty(obj,k,descriptor); else delete obj[k]; } };
+  const fuenteAntes = guardarCampos(fuente,Object.keys(copia)), camposAntes = guardarCampos(G,["plots","nodos"]), ordenAntes = guardarCampos(p,["orden"]);
+  const pausasAntes = guardarCampos(mapaPausas,origen ? [origenClave,destinoClave] : [destinoClave]);
+  const contenedor = destino.type === "plot" ? G.plots : G.nodos, claveContenedor = destino.type === "plot" ? String(destino.i) : produccionNodoKey(destino.i);
+  const entradaAntes = contenedor && guardarCampos(contenedor,[claveContenedor]);
+  const nodosOriginales = G.nodos, entradasNodos = nodosOriginales && Object.getOwnPropertyDescriptors(nodosOriginales);
+  // No callbacks, render or save observes a target active before its replacement is paused.
+  try {
+    if (origen) produccionPausarEn(origen,t);
+    Object.assign(fuente,copia);
+    if (destino.type === "plot") G.plots[destino.i] = {...copia};
+    else { G.nodos = G.nodos || {}; G.nodos[produccionNodoKey(destino.i)] = {...copia}; }
+    delete mapaPausas[destinoClave];
+    produccionOrden(destinoClave);
+    if (sc && sc.syncNodos) sc.syncNodos();
+    if (sc && sc.syncPlots) sc.syncPlots();
+  } catch (_) {
+    restaurarCampos(fuente,fuenteAntes);
+    if (contenedor) restaurarCampos(contenedor,entradaAntes);
+    if (nodosOriginales) {
+      for (const k of Object.keys(nodosOriginales)) if (!Object.prototype.hasOwnProperty.call(entradasNodos,k)) delete nodosOriginales[k];
+      Object.defineProperties(nodosOriginales,entradasNodos);
+    }
+    restaurarCampos(G,camposAntes);
+    restaurarCampos(p,ordenAntes);
+    restaurarCampos(mapaPausas,pausasAntes);
+    return fallo("No se completó el cambio. Las producciones conservan su estado anterior.");
+  }
+  // Rendering is feedback after the state is complete. A failed paint is not a failed swap.
+  const mostrar = fn => { try { fn(); } catch (_) {} };
+  mostrar(() => { if (fuenteOrigen && fuenteOrigen.spr && fuenteOrigen.spr.setAlpha) fuenteOrigen.spr.setAlpha(0.5); });
+  mostrar(() => { if (fuenteOrigen && fuenteOrigen.sprite && fuenteOrigen.sprite.setAlpha) fuenteOrigen.sprite.setAlpha(0.5); });
+  mostrar(() => { if (destino.type === "plot" && sc && sc.applyPlotVisual) sc.applyPlotVisual(fuente); });
+  mostrar(() => { if (fuente.spr && fuente.spr.setAlpha) fuente.spr.setAlpha(1); });
+  mostrar(() => { if (fuente.sprite && fuente.sprite.setAlpha) fuente.sprite.setAlpha(1); });
+  mostrar(() => { if (origen) tutoPracticaPausaRegistrar(origenClave,false,practicaAntes); });
+  mostrar(() => tutoPracticaPausaRegistrar(destinoClave,true,practicaAntes));
+  mostrar(() => { if (typeof refreshCobertizo === "function") refreshCobertizo(); });
+  mostrar(() => { if (typeof refreshHud === "function") refreshHud(); });
+  // One final snapshot only; a network failure keeps this state and the usual pending write.
+  const sinConfirmar = () => mostrar(() => { if (typeof toast === "function") toast("Cambio aplicado, guardado sin confirmar; revisa el indicador de guardado."); });
+  try {
+    if (typeof saveFarm === "function") { const guardado=saveFarm(true); if (guardado && typeof guardado.catch === "function") guardado.catch(sinConfirmar); }
+    else sinConfirmar();
+  } catch (_) { sinConfirmar(); }
+  return true;
+}
+
 function produccionEmplazamiento(tipo) {
   return GF.WORLD_OBJECTS.findIndex((o,idx)=>{
     if(o.premiumOnly||!(tipo==='tree'||tipo==='rock'?o.type===tipo:o.type==='ore'&&o.ore===tipo)||!(o.exp==null||o.exp<(G.expansiones||0))||produccionNodoPoseido(idx))return false;

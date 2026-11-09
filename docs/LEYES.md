@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Reactivación de parcelas desde el mapa — 09/11/2026
+
+El propietario revisó la propuesta y autoriza publicar la reactivación de parcelas al tocarlas: mostrar el cupo, elegir explícitamente qué otra producción pausar y confirmar un único intercambio. Se revalidan cuenta, escena, guardado, capacidad y selección; se conservan cultivos, cargas, tiempos y reglas. Cancelar no cambia la granja. También autoriza una noticia sobre la mejora. No se ejecutan reparaciones de cuentas ni compensaciones. Ver REACTIVACION-PARCELAS-20261109.md.
+
 ## Parcelas identificadas y pausa en su propio suelo — 09/11/2026
 
 El propietario autoriza terminar las pruebas y publicar números estables de parcela, coincidentes con el Cobertizo, y corregir el anclaje de «Pausada» para que aparezca dentro de su propia parcela. Es una mejora de presentación: conserva índices, posiciones, cultivos, pausas, relojes, capacidad y partidas. Los números no se guardan como datos de jugador. Ver PARCELAS-NUMERADAS-20261109.md.

@@ -1,6 +1,14 @@
 {
   "items": [
     {
+      "id": "2026-11-09-reactivar-parcelas",
+      "title": "Reactivar parcelas ahora es más fácil",
+      "date": "2026-11-09",
+      "content": "**Reactivar parcelas ahora es más fácil**\n\nTocá una parcela pausada, elegí qué producción pausar y confirmá el cambio. Se conservan los cultivos y sus tiempos. Si hay cupo libre, podés reactivarla sin pausar otra producción.\n\n1. Tocá la **parcela pausada**.\n2. Si falta cupo, elegí qué producción pausar.\n3. Revisá y confirmá el cambio. [Entrar al juego](https://goldenfarm.onrender.com/)",
+      "image": "/news/reactivar-parcelas-20261109.png",
+      "alt": "Guía ilustrada de Golden Farm: tocar una parcela pausada, elegir qué producción pausar si falta cupo y confirmar el cambio. No es una captura de una partida."
+    },
+    {
       "id": "2026-11-09-referidos-cerrado",
       "title": "Evento de referidos cerrado",
       "date": "2026-11-09",
