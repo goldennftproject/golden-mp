@@ -1,6 +1,15 @@
 {
   "items": [
     {
+      "id": "2026-11-09-referidos-cerrado",
+      "title": "Evento de referidos cerrado",
+      "date": "2026-11-09",
+      "content": "🔒 Evento de referidos cerrado · Golden Farm\n\nEl plazo para participar terminó a las 00:00 del lunes 9 de noviembre, hora de Uruguay/Argentina (UTC−3).\n\n¡Gracias a todos por participar! 🌱\n\nDurante el día revisaremos y publicaremos los boletos válidos. Después realizaremos el sorteo y anunciaremos los resultados.\n\n🎮 https://goldenfarm.onrender.com/",
+      "image": "/news/golden-farm-guia-referidos.jpg",
+      "alt": "Guía del evento de referidos de Golden Farm",
+      "discordUrl": "https://discord.com/channels/1564640221063024763/1564643673889841243/1569362035232350231"
+    },
+    {
       "id": "2026-11-08-cierre-referidos",
       "title": "Cierre del sorteo de referidos · 8 de noviembre",
       "date": "2026-11-08",
