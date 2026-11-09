@@ -1752,6 +1752,82 @@ async function prepararRecargaSegura() {
   finally{RECARGA_GUARDANDO=false;}
 }
 
+
+/* Expansion payments need an accepted inventory first: crafting and consuming one pick
+   can otherwise leave no net tool/resource evidence in the same snapshot. No guard is relaxed. */
+let EXPANSION_EN_CURSO = null;
+const EXPANSION_INICIOS_PENDIENTES = new Map();
+function expansionGuardando() { return !!EXPANSION_EN_CURSO; }
+function expansionObraPendiente() { return !!(UID && EXPANSION_INICIOS_PENDIENTES.has(UID) && G.expObra); }
+function expansionFirmaObra(obra) { return obra ? JSON.stringify([obra.i,obra.n,obra.desde,obra.hasta]) : null; }
+function expansionObraPuedeEntregar(obra) {
+  if (EXPANSION_EN_CURSO) return false;
+  // Also protect work created by an older tab: an empty in-memory marker is not an ACK.
+  if (UID && (!CARGA_OK || SOLO_LOCAL || !SAVE_BASES.get(UID) || SAVE_CONFLICTOS.has(UID) ||
+      guardadoTienePendiente(UID) || SAVE_EN_CURSO || MERCADO_EN_CURSO ||
+      (window.GoldenGraves && GoldenGraves.hasPending(UID)))) return false;
+  const pendiente = UID && EXPANSION_INICIOS_PENDIENTES.get(UID);
+  if (!pendiente) return true;
+  if (expansionFirmaObra(obra) !== pendiente.obra) return false;
+  const ticket = {uid:UID,base:SAVE_BASES.get(UID),key:lastSavedKey};
+  if ((SAVE_CONFIRMACIONES.get(UID)||0) <= pendiente.confirmaciones || !recargaSigueConfirmada(ticket)) return false;
+  EXPANSION_INICIOS_PENDIENTES.delete(UID);
+  expansionAvisarObra(pendiente.expansion);
+  return true;
+}
+async function expansionConfirmarActual(uid) {
+  const antes=SAVE_CONFIRMACIONES.get(uid)||0;
+  await conTope(saveFarm(true),40000,'confirmar guardado de expansión');
+  const ticket={uid,base:SAVE_BASES.get(uid),key:lastSavedKey};
+  return (SAVE_CONFIRMACIONES.get(uid)||0)>antes && recargaSigueConfirmada(ticket) ? ticket : null;
+}
+function expansionSolicitar() {
+  if (EXPANSION_EN_CURSO) { toast('Ya se está confirmando la expansión.'); return Promise.resolve(false); }
+  const uid=UID,sc=window.FARM;
+  if (!uid || !sb || !CARGA_OK || SOLO_LOCAL || SAVE_CONFLICTOS.has(uid) || MERCADO_EN_CURSO || RECARGA_GUARDANDO ||
+      (window.GoldenGraves && GoldenGraves.hasPending(uid))) {
+    toast('Primero confirma el guardado con el disquete. No se pagó una nueva expansión.');return Promise.resolve(false);
+  }
+  if (sc && sc.action) { toast('Termina la acción actual antes de expandir.');return Promise.resolve(false); }
+  const elegida=expansionSiguiente(),firma=elegida&&JSON.stringify({i:elegida.i,costo:elegida.costo,min:expansionObraMin(elegida.n)});
+  if (!elegida || G.expObra || G.level<elegida.nivel || !canAfford(elegida.costo) || expansionObraMin(elegida.n)<=0) {
+    toast(G.expObra?'Ya hay una expansión en obra.':'Revisa los requisitos de la expansión.');return Promise.resolve(false);
+  }
+  let desbloquear=()=>{},pausada=false,escenaVigente=true;
+  const cerrarEscena=()=>{escenaVigente=false;};
+  const tarea=Promise.resolve().then(async()=>{
+    try {
+      desbloquear=mercadoBloquearPantalla('Guardando los materiales antes de expandir…');
+      if (sc?.sys?.isActive?.()===true && typeof sc.scene?.pause==='function') { sc.events?.once?.('shutdown',cerrarEscena);sc.scene.pause();pausada=true; }
+      const previa=await expansionConfirmarActual(uid);
+      if (!previa || UID!==uid) { if(UID===uid)toast('Los materiales todavía no están confirmados. No se pagó la expansión.');return false; }
+      const actual=expansionSiguiente(),actualFirma=actual&&JSON.stringify({i:actual.i,costo:actual.costo,min:expansionObraMin(actual.n)});
+      if (!escenaVigente || window.FARM!==sc || !recargaSigueConfirmada(previa) || actualFirma!==firma || G.expObra || G.level<actual.nivel || !canAfford(actual.costo)) {
+        toast('La granja cambió mientras guardaba. Revisa la expansión y vuelve a intentarlo.');return false;
+      }
+      EXPANSION_INICIOS_PENDIENTES.delete(uid); // A newly confirmed snapshot with no work supersedes an old rejected start.
+      if (!expansionComprarLocal(true)) return false;
+      const inicio={obra:expansionFirmaObra(G.expObra),expansion:actual,confirmaciones:SAVE_CONFIRMACIONES.get(uid)||0};
+      EXPANSION_INICIOS_PENDIENTES.set(uid,inicio);
+      const confirmada=await expansionConfirmarActual(uid);
+      if (!confirmada || UID!==uid || !escenaVigente || window.FARM!==sc || EXPANSION_INICIOS_PENDIENTES.get(uid)!==inicio || expansionFirmaObra(G.expObra)!==inicio.obra) {
+        if(UID===uid)toast('El inicio de la obra sigue sin confirmar. Conservamos el intento: pulsa el disquete, sin volver a pagar.');return false;
+      }
+      EXPANSION_INICIOS_PENDIENTES.delete(uid);expansionAvisarObra(actual);return true;
+    } catch(e) {
+      if(UID===uid)toast(EXPANSION_INICIOS_PENDIENTES.has(uid)?'Obra sin confirmar. Pulsa el disquete para comprobar el mismo intento.':'No se confirmó el guardado. No se pagó la expansión.');
+      return false;
+    } finally {
+      desbloquear();
+      sc?.events?.off?.('shutdown',cerrarEscena);
+      if(pausada && escenaVigente && UID===uid && window.FARM===sc && sc?.sys?.isPaused?.()===true && typeof sc.scene?.resume==='function')sc.scene.resume();
+      if(UID===uid){refreshHud();if(isOpen('ov-expandir'))refreshExpandir();}
+    }
+  });
+  EXPANSION_EN_CURSO=tarea;
+  return tarea.finally(()=>{if(EXPANSION_EN_CURSO===tarea)EXPANSION_EN_CURSO=null;});
+}
+
 function guardadoTienePendiente(uid=UID) { return SAVE_PENDIENTES.has(uid); }
 function guardadoHuellaPeticion(data, raiz=true) {
   if(Array.isArray(data))return data.map(x=>guardadoHuellaPeticion(x,false));

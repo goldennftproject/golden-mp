@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Expansiones con guardado confirmado — 09/11/2026
+
+El propietario autoriza corregir y publicar para todos el rechazo al expandir después de fabricar y consumir un pico. Se confirma primero el inventario actual, se revalidan cuenta, requisitos y coste, y se confirma después el inicio de la obra antes de anunciar éxito. Se bloquean doble clic y entregas mientras el guardado siga pendiente o en conflicto. Se conservan materiales, progreso, precios, tiempos y reglas del servidor; sin ajustes de cuentas ni compensaciones automáticas. Ver EXPANSION-GUARDADO-20261109.md.
+
 ## Regreso de calaveras e inventario transportable — 08/11/2026
 
 Dirección pide revisar el bloqueo de Tecnopartes. La validación acepta todas las familias que ya admite el portal; conserva usos, cantidades y metadatos. La interfaz difiere sus latidos mientras confirma calaveras y libera un UUID cancelado sólo con bases coincidentes, sin hidratar ni anunciar un guardado inexistente. Se conserva el avance, los recibos y las reglas de muerte; sin compensaciones ni cambios administrativos de cuentas. La carga conserva vida cero acreditada por los datos de un viaje válido, admite el estado de una escena pausada y prueba ambos botones desde una carga completa. Ver REGRESO-TECNOPARTES-20261108.md.

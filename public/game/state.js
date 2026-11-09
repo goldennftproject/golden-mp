@@ -2418,6 +2418,11 @@ function expansionSiguiente() {
 // Sólo afecta compras futuras: ni las expansiones adquiridas ni las obras pagadas se recalculan.
 function expansionPrecioCupo(i) { const base=20 + 10*i + 5*i*i + Math.round(.5*Math.pow(Math.max(0,i-2),3));return i>=2?Math.ceil(base*1.3):base; }
 function expansionComprar() {
+  // Cloud callers await both confirmations; isolated/local play keeps its boolean contract.
+  if (typeof expansionSolicitar === "function" && typeof UID !== "undefined" && UID) return expansionSolicitar();
+  return expansionComprarLocal(false);
+}
+function expansionComprarLocal(silencio = false) {
   const e = expansionSiguiente();
   if (!e) { toast("Ya tienes las " + EXPANSION_MAX + " expansiones"); return false; }
   if ((G.level || 1) < e.nivel) { toast("La expansión " + e.n + " se abre en el nivel " + e.nivel); return false; }
@@ -2432,14 +2437,19 @@ function expansionComprar() {
   const min = expansionObraMin(e.n);
   if (min > 0) {
     G.expObra = { i: e.i, n: e.n, desde: nowMs(), hasta: nowMs() + min * 60000 };
-    log("🏗️ Obra en marcha: la expansión " + e.n + " estará lista en " + expansionObraTxt() + ".", "gold");
-    toast("Expansión " + e.n + " en obra · " + expansionObraTxt());
-    if (window.sfx) sfx("forge");
-    if (typeof closeOv === "function") { closeOv("ov-market"); closeOv("ov-deco"); closeOv("ov-expandir"); }
-    if (typeof saveFarm === "function") saveFarm(true);
+    if (!silencio) {
+      expansionAvisarObra(e);
+      if (typeof saveFarm === "function") saveFarm(true);
+    }
     return true;
   }
   return expansionEntregar(e);
+}
+function expansionAvisarObra(e) {
+  log("🏗️ Obra en marcha: la expansión " + e.n + " estará lista en " + expansionObraTxt() + ".", "gold");
+  toast("Expansión " + e.n + " en obra · " + expansionObraTxt());
+  if (window.sfx) sfx("forge");
+  if (typeof closeOv === "function") { closeOv("ov-market"); closeOv("ov-deco"); closeOv("ov-expandir"); }
 }
 /* cuánto tarda la obra de la expansión n (minutos); 0 = instantánea */
 function expansionObraMin(n) {
@@ -2454,6 +2464,7 @@ function expansionObraMinTxt(min) {
 function expansionObra() { return (G.expObra && G.expObra.hasta) ? G.expObra : null; }
 function expansionObraFaltaMs() { const o = expansionObra(); return o ? Math.max(0, o.hasta - nowMs()) : 0; }
 function expansionObraTxt() {
+  if (typeof expansionObraPendiente === "function" && expansionObraPendiente()) return "sin confirmar";
   const ms = expansionObraFaltaMs(); if (ms <= 0) return "un momento";
   const m = Math.ceil(ms / 60000);
   return m >= 60 ? Math.floor(m / 60) + " h " + (m % 60 ? (m % 60) + " min" : "") : m + " min";
@@ -2461,6 +2472,7 @@ function expansionObraTxt() {
 /* se llama cada segundo desde el HUD y al cargar la granja: si la obra terminó, se entrega */
 function expansionObraTick() {
   const o = expansionObra(); if (!o) return false;
+  if (typeof expansionObraPuedeEntregar === "function" && !expansionObraPuedeEntregar(o)) return false;
   if (nowMs() < o.hasta) return false;
   const e = expansionSiguiente();
   delete G.expObra;
@@ -3902,7 +3914,7 @@ function brujula() {
       return B({ txt: "Termina la obra de " + BUILD_DEF[t].label + (partes.length ? ": faltan " + partes.join(" y ") : ""), target: t });
     }
     if (typeof expansionObra === "function" && expansionObra())
-      return B({ txt: "La expansión " + expansionObra().n + " está en obra: lista en " + expansionObraTxt(), panel: "ov-expandir" });
+      return B({ txt: (typeof expansionObraPendiente === "function" && expansionObraPendiente()) ? "El inicio de la expansión está sin confirmar. Pulsa el disquete para comprobar el mismo guardado." : "La expansión " + expansionObra().n + " está en obra: lista en " + expansionObraTxt(), panel: "ov-expandir" });
     /* 3 · se puede comprar ya */
     if (typeof expansionSiguiente === "function") {
       const e = expansionSiguiente();

@@ -1790,6 +1790,12 @@ function refreshExpandir() {
     (G.produccion && G.produccion.v === 1 ? " y suma 1 cupo productivo + 1 nodo básico gratuito a elección: árbol, roca o parcela. Elegilo en el Cobertizo al terminar la obra. Necesita espacio físico; las vetas avanzadas se compran aparte." : " y destapa lo que hay debajo.");
   /* 20/9: en obra. Ya se pagó; lo único que falta es tiempo, y el panel lo dice con el reloj */
   const obra = (typeof expansionObra === "function") ? expansionObra() : null;
+  if (obra && typeof expansionObraPendiente === "function" && expansionObraPendiente()) {
+    if (tit) tit.textContent = "Inicio de expansión sin confirmar";
+    if (sub) sub.textContent = "Conservamos el intento. Pulsa el disquete para comprobar el mismo guardado; no vuelvas a pagar.";
+    reqs.innerHTML = ""; if (trae) trae.innerHTML = "";
+    btn.textContent = "Pendiente de confirmar"; btn.disabled = true; btn.onclick = null; return;
+  }
   if (obra) {
     if (tit) tit.textContent = "Expansión " + obra.n + " en obra";
     if (sub) sub.textContent = "Ya está pagada. La cerca se abre sola cuando la obra termina — también con el juego cerrado.";
@@ -1841,9 +1847,9 @@ function refreshExpandir() {
   btn.textContent = puede ? (minObra ? "Expandir · obra de " + expansionObraMinTxt(minObra) : "Expandir")
     : faltaNivel ? "Necesitas granja nivel " + ex.nivel + " (tienes " + (G.level || 1) + ")"
     : "Te falta: " + faltantes.join(" · ");
-  btn.onclick = () => {
+  btn.onclick = async () => {
     if (!puede) return;
-    if (typeof expansionComprar === "function" && expansionComprar()) closeOv("ov-expandir");
+    if (typeof expansionComprar === "function" && await expansionComprar()) closeOv("ov-expandir");
   };
 }
 
@@ -5291,7 +5297,7 @@ function refreshDeco() {
   // telón (la forma del mundo cambió) y el panel se vuelve a pintar al abrirlo.
   box.querySelectorAll('[data-buydeco]').forEach(b=>{const d=DECO_DEF[b.dataset.buydeco];if(d&&!d.plata)ofrecerRecargaGolden(b,d.golden);});
   const eb = $("exp-comprar");
-  if (eb) eb.onclick = () => { if (typeof expansionComprar === "function" && expansionComprar()) { try { refreshDeco(); refreshHud(); } catch (e) {} } };
+  if (eb) eb.onclick = async () => { if (typeof expansionComprar === "function" && await expansionComprar()) { try { refreshDeco(); refreshHud(); } catch (e) {} } };
   const de = $("deco-editar"); if (de) de.onclick = () => { if (window.setEditMode) setEditMode(true); };   // cierra la Tienda y abre el modo edición con el selector de adornos
 }
 
@@ -7349,15 +7355,15 @@ function initUI() {
   tutoSync(true);   // cartel + flecha del tutorial guiado
   /* 8/9: la tira también se repinta en el latido — los números suben al craftear o al cobrar,
      no solo al gastar, y con la firma no cuesta nada si no cambió nada. */
-  setInterval(() => { if(window.GoldenGraves&&typeof GoldenGraves.busy==='function'&&GoldenGraves.busy())return; try { refreshRecientes(); refreshMorral(); refreshCombate(); marketVentasTick(); bancoTick(); } catch (e) {} }, 1000);
+  setInterval(() => { if(typeof expansionGuardando==='function'&&expansionGuardando())return; if(window.GoldenGraves&&typeof GoldenGraves.busy==='function'&&GoldenGraves.busy())return; try { refreshRecientes(); refreshMorral(); refreshCombate(); marketVentasTick(); bancoTick(); } catch (e) {} }, 1000);
   // Durante el flush de actualización se difiere sólo este latido. Los relojes absolutos
   // conservan el tiempo y se ponen al día al retomar; las acciones manuales siguen detectándose.
-  setInterval(() => { if(typeof RECARGA_GUARDANDO!=="undefined"&&RECARGA_GUARDANDO)return; if(window.GoldenGraves&&typeof GoldenGraves.busy==='function'&&GoldenGraves.busy())return; if (typeof buffTick === "function") buffTick(); if (typeof expansionObraTick === "function") { try { if (expansionObraTick()) refreshHud(); } catch (e) { console.warn(e); } } if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
+  setInterval(() => { if(typeof RECARGA_GUARDANDO!=="undefined"&&RECARGA_GUARDANDO)return; if(typeof expansionGuardando==='function'&&expansionGuardando())return; if(window.GoldenGraves&&typeof GoldenGraves.busy==='function'&&GoldenGraves.busy())return; if (typeof buffTick === "function") buffTick(); if (typeof expansionObraTick === "function") { try { if (expansionObraTick()) refreshHud(); } catch (e) { console.warn(e); } } if (typeof stamTick === "function") stamTick(); if (typeof incTick === "function") incTick(); if (typeof granjaRegen === "function") granjaRegen(); tutoSync(); refreshHud(); }, 1000);
   /* 26/8 — el flujo de la bolsa late aparte y MÁS RÁPIDO que el HUD. Un segundo de retraso entre
      el golpe y el « +1 Madera » ya no se siente como respuesta al clic, se siente como otra cosa
      que pasó después. A 180 ms es indistinguible de instantáneo, y comparar dos objetos planos
      cinco veces por segundo no le cuesta nada a nadie. */
-  setInterval(() => { if(window.GoldenGraves&&typeof GoldenGraves.busy==='function'&&GoldenGraves.busy())return; try { flujoTick(); } catch (e) {} }, 180);
+  setInterval(() => { if(typeof expansionGuardando==='function'&&expansionGuardando())return; if(window.GoldenGraves&&typeof GoldenGraves.busy==='function'&&GoldenGraves.busy())return; try { flujoTick(); } catch (e) {} }, 180);
   /* Espacio se engancha arriba, junto a los atajos que ya conocen el foco y las ventanas. */
 }
 initUI();
