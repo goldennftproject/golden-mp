@@ -1074,6 +1074,70 @@ const CORS = {
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
+// SAVE_SUPPORT_V1: private diagnostics only; never a restore, reward or save decision.
+const SAVE_SUPPORT_PROJECT='ulspkdaljeuleqqdokfk';
+const SAVE_SUPPORT_FIELDS=new Set(["_economiaControl","_graveProtocol","_saveOp","actividadAcciones","actividadGranja","amarres","animals","armCd","armasUnlocked","armor","armorDur","armorEq","armorOff","artefactos","banco","bowOwned","buffCultivoHasta","buffs","built","buzonArchivo","buzonLeidas","canaElegida","canas","canasDur","canasDurV","chestCap","chests","cobertizo","combatXp","cont","conts","cooking","cosEq","cosmeticos","daily","decoBolsa","decos","dishes","doma","dummyTrain","dummyUsedAt","edif2","editVisto","emergBuys","energiaGranja","escamas","escamasLonja","espacioV","establoV","estrellaMax","excav","expObra","expParcelasDadas","expansiones","farmXpBase","farmXpEdificios","farmXpRitmo","firstCropDone","firstSeeds","fish","forjaOps","gear","ghInv","goblin","godHand","golden","hbInit","horno","hotSel","hotbar","hp","hpMax","incDia","incResumen","incursion","incursionTutorialUsada","infraestructura","iniciado","invRows","kitReclamado","layout","layoutPlots","layoutPond","level","logros","logrosAcciones","logrosV2","lombDia","lombricario","lonja","lonjaCap","lonjaEntregados","lonjaMes","marea","mejorasPasivas","mercadoVentas","mkPend","modoPelea","nasaPlanos","nasas","nfts","nodoUsos","nodos","obraDep","obras","ofrendaLog","ofrendaPts","packs","pass","pedidos","pescaDesde","pescaDia","pescaHasta","pescaStats","pescaTiene","pescaV4","picks","planos","plata","plots","plotsCompradas","plotsFicha","plotsOwned","presion","prestige","produccion","recientes","regalos","reinicio","res","rocksOpen","runaOro","seedBuys","seeds","selSeed","senales","sflStock","skills","slots","stam","stamAcc","stamFullAt","stamLastAt","stamRec","stats","statsBase","swordOwned","swordWoodOwned","tituloPesca","tools","torneo","torneoCobrado","torneoPodioCobrado","trampas","treesOpen","triesV","tumba","tuto","vales","visitas","visto","vistos","weaponSpares","weaponSparesOps","weapons","zonaCdHasta","zonaViaje","zonasVistas"]);
+const SAVE_SUPPORT_SECRETS=new Set(["authorization","cookie","cookies","headers","password","passwd","accesstoken","refreshtoken","idtoken","jwt","apikey","servicerolekey","sbkey","email","correo","token","secret","clientsecret","privatekey","mnemonic","seedphrase","session","cookiestore","auth"]);
+const SAVE_SUPPORT_LIMITS={"depth":12,"nodes":8192,"objectKeys":256,"arrayLength":512,"snapshotBytes":131072,"captureBodyBytes":700000,"clientBatchBytes":262144,"clientItems":3,"ordinaryCaptureTimeoutMs":250,"clientCaptureBudgetMs":1000,"clientTransportTimeoutMs":3000};
+function saveSupportBytes(value){try{return new TextEncoder().encode(JSON.stringify(value)).length;}catch{return Infinity;}}
+function saveSupportPrivateString(value){return /Bearer\s+[A-Za-z0-9._-]+/i.test(value)||/eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/.test(value)||/[0-9]{6,20}:[A-Za-z0-9_-]{30,100}/.test(value)||/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value);}
+function saveSupportSnapshot(value){
+ let sanitized=false,nodes=0;
+ try{
+  if(!value||typeof value!=='object'||Array.isArray(value)||saveSupportBytes(value)>SAVE_SUPPORT_LIMITS.snapshotBytes)return{data:null,sanitized:false,omitted:true};
+  // Validate the entire shape before projecting; an unsupported field cannot become a partial copy.
+  const stack=[{value,depth:0}];while(stack.length){const entry=stack.pop(),v=entry.value,d=entry.depth;if(++nodes>SAVE_SUPPORT_LIMITS.nodes||d>SAVE_SUPPORT_LIMITS.depth)throw Error('shape');if(v===null||typeof v==='string'||typeof v==='boolean')continue;if(typeof v==='number'){if(!Number.isFinite(v))throw Error('shape');continue;}if(typeof v!=='object')throw Error('shape');if(Array.isArray(v)){if(v.length>SAVE_SUPPORT_LIMITS.arrayLength)throw Error('shape');for(const x of v)stack.push({value:x,depth:d+1});}else{const keys=Object.keys(v);if(keys.length>SAVE_SUPPORT_LIMITS.objectKeys)throw Error('shape');for(const key of keys)stack.push({value:v[key],depth:d+1});}}
+  function clean(v){if(v===null||typeof v==='number'||typeof v==='boolean')return v;if(typeof v==='string'){if(saveSupportPrivateString(v)){sanitized=true;return'[redacted]';}return v;}if(Array.isArray(v))return v.map(clean);const out=Object.create(null);for(const key of Object.keys(v)){const normalized=key.toLowerCase().replace(/[^a-z0-9]/g,'');if(SAVE_SUPPORT_SECRETS.has(normalized)||['__proto__','prototype','constructor'].includes(key)){sanitized=true;continue;}out[key]=clean(v[key]);}return out;}
+  const projected=Object.create(null);for(const key of Object.keys(value)){if(SAVE_SUPPORT_FIELDS.has(key))projected[key]=value[key];else sanitized=true;}const data=clean(projected);return{data,sanitized,omitted:sanitized};
+ }catch{return{data:null,sanitized:false,omitted:true};}
+}
+function saveSupportCanonical(value){
+ let nodes=0;function ordered(v,depth){if(++nodes>65536||depth>64)throw Error('shape');if(v===null||typeof v==='string'||typeof v==='boolean')return JSON.stringify(v);if(typeof v==='number'){if(!Number.isFinite(v))throw Error('shape');return JSON.stringify(v);}if(!v||typeof v!=='object')throw Error('shape');if(Array.isArray(v))return'['+v.map(x=>ordered(x,depth+1)).join(',')+']';return'{'+Object.keys(v).sort().map(key=>JSON.stringify(key)+':'+ordered(v[key],depth+1)).join(',')+'}';}return ordered(value,0);
+}
+async function saveSupportDigest(value){const bytes=new TextEncoder().encode(value),digest=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');}
+async function saveSupportHash(value){return await saveSupportDigest(saveSupportCanonical(value));}
+function saveSupportBase(value){return typeof value==='string'&&value.length<=64&&/^\d{4}-\d{2}-\d{2}[T ][0-9:.+\-]+Z?$/.test(value)&&Number.isFinite(Date.parse(value))?value:null;}
+function saveSupportMeta(body,extra={}){const result={rulesVersion:VERSION,serializerVersion:1,...extra};const build=body?.support?.build??body?.build;if(typeof build==='string'&&/^[A-Za-z0-9._-]{1,64}$/.test(build))result.build=build;return result;}
+async function saveSupportRpc(admin,args,deadline){
+ const remaining=Math.max(0,Math.min(SAVE_SUPPORT_LIMITS.ordinaryCaptureTimeoutMs,deadline-Date.now()));if(!remaining||typeof admin?.rpc!=='function')return null;
+ const controller=new AbortController();let timer;
+ try{
+  let query=admin.rpc('gf_save_support_capture',args);
+  // The deployed supabase-js v2 PostgREST builder supports abortSignal. Do not start unabortable diagnostics.
+  if(typeof query?.abortSignal!=='function')return null;query=query.abortSignal(controller.signal);
+  const timeout=new Promise(resolve=>{timer=setTimeout(()=>{controller.abort();resolve(null);},remaining);});
+  const answer=await Promise.race([Promise.resolve(query).catch(()=>null),timeout]);return answer&&!answer.error&&answer.data?.ok===true?answer.data:null;
+ }catch{return null;}finally{if(timer!==undefined)clearTimeout(timer);controller.abort();}
+}
+function saveSupportOriginal(value){const snapshot=saveSupportSnapshot(value);return{snapshot};}
+async function saveSupportRejected(admin,uid,body,observed,reason,original){
+ const deadline=Date.now()+SAVE_SUPPORT_LIMITS.ordinaryCaptureTimeoutMs;
+ try{
+  if(body?.cuenta!=null&&body.cuenta!==uid||observed?.user_id!=null&&observed.user_id!==uid)return;
+  const proposed=original?.snapshot??saveSupportSnapshot(body?.data),canonical=saveSupportSnapshot(observed?.data),observedBase=saveSupportBase(observed?.updated_at),haveObserved=canonical.data!==null&&observedBase!==null;
+  const op=typeof body?.op==='string'&&/^[a-zA-Z0-9._-]{8,100}$/.test(body.op)?body.op:null;
+  await saveSupportRpc(admin,{p_uid:uid,p_kind:'rejected',p_op:op,p_base:saveSupportBase(body?.base),p_reason:reason,p_payload:proposed.data,p_meta:saveSupportMeta(body,{source:'rechazo',sanitized:proposed.sanitized||canonical.sanitized,omitted:proposed.omitted||canonical.omitted?1:0}),p_observed_base:haveObserved?observedBase:null,p_observed_data:haveObserved?canonical.data:null},deadline);
+ }catch{/* Diagnostics never change the original save response. */}
+}
+async function saveSupportCapture(admin,uid,body){
+ const support=body?.support;
+ if(body?.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
+ if(!support||support.v!==1||support.action!=='capture'||support.project!==SAVE_SUPPORT_PROJECT||!Array.isArray(support.items)||support.items.length>SAVE_SUPPORT_LIMITS.clientItems||saveSupportBytes(body)>SAVE_SUPPORT_LIMITS.captureBodyBytes||saveSupportBytes(support)>SAVE_SUPPORT_LIMITS.clientBatchBytes)return json({error:'Pedido de soporte inválido'},400);
+ const deadline=Date.now()+SAVE_SUPPORT_LIMITS.clientCaptureBudgetMs,items=[];
+ // Verify every raw hash before recording any item. The hash is not an acceptance proof.
+ for(const item of support.items){
+  if(!item||typeof item!=='object'||!['copia','aparcada','carga','rechazo','conflicto'].includes(item.source)||typeof item.hash!=='string'||!/^[a-f0-9]{64}$/.test(item.hash)||!item.data||typeof item.data!=='object'||Array.isArray(item.data))return json({error:'Copia de soporte inválida'},400);
+  let verified;try{verified=await saveSupportHash(item.data);}catch{return json({error:'Copia de soporte inválida'},400);}if(verified!==item.hash)return json({error:'La huella de soporte no coincide'},400);
+  items.push({item,snapshot:saveSupportSnapshot(item.data)});
+ }
+ const batchOp='client-batch:'+await saveSupportDigest(items.map(x=>x.item.hash).sort().join('|'));
+ const accepted=[];for(const {item,snapshot} of items){
+  const result=await saveSupportRpc(admin,{p_uid:uid,p_kind:'client_evidence',p_op:batchOp,p_base:null,p_reason:'client',p_payload:snapshot.data,p_meta:saveSupportMeta(body,{clientHash:item.hash,source:item.source,sanitized:snapshot.sanitized,omitted:snapshot.omitted?1:0}),p_observed_base:null,p_observed_data:null},deadline);
+  if(snapshot.data!==null&&result&&['retained','deduped'].includes(result.captured)&&result.payloadRetained===true&&typeof result.supportId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(result.supportId))accepted.push({hash:item.hash,status:result.captured,supportId:result.supportId,payloadRetained:true,omitted:snapshot.omitted||result.omitted===true});
+ }
+ return json({ok:true,support:{v:1,accepted,omittedCount:items.length-accepted.filter(x=>!x.omitted).length}});
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== 'POST') return json({error:'Método no permitido'},405);
@@ -1087,6 +1151,7 @@ Deno.serve(async (req) => {
     const uid = u.user.id;
 
     const body = await req.json().catch(() => null);
+    if(body?.support)return await saveSupportCapture(admin,uid,body);
 
     if(body?.ranking){
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
@@ -1182,8 +1247,8 @@ Deno.serve(async (req) => {
     const { data: prevRow, error: readError } = await admin.from("farms").select("*").eq("user_id", uid).maybeSingle();
     if (readError) return json({ error: "No se pudo leer la granja anterior. No se escribió nada." }, 503);
     // Una pestaña anterior al reinicio global no puede resucitar su progreso.
-    if (Number(prevRow?.data?.reinicio || 0) > Number(data.reinicio || 0)) return json({ error: "La cuenta se reinició. Recargá para comenzar de cero.", conflicto: true }, 409);
-    if (prevRow?.data?._graveProtocol === 1 && body?.graveProtocol !== 1) return json({error:"Actualizá el juego para guardar esta partida con calaveras compartidas. Se conserva tu copia local.",conflicto:true,actualizar:true},409);
+    if (Number(prevRow?.data?.reinicio || 0) > Number(data.reinicio || 0)) {await saveSupportRejected(admin,uid,body,prevRow,'validation');return json({ error: "La cuenta se reinició. Recargá para comenzar de cero.", conflicto: true }, 409);}
+    if (prevRow?.data?._graveProtocol === 1 && body?.graveProtocol !== 1) {await saveSupportRejected(admin,uid,body,prevRow,'validation');return json({error:"Actualizá el juego para guardar esta partida con calaveras compartidas. Se conserva tu copia local.",conflicto:true,actualizar:true},409);}
     const op = body?.op;
     if (op != null && (typeof op !== "string" || !/^[a-zA-Z0-9._-]{8,100}$/.test(op))) return json({ error: "Identificador de operación inválido" }, 400);
     if (op && prevRow?.data?._saveOp === op) {
@@ -1200,10 +1265,11 @@ Deno.serve(async (req) => {
         const proof=await admin.rpc('gf_graves_save_proof',{p_uid:uid,p_base:body.base,p_op:op,p_tumba:data.tumba??null});
         if(!proof.error&&proof.data?.ok===true)graveProof=proof.data;
       }
+      await saveSupportRejected(admin,uid,body,prevRow,'cas');
       return json({error:"Otra sesión guardó una versión diferente",conflicto:true,...(graveProof?{graveProof}: {})},409);
     }
     const graveNo=graveOrdinaryGuard(prevRow?.data??null,data,body?.graveProtocol,Date.now());
-    if(graveNo)return json({error:graveNo,conflicto:true,calavera:true},409);
+    if(graveNo){await saveSupportRejected(admin,uid,body,prevRow,'validation');return json({error:graveNo,conflicto:true,calavera:true},409);}
     const ahora = new Date(Math.max(Date.now(), prevRow?.updated_at ? new Date(prevRow.updated_at).getTime() + 1 : 0));
     const elapsedSeg = prevRow?.updated_at ? (ahora.getTime() - new Date(prevRow.updated_at).getTime()) / 1000 : 0;
 
@@ -1212,9 +1278,11 @@ Deno.serve(async (req) => {
       .select("seller,sold_to,kind,item,qty,price,paid,fee_pct")
       .or("seller.eq." + uid + ",sold_to.eq." + uid).limit(2000);
     if (marketError) return json({ error: "No se pudo validar el mercado. No se escribió nada." }, 503);
+    const supportOriginal=saveSupportOriginal(data); // Capture before the economic guard mutates its working copy.
     const protegidos = protegerEconomia(prevRow?.data ?? null, data, ahora.getTime(), prevRow?.updated_at?new Date(prevRow.updated_at).getTime():0);
     if (protegidos.length) {
       await admin.from("farm_saves_log").insert({user_id:uid,reglas_v:VERSION,elapsed_s:Math.round(elapsedSeg),delta:{economia_rechazada:true},sospechas:protegidos});
+      await saveSupportRejected(admin,uid,body,prevRow,'economy',supportOriginal);
       return json({ error: "Guardado económico bloqueado; conservá el respaldo local y recargá para sincronizar.", economia:true, sospechas: protegidos }, 409);
     }
     const mercado = mercadoPermiso(uid, filas ?? [], prevRow?.mercado_ack ?? null, prevRow?.data ?? null, data);
@@ -1228,7 +1296,7 @@ Deno.serve(async (req) => {
     });
 
     /* modo rechazo (futuro, tras calibrar): un guardado con sospechas no entra */
-    if (MODO === "rechazo" && sospechas.length) return json({ error: "guardado rechazado", sospechas }, 422);
+    if (MODO === "rechazo" && sospechas.length) {await saveSupportRejected(admin,uid,body,prevRow,'heuristic',supportOriginal);return json({ error: "guardado rechazado", sospechas }, 422);}
     actividadActualizar(prevRow?.data??null,data,ahora.getTime(),undefined,body.jornada===1,prevRow?.updated_at?new Date(prevRow.updated_at).getTime():0); // Sólo guardados aceptados; CAS evita duplicar crédito.
 
     /* el guardado ENTRA, y con él queda anotado lo del mercado que ya se contó: así el
@@ -1244,7 +1312,7 @@ Deno.serve(async (req) => {
     };
     let escrito = await escribir(true);
     if (escrito.error && /mercado_ack/.test(escrito.error.message || "")) escrito = await escribir(false);
-    if (escrito.error?.code === "23505" || (!escrito.error && !escrito.data)) return json({ error: "Otra sesión guardó antes. No se sobrescribió su granja.", conflicto: true }, 409);
+    if (escrito.error?.code === "23505" || (!escrito.error && !escrito.data)) {await saveSupportRejected(admin,uid,body,prevRow,'cas',supportOriginal);return json({ error: "Otra sesión guardó antes. No se sobrescribió su granja.", conflicto: true }, 409);}
     if (escrito.error) return json({ error: escrito.error.message }, 500);
     return json({ ok: true, sospechas: sospechas.length, updated_at: escrito.data.updated_at, actividadGranja:data.actividadGranja,logrosV2:data.logrosV2,incursionTutorialUsada:data.incursionTutorialUsada===true });
   } catch (e) {

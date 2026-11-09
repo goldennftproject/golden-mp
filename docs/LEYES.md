@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Historial privado automático de guardado — 09/11/2026
+
+El propietario autoriza implementar, probar y publicar un historial privado y acotado de guardados aceptados, propuestas rechazadas y copias locales propias anteriores a hidratar, sin nuevas descargas manuales al jugador. Autenticación, propiedad, etapa de partida, privacidad, retención y cuotas se comprueban en servidor; los fallos del soporte no rechazan el guardado habitual. Las evidencias locales o rechazadas nunca se aceptan, fusionan ni restauran automáticamente. Se preservan partidas, reglas, cuentas, arte, sistemas pausados y estudio USDT. Ver HISTORIAL-GUARDADO-20261109.md.
+
 ## Expansiones con guardado confirmado — 09/11/2026
 
 El propietario autoriza corregir y publicar para todos el rechazo al expandir después de fabricar y consumir un pico. Se confirma primero el inventario actual, se revalidan cuenta, requisitos y coste, y se confirma después el inicio de la obra antes de anunciar éxito. Se bloquean doble clic y entregas mientras el guardado siga pendiente o en conflicto. Se conservan materiales, progreso, precios, tiempos y reglas del servidor; sin ajustes de cuentas ni compensaciones automáticas. Ver EXPANSION-GUARDADO-20261109.md.

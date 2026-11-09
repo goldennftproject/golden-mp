@@ -1,3 +1,141 @@
+/* Private diagnostic copies of this authenticated owner's existing backups. Never restores or deletes a copy. */
+(function(root){
+ 'use strict';
+ const PROJECT='ulspkdaljeuleqqdokfk',UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,HASH=/^[0-9a-f]{64}$/;
+ const LIMITS=Object.freeze({keys:4096,wrappers:40,rawBytes:4194304,wrapperBytes:700000,depth:12,nodes:8192,objectKeys:256,arrayLength:512,snapshotBytes:131072,batchBytes:262144,items:3,timeout:3000,backoff:60000,ackEntries:64,ackAge:604800000});
+ const SECRETS=new Set(['authorization','cookie','cookies','headers','password','passwd','accesstoken','refreshtoken','idtoken','jwt','apikey','servicerolekey','sbkey','email','correo','token','secret','clientsecret','privatekey','mnemonic','seedphrase','session','cookiestore','auth']);
+ const COMPARISON_FIELDS=Object.freeze(["_economiaControl","_graveProtocol","_saveOp","actividadAcciones","actividadGranja","amarres","animals","armCd","armasUnlocked","armor","armorDur","armorEq","armorOff","artefactos","banco","bowOwned","buffCultivoHasta","buffs","built","buzonArchivo","buzonLeidas","canaElegida","canas","canasDur","canasDurV","chestCap","chests","cobertizo","combatXp","cont","conts","cooking","cosEq","cosmeticos","daily","decoBolsa","decos","dishes","doma","dummyTrain","dummyUsedAt","edif2","editVisto","emergBuys","energiaGranja","escamas","escamasLonja","espacioV","establoV","estrellaMax","excav","expObra","expParcelasDadas","expansiones","farmXpBase","farmXpEdificios","farmXpRitmo","firstCropDone","firstSeeds","fish","forjaOps","gear","ghInv","goblin","godHand","golden","hbInit","horno","hotSel","hotbar","hp","hpMax","incDia","incResumen","incursion","incursionTutorialUsada","infraestructura","iniciado","invRows","kitReclamado","layout","layoutPlots","layoutPond","level","logros","logrosAcciones","logrosV2","lombDia","lombricario","lonja","lonjaCap","lonjaEntregados","lonjaMes","marea","mejorasPasivas","mercadoVentas","mkPend","modoPelea","nasaPlanos","nasas","nfts","nodoUsos","nodos","obraDep","obras","ofrendaLog","ofrendaPts","packs","pass","pedidos","pescaDesde","pescaDia","pescaHasta","pescaStats","pescaTiene","pescaV4","picks","planos","plata","plots","plotsCompradas","plotsFicha","plotsOwned","presion","prestige","produccion","recientes","regalos","reinicio","res","rocksOpen","runaOro","seedBuys","seeds","selSeed","senales","sflStock","skills","slots","stam","stamAcc","stamFullAt","stamLastAt","stamRec","stats","statsBase","swordOwned","swordWoodOwned","tituloPesca","tools","torneo","torneoCobrado","torneoPodioCobrado","trampas","treesOpen","triesV","tumba","tuto","vales","visitas","visto","vistos","weaponSpares","weaponSparesOps","weapons","zonaCdHasta","zonaViaje","zonasVistas"]);
+ const forbidden=k=>SECRETS.has(k.toLowerCase().replace(/[^a-z0-9]/g,''))||['__proto__','prototype','constructor'].includes(k);
+ const uid=v=>typeof v==='string'&&UUID.test(v)?v.toLowerCase():null,plain=v=>!!v&&Object.prototype.toString.call(v)==='[object Object]'&&(Object.getPrototypeOf(v)===null||Object.getPrototypeOf(Object.getPrototypeOf(v))===null),number=v=>typeof v==='number'&&Number.isFinite(v);
+ const bytes=v=>new TextEncoder().encode(v).byteLength;
+ function canonicalJSON(value){
+  let nodes=0;
+  function visit(v,depth){
+   if(++nodes>LIMITS.nodes||depth>LIMITS.depth)throw Error('tree_limit');
+   if(v===null||typeof v==='boolean')return JSON.stringify(v);
+   if(typeof v==='number'){if(!Number.isFinite(v))throw Error('invalid_number');return JSON.stringify(v);}
+   if(typeof v==='string'){if(/^eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/.test(v))throw Error('credential');return JSON.stringify(v);}
+   if(Array.isArray(v)){if(v.length>LIMITS.arrayLength)throw Error('tree_limit');const parts=[];for(let i=0;i<v.length;i++){if(!Object.prototype.hasOwnProperty.call(v,i))throw Error('invalid_json');parts.push(visit(v[i],depth+1));}return '['+parts.join(',')+']';}
+   if(!plain(v))throw Error('invalid_json');
+   const keys=Object.keys(v).sort();if(keys.length>LIMITS.objectKeys)throw Error('tree_limit');
+   return '{'+keys.map(k=>{if(forbidden(k))throw Error('credential');return JSON.stringify(k)+':'+visit(v[k],depth+1);}).join(',')+'}';
+  }
+  return visit(value,0);
+ }
+ function descriptor(key){
+  if(key==='gf-granja-copia-'+PROJECT)return{source:'copia',owner:null,at:0};
+  if(key==='gf-granja-aparcada-'+PROJECT)return{source:'aparcada',owner:null,at:0};
+  const tail='([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})';
+  const timed=new RegExp('^gf-(rechazo|conflicto)-respaldo-'+PROJECT+'-'+tail+'-(\\d{10,16})$','i').exec(key);
+  if(timed)return{source:timed[1].toLowerCase(),owner:timed[2].toLowerCase(),at:Number(timed[3])};
+  const load=new RegExp('^gf-carga-respaldo-'+PROJECT+'-'+tail+'-([0-9a-f]{1,8})(?:-([1-9][0-9]{0,2}))?$','i').exec(key);
+  return load&&(!load[3]||Number(load[3])<=100)?{source:'carga',owner:load[1].toLowerCase(),at:0}:null;
+ }
+ function increment(o,key,n=1){o[key]=(o[key]||0)+n;}
+ // This projection is only a duplicate filter. Uploaded data/hash remain the original validated snapshot.
+ function semanticallyEqual(a,b,now){
+  const project=data=>{const out=Object.create(null);for(const k of COMPARISON_FIELDS)if(!['visto','_saveOp','_economiaControl'].includes(k)&&Object.prototype.hasOwnProperty.call(data,k))out[k]=data[k];return out;};
+  const left=project(a),right=project(b),avip=number(a.produccion?.vipHasta)?a.produccion.vipHasta:0,bvip=number(b.produccion?.vipHasta)?b.produccion.vipHasta:0;
+  // A full, equal confirmed energy balance cannot regenerate further. Otherwise value and date stay inseparable.
+  const cap=avip>now?100:50;
+  if(avip===bvip&&plain(left.energiaGranja)&&plain(right.energiaGranja)&&left.energiaGranja.actual===cap&&right.energiaGranja.actual===cap&&number(left.energiaGranja.at)&&number(right.energiaGranja.at)){
+   left.energiaGranja={...left.energiaGranja};right.energiaGranja={...right.energiaGranja};delete left.energiaGranja.at;delete right.energiaGranja.at;
+  }
+  return canonicalJSON(left)===canonicalJSON(right);
+ }
+ function capture(storage,owner,now=Date.now()){
+  owner=uid(owner);const omissions={},records=[];let recognized=0,read=0,total=0;
+  if(!owner)return Object.freeze({records:Object.freeze(records),omissions:Object.freeze({owner:1}),recognized,read});
+  try{
+   const count=Math.min(Number(storage.length)||0,LIMITS.keys),keys=[];
+   if(storage.length>LIMITS.keys)increment(omissions,'keyLimit',storage.length-LIMITS.keys);
+   for(let i=0;i<count;i++){const key=storage.key(i),d=typeof key==='string'?descriptor(key):null;if(!d)continue;recognized++;if(d.owner&&d.owner!==owner){increment(omissions,'otherOwner');continue;}keys.push({key,...d});}
+   keys.sort((a,b)=>(a.source==='copia'?-2:a.source==='aparcada'?-1:0)-(b.source==='copia'?-2:b.source==='aparcada'?-1:0)||b.at-a.at||a.key.localeCompare(b.key));
+   if(keys.length>LIMITS.wrappers)increment(omissions,'wrapperLimit',keys.length-LIMITS.wrappers);
+   for(const d of keys.slice(0,LIMITS.wrappers)){
+    read++;let text;
+    try{
+     const raw=storage.getItem(d.key);if(typeof raw!=='string'||raw.length>LIMITS.wrapperBytes)throw Error('wrapper_limit');
+     const size=bytes(raw);total+=size;if(size>LIMITS.wrapperBytes)throw Error('wrapper_limit');if(total>LIMITS.rawBytes){increment(omissions,'rawBudget',keys.slice(0,LIMITS.wrappers).length-read+1);break;}
+     const wrap=JSON.parse(raw);if(!plain(wrap)||!plain(wrap.data))throw Error('invalid_wrapper');
+     const a=uid(wrap.uid),b=uid(wrap.cuenta);if((wrap.uid!=null&&!a)||(wrap.cuenta!=null&&!b)||(a&&b&&a!==b))throw Error('owner');
+     const wrapped=b||a;if(wrapped!==owner||(d.owner&&d.owner!==wrapped)||(wrap.project!=null&&wrap.project!==PROJECT))throw Error('owner');
+     if(d.source==='carga'&&(wrap.v!==1||wrap.restauracionAutomatica!==false||!number(wrap.conservadoAt)))throw Error('invalid_wrapper');
+     const data=wrap.data;if(!Number.isInteger(data.level)||data.level<1||data.level>10000||!plain(data.res)||!number(data.plata)||data.plata<0)throw Error('invalid_snapshot');
+     text=canonicalJSON(data);if(bytes(text)>LIMITS.snapshotBytes)throw Error('snapshot_limit');
+     const rawAt=d.at||(d.source==='carga'?(number(wrap.localAt)&&wrap.localAt>0?wrap.localAt:wrap.conservadoAt):(number(wrap.at)?wrap.at:wrap.aparcadaAt));
+     const at=number(rawAt)&&rawAt>=0&&rawAt<=now+86400000?rawAt:0;
+     records.push(Object.freeze({source:d.source,at,text,reset:number(data.reinicio)?data.reinicio:0,started:number(data.iniciado)?data.iniciado:0,ref:d.key}));
+    }catch(e){increment(omissions,['owner','credential','wrapper_limit','snapshot_limit','tree_limit'].includes(e.message)?e.message:'invalid');}
+   }
+  }catch{increment(omissions,'storage');}
+  return Object.freeze({records:Object.freeze(records),omissions:Object.freeze(omissions),recognized,read});
+ }
+ function create(options={}){
+  const storage=options.storage||root.localStorage,now=options.now||(()=>Date.now()),getUid=options.getUid||(()=>null),digest=options.digest||(async text=>Array.from(new Uint8Array(await root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join(''));
+  const invoke=options.invoke,Controller=options.AbortController||root.AbortController,setTimer=options.setTimeout||root.setTimeout,clearTimer=options.clearTimeout||root.clearTimeout;
+  let generation=0,activeUid=null,last={status:'idle'};const controllers=new Set(),inflight=new Map(),memory=new Map();
+  const current=t=>!!t&&t.generation===generation&&t.uid===activeUid&&uid(getUid())===t.uid;
+  function cancel(){generation++;activeUid=null;for(const c of controllers)c.abort();controllers.clear();}
+  function begin(owner){cancel();activeUid=uid(owner);return Object.freeze({uid:activeUid,generation});}
+  const stage=d=>JSON.stringify([number(d?.reinicio)?d.reinicio:0,number(d?.iniciado)?d.iniciado:0]);
+  const key=owner=>'gf-support-history-ack-'+PROJECT+'-'+owner;
+  function readAck(owner,epoch){
+   const mem=memory.get(owner);if(mem?.stage===epoch)return mem;
+   let a=null;try{a=JSON.parse(storage.getItem(key(owner))||'null');}catch{}
+   if(!a||a.v!==1||a.uid!==owner||a.project!==PROJECT||a.stage!==epoch)a={hashes:[],backoffUntil:0};
+   const hashes=(Array.isArray(a.hashes)?a.hashes:[]).filter(x=>x&&HASH.test(x.hash)&&number(x.at)&&x.at<=now()&&x.at>now()-LIMITS.ackAge).slice(0,LIMITS.ackEntries).map(x=>({hash:x.hash,at:x.at}));
+   const backoffUntil=number(a.backoffUntil)&&a.backoffUntil>now()&&a.backoffUntil<=now()+LIMITS.backoff?a.backoffUntil:0;
+   a={v:1,uid:owner,project:PROJECT,stage:epoch,hashes,backoffUntil};
+   memory.set(owner,a);return a;
+  }
+  function writeAck(owner,a){memory.set(owner,a);try{storage.setItem(key(owner),JSON.stringify(a));return true;}catch{return false;}}
+  function report(status,extra={}){last={status,...extra};return last;}
+  async function run(token,captured,canonical){
+   if(!current(token)||!plain(canonical)||typeof invoke!=='function'||typeof Controller!=='function')return report('not_current');
+   const epoch=stage(canonical),ack=readAck(token.uid,epoch),omissions={...(captured?.omissions||{})};
+   if(ack.backoffUntil>now())return report('backoff',{omissions});
+   const controller=new Controller();controllers.add(controller);
+   let timer;
+   try{
+    const distinct=[],seen=new Set(),acknowledged=new Set(ack.hashes.map(x=>x.hash));
+    for(const r of captured?.records||[]){
+     if(!current(token)||controller.signal.aborted)return report('cancelled');
+     if(r.reset!==(number(canonical.reinicio)?canonical.reinicio:0)){increment(omissions,'resetStage');continue;}
+     if((number(canonical.iniciado)?canonical.iniciado:0)!==r.started){increment(omissions,'startStage');continue;}
+     if(semanticallyEqual(JSON.parse(r.text),canonical,now())){increment(omissions,'canonicalEquivalent');continue;}
+     const hash=await digest(r.text);if(!current(token)||controller.signal.aborted)return report('cancelled');if(!HASH.test(hash))throw Error('hash');
+     if(seen.has(hash)){increment(omissions,'duplicate');continue;}seen.add(hash);if(acknowledged.has(hash)){increment(omissions,'acknowledged');continue;}distinct.push({...r,hash});
+    }
+    const ordered=[],taken=new Set(),take=(r,reason)=>{if(r&&!taken.has(r.hash)){ordered.push({...r,reason});taken.add(r.hash);}},newest=distinct.slice().sort((a,b)=>b.at-a.at),oldest=distinct.slice().sort((a,b)=>a.at-b.at);
+    take(newest.find(r=>r.source==='copia')||newest[0],'current_or_latest');take(newest.find(r=>['conflicto','rechazo'].includes(r.source)&&!taken.has(r.hash)),'latest_conflict');
+    take(oldest.find(r=>r.at>=now()-86400000&&!taken.has(r.hash))||oldest.find(r=>!taken.has(r.hash)),'earliest_24h_or_oldest');for(const r of newest)take(r,'remaining');
+    const body={cuenta:token.uid,support:{v:1,action:'capture',project:PROJECT,items:[]}},reasons=[];
+    for(const r of ordered){if(body.support.items.length>=LIMITS.items){increment(omissions,'selectionLimit');continue;}const item={data:JSON.parse(r.text),hash:r.hash,source:r.source,at:r.at};body.support.items.push(item);if(bytes(JSON.stringify(body))>LIMITS.batchBytes){body.support.items.pop();increment(omissions,'batchBudget');}else reasons.push(r.reason);}
+    if(!body.support.items.length)return report('nothing_to_send',{omissions});
+    if(!current(token)||controller.signal.aborted)return report('cancelled');
+    const aborted=new Promise((_,reject)=>controller.signal.addEventListener('abort',()=>reject(Error('aborted')),{once:true}));
+    timer=setTimer(()=>controller.abort(),LIMITS.timeout);
+    const response=await Promise.race([invoke(body,{signal:controller.signal,timeout:LIMITS.timeout}),aborted]);
+    if(!current(token)||controller.signal.aborted)return report('cancelled');
+    const result=response?.data;if(response?.error||result?.ok!==true||result?.support?.v!==1||!Array.isArray(result.support.accepted))throw Error('response');
+    const entries=result.support.accepted,asked=new Set(body.support.items.map(x=>x.hash)),returned=new Set();
+    if(entries.length>asked.size||!Number.isSafeInteger(result.support.omittedCount)||result.support.omittedCount<0||result.support.omittedCount>asked.size)throw Error('response');
+    for(const entry of entries){if(!entry||!asked.has(entry.hash)||returned.has(entry.hash)||entry.payloadRetained!==true||entry.omitted!==false||!uid(entry.supportId)||!['retained','deduped'].includes(entry.status))throw Error('response');returned.add(entry.hash);}
+    for(const hash of returned)ack.hashes= [{hash,at:now()},...ack.hashes.filter(x=>x.hash!==hash)].slice(0,LIMITS.ackEntries);
+    if(returned.size<asked.size||result.support.omittedCount>0)ack.backoffUntil=now()+LIMITS.backoff;else ack.backoffUntil=0;
+    const cached=writeAck(token.uid,ack);return report('captured',{sent:asked.size,retained:returned.size,ackCached:cached,reasons,omissions});
+   }catch{
+    if(current(token)){ack.backoffUntil=now()+LIMITS.backoff;writeAck(token.uid,ack);return report('unconfirmed',{omissions});}
+    return report('cancelled');
+   }finally{if(timer!==undefined)clearTimer(timer);controllers.delete(controller);}
+  }
+  function submit(token,captured,canonical){if(inflight.has(token?.generation))return inflight.get(token.generation);const task=run(token,captured,canonical).catch(()=>report('unconfirmed'));inflight.set(token?.generation,task);task.finally(()=>{if(inflight.get(token?.generation)===task)inflight.delete(token?.generation);});return task;}
+  return Object.freeze({begin,cancel,capture:token=>current(token)?capture(storage,token.uid,now()):capture(storage,null,now()),submit,isCurrent:current,stats:()=>({...last})});
+ }
+ const api={create,capture,canonicalJSON,descriptor,semanticallyEqual,comparisonFields:COMPARISON_FIELDS,PROJECT,LIMITS};if(typeof module!=='undefined'&&module.exports)module.exports=api;root.GoldenSaveHistoryClient=api;
+})(typeof window==='undefined'?globalThis:window);
+
 /* Golden Farm · persistencia por cuenta (login anónimo de Supabase) */
 /* 14/9 — MUDANZA DE PROYECTO. Estas dos líneas las reescribe `node tools/cambiar-supabase.js <url> <anon key>`
    (docs/MUDANZA-SUPABASE.md). Todo lo que este navegador guarda por su cuenta —la marca de cuenta y la copia
@@ -58,6 +196,20 @@ const SAVE_CONFIRMACIONES = new Map();
 const SAVE_GRAVE_REBASES = new Map();
 const SAVE_PENDIENTES = new Map(); // Petición ordinaria exacta hasta un ACK probado; separada por cuenta.
 let SAVE_EN_CURSO = null, SAVE_OTRA = false;
+
+// The existing SDK supplies authentication. This adapter never reads an Auth store or token.
+let SAVE_HISTORY_CLIENT = null;
+function historialSoporteCliente() {
+  try {
+    if (!window.GoldenSaveHistoryClient || !sb || !UID) return null;
+    if (!SAVE_HISTORY_CLIENT) SAVE_HISTORY_CLIENT = GoldenSaveHistoryClient.create({
+      storage:localStorage,getUid:()=>UID,
+      invoke:(body,options)=>sb.functions.invoke('guardar',{body,signal:options.signal,timeout:options.timeout})
+    });
+    return SAVE_HISTORY_CLIENT;
+  } catch (_) { return null; }
+}
+
 var RECARGA_GUARDANDO = false; // Sólo difiere el latido pasivo del HUD mientras se confirma la recarga.
 let MERCADO_GLOBAL = false, MERCADO_CACHE = null, MERCADO_REFRESCANDO = null, MERCADO_INTENTO = 0, MERCADO_EN_CURSO = null;
 const ALFA_GUARDADOS={intentos:0,confirmados:0,conflictos:0,fallos:0,ultimo:null,ms:[]};
@@ -218,14 +370,18 @@ async function recuperarGuardadoServidor(){
  if(typeof ruletasTieneReciboPendiente==='function'&&ruletasTieneReciboPendiente(uid)){
   try{await ruletasConsultar();toast('Giro comprobado y guardado sincronizado.');return true;}catch(e){toast(e?.message||'No se pudo comprobar el giro; se conserva el bloqueo.');return false;}
  }
+ const soporteCliente=historialSoporteCliente(),soporteCarga=soporteCliente?.begin(uid);
+ let soporteCopias=null;
  RECUPERANDO_GUARDADO=true;const desbloquear=mercadoBloquearPantalla('Recuperando el guardado del servidor…');
  try{
    if(MERCADO_EN_CURSO)await MERCADO_EN_CURSO;if(SAVE_EN_CURSO)await SAVE_EN_CURSO;
    if(UID!==uid)return false;
    // Si el respaldo no cabe, no sustituir la partida actual.
    localStorage.setItem('gf-conflicto-respaldo-'+SB_REF+'-'+uid+'-'+Date.now(),JSON.stringify({cuenta:uid,data:snapshot(),base:SAVE_BASES.get(uid),pendiente:localStorage.getItem('gf-venta-pendiente-'+SB_REF+'-'+uid)}));
+   try{soporteCopias=soporteCliente?.capture(soporteCarga);}catch(_){} 
    const {data,error}=await conTope(sb.from('farms').select('data,updated_at').eq('user_id',uid).maybeSingle(),15000,'recuperar guardado');
    if(UID!==uid||error||!data?.data||typeof data.data!=='object'||!data.updated_at)return false;
+   try{if(soporteCopias)void soporteCliente.submit(soporteCarga,soporteCopias,data.data);}catch(_){}
    CARGA_OK=false;
    try{hydrate(data.data);}finally{CARGA_OK=true;}
    SAVE_BASES.set(uid,data.updated_at);mercadoLimpiarPendiente(uid);SAVE_CONFLICTOS.delete(uid);SAVE_OTRA=false;copiaGuardar(snapshot(),true);lastSavedKey=snapKey();
@@ -668,6 +824,7 @@ async function initSave() {
       session = data.session;
     }
     if (!session || !session.user) return false;
+    if(UID!==session.user.id)SAVE_HISTORY_CLIENT?.cancel();
     if(UID!==session.user.id&&window.GoldenGraves)GoldenGraves.reset();
     UID = session.user.id;
     SESION_ACTUAL = session;
@@ -676,6 +833,7 @@ async function initSave() {
        esto, nuestra copia envejece y el día que haga falta ya no sirve para revivir nada. */
     try {
       sb.auth.onAuthStateChange((ev, s) => {
+        if(ev==='SIGNED_OUT'||(s?.user?.id&&s.user.id!==UID))SAVE_HISTORY_CLIENT?.cancel();
         if (s && s.user) { marcarCuenta(s); SESION_ACTUAL = s; }   // 18/9: y la sesión se mantiene fresca,
                                                                    // que es de donde el panel lee el correo
         /* SIGNED_OUT sin que nadie apretara nada es EXACTAMENTE el momento que veníamos
@@ -1468,6 +1626,9 @@ var CARGA_OK = false;      // ¿se llegó a leer y aplicar el guardado de la nub
 var SOLO_LOCAL = false;
 var CARGA_FALLO = false;   // ¿falló la lectura? (distinto de "no hay fila")
 async function loadFarm() {
+  const soporteCliente=historialSoporteCliente(),soporteCarga=soporteCliente?.begin(UID);
+  if(!soporteCliente)SAVE_HISTORY_CLIENT?.cancel();
+  let soporteCopias=null;
   MERCADO_GLOBAL = true;
   CARGA_OK = false; CARGA_FALLO = false; SOLO_LOCAL = false;
   if (!sb || !UID) {
@@ -1503,6 +1664,8 @@ async function loadFarm() {
     sesionLog("no se pudo validar la cuenta; carga y guardado bloqueados");
     return false;
   }
+  // Authentication already checked the UID. Capture immutable own wrappers before any hydrate/overwrite.
+  try { soporteCopias=soporteCliente?.capture(soporteCarga); } catch (_) {}
   for (let intento = 0; intento < 3; intento++) {
     try {
       // En alfa no añade consultas al arranque. En release, restaurar ANTES de leer la granja.
@@ -1518,6 +1681,8 @@ async function loadFarm() {
       if(!copiaPreservarAntesDeCarga(respaldo,data?.data,uid,data?.updated_at))throw new Error("No se pudo conservar la copia anterior; no se cargó ni se sobrescribió");
       if(UID!==uid){CARGA_FALLO=true;return false;}
       if (data) {
+        // Fire-and-forget private support; local preservation above remains a mandatory gate.
+        try { if(soporteCopias)void soporteCliente.submit(soporteCarga,soporteCopias,data.data); } catch (_) {}
         if (mercadoPendiente(uid) && respaldo && respaldo.uid === uid) copiaAparcar(respaldo);
         hydrate(data.data);
         SAVE_BASES.set(uid,data.updated_at||null);SAVE_CONFLICTOS.delete(uid);
@@ -2048,6 +2213,7 @@ async function saveFarmReal(force) {
    jugado desde el último guardado aceptado: un minuto, por el autosave. */
 async function porteroRechazo(det) {
   const uid=UID;if(!uid)return;
+  const soporteCliente=historialSoporteCliente(),soporteCarga=soporteCliente?.begin(uid);
   let recuperado=false;
   const sosp = (det && Array.isArray(det.sospechas)) ? det.sospechas : [];
   const lista = sosp.map(x => (x && x.que) || (x && x.recurso) || (typeof x === "string" ? x : JSON.stringify(x))).join(" · ");
@@ -2059,6 +2225,7 @@ async function porteroRechazo(det) {
     if(error)throw error;
     if (data && data.data) {
       localStorage.setItem('gf-rechazo-respaldo-'+SB_REF+'-'+uid+'-'+Date.now(),JSON.stringify({cuenta:uid,data:snapshot()}));
+      try{const copias=soporteCliente?.capture(soporteCarga);if(copias)void soporteCliente.submit(soporteCarga,copias,data.data);}catch(_){}
       SAVE_BASES.set(uid, data.updated_at || null);
       hydrate(data.data);
       copiaGuardar(snapshot(),true);                 // la copia local también vuelve a la aceptada
@@ -2290,6 +2457,7 @@ async function cerrarSesion() {
     const salida = await conTope(sb.auth.signOut({scope:"local"}), 10000, "cerrar sesión");
     if (salida && salida.error) return { error: "no se pudo cerrar la sesión; vuelve a intentarlo" };
     // Bloquea autosaves y callbacks durante los 400 ms anteriores a la recarga.
+    SAVE_HISTORY_CLIENT?.cancel();
     CARGA_OK = false; UID = null; SESION_ACTUAL = null; PUERTA_EMAIL = true;
     try { localStorage.removeItem(GF_CUENTA_KEY); } catch (e) {}
     try { localStorage.removeItem(GF_COPIA_KEY); } catch (e) {}
