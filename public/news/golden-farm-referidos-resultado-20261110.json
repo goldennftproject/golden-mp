@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "drawId": "referidos-20261108-official-20261110",
+  "eventId": "referidos-20261108",
+  "sourceSnapshotSha256": "a04cc5447c5716e8aaf852bb25d03517219f35afafe6b7f953dae1b39c330213",
+  "sealedSnapshotSha256": "be30191a8da5370fe956a426e44857ad7aaa3494c40dffcab44b0bcd348038d5",
+  "approvalSha256": "14170f459feb08fa13b6f066932d8488de90ec50a1567d799256687f5d26e72f",
+  "drawScriptSha256": "d8ddd741f21e4a6ed3df9b9cfb663ff4f5eecf8bc88cbb9a70e98b377a2b9574",
+  "ticketPublication": {
+    "status": "verified",
+    "sourceSnapshotSha256": "a04cc5447c5716e8aaf852bb25d03517219f35afafe6b7f953dae1b39c330213",
+    "publishedAt": "2026-11-10T13:59:14.903Z",
+    "url": "https://discord.com/channels/1564640221063024763/1564643673889841243/1569713041975545946",
+    "contentSha256": "feed1c5b8c9ef2e8a33255d376d6b8e85430917f81e97d885cf5dc47aa90d584",
+    "receipt": "distribution/discord-tickets-receipt.json",
+    "receiptSha256": "2cc91751893d6411f80caa2a1c68b35968cea49f60b0bc4252da41920cb3a8d7",
+    "telegramUrl": "https://t.me/c/2155732770/19716"
+  },
+  "algorithm": "Node.js crypto.randomInt(remainingTicketCount); uniform remaining ticket; remove all tickets of winner; no replacement of participant",
+  "startedAt": "2026-11-10T13:59:26.495Z",
+  "rounds": [
+    {
+      "rank": 1,
+      "prizeUsd": 10,
+      "ticket": 6,
+      "participant": "P02",
+      "name": "SalchiNFT",
+      "eligibleTickets": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "visualOrder": [
+        3,
+        10,
+        7,
+        13,
+        1,
+        5,
+        9,
+        4,
+        12,
+        8,
+        2,
+        11,
+        6,
+        14
+      ],
+      "selectedIndex": 5,
+      "removedTickets": [
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "rank": 2,
+      "prizeUsd": 5,
+      "ticket": 14,
+      "participant": "P04",
+      "name": "Not | SG (@not546)",
+      "eligibleTickets": [
+        1,
+        2,
+        3,
+        4,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "visualOrder": [
+        3,
+        10,
+        13,
+        1,
+        9,
+        4,
+        12,
+        2,
+        11,
+        14
+      ],
+      "selectedIndex": 9,
+      "removedTickets": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "rank": 3,
+      "prizeUsd": 5,
+      "ticket": 1,
+      "participant": "P01",
+      "name": "CobraReX",
+      "eligibleTickets": [
+        1,
+        2,
+        3,
+        4,
+        9,
+        10,
+        11
+      ],
+      "visualOrder": [
+        3,
+        10,
+        1,
+        9,
+        4,
+        2,
+        11
+      ],
+      "selectedIndex": 0,
+      "removedTickets": [
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  ],
+  "paymentsExecuted": false,
+  "accountWrites": 0,
+  "completedAt": "2026-11-10T13:59:26.501Z",
+  "status": "official_complete"
+}
