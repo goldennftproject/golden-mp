@@ -2564,6 +2564,7 @@
   <link rel="stylesheet" href="game/wood-shortcuts.css">
   <link rel="stylesheet" href="game/ruletas-feedback.css">
   <link rel="stylesheet" href="game/market-window.css">
+  <link rel="stylesheet" href="game/zone-combat-guide.css">
   <script>
   /* Cargador con reintentos: el server free de Render a veces corta conexiones.
      Carga los scripts del juego EN FILA (uno por vez) y reintenta cada uno hasta 8 veces. */
@@ -2573,7 +2574,7 @@
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
     const GF_BUILD = "20260928-163402";
     const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/graves-api.js", "game/grave-rebase.js", "game/save.js","game/ui.js","game/ruletas-api.js","game/ruletas.js","game/news.js","game/novedades.js","game/lighting.js","game/visual-v2.js","game/world-lights.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/concept-finish.js","game/adaptive-layout.js","game/market-window.js","game/boot.js",
-                   "game/farm.js","game/reference-world.js","game/reference-camera-ui.js","game/grave-guide.js", "game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
+                   "game/farm.js","game/reference-world.js","game/reference-camera-ui.js","game/grave-guide.js", "game/zone-combat-guide.js", "game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
        entrar »). El cargador de abajo pide un archivo, espera a que llegue, pide el siguiente:
        doce idas y vueltas al servidor PUESTAS UNA DETRÁS DE OTRA antes de que corra la primera

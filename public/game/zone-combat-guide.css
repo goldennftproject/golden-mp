@@ -1,0 +1,32 @@
+/* Compact, nonmodal instructions using the existing Tienda wood and a real entry mob. */
+#zone-combat-guide-root{position:fixed;z-index:7;left:8px;top:76px;width:310px;pointer-events:none;font:13px/1.35 system-ui,sans-serif;color:#402a1b;box-sizing:border-box}
+#zone-combat-guide-root *,#zone-combat-guide-root *::before,#zone-combat-guide-root *::after{box-sizing:border-box}
+#zone-combat-guide-root [hidden]{display:none!important}
+#zone-combat-guide-help,#zone-combat-guide-understood{pointer-events:auto;cursor:pointer;min-height:44px;border:9px solid transparent;border-image:url('../assets/visual-v2/skin/wood-shortcuts.svg') 15 16 12 fill / 9px / 0 stretch;border-radius:0;background:#57351e;background-clip:padding-box;box-shadow:0 2px 4px #14200b66;color:#fff1d1;font:700 14px/1.1 Georgia,'Times New Roman',serif;text-shadow:0 1px 1px #35200e;letter-spacing:0;padding:2px 8px}
+#zone-combat-guide-help{display:flex;align-items:center;justify-content:center;gap:7px;margin:0 0 6px auto;min-width:112px}
+#zone-combat-guide-help>span{display:inline-grid;place-items:center;width:18px;height:18px;border:1px solid currentColor;border-radius:50%;font:700 13px/1 system-ui,sans-serif}
+#zone-combat-guide{pointer-events:auto;border:9px solid transparent;border-image:url('../assets/visual-v2/skin/wood-shortcuts.svg') 15 16 12 fill / 9px / 0 stretch;border-radius:0;background:#57351e;background-clip:padding-box;filter:drop-shadow(0 3px 3px #17210e66);max-height:var(--combat-guide-max-height,420px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.zone-combat-guide-paper{padding:10px;background:#f3e3c1;color:#402a1b;min-width:0}
+#zone-combat-guide .zone-combat-guide-kicker{margin:0 0 3px;font:700 10px/1.3 system-ui,sans-serif;letter-spacing:.07em;text-transform:uppercase;color:#79522c}
+#zone-combat-guide-title{margin:0 0 8px;color:#51331e;font:700 18px/1.2 Georgia,'Times New Roman',serif;text-align:left;letter-spacing:0}
+#zone-combat-guide ol{margin:0;padding:0;list-style:none;counter-reset:combat-guide-step}
+#zone-combat-guide li{display:grid;grid-template-columns:62px minmax(0,1fr);gap:9px;min-height:64px;align-items:center;padding:6px 0;border-top:1px solid #bda173;counter-increment:combat-guide-step}
+#zone-combat-guide li>span:last-child{min-width:0}
+#zone-combat-guide li strong{display:block;margin:0 0 2px;font-size:13px;line-height:1.25;color:#4b2f1b}
+#zone-combat-guide li strong::before{content:counter(combat-guide-step) '. ';color:#8d5829}
+#zone-combat-guide li>span:last-child>span{display:block;font-size:12px;line-height:1.35}
+.zone-combat-guide-art{position:relative;display:block;width:62px;height:48px;pointer-events:none}
+.zone-combat-guide-art>svg{display:block;width:62px;height:48px}
+.zone-combat-guide-target{border:2px solid #ac4839;border-radius:5px;background:#decea4}
+.zone-combat-guide-target img{display:block;margin:2px 2px 0 auto;object-fit:contain;image-rendering:pixelated}
+.zone-combat-guide-mouse{position:absolute;z-index:1;left:-2px;bottom:-4px;width:22px;height:31px;transform:rotate(-15deg)}
+.zone-combat-guide-mouse>svg{display:block;width:22px;height:31px}
+.zone-combat-guide-ground .zone-combat-guide-mouse{left:0;bottom:8px;transform:rotate(-10deg)}
+#zone-combat-guide-understood{display:block;width:100%;margin:8px 0 0;min-height:44px}
+#zone-combat-guide-help:hover,#zone-combat-guide-understood:hover{filter:brightness(1.09)}
+#zone-combat-guide-root button:focus-visible,#zone-combat-guide-title:focus-visible{outline:3px solid #246b8d;outline-offset:2px}
+#zone-combat-guide-root.zone-combat-guide-compact li{grid-template-columns:48px minmax(0,1fr);gap:6px}
+#zone-combat-guide-root.zone-combat-guide-compact .zone-combat-guide-art{transform:scale(.77);transform-origin:left center;width:48px}
+#zone-combat-guide-root.zone-combat-guide-compact .zone-combat-guide-paper{padding:7px}
+#zone-combat-guide-root.zone-combat-guide-compact #zone-combat-guide-title{font-size:16px}
+@media(prefers-reduced-motion:reduce){#zone-combat-guide-root *{scroll-behavior:auto!important}}

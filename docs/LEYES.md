@@ -1,5 +1,10 @@
 # Las leyes de Golden Farm
 
+## Guía breve de combate al entrar — 10/11/2026
+
+El propietario pide «con imágenes de ejemplo y demás. bastante resumido igual.» y una leyenda al entrar por primera vez a la Zona Negra. Se explican los controles existentes de fijar y atacar con clic derecho, Perseguir/Parado y cancelar en suelo vacío. La tarjeta no es modal ni pausa la pelea, conserva el foco al aparecer y se puede volver a abrir. Sólo guarda una preferencia local por cuenta y proyecto; no cambia partidas, combate, premios o sistemas pausados. Ver GUIA-COMBATE-20261110.md.
+
+
 ## Reactivación de parcelas desde el mapa — 09/11/2026
 
 El propietario revisó la propuesta y autoriza publicar la reactivación de parcelas al tocarlas: mostrar el cupo, elegir explícitamente qué otra producción pausar y confirmar un único intercambio. Se revalidan cuenta, escena, guardado, capacidad y selección; se conservan cultivos, cargas, tiempos y reglas. Cancelar no cambia la granja. También autoriza una noticia sobre la mejora. No se ejecutan reparaciones de cuentas ni compensaciones. Ver REACTIVACION-PARCELAS-20261109.md.

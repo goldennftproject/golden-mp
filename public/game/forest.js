@@ -14,6 +14,7 @@ class ForestScene extends Phaser.Scene {
        ofreciendo una acción de esta Zona. Limpiarlos en este límite cubre muerte, portal entre
        zonas y vuelta a la granja de una vez. */
     this.events.once("shutdown", () => {
+      if (window.GoldenCombatGuide) GoldenCombatGuide.clear(this);
       if (window.GoldenGraveGuide) GoldenGraveGuide.clear(this);
       if (window.GoldenGraves && typeof GoldenGraves.clear === "function") GoldenGraves.clear(this);
       this.cerrarCuerpo();
@@ -219,6 +220,10 @@ class ForestScene extends Phaser.Scene {
       if (GoldenGraves.hasPending() || (G.hp <= 0 && GoldenGraves.usesServer())) GoldenGraves.showRecovery(this);
       else if (G.hp <= 0 && this.derrotaCompartidaActiva()) this.iniciarMuerteCompartida().catch(() => {});
     }
+    if (window.GoldenCombatGuide && G.hp > 0) GoldenCombatGuide.attach(this, {
+      getUid: () => typeof UID === "string" && typeof CARGA_OK !== "undefined" && CARGA_OK === true && (typeof SOLO_LOCAL === "undefined" || !SOLO_LOCAL) ? UID : null,
+      getProjectRef: () => typeof SB_REF === "string" ? SB_REF : "golden-farm"
+    });
   }
 
   actualizarCalaverasCompartidas() {
