@@ -46,8 +46,9 @@ function pintarVisita(canvas,ctx,items,fondo,ox,oy){
    if(!o.image)continue;
    const h=o.w*o.image.height/o.image.width;ctx.drawImage(o.image,o.x+ox-o.w/2,o.y+oy-h,o.w,h);
    for(const {p,pos}of luces.get(o)||[]){
-    const a=api.appearance(p,at.darkness,t,!!media?.matches,at.active),r=Math.max(pos.w*6.5,pos.h*4.5);
-    if(at.active&&at.darkness)pools.push({pos,strength:at.darkness});
+    const a=api.appearance(p,at.darkness,t,!!media?.matches,at.active);
+    const r=api.haloDiameter?.(pos,p,at.active?at.darkness:0)??Math.max(pos.w*6.5,pos.h*4.5);
+    if(at.active&&at.darkness)pools.push({pos,strength:at.darkness,diameter:r});
     if(a.halo<=0&&a.core<=0)continue;
     ctx.save();ctx.globalCompositeOperation='lighter';
     if(a.halo>0){ctx.globalAlpha=a.halo;ctx.drawImage(halo,pos.x-r/2,pos.y-r*.83/2,r,r*.83);}
