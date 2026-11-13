@@ -1,16 +1,15 @@
 /* EL PORTERO DEL GUARDADO · la única puerta de escritura a `farms` (21/8)
    ====================================================================================
-   AUTOCONTENIDO A PROPÓSITO: el editor del dashboard de Supabase no siempre empaqueta
-   un segundo archivo (el primer deploy falló con "Module not found reglas.mjs"), así
-   que las reglas viven acá adentro, entre los marcadores === REGLAS === abajo. El test
+   Las reglas principales viven acá, entre los marcadores === REGLAS === abajo. El test
    de la suite (tools/test-portero-reglas.js) extrae ese bloque y lo ejecuta tal cual:
    lo que se prueba es EXACTAMENTE lo que se deploya. No mover los marcadores.
 
-   Deploy: Dashboard → Edge Functions → "guardar" → pegar este único archivo → Deploy.
+   El paquete de la función debe incluir index.ts y bellotas.ts.
    Instrucciones completas: docs/PORTERO-GUARDADO.md.
    La fecha del guardado la pone EL SERVIDOR (el reloj del cliente no se toca ni se cree). */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { bellotasActualizar, bellotasConRanking, bellotasEstado, bellotasReclamar, bellotasRegistrarDiaria } from "./bellotas.ts";
 
 /* === REGLAS === (JavaScript puro — este bloque lo ejecuta también el test de la suite)
    MODO SOMBRA: el portero anota lo sospechoso en la bitácora pero NUNCA rechaza. El
@@ -18,7 +17,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 13;       // 08/11: forja repetida autoritativa, con entregas, coste y enfriamiento confirmados.
+const VERSION = 14;       // 13/11: evidencia y cobros del evento de Bellotas.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -77,27 +76,28 @@ function actividadAcreditar(data,cantidad,ahora){
 function actividadEstado(d,ahora){const a=actividadLibro(d);return {energia:a.energia,objetivo:ACTIVIDAD_OBJETIVO,cumplida:a.energia>=ACTIVIDAD_OBJETIVO,vip:num(d?.produccion?.vipHasta)>ahora,usdt:false};}
 // No depende de cuánto material queda en la bolsa. null conserva el testigo neto
 // de clientes antiguos sin historia de nodos; cero significa que la historia no prueba tala.
-function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
+function usosNodosConCargas(a,b,ahora,desdeServidor,tipo){
   const mundo=premiumMundo(a);
   if(mundo!==premiumMundo(b))return 0;
-  const presente=(d,o)=>premiumPresente(d,o)||(!o.premiumOnly&&o.exp===null&&o.lock===0&&d.treesOpen===undefined);
-  const arboles=mundo.objects.filter(o=>o.type==='tree'&&presente(a,o)&&presente(b,o)&&
+  const abiertos=tipo==='tree'?'treesOpen':'rocksOpen';
+  const presente=(d,o)=>premiumPresente(d,o)||(!o.premiumOnly&&o.exp===null&&o.lock===0&&d[abiertos]===undefined);
+  const nodos=mundo.objects.filter(o=>(o.type===tipo||(tipo==='rock'&&o.type==='ore'&&o.ore==='piedra'))&&presente(a,o)&&presente(b,o)&&
     (o.premiumOnly||o.exp===null||num(a.expansiones)>o.exp));
-  if(!arboles.length)return 0;
-  if(!arboles.some(o=>a.nodos?.[o.key]!==undefined||a.nodoUsos?.[o.i]!==undefined||b.nodoUsos?.[o.i]!==undefined))return null;
+  if(!nodos.length)return 0;
+  if(!nodos.some(o=>a.nodos?.[o.key]!==undefined||a.nodoUsos?.[o.i]!==undefined||b.nodoUsos?.[o.i]!==undefined))return null;
   // El snapshot aceptado puede preceder a su recepción: incluye las acciones en vuelo.
   const recibido=desdeServidor>0&&desdeServidor<=ahora?desdeServidor:ahora,anclaEnergia=num(a.energiaGranja?.at);
-  const inicio=anclaEnergia>0&&anclaEnergia<=recibido?anclaEnergia:recibido,base=1800000;
+  const inicio=anclaEnergia>0&&anclaEnergia<=recibido?anclaEnergia:recibido,base=tipo==='tree'?1800000:2400000;
   const comidaCd=(d,t)=>(Array.isArray(d.buffs)?d.buffs:[]).some(x=>x?.type==='cd'&&x.mult===.85&&num(x.until)>t);
   const comidaNueva=num(a.dishes?.estofado)>num(b.dishes?.estofado)&&comidaCd(b,inicio);
   const cicloNuevo=base*((num(a.produccion?.vipHasta)>inicio||num(b.produccion?.vipHasta)>inicio)?.9:1)*((comidaCd(a,inicio)||comidaNueva)?.85:1);
   const cargas=(r,t)=>!r?.readyAt?4:r.readyAt>t?0:Math.min(4,1+Math.max(0,Math.floor((t-r.readyAt)/(r.readyAt-r.cdIni))));
   let probadas=0;
-  for(const o of arboles){
+  for(const o of nodos){
     const previo=a.nodoUsos?.[o.i]??0,actual=b.nodoUsos?.[o.i]??previo;
     if(!Number.isSafeInteger(previo)||previo<0||!Number.isSafeInteger(actual)||actual<=previo)continue;
     const n=actual-previo,r=a.nodos?.[o.key],q=b.nodos?.[o.key],virgen=previo===0&&(!r||r.readyAt===0);
-    // Un árbol ya usado sin reloj no vuelve a nacer con cuatro cargas.
+    // Un nodo ya usado sin reloj no vuelve a nacer con cuatro cargas.
     if(!virgen&&(!r||!Number.isFinite(r.readyAt)||!Number.isFinite(r.cdIni)||r.readyAt<=r.cdIni||r.cdIni<=0)){
       if(!r&&!Object.keys(a.nodos||{}).length)return null;
       continue;
@@ -120,6 +120,15 @@ function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
     if(!restantes&&q.cdIni<inicio-1000)continue;
     probadas+=n;
   }
+  return probadas;
+}
+function piedraEvidenciaNodos(a,b,ahora,desdeServidor){
+  return usosNodosConCargas(a,b,ahora,desdeServidor,'rock')??0;
+}
+function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
+  const probadas=usosNodosConCargas(a,b,ahora,desdeServidor,'tree');
+  if(probadas===null)return null;
+  if(!probadas)return 0;
   const stat=Math.max(0,num(b.stats?.talar?._)-num(a.stats?.talar?._));
   const xp=Math.floor(Math.max(0,num(b.skills?.tala)-num(a.skills?.tala))/10);
   let ingresosPedidos=0;
@@ -138,23 +147,28 @@ function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
   const regen=(desde,hasta)=>{const vip=Math.max(0,Math.min(hasta,finVip)-desde);return (vip*100+(Math.max(0,hasta-desde)-vip)*50)/ENERGIA_GRANJA_MS;};
   // La regeneración anterior al último guardado sólo puede llenar el depósito.
   // El intervalo posterior usa updated_at del servidor, nunca visto/at del cliente nuevo.
+  const recibido=desdeServidor>0&&desdeServidor<=ahora?desdeServidor:ahora,anclaEnergia=num(a.energiaGranja?.at);
+  const inicio=anclaEnergia>0&&anclaEnergia<=recibido?anclaEnergia:recibido;
   const energiaInicio=Math.min(finVip>inicio?100:50,Math.max(0,e.actual)+regen(Math.min(inicio,Math.max(0,num(e.at)||inicio)),inicio));
   const finEnergia=Number.isFinite(b.energiaGranja?.at)?Math.min(ahora,Math.max(inicio,b.energiaGranja.at)):ahora;
   const energia=Math.floor(Math.max(0,energiaInicio+regen(inicio,finEnergia)-b.energiaGranja.actual)+1e-6);
   return Math.min(probadas,stat,xp,Math.floor(hachas),energia);
 }
-function actividadEvidencias(a,b,ahora,desdeServidor=0){
+function actividadEvidencias(a,b,ahora,desdeServidor=0,evento=false){
   const suma=o=>Object.values(o||{}).reduce((s,v)=>s+Math.max(0,num(v)),0);
   const sube=(x,y)=>Object.keys(y||{}).reduce((s,k)=>s+Math.max(0,num(y[k])-num(x?.[k])),0);
   const baja=(x,y)=>sube(y,x);
   const stat=k=>sube(a.stats?.[k],b.stats?.[k]);
   const colas=(x,y,fin)=>{const ids=new Set((Array.isArray(x)?x:[]).filter(Boolean).map(c=>String(c.id||c.cultivo)+':'+c[fin]));return (Array.isArray(y)?y:[]).filter(c=>c&&num(c.total||c.n)>0&&num(c[fin])>ahora&&!ids.has(String(c.id||c.cultivo)+':'+c[fin])).length;};
-  let siembras=0,cosechas=0;
+  let siembras=0,cosechas=0,cosechasPapa=0;
   for(let i=0;i<Math.min(256,(b.plots||[]).length);i++){
     const p=a.plots?.[i],q=b.plots[i];if(!q)continue;
     const nueva=q.state==='growing'&&num(q.readyAt)>ahora&&(!p||p.state==='dry'||(['ready','growing'].includes(p.state)&&num(p.readyAt)<=ahora));
     if(nueva)siembras++;
-    if(p&&['ready','growing'].includes(p.state)&&num(p.readyAt)<=ahora&&(q.state==='dry'||nueva))cosechas++;
+    if(p&&['ready','growing'].includes(p.state)&&num(p.readyAt)<=ahora&&(q.state==='dry'||nueva)){
+      cosechas++;
+      if(p.cropKey==='papa'&&!a.produccion?.pausas?.['p:'+i])cosechasPapa++;
+    }
   }
   const excavados=(b.excav?.hechos||[]).filter(i=>a.excav?.dia!==b.excav?.dia||!(a.excav?.hechos||[]).includes(i)).length;
   const inventarioNuevo=sube(a.tools,b.tools)+sube(a.picks?.dur,b.picks?.dur)+Object.keys(b.weapons||{}).filter(k=>JSON.stringify(a.weapons?.[k])!==JSON.stringify(b.weapons[k])).length+Object.keys(b.armor||{}).filter(k=>JSON.stringify(a.armor?.[k])!==JSON.stringify(b.armor[k])).length;
@@ -166,9 +180,12 @@ function actividadEvidencias(a,b,ahora,desdeServidor=0){
     if(p&&num(p.comidoAt)>0&&num(p.comidoAt)>=num(p.prodAt)&&Math.max(num(p.prodAt),num(p.comidoAt))+86400000<=ahora&&num(q.prodAt)>num(p.prodAt))animales++;
   }
   const tala=talaEvidenciaNodos(a,b,ahora,desdeServidor);
-  return {plant:Math.min(siembras,baja(a.seeds,b.seeds)+Math.floor(Math.max(0,num(a.plata)-num(b.plata)))),harvest:Math.min(stat('cosechar'),cosechas),
+  const minas=Math.min(stat('minar'),Math.max(baja(a.picks?.dur,b.picks?.dur),(num(b.skills?.crafting)-num(a.skills?.crafting)>=10?['piedra','bronce','hierro','oro','diamante','netherita'].reduce((s,k)=>s+Math.min(Math.max(0,num(b.stats?.minar?.[k])-num(a.stats?.minar?.[k])),Math.max(0,num(b.res?.[k])-num(a.res?.[k]))),0):0)));
+  const papas=evento?Math.min(cosechasPapa,Math.max(0,num(b.stats?.cosechar?.papa)-num(a.stats?.cosechar?.papa))):0;
+  const piedra=evento?Math.min(minas,piedraEvidenciaNodos(a,b,ahora,desdeServidor),Math.max(0,num(b.stats?.minar?.piedra)-num(a.stats?.minar?.piedra))):0;
+  return {plant:Math.min(siembras,baja(a.seeds,b.seeds)+Math.floor(Math.max(0,num(a.plata)-num(b.plata)))),harvest:Math.min(stat('cosechar'),cosechas),papas,piedra,
     chop:tala===null?Math.min(stat('talar'),Math.max(Math.max(0,num(a.tools?.axe)-num(b.tools?.axe)),(num(b.skills?.crafting)-num(a.skills?.crafting)>=5?Math.max(0,num(b.res?.madera)-num(a.res?.madera)):0))):tala,
-    mine:Math.min(stat('minar'),Math.max(baja(a.picks?.dur,b.picks?.dur),(num(b.skills?.crafting)-num(a.skills?.crafting)>=10?['piedra','bronce','hierro','oro','diamante','netherita'].reduce((s,k)=>s+Math.min(Math.max(0,num(b.stats?.minar?.[k])-num(a.stats?.minar?.[k])),Math.max(0,num(b.res?.[k])-num(a.res?.[k]))),0):0)))+Math.min(excavados,sube(a.seeds,b.seeds)+sube(a.res,b.res)),
+    mine:minas+Math.min(excavados,sube(a.seeds,b.seeds)+sube(a.res,b.res)),
     animal:animales,craft:insumos>0?inventarioNuevo+colas(a.horno,b.horno,'listoAt')+derivados:0,
     cook:insumos>0?colas(a.cooking,b.cooking,'endAt')+colas(a.lombricario,b.lombricario,'listaEn'):0,
     auto:Math.min(Math.max(0,suma((a.godHand?.inv||[]).map(s=>s?.n))-suma((b.godHand?.inv||[]).map(s=>s?.n))),sube(a.res,b.res))};
@@ -216,18 +233,24 @@ function jornadaOperacion(data,id,dia,ahora,op){
  return {data:d,cobro};
 }
 // Sólo platos terminados y recogidos de una cola ya aceptada. No compras ni lombricario.
-function platosTerminados(prev,next,ahora){
+function platosTerminados(prev,next,ahora,recetas){
  if(!prev)return 0;
  const cola=Array.isArray(prev.cooking)?prev.cooking:[],actual=Array.isArray(next.cooking)?next.cooking:[];
  const key=c=>String(c.id)+':'+c.endAt,restantes=new Map();
  for(const c of actual)restantes.set(key(c),(restantes.get(key(c))||0)+1);
- const candidatos={};
+ const candidatos=Object.create(null);
  for(const c of cola){const k=key(c),n=restantes.get(k)||0;if(n){restantes.set(k,n-1);continue;}
   if(num(c.endAt)>0&&num(c.endAt)<=ahora)candidatos[c.id]=(candidatos[c.id]||0)+1;
  }
- return Object.keys(candidatos).reduce((s,k)=>s+Math.min(candidatos[k],Math.max(0,num(next.stats?.cocinar?.[k])-num(prev.stats?.cocinar?.[k])),Math.max(0,num(next.dishes?.[k])-num(prev.dishes?.[k]))),0);
+ let total=0;
+ for(const [id,cantidad] of Object.entries(candidatos)){
+  const recogidos=Math.min(Number(cantidad),Math.max(0,num(next.stats?.cocinar?.[id])-num(prev.stats?.cocinar?.[id])),Math.max(0,num(next.dishes?.[id])-num(prev.dishes?.[id])));
+  if(recetas&&['papa_asada','pure_papa','estofado'].includes(id))recetas[id]=Math.floor(recogidos);
+  total+=recogidos;
+ }
+ return total;
 }
-function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0){
+function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0,evento=false){
   // Omitir un reloj moderno no convierte el siguiente guardado en un cliente legado.
   if(prev?.nodos)for(const o of premiumMundo(prev).objects){
     const r=prev.nodos[o.key],q=next.nodos?.[o.key];
@@ -238,7 +261,7 @@ function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0
     if(!next.nodos||typeof next.nodos!=='object'||Array.isArray(next.nodos))next.nodos={};
     next.nodos[o.key]=JSON.parse(JSON.stringify(r));
   }
-  const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora,desdeServidor):{},pedidos=next.actividadAcciones||{};
+  const a=actividadLibro(prev),pruebas=prev?actividadEvidencias(prev,next,ahora,desdeServidor,evento):{},pedidos=next.actividadAcciones||{};
   const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
   // Sólo el intervalo representado por la muestra, sin reutilizar regeneración posterior.
   const finEnergia=Number.isFinite(next.energiaGranja?.at)?Math.min(ahora,Math.max(at,next.energiaGranja.at)):ahora;
@@ -249,7 +272,14 @@ function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0
     const n=Math.min(pedido-anterior,Math.max(0,Math.floor(num(pruebas[k]))),Math.floor((presupuesto+1e-6)/ACTIVIDAD_COSTOS[k]));
     credito+=n*ACTIVIDAD_COSTOS[k];presupuesto-=n*ACTIVIDAD_COSTOS[k];a.registro[k]=pedido;acciones[k]=n;
   }
-  acciones.platos=platosTerminados(prev,next,ahora);
+  const recetas=evento?{}:undefined;
+  acciones.platos=platosTerminados(prev,next,ahora,recetas);
+  if(evento){
+    acciones.recetas=recetas;
+    acciones.papas=Math.min(acciones.harvest,Math.floor(num(pruebas.papas)));
+    acciones.piedra=Math.min(acciones.mine,Math.floor(num(pruebas.piedra)));
+    acciones.energiaGranja=acciones.plant+acciones.harvest+acciones.chop+acciones.mine+2*acciones.animal;
+  }
   if(recibo)Object.assign(recibo,acciones);
   next.actividadGranja=a;next.actividadAcciones={...a.registro};logrosActualizar(prev,next,acciones);actividadAcreditar(next,credito,ahora);if(premiar)jornadaAcreditar(prev,next,acciones,ahora);return next.actividadGranja;
 }
@@ -1153,6 +1183,25 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => null);
     if(body?.support)return await saveSupportCapture(admin,uid,body);
 
+    const bellotasHabilitadas=Deno.env.get('GF_BELLOTAS_20261113')!=='0';
+    const bellotas=body?.bellotas;
+    if(bellotas!==undefined){
+      if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
+      if(!bellotas||!['estado','reclamar'].includes(bellotas.accion))return json({error:'Acción de Bellotas inválida'},400);
+      if(!bellotasHabilitadas)return bellotas.accion==='estado'
+        ?json({ok:true,bellotas:{habilitado:false}})
+        :json({error:'El evento de Bellotas no está habilitado'},400);
+      if(bellotas.accion==='estado'){
+        const [granja,ranking]=await Promise.all([
+          admin.from('farms').select('data').eq('user_id',uid).maybeSingle(),
+          admin.rpc('gf_ranking_bellotas',{p_uid:uid}),
+        ]);
+        if(granja.error||ranking.error||!ranking.data)return json({error:'No se pudo consultar Bellotas'},503);
+        return json({ok:true,bellotas:bellotasConRanking(granja.data?.data??null,Date.now(),ranking.data)});
+      }
+      if(typeof bellotas.id!=='string')return json({error:'Misión de Bellotas inválida'},400);
+    }
+
     if(body?.ranking){
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta'},409);
       if(body.ranking.accion!=='granja')return json({error:'Clasificación inválida'},400);
@@ -1204,26 +1253,32 @@ Deno.serve(async (req) => {
       return json(data);
     }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
-    if(body?.forja || body?.repuesto || body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
+    if(bellotas || body?.forja || body?.repuesto || body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
       const a=body.artefacto;
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
       const {data:row,error:err}=await admin.from('farms').select('*').eq('user_id',uid).maybeSingle();
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
-      const ahora=Math.max(Date.now(),new Date(row.updated_at).getTime()+1);
-      const r=body.forja ? forjaOperacion(row.data,body.forja,ahora,body.op) : body.repuesto ? repuestoOperacion(row.data,body.repuesto,body.op) : body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
-      if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,premio:r.premio,repetido:true,granja:granjaVisitada});
+      const reloj=Date.now(),ahora=Math.max(reloj,new Date(row.updated_at).getTime()+1);
+      const r=bellotas ? bellotasReclamar(row.data,bellotas.id,reloj,body.op) : body.forja ? forjaOperacion(row.data,body.forja,ahora,body.op) : body.repuesto ? repuestoOperacion(row.data,body.repuesto,body.op) : body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      const jornada=bellotasHabilitadas&&!bellotas&&!body.forja&&!body.repuesto&&body.mision;
+      const estadoBellotas=(data)=>bellotas||jornada?{bellotas:bellotasEstado(data,reloj)}:{};
+      if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,premio:r.premio,repetido:true,granja:granjaVisitada,...estadoBellotas(row.data)});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
       if(r.tasaCambio)return json({error:r.error,tasaCambio:true},412);
       if(r.error)return json({error:r.error},400);
+      if(jornada)bellotasRegistrarDiaria(row.data,r.data,jornada.id,jornada.dia,reloj);
       picosUnificarEstado(r.data);
       const fecha=new Date(ahora).toISOString();
-      const {data:hecho,error:fallo}=await admin.from('farms').update({data:r.data,updated_at:fecha}).eq('user_id',uid).eq('updated_at',row.updated_at).select('updated_at').maybeSingle();
+      const {data:hecho,error:fallo}=await admin.from('farms').update({data:r.data,updated_at:fecha}).eq('user_id',uid).eq('updated_at',row.updated_at).select(bellotas||jornada?'updated_at,data':'updated_at').maybeSingle();
+      if(bellotas&&fallo?.code==='P0001'&&fallo.message==='Evento Bellotas: reclamo fuera de horario')return json({error:'El evento de Bellotas está fuera de horario'},400);
+      if(bellotas&&fallo?.code==='P0001'&&fallo.message==='Evento Bellotas: misión ya reclamada')return json({error:'Ya reclamaste esta misión de Bellotas'},400);
       if(fallo)return json({error:'No se pudo confirmar la operación'},503);
       if(!hecho)return json({error:'Otra sesión guardó primero',conflicto:true},409);
       // La versión debe ser la devuelta por PostgreSQL, no otra representación ISO del mismo instante.
-      return json({ok:true,data:r.data,updated_at:hecho.updated_at,cobro:r.cobro,premio:r.premio,granja:granjaVisitada});
+      const confirmado=bellotas||jornada?hecho.data:r.data;
+      return json({ok:true,data:confirmado,updated_at:hecho.updated_at,cobro:r.cobro,premio:r.premio,granja:granjaVisitada,...estadoBellotas(confirmado)});
     }
 
     /* REINICIAR LA CUENTA (24/9, dirección: « debe literal borrar la cuenta y crearla como si
@@ -1270,7 +1325,8 @@ Deno.serve(async (req) => {
     }
     const graveNo=graveOrdinaryGuard(prevRow?.data??null,data,body?.graveProtocol,Date.now());
     if(graveNo){await saveSupportRejected(admin,uid,body,prevRow,'validation');return json({error:graveNo,conflicto:true,calavera:true},409);}
-    const ahora = new Date(Math.max(Date.now(), prevRow?.updated_at ? new Date(prevRow.updated_at).getTime() + 1 : 0));
+    const reloj=Date.now(),desdeServidor=prevRow?.updated_at?new Date(prevRow.updated_at).getTime():0;
+    const ahora = new Date(Math.max(reloj,desdeServidor?desdeServidor+1:0));
     const elapsedSeg = prevRow?.updated_at ? (ahora.getTime() - new Date(prevRow.updated_at).getTime()) / 1000 : 0;
 
     /* lo que el MERCADO dice que hizo este jugador (no lo que dice su navegador) */
@@ -1297,7 +1353,12 @@ Deno.serve(async (req) => {
 
     /* modo rechazo (futuro, tras calibrar): un guardado con sospechas no entra */
     if (MODO === "rechazo" && sospechas.length) {await saveSupportRejected(admin,uid,body,prevRow,'heuristic',supportOriginal);return json({ error: "guardado rechazado", sospechas }, 422);}
-    actividadActualizar(prevRow?.data??null,data,ahora.getTime(),undefined,body.jornada===1,prevRow?.updated_at?new Date(prevRow.updated_at).getTime():0); // Sólo guardados aceptados; CAS evita duplicar crédito.
+    const acciones={};
+    actividadActualizar(prevRow?.data??null,data,ahora.getTime(),bellotasHabilitadas?acciones:undefined,body.jornada===1,desdeServidor,bellotasHabilitadas);
+    // El CAS protege el progreso y los recibos anteriores, también si se deshabilita el evento.
+    if(bellotasHabilitadas)bellotasActualizar(prevRow?.data??null,data,acciones,reloj,desdeServidor);
+    else if(prevRow?.data?.bellotasEvento!==undefined)data.bellotasEvento=prevRow.data.bellotasEvento;
+    else delete data.bellotasEvento;
 
     /* el guardado ENTRA, y con él queda anotado lo del mercado que ya se contó: así el
        mismo permiso no se gasta dos veces. Si la columna todavía no existe (falta correr

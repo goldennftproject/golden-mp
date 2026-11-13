@@ -577,6 +577,15 @@
   .paq-mini.hoy{opacity:1;animation:paqlatido 2.6s ease-in-out infinite}
   .paq-mini.siete{width:26px}
   .forge-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:52vh;overflow:auto}
+  #bellotas-evento[hidden]{display:none}
+  #bellotas-evento{padding:12px;border:1px solid var(--line);border-radius:11px;background:#f7e9c6;color:#48301b;text-align:left}
+  #bellotas-evento h4{margin:0 0 8px;color:#633a16}
+  #bellotas-evento p{margin:6px 0}
+  #bellotas-evento details{margin:6px 0;padding:6px 8px;border-top:1px solid #dac18e}
+  #bellotas-evento summary{cursor:pointer;font-weight:700}
+  #bellotas-evento .forge-row{margin:5px 0}
+  #bellotas-evento .fds{color:#61472a}
+  #bellotas-evento progress{max-width:100%;accent-color:#517333}
   .forge-row{display:flex;align-items:center;gap:10px;background:#faf3e2;border:1px solid var(--line);border-radius:11px;padding:9px 10px}
   .forge-row.eq{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
   .forge-row .fic{width:46px;height:46px;flex:0 0 auto;background:#efe3c6;border:2px solid #d3c298;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:22px}
@@ -2573,7 +2582,7 @@
     // jugador seguía corriendo el state.js viejo aunque el servidor tuviera el nuevo).
     // deploy.bat la actualiza sola (busca GF_BUILD y pone la fecha/hora del deploy).
     const GF_BUILD = "20260928-163402";
-    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/graves-api.js", "game/grave-rebase.js", "game/save.js","game/ui.js","game/ruletas-api.js","game/ruletas.js","game/news.js","game/novedades.js","game/lighting.js","game/visual-v2.js","game/world-lights.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/concept-finish.js","game/adaptive-layout.js","game/market-window.js","game/boot.js",
+    const files = ["vendor/qrcode.js","game/config.js","game/nav.js","game/audio.js","game/state.js","game/graves-api.js", "game/grave-rebase.js", "game/save.js","game/ui.js","game/bellotas-evento.js","game/ruletas-api.js","game/ruletas.js","game/news.js","game/novedades.js","game/lighting.js","game/visual-v2.js","game/world-lights.js","game/reference-hud.js","game/reference-market.js","game/reference-ui.js","game/concept-finish.js","game/adaptive-layout.js","game/market-window.js","game/boot.js",
                    "game/farm.js","game/forest-edge.js","game/reference-world.js","game/reference-camera-ui.js","game/grave-guide.js", "game/zone-combat-guide.js", "game/forest.js","game/plaza.js","game/visita.js","game/main.js","game/update.js"];
     /* 24/8 — SE BAJAN TODOS A LA VEZ, SE EJECUTAN EN FILA (dirección: « sigue tardando en
        entrar »). El cargador de abajo pide un archivo, espera a que llegue, pide el siguiente:

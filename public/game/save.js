@@ -395,7 +395,7 @@ async function economiaSolicitar(detalle) {
     const mensaje=MERCADO_EN_CURSO?'Hay otra operación en curso. Espera a que termine.':SAVE_CONFLICTOS.has(UID)?'Hay un conflicto de guardado. Pulsa Revisar guardado o el disquete antes de comprobar el mismo pago.':'La sesión aún no está conectada y cargada desde el servidor. Espera o vuelve a iniciar sesión; no repitas el pago.';
     toast(detalle.usdt?mensaje:'Necesitas conexión y guardado sincronizado');if(detalle.usdt)usdtMensaje(mensaje);return;
   }
-  const uid=UID, desbloquear=mercadoBloquearPantalla('Confirmando la operación del objeto…');
+  const uid=UID, desbloquear=mercadoBloquearPantalla(detalle.bellotas?'Confirmando las bellotas…':'Confirmando la operación del objeto…');
   if(detalle.usdt)usdtMensaje('Confirmando el guardado antes de acreditar…');
   const confirmadas=SAVE_CONFIRMACIONES.get(uid)||0, flush=saveFarm(true);
   MERCADO_EN_CURSO=(async()=>{
@@ -431,7 +431,17 @@ async function economiaSolicitar(detalle) {
         toast(detalle.produccionPremium.accion==='colocar'?'Nodo colocado con su cupo propio':'Nodo comprado; puedes colocarlo desde el Cobertizo','success','compra');
         return data;
       }
-      toast(detalle.usdt ? ("Depósito confirmado: +"+fmtGolden(data.cobro)+" Golden") : detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.mision ? 'Misión reclamada: +'+fmtPlata(data.cobro)+' Plata' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata', 'success', detalle.banco?'canje':detalle.diario||detalle.logro||detalle.mision?'premio':detalle.infra||detalle.mejora?'mejora':'compra');
+      if(detalle.bellotas){
+        const cantidad=data.cobro;
+        if(cantidad===1||cantidad===2)toast('Misión reclamada: +'+cantidad+(cantidad===1?' bellota':' bellotas'),'success','premio');
+        return data;
+      }
+      if(detalle.mision){
+        toast('Misión reclamada: +'+fmtPlata(data.cobro)+' Plata','success','premio');
+        void window.GoldenBellotas?.despuesDeCobro();
+        return data;
+      }
+      toast(detalle.usdt ? ("Depósito confirmado: +"+fmtGolden(data.cobro)+" Golden") : detalle.p2p ? ({publicar:'Publicación confirmada',comprar:'Compra confirmada',retirar:'Retiro confirmado',cobrar:'Cobro confirmado'}[detalle.p2p.accion]||'Mercado confirmado') : detalle.pack?.id==='caja' ? ('Caja confirmada: '+data.premio.qty+' '+RES_LABEL[data.premio.item]+' · Entregas pendientes') : detalle.pack ? 'Pack confirmado; recoge los materiales en Entregas pendientes' : detalle.infra ? 'Mejora de infraestructura confirmada' : detalle.mejora ? 'Mejora confirmada: +0,15 por recolección' : detalle.logro ? 'Logro confirmado: +'+fmtPlata(data.cobro)+' Plata' : detalle.visita ? (detalle.visita.accion==='ver'?'Visita confirmada · una por granja y día UTC para logros':'+1 semilla de papa por la visita') : detalle.diario ? 'Recompensa diaria confirmada: día '+data.cobro+'/7' : detalle.banco ? 'Canje confirmado: +'+fmtGolden(data.cobro)+' Golden' : detalle.artefacto.accion==='comprar' ? 'Objeto comprado con Golden' : '+'+fmtPlata(data.cobro)+' Plata', 'success', detalle.banco?'canje':detalle.diario||detalle.logro?'premio':detalle.infra||detalle.mejora?'mejora':'compra');
       return data;
     }catch(e){if(mercadoPendiente(uid))SAVE_CONFLICTOS.add(uid);if(UID===uid){toast('No se pudo completar la operación; comprueba la conexión');if(detalle.usdt)usdtMensaje('No se pudo completar la comprobación. El pago no debe repetirse; revisa el guardado y consulta el mismo hash.');}}
   })().finally(()=>{MERCADO_EN_CURSO=null;desbloquear();refreshHud();if(isOpen('ov-market')){if(detalle.mejora||detalle.infra)refreshNft();else refreshSeedShop();}if(isOpen('ov-reliquias'))refreshArtefactos();if(detalle.produccionPremium&&isOpen('ov-cobertizo'))refreshCobertizo();if(isOpen('ov-banco'))refreshBanco();if(isOpen('ov-logros'))refreshLogros();if(isOpen('ov-barn'))refreshBarn();if(detalle.infra&&isOpen('ov-p2p'))refreshP2P();if(detalle.infra&&isOpen('ov-godhand'))refreshGodHand();usdtProgramarPendiente();});
@@ -2000,7 +2010,7 @@ function guardadoHuellaPeticion(data, raiz=true) {
   const result=Object.create(null);
   // Sólo libros que el guardado normal recalcula o proyecta desde el servidor.
   // Saldos, recursos, entregas, recibos, energía, nodos y reinicio se comparan completos.
-  const derivados=new Set(['_saveOp','_economiaControl','actividadGranja','actividadAcciones','logrosV2','logrosAcciones','logros','incursionTutorialUsada']);
+  const derivados=new Set(['_saveOp','_economiaControl','actividadGranja','actividadAcciones','logrosV2','logrosAcciones','logros','incursionTutorialUsada','bellotasEvento']);
   for(const k of Object.keys(data).sort())if(!raiz||!derivados.has(k))result[k]=guardadoHuellaPeticion(data[k],false);
   return result;
 }

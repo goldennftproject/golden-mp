@@ -171,6 +171,7 @@ function openOv(id) {
   }
   if (window.sfx) sfx(OV_SFX[id] || "click");
   if (OV_REFRESH[id]) OV_REFRESH[id]();
+  if (id === "ov-objetivos") void window.GoldenBellotas?.consultar();
   if (typeof tutoHighlight === "function") tutoHighlight();   // 13/8: al abrir un panel, el botón del objetivo se resalta al instante
 }
 function cerrarCuerpoPanelPc() {
@@ -218,6 +219,7 @@ function refrescarGuiaTrasCerrarOv(cerro) {
   tutoHighlight();
 }
 function closeOv(id) {
+  if (id === "ov-objetivos") window.GoldenBellotas?.cerrar();
   if(id==='ov-config'&&typeof prepararReferidos.cancelarEvento==='function')prepararReferidos.cancelarEvento();
   if (id === "ov-noticias" && window.GoldenNews) window.GoldenNews.closeImage();
   /* 8/9: cerrar la puerta de la Zona por la × devuelve todo a la granja, igual que « Volver ».
@@ -4951,7 +4953,11 @@ function refreshObjetivos() {
   /* ── 3 · LA GUÍA ──────────────────────────────────────────────────────────────────────────
      Lo que había antes en esta pestaña. Baja al final a propósito: sirve la primera hora, y
      después estorba arriba de lo que el jugador viene a mirar. */
-  if (typeof TUTO_CAPS === "undefined") { box.innerHTML = h; return; }
+  if (typeof TUTO_CAPS === "undefined") {
+    box.innerHTML = h;
+    window.GoldenBellotas?.montar(box);
+    return;
+  }
   h += '<div class="shophead">La guía · lo básico de la granja</div>';
   const idxActual = (G.tuto && !G.tuto.done) ? (G.tuto.step || 0) : 1e9;
   TUTO_CAPS.forEach(cap => {
@@ -4969,6 +4975,7 @@ function refreshObjetivos() {
       '</div></div>';
   });
   box.innerHTML = h;
+  window.GoldenBellotas?.montar(box);
 }
 
 function refreshMapa() {

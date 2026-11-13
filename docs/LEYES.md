@@ -1,5 +1,9 @@
 # Las leyes de Golden Farm
 
+## Evento Bellotas del Bosque — 13/11/2026
+
+El propietario autoriza publicar el evento y avisar en Noticias, Discord y Telegram. El servidor abre y cierra a las 20:00 de Uruguay y Argentina. Las diarias y seis extras abiertas suman una bellota; cuatro extras de granja VIP suman dos. El tutorial no puntúa. Cada reclamo confirmado se registra una vez y los resultados se verifican antes de adjudicar USD 10, 5 y 5. En un empate se reparten en partes iguales los premios de los puestos ocupados. Ver BELLOTAS-DEL-BOSQUE-20261113.md.
+
 ## Guía breve de combate al entrar — 10/11/2026
 
 El propietario pide «con imágenes de ejemplo y demás. bastante resumido igual.» y una leyenda al entrar por primera vez a la Zona Negra. Se explican los controles existentes de fijar y atacar con clic derecho, Perseguir/Parado y cancelar en suelo vacío. La tarjeta no es modal ni pausa la pelea, conserva el foco al aparecer y se puede volver a abrir. Sólo guarda una preferencia local por cuenta y proyecto; no cambia partidas, combate, premios o sistemas pausados. Ver GUIA-COMBATE-20261110.md.
