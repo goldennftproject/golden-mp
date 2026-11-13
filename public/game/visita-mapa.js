@@ -128,7 +128,19 @@ async function dibujar(g){
  const libres=[...terreno.mias].filter(k=>!ocupadas.has(k));let an=0;
  for(const [k,n] of Object.entries(m.animales||{}))for(let i=0;i<n&&an<libres.length;i++,an++){const [c,r]=libres[(an*7)%libres.length].split(',').map(Number);items.push({key:'animal_'+k,x:(c+.5)*T,y:(r+1)*T,w:T*.85});}
  const iluminadas=new Map();
- await Promise.all(items.map(async o=>{o.image=await imagen(o.key);if(o.image&&window.GoldenVisual){const original=o.image;o.image=await GoldenVisual.visitImage(o.key,original);o.renewed=o.image!==original;}if(o.image&&g.iluminacionSuave===true&&window.GoldenLighting){if(!iluminadas.has(o.key)){try{iluminadas.set(o.key,GoldenLighting.shadeImage(o.image));}catch(_){iluminadas.set(o.key,o.image);}}o.image=iluminadas.get(o.key);}}));
+ await Promise.all(items.map(async o=>{
+  o.image=await imagen(o.key);
+  if(o.image&&window.GoldenVisual){
+   const original=o.image;o.image=await GoldenVisual.visitImage(o.key,original);
+   o.renewed=o.image!==original;
+  }
+  if(!o.image||g.iluminacionSuave!==true||!window.GoldenLighting)return;
+  if(!iluminadas.has(o.key)){
+   try{iluminadas.set(o.key,GoldenLighting.shadeImage(o.image,{key:o.key,renewed:o.renewed}));}
+   catch(_){iluminadas.set(o.key,o.image);}
+  }
+  o.image=iluminadas.get(o.key);
+ }));
  items.sort((a,b)=>a.y-b.y);
  const fondo=document.createElement('canvas');fondo.width=canvas.width;fondo.height=canvas.height;fondo.getContext('2d').drawImage(canvas,0,0);
  cerrarLucesVisita=pintarVisita(canvas,ctx,items,fondo,ox,oy);

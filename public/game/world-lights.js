@@ -291,18 +291,31 @@
     return {core:strength*(fire?.66:.60)*pulse,halo:active?(fire?.045+.40*d:.43*d)*pulse:0,
       stretch:fire&&!reduced?1+.10*Math.sin(t*.009+p.x*19):1};
   }
+  // The fire anchor sits up the wall. Project forward to the foot of the sprite,
+  // then let the light flatten and fall off over the ground in front of it.
+  function groundSpill(sprite,profile,key,pos=anchor(sprite,profile)){
+    if(!pos||profile.kind!=='fire'||(key!=='horno'&&key!=='store'))return null;
+    const oven=key==='horno',sine=Math.sin(pos.rotation),cosine=Math.cos(pos.rotation);
+    const frontX=-sine,frontY=cosine;
+    const toFoot=(sprite.x-pos.x)*frontX+(sprite.y-pos.y)*frontY;
+    const forward=Math.max(0,toFoot)+sprite.displayWidth*(oven?.17:.15);
+    const diameter=sprite.displayWidth*(oven?1.24:.96);
+    return {x:pos.x+frontX*forward,y:pos.y+frontY*forward,
+      diameter,height:diameter*(oven?.47:.41),rotation:pos.rotation};
+  }
   // Warm emitters replace moonlight locally within the ONE existing multiply layer.
   // Otherwise a bright additive core clips to white before the blue night filter.
   function atmosphereLayers(pools,camera,scale={}){
     const layers=[],out={},sx=scale.x??1,sy=scale.y??1;
-    for(const {pos,strength,diameter}of pools){
+    for(const {pos,strength,diameter,height}of pools){
       const a=clamp(strength);if(!pos||!a)continue;
       const p=camera?.matrix?.transformPoint?camera.matrix.transformPoint(pos.x-(camera.scrollX||0),pos.y-(camera.scrollY||0),out):pos;
       const x=p.x*sx+(scale.ox||0),y=p.y*sy+(scale.oy||0),zoom=camera?.zoom||1;
       const r=(diameter ?? haloDiameter(pos,null,0))*zoom;
-      if(![x,y,r].every(Number.isFinite)||r<=0)continue;
+      const h=height==null?r*.83:height*zoom;
+      if(![x,y,r,h].every(Number.isFinite)||r<=0||h<=0)continue;
       const n=v=>Math.round(v*100)/100;
-      layers.push('radial-gradient(ellipse '+n(r*sx/2)+'px '+n(r*sy*.83/2)+'px at '+n(x)+'px '+n(y)+'px,rgba(255,229,172,'+n(.92*a)+') 0%,rgba(255,214,148,'+n(.42*a)+') 36%,rgba(255,205,130,'+n(.10*a)+') 68%,transparent 100%)');
+      layers.push('radial-gradient(ellipse '+n(r*sx/2)+'px '+n(h*sy/2)+'px at '+n(x)+'px '+n(y)+'px,rgba(255,229,172,'+n(.92*a)+') 0%,rgba(255,214,148,'+n(.42*a)+') 36%,rgba(255,205,130,'+n(.10*a)+') 68%,transparent 100%)');
     }
     return layers.length?layers.join(',')+',linear-gradient(var(--gf-day-color,#fff),var(--gf-day-color,#fff))':'';
   }
@@ -329,7 +342,7 @@
       const layers=atmosphereLayers(pools,scene.cameras?.main,scale);
       if(layers)world.style.setProperty('--gf-day-sources',layers);else world.style.removeProperty('--gf-day-sources');
     }
-    function remove(entry){entry.halo.destroy();entry.core.destroy();}
+    function remove(entry){entry.halo.destroy();entry.core.destroy();entry.spill?.destroy();}
     function image(key){const im=scene.add.image(0,0,key);root.GoldenLighting?.exclude(im);im.setBlendMode(root.Phaser?.BlendModes?.ADD??1);return im;}
     function sync(state,time){
       if(dead)return;
@@ -348,6 +361,14 @@
           const alpha=Number.isFinite(s.alpha)?s.alpha:1;
           const diameter = haloDiameter(pos, p, at.active ? at.darkness : 0);
           if(at.active&&at.darkness&&alpha>0)pools.push({pos,strength:at.darkness*alpha,diameter});
+          const spill=at.active&&at.darkness>0&&alpha>0?groundSpill(s,p,key,pos):null;
+          if(spill){
+            if(!e.spill)e.spill=image(HALO).setDepth(-998.3);
+            e.spill.setPosition(spill.x,spill.y).setDisplaySize(spill.diameter,spill.height)
+              .setAlpha(a.halo*alpha*.83).setVisible(true);
+            e.spill.setRotation?.(spill.rotation);
+            pools.push({pos:spill,strength:at.darkness*alpha*.68,diameter:spill.diameter,height:spill.height});
+          }else e.spill?.setVisible(false);
           const depth=(s.depth||s.y||0)+.02;
           e.halo.setPosition(pos.x,pos.y).setDisplaySize(diameter,diameter*.83).setDepth(depth).setAlpha(a.halo*alpha).setVisible(a.halo>0);
           e.core.setPosition(pos.x,pos.y).setDisplaySize(pos.w,pos.h*a.stretch).setDepth(depth+.01).setAlpha(a.core*alpha).setVisible(a.core>0);
@@ -375,9 +396,14 @@
     // Keep the cleanup separate from source groups so restarts cannot accumulate effects.
     function cleanup(){if(dead)return;dead=true;for(const g of entries.values())for(const e of g.parts.values())remove(e);entries.clear();world?.style?.removeProperty('--gf-day-sources');scene.events?.off('shutdown',cleanup);}
     scene.events?.once('shutdown',cleanup);
-    return {sync,destroy:cleanup,size:()=>{let n=0;for(const g of entries.values())n+=g.parts.size;return n;}};
+    function spillCount(){
+      let count=0;
+      for(const group of entries.values())for(const entry of group.parts.values())if(entry.spill?.visible)count++;
+      return count;
+    }
+    return {sync,destroy:cleanup,spillCount,size:()=>{let n=0;for(const g of entries.values())n+=g.parts.size;return n;}};
   }
-  const api={profiles,anchor,appearance,haloDiameter,atmosphereLayers,create};
+  const api={profiles,anchor,appearance,haloDiameter,groundSpill,atmosphereLayers,create};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(root.document)root.GoldenWorldLights=api;
 })(typeof window==='undefined'?globalThis:window);
