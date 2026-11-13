@@ -160,6 +160,8 @@ app.get(/^\/game\/.+\.js$/, (req, res, next) => {
   res.type("application/javascript").send(e.codigo);
 });
 
+app.get("/news/index.json", require("./bellotas-noticia").servirNoticiasBellotas);
+
 // Sirve el cliente estático (public/) — sirve para el deploy "todo en uno" en Render.
 // no-cache en js/html/css: el navegador revalida con ETag en cada carga, así después
 // de un deploy siempre baja el código nuevo (nunca reusa un .js viejo cacheado).
