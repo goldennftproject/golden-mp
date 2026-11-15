@@ -3617,12 +3617,15 @@ function refreshEquip() {
   gearSlot("eq-escudo", "escudo", "Escudo");
   // arma: se EQUIPA/CAMBIA con clic en el slot (detalles jueves) — espada ↔ arco ↔ nada
   const arma = G.gear.arma;
-  const armaDef = arma && ARM_DEF[arma];
-  fill("eq-arma", !!armaDef, armaDef ? spIc(armaDef.sprite || ARM_TIPO_DEF[armaDef.tipo].sprite, "") : "",
-    armaDef ? armaDef.label + " equipada · clic para cambiar" : "Arma · clic para equipar");
+  const armaDef = arma && G.weapons?.[arma] && ARM_DEF[arma];
+  const armaRota = armaDef && !armaEq();
+  const armaEstado = armaDef && (armaRota ? armaDef.label + " · Arma rota. Abrí Herrería → Reparar." : armaDef.label + " equipada.");
+  const armaIcono = armaDef ? spIc(armaDef.sprite || ARM_TIPO_DEF[armaDef.tipo].sprite, "") : "";
+  fill("eq-arma", !!armaDef, armaIcono + (armaRota ? '<span class="eqcnt" aria-hidden="true">Rota</span>' : ""),
+    armaDef ? armaEstado + " Clic para cambiar" : "Arma · clic para equipar");
   const armaEl = $("eq-arma");
   if (armaEl) {
-    armaEl.setAttribute("aria-label", armaDef ? armaDef.label + " equipada. Cambiar arma" : "Equipar arma");
+    armaEl.setAttribute("aria-label", armaDef ? armaEstado + " Cambiar arma" : "Equipar arma");
     const cambiarArma = () => {
     /* 8/9 — LA LISTA SALE DE DONDE ESTÉS. Acá se recorría G.weapons siempre, o sea el arsenal de
        la GRANJA: dentro de la Zona te dejaba equiparte la espada que dejaste en casa, y no te

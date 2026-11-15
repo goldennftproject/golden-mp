@@ -1675,7 +1675,9 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "cofre") return "Cofre de depósito";
     if (o.type === "dummy") {
       if (typeof dummyEntrenando === "function" && dummyEntrenando()) return "Entrenando… clic para cobrar los golpes acumulados";
-      const aid = armaEq(); if (!aid || ARM_DEF[aid].tipo === "arco") return "Muñeco de entrenamiento — equipa un arma cuerpo a cuerpo";
+      const motivo = dummyMotivoArma();
+      if (motivo) return motivo;
+      const aid = armaEq();
       const habilidad = SKILL_NAME[armSkillKey(ARM_DEF[aid].tipo)];
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       return dleft > 0 ? "El muñeco descansa — vuelve en " + fmtDur(dleft) : "Entrenar " + habilidad + " (+" + DUMMY_XP + " golpes)";
@@ -1946,6 +1948,8 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "cofre") { window.chestOpen = o.chestIdx; return openOv("ov-cofre"); }
     if (o.type === "dummy") {
       if (typeof dummyEntrenando === "function" && dummyEntrenando()) { dummyCobrar(); return; }   // volviste: cobrás los golpes acumulados
+      const motivo = dummyMotivoArma();
+      if (motivo) { toast(motivo); return; }
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       askConfirm((dleft > 0
           ? "El muñeco descansa (vuelve en " + fmtDur(dleft) + "), pero puedes dejar al granjero entrenando: acumulas golpes del arma por el tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h."
@@ -4764,8 +4768,9 @@ class FarmScene extends Phaser.Scene {
 
   // entrenar con el dummy: 3 espadazos, golpes de la habilidad equipada y cooldown de 4 horas
   trainDummy(o) {
+    const motivo = dummyMotivoArma();
+    if (motivo) { toast(motivo); return; }
     const aid = armaEq();
-    if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipa un arma cuerpo a cuerpo (espada, hacha o mazo)"); return; }
     const left = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
     if (left > 0) { toast("El muñeco descansa — vuelve en " + fmtDur(left)); return; }
     G.dummyUsedAt = nowMs();
@@ -4789,7 +4794,8 @@ class FarmScene extends Phaser.Scene {
         const sk = armSkillKey(ARM_DEF[aid].tipo);
         addTries(sk, DUMMY_XP);
         log("Entrenaste con el muñeco: +" + DUMMY_XP + " golpes de " + SKILL_NAME[sk] + ". Vuelve en 4h. " + G.weapons[aid].dur + "/" + ARM_DEF[aid].dur, "gold");
-        toast("+" + DUMMY_XP + " golpes de " + SKILL_NAME[sk]);
+        const avisoRota = G.weapons[aid].dur <= 0 ? ". El arma se rompió. Abrí Herrería → Reparar" : "";
+        toast("+" + DUMMY_XP + " golpes de " + SKILL_NAME[sk] + avisoRota);
         refreshHud(); if (typeof saveFarm === "function") saveFarm();
       }
     };

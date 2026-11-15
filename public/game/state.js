@@ -4882,9 +4882,18 @@ function dummyMsUtiles() {
   if (!dummyEntrenando()) return 0;
   return Math.max(0, nowMs() - G.dummyTrain.desde - DUMMY_OFF_ESPERA_MS);
 }
+function dummyMotivoArma() {
+  const equipada = G.gear.arma;
+  const def = equipada && ARM_DEF[equipada];
+  if (!def || !G.weapons?.[equipada]) return "Equipa un arma cuerpo a cuerpo (espada, hacha o mazo)";
+  if (!armaEq()) return "Tu arma está rota. Abrí Herrería → Reparar";
+  if (def.tipo === "arco") return "El muñeco solo admite armas cuerpo a cuerpo. Equipa una espada, un hacha o un mazo";
+  return "";
+}
 function dummyIniciar() {
+  const motivo = dummyMotivoArma();
+  if (motivo) { toast(motivo); return; }
   const aid = armaEq();
-  if (!aid || ARM_DEF[aid].tipo === "arco") { toast("Equipa un arma cuerpo a cuerpo para entrenar"); return; }
   G.dummyTrain = { desde: nowMs(), arma: aid };
   G.dummyUsedAt = nowMs();   // 19/9: el campo existía desde el 9/8 y nadie lo escribía — el paso del tutorial lo lee
   if (typeof tutoEvent === "function") tutoEvent("dummy");
