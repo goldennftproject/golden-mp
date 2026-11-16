@@ -11,6 +11,16 @@ const aviso = {
   content: "Entrá en **Misiones → Bellotas del Bosque** para ver las misiones y el ranking. Guardá tu granja al entrar y completá y reclamá tus misiones para sumar bellotas.\n\nEl evento cierra el **domingo 15 de noviembre a las 20:00**, hora de Uruguay y Argentina. Hay **USD 20 en premios** para los tres primeros puestos. Si hay empate, se suman los premios de los puestos empatados y se reparten en partes iguales.",
 };
 
+const avisoCierre = {
+  id: "2026-11-15-bellotas-del-bosque-cierre",
+  title: "Bellotas del Bosque ya cerró",
+  date: "2026-11-15",
+  image: aviso.image,
+  alt: "Bellota pixelada entre los árboles de Golden Farm.",
+  content: "El evento terminó el **domingo 15 de noviembre a las 20:00**, hora de Uruguay y Argentina. Las misiones diarias siguen entregando Plata.\n\n¡Gracias por participar! El ranking provisional sigue disponible en **Misiones → Bellotas del Bosque**. Publicaremos los resultados y el reparto de los **USD 20 en premios** después de verificar las bellotas reclamadas.",
+  discordUrl: "https://discord.com/channels/1564640221063024763/1564643673889841243/1571685042676174930",
+};
+
 function noticiasBellotas(ahora) {
   if (ahora < inicio) return feed;
   const nota = ahora < fin ? aviso : {
@@ -18,7 +28,8 @@ function noticiasBellotas(ahora) {
     title: "Bellotas del Bosque abrió el 13 de noviembre",
     content: "El evento se realizó del viernes 13 al domingo 15 de noviembre. Podés consultar el ranking provisional en **Misiones → Bellotas del Bosque**. Los premios se adjudican después de verificar los resultados.",
   };
-  return {...feed, items: [nota, ...feed.items]};
+  const avisos = ahora < fin ? [nota] : [avisoCierre, nota];
+  return {...feed, items: [...avisos, ...feed.items]};
 }
 
 function servirNoticiasBellotas(req, res) {
