@@ -21,6 +21,16 @@ const avisoCierre = {
   discordUrl: "https://discord.com/channels/1564640221063024763/1564643673889841243/1571685042676174930",
 };
 
+const resultados = {
+  id: "2026-11-15-bellotas-del-bosque-resultados",
+  title: "Resultados de Bellotas del Bosque",
+  date: "2026-11-15",
+  image: "/news/bellotas-ranking-20261115.png",
+  discordUrl: "https://discord.com/channels/1564640221063024763/1564643673889841243/1571687357860810835",
+  alt: "Ranking final de Bellotas del Bosque. Not, kimeran y CobraReX ocupan los tres primeros puestos.",
+  content: "🥇 **Not** · 24 bellotas · **USD 10**\n🥈 **kimeran** · 15 bellotas · **USD 5**\n🥉 **CobraReX** · 14 bellotas · **USD 5**\n\nParticiparon **12 granjas** y se reclamaron **109 bellotas**. ¡Felicitaciones a los ganadores y gracias a todos por participar!\n\nEl ranking completo está en **Misiones → Bellotas del Bosque**.",
+};
+
 function noticiasBellotas(ahora) {
   if (ahora < inicio) return feed;
   const nota = ahora < fin ? aviso : {
@@ -28,7 +38,7 @@ function noticiasBellotas(ahora) {
     title: "Bellotas del Bosque abrió el 13 de noviembre",
     content: "El evento se realizó del viernes 13 al domingo 15 de noviembre. Podés consultar el ranking provisional en **Misiones → Bellotas del Bosque**. Los premios se adjudican después de verificar los resultados.",
   };
-  const avisos = ahora < fin ? [nota] : [avisoCierre, nota];
+  const avisos = ahora < fin ? [nota] : [resultados, avisoCierre, nota];
   return {...feed, items: [...avisos, ...feed.items]};
 }
 
