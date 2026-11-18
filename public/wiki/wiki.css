@@ -306,6 +306,36 @@ main { min-width: 0; }
 .answer dl { margin-block-end: 0; }
 .answer dd { margin: .2rem 0 .8rem; }
 .answer dd:last-child { margin-block-end: 0; }
+.wiki-figure { margin: .85rem 0 .15rem; }
+.wiki-media {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid #cdbf9e;
+  border-radius: .42rem;
+  background: #f6efe0;
+  color: var(--forest);
+  cursor: zoom-in;
+  text-decoration: none;
+}
+.wiki-media:hover { border-color: #7a956c; background: #edf1e6; }
+.wiki-media img { height: auto; }
+.wiki-figure-vertical img { width: auto; max-height: 27rem; }
+.wiki-media span {
+  display: block;
+  padding: .16rem .65rem .2rem;
+  border-top: 1px solid #ded2b7;
+  text-align: right;
+  font-size: .8rem;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.wiki-figure figcaption {
+  margin-top: .3rem;
+  color: var(--muted);
+  font-size: .9rem;
+}
 .notice {
   max-width: 75ch;
   margin: 1rem 0;

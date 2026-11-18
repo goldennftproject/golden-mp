@@ -10,7 +10,8 @@
 #ov-guia > .guia-card > h3 { flex: none; }
 #ov-guia .guia-wiki {
   align-self: flex-start;
-  margin-bottom: 8px;
+  flex: none;
+  margin-top: 8px;
   color: #315324;
   font-size: 14px;
   text-decoration: underline;
@@ -32,6 +33,7 @@
   padding: 0 0 9px;
   font-size: 14px;
 }
+.visual-v2 #ov-guia .guia-buscador { margin-top: 14px; }
 #ov-guia #guia-busqueda {
   box-sizing: border-box;
   flex: 1;

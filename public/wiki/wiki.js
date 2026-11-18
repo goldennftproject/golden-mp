@@ -20,13 +20,15 @@ const entries = topics.flatMap(topic => {
     const main = heading === title;
     const context = main ? topic.dataset.keywords : heading.dataset.keywords;
     const detail = main ? topic.querySelector("header p:last-of-type") : heading.closest(".answer") || heading.nextElementSibling;
+    const explanation = detail?.cloneNode(true);
+    explanation?.querySelectorAll("figure").forEach(figure => figure.remove());
     return {
       id: main ? topic.id : heading.id,
       title: heading.textContent,
       topic: main ? "" : title.textContent,
       heading: normalize(heading.textContent),
       keywords: normalize(context || ""),
-      detail: normalize(detail?.textContent || ""),
+      detail: normalize(explanation?.textContent || ""),
     };
   });
 });
