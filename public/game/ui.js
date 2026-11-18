@@ -609,7 +609,7 @@ function refreshCombate() {
     return '<div class="cbq' + (dur > 0 ? "" : " seca") + '" title="' + lbl + " de " + setDef.label +
       (dur > 0 ? " · defensa +" + setDef.piezas[pz].def + " · durabilidad " + dur + "/" + max
                : " · GASTADA: no defiende hasta que la repares") + '">' +
-      '<img src="' + GF.spr("armor_" + setEq + "_" + pz) + '" onerror="this.outerHTML=\'🛡️\'">' +
+      '<img src="' + GF.spr(armorSprite(setEq, pz)) + '" onerror="this.outerHTML=\'🛡️\'">' +
       (dur > 0 && dur <= max / 4 ? '<span class="cbn">' + dur + '</span>' : '') + '</div>';
   };
   const SLOTS = (typeof ARMOR_SLOTS !== "undefined") ? ARMOR_SLOTS : [];
@@ -2308,7 +2308,7 @@ function itemView(d) {
   if (!d) return null;
   if (d.kind === "armor") {
     const p = armorPieza(d.key); if (!p || !armorTiene(p.set, p.pieza)) return null;
-    return { sprite: 'armor_' + p.set + '_' + p.pieza, emoji: '🛡️', label: mkNombre('armor', d.key) + ' · durabilidad ' + armorDur(p.set, p.pieza) + '/' + ARMOR_DUR_MAX + ' · clic para equipar', dur: armorDur(p.set, p.pieza) / ARMOR_DUR_MAX * 100 };
+    return { sprite: armorSprite(p.set, p.pieza), emoji: '🛡️', label: mkNombre('armor', d.key) + ' · durabilidad ' + armorDur(p.set, p.pieza) + '/' + ARMOR_DUR_MAX + ' · clic para equipar', dur: armorDur(p.set, p.pieza) / ARMOR_DUR_MAX * 100 };
   }
   if (d.kind === "tool") {
     if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · 1 uso cada una · tienes " + toolCount("axe"), dur: null };
@@ -3691,7 +3691,7 @@ function refreshEquip() {
         const sd = ARMOR_SETS[setEq];
         el.classList.remove("ghost");
         el.title = ARMOR_SLOT_LABEL[pz] + " · " + sd.label + " · defensa +" + sd.piezas[pz].def;
-        el.innerHTML = spIc("armor_" + setEq + "_" + pz, "🛡️");
+        el.innerHTML = spIc(armorSprite(setEq, pz), "🛡️");
         el.onclick = () => armorAlternarPieza(armorKey(setEq, pz));
         activarAccionConTeclado(el, el.onclick);
       } else if (!slotViejo) {
@@ -3707,7 +3707,7 @@ function refreshEquip() {
   // fixs.docx #7 (11/8): la armadura de la Curtiduría se crafteaba y "no aparecía en ningún
   // lado" fuera de esa ventana. Ahora el panel de Equipo lista tus sets, piezas y bonos.
   if (box) {
-    let h = '<div class="secc">Armadura de la Curtiduría</div>';
+    let h = '<div class="secc">Armaduras</div>';
     const tengoAlguna = ARMOR_ORDER.some(s => armorPuestas(s) > 0);
     if (!tengoAlguna) h += '<div class="info">Todavía no has fabricado ninguna pieza — se hacen en la Curtiduría con los materiales de tus animales.</div>';
     else ARMOR_ORDER.forEach(set => {
@@ -3715,7 +3715,7 @@ function refreshEquip() {
       const sd = ARMOR_SETS[set], eq = armorEquipado(set);
       h += '<div class="forge-row' + (eq ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + sd.label + (eq ? ' <span class="tag">equipada</span>' : '') + ' <span class="tag">' + n + '/5</span></div>' +
         '<div class="fds">' + ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).map(pz =>
-          '<img src="' + GF.spr("armor_" + set + "_" + pz) + '" title="' + ARMOR_SLOT_LABEL[pz] + '" style="width:26px;height:26px;image-rendering:pixelated;vertical-align:middle" onerror="this.remove()">').join(" ") + '</div>' +
+          '<img src="' + GF.spr(armorSprite(set, pz)) + '" title="' + ARMOR_SLOT_LABEL[pz] + '" style="width:26px;height:26px;image-rendering:pixelated;vertical-align:middle" onerror="this.remove()">').join(" ") + '</div>' +
         (armorSetCompleto(set) ? '<div class="fds">Set completo: ' + sd.bono.txt + '</div>' : '<div class="fds">Defensa de las piezas: +' + ARMOR_SLOTS.reduce((a, pz) => a + (armorTiene(set, pz) ? sd.piezas[pz].def : 0), 0) + '</div>') + '</div>' +
         '<div class="fbtns">' + (eq ? '' : '<button class="green sm" data-armeq="' + set + '">Equipar</button>') + '</div></div>';
     });
@@ -3843,6 +3843,22 @@ function faltaReceta(cost,plata){
 function refreshForge() {
   const eq = G.picks.eq;
   let craft = "", repair = "";
+  const peto = ARMOR_SETS.vegetal, pieza = peto.piezas.pecho;
+  const tienePeto = armorTiene("vegetal", "pecho");
+  const repPeto = tienePeto ? armorReparaCosto("vegetal", "pecho") : null;
+  const costePeto = tienePeto ? repPeto : pieza;
+  const puedePeto = costePeto && canAfford({ [peto.mat]: costePeto.mat }) &&
+    G.plata >= costePeto.plata && (tienePeto || canonicalStacks().length < invSlots());
+  const estadoPeto = tienePeto ? "Durabilidad " + armorDur("vegetal", "pecho") + "/" + ARMOR_DUR_MAX :
+    "Trenzado con los tallos de la cosecha de papa";
+  const precioPeto = costePeto ? '<div class="fds">' + costePeto.mat + " papas · " + costePeto.plata + " Plata</div>" +
+    faltaReceta({ [peto.mat]: costePeto.mat }, costePeto.plata) : "";
+  const botonPeto = costePeto ? '<button id="forge-peto" class="green sm" ' + (puedePeto ? "" : "disabled") +
+    ">" + (tienePeto ? "Reparar" : "Fabricar") + "</button>" : "";
+  craft += '<div class="forge-row"><div class="fic"><img alt="" src="' + GF.spr(armorSprite("vegetal", "pecho")) +
+    '"></div><div class="finfo"><div class="fnm">' + peto.label + '</div><div class="fds">+' +
+    pieza.def + " de defensa · " + estadoPeto + "</div>" + precioPeto + '</div><div class="fbtns">' +
+    botonPeto + "</div></div>";
   // picos APILABLES (31/7): cada uno es 1 uso; craftear suma al stock
   PICK_ORDER.forEach(id => {
     const pd = PICK_DEF[id], n = pickCount(id), isEq = eq === id && n > 0;
@@ -4013,6 +4029,12 @@ function refreshForge() {
   }));
   const fa = $("forge-arrows"); if (fa) fa.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-arrows"], () => craftArrows());
   const fa5 = $("forge-arrows5"); if (fa5) fa5.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-arrows5", "#forge-arrows"], () => craftLote(craftArrows, null, 5));
+  const fp = $("forge-peto");
+  if (fp) fp.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-peto"], () => {
+    if (tienePeto) repararArmor("vegetal", "pecho");
+    else craftArmor("vegetal", "pecho");
+    refreshForge();
+  });
   const fc = $("forge-chest"); if (fc) fc.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-chest"], () => craftChest());
   if (typeof tutoHighlight === "function") tutoHighlight();
   forgeReponerFocoPc(card);
@@ -5109,7 +5131,7 @@ function refreshGodHand() {
 function refreshCurtiduria() {
   const box = $("curti-list"); if (!box) return;
   let h = '<div class="info">Equipada: <b>' + (G.armorEq && ARMOR_SETS[G.armorEq] ? ARMOR_SETS[G.armorEq].label + " · " + armorDefensa() + " de defensa" : "ninguna") + '</b></div>';
-  ARMOR_ORDER.forEach(set => {
+  ARMOR_ORDER.filter(set => !ARMOR_SETS[set].taller).forEach(set => {
     const sd = ARMOR_SETS[set], eq = armorEquipado(set), n = armorPuestas(set), completo = armorSetCompleto(set);
     /* 14/9 — TENER LAS CINCO Y QUE FUNCIONEN DEJARON DE SER LO MISMO. Con la durabilidad, el
        panel decía « ACTIVO » del bono mientras una pieza estaba en cero y armorBono() devolvía

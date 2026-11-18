@@ -6014,6 +6014,8 @@ function ofrendar(k, n) {
 const ARMOR_SLOTS = ["yelmo", "pecho", "pantalones", "botas", "guantes"];
 const ARMOR_SLOT_LABEL = { yelmo:"Yelmo", pecho:"Pecho", pantalones:"Pantalones", botas:"Botas", guantes:"Guantes" };
 const ARMOR_SETS = {
+  vegetal: { label:"Peto de fibra vegetal", mat:"papa", taller:"store",
+    piezas:{ pecho:{mat:8,plata:20,def:1} } },
   fibra:    { label:"Armadura de Fibra",    animal:"alpaca", mat:"fibra",    tipo:"ligera",
     bono:{ txt:"+15% vel. ataque + 12% evasión", atkSpd:15, evade:12 },
     piezas:{ yelmo:{mat:2,plata:30,def:3}, pecho:{mat:4,plata:60,def:5}, pantalones:{mat:3,plata:45,def:4}, botas:{mat:2,plata:25,def:2}, guantes:{mat:1,plata:20,def:1} } },
@@ -6027,7 +6029,7 @@ const ARMOR_SETS = {
     bono:{ txt:"+20% de defensa y +10% de daño (−5% de velocidad)", defPct:20, dmgPct:10, spd:-5 },
     piezas:{ yelmo:{mat:2,hierro:5,plata:120,def:8}, pecho:{mat:3,hierro:8,plata:200,def:12}, pantalones:{mat:2,hierro:6,plata:150,def:9}, botas:{mat:1,hierro:4,plata:80,def:5}, guantes:{mat:1,hierro:3,plata:70,def:4} } },
 };
-const ARMOR_ORDER = ["fibra", "piel", "cuero", "colmillo"];
+const ARMOR_ORDER = ["vegetal", "fibra", "piel", "cuero", "colmillo"];
 /* ═══ LA ARMADURA SE GASTA Y SE REPARA   (14/9, dirección, Discord) ═══════════════════════════
    « hay q crear una mecanica de la armadura… la armadura no puede ser eterna… debe repararse con
      materiales de animales… habría q subir el costo de creado para poder implementar tipo un 50 %
@@ -6060,8 +6062,13 @@ var ARMOR_COSTE_MULT = 1.50;   // crear cuesta esto de lo que costaba antes de q
   }
 })();
 function armorKey(set, pieza) { return "arm_" + set + "_" + pieza; }
+function armorSprite(set, pieza) {
+  return "armor_" + (set === "vegetal" ? "fibra" : set) + "_" + pieza;
+}
 function armorPieza(key) {
-  for (const set of ARMOR_ORDER) for (const pieza of ARMOR_SLOTS) if (armorKey(set, pieza) === key) return { set, pieza };
+  for (const set of ARMOR_ORDER) for (const pieza of Object.keys(ARMOR_SETS[set].piezas)) {
+    if (armorKey(set, pieza) === key) return { set, pieza };
+  }
   return null;
 }
 function armorActiva(set, pieza) { return G.armorEq === set && armorTiene(set, pieza) && !(G.armorOff || {})[armorKey(set, pieza)]; }
@@ -6101,7 +6108,8 @@ function armorReparaCosto(set, pieza) {
 }
 function repararArmor(set, pieza) {
   const sd = ARMOR_SETS[set]; if (!sd) return 0;
-  if (!(G.built && G.built.curtiduria)) { toast("Necesitas la Curtiduría para reparar"); return 0; }
+  const taller = sd.taller || "curtiduria";
+  if (!G.built?.[taller]) { toast("Necesitas " + (sd.taller ? "la Herrería" : "la Curtiduría") + " para reparar"); return 0; }
   if (!armorTiene(set, pieza)) { toast("No tienes esa pieza"); return 0; }
   const c = armorReparaCosto(set, pieza);
   if (!c) { toast(ARMOR_SLOT_LABEL[pieza] + " está entera"); return 0; }
@@ -6170,7 +6178,9 @@ function armorAlMorir() {
   });
   return { gastadas: gastadas, rotas: rotas };
 }
-function armorTiene(set, pieza) { return !!(G.armor && G.armor[armorKey(set, pieza)]); }
+function armorTiene(set, pieza) {
+  return !!(ARMOR_SETS[set]?.piezas[pieza] && G.armor?.[armorKey(set, pieza)]);
+}
 function armorPuestas(set) { return ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).length; }
 function armorSetCompleto(set) { return armorPuestas(set) === ARMOR_SLOTS.length; }
 /* 14/9 — el BONO del set pide las cinco piezas y además que estén sanas: si una está gastada, el
@@ -6195,7 +6205,8 @@ function atkSpdMult() { return 1 + ((typeof eqRunaVal === "function" ? eqRunaVal
 function evadeChance() { return armorBonoVal("evade") / 100; }   // 0..1
 function craftArmor(set, pieza) {
   const sd = ARMOR_SETS[set]; if (!sd) return;
-  if (!(G.built && G.built.curtiduria)) { toast("Necesitas la Curtiduría"); return; }
+  const taller = sd.taller || "curtiduria";
+  if (!G.built?.[taller]) { toast("Necesitas " + (sd.taller ? "la Herrería" : "la Curtiduría")); return; }
   if (armorTiene(set, pieza)) { toast("Ya tienes esa pieza"); return; }
   if (canonicalStacks().length >= invSlots()) { toast("Haz lugar en la bolsa para la armadura"); return; }
   const p = sd.piezas[pieza]; if (!p) return;

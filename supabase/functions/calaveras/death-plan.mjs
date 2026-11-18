@@ -8,7 +8,7 @@ const capacities=Object.freeze(Object.assign(Object.create(null),{bag:8,backpack
 const kinds=new Set(['res','seed','fish','dish','arm','armor','armorset','gear','cont','pick','tool','cana']);
 const gearKeys=new Set(['botas_cuero','casco_cuero','pechera_cuero','escudo_madera','casco_hierro','escudo_hierro','pechera_hierro']);
 const armorPieces=['yelmo','pecho','pantalones','botas','guantes'];
-const armorSets=new Set(['fibra','piel','cuero','colmillo']);
+const armorSets=new Set(['vegetal','fibra','piel','cuero','colmillo']);
 function randomInt100(){
  const crypto=globalThis.crypto;if(!crypto?.getRandomValues)throw Error('Secure random source unavailable');
  const a=new Uint32Array(1);do{crypto.getRandomValues(a);}while(a[0]>=4294967200);return a[0]%100;
@@ -37,7 +37,7 @@ export function planSharedGraveDeath(canonicalData,roll100=randomInt100){
  const armor=clone(object(d.armor)?d.armor:{}),armorDur=clone(object(d.armorDur)?d.armorDur:{}),armorOff=clone(object(d.armorOff)?d.armorOff:{});
  let armorEq=d.armorEq??null;
  const breakSlots=[],gastadas=[];
- if(armorSets.has(armorEq))for(const piece of armorPieces){
+ if(armorSets.has(armorEq))for(const piece of (armorEq === "vegetal" ? ["pecho"] : armorPieces)){
   const k='arm_'+armorEq+'_'+piece;if(!armor[k]||armorOff[k])continue;
   const before=Number.isFinite(armorDur[k])?Math.max(0,Math.min(100,armorDur[k])):100;
   if(before>0){armorDur[k]=Math.max(0,before-5);gastadas.push(piece);}
@@ -46,7 +46,7 @@ export function planSharedGraveDeath(canonicalData,roll100=randomInt100){
  const candidates=[];
  for(const slot of ['casco','armadura','botas','escudo'])if(gearKeys.has(gear[slot]))candidates.push({slot,kind:'gear',k:gear[slot]});
  if(typeof gear.arma==='string'&&own(weapons,gear.arma)&&object(weapons[gear.arma]))candidates.push({slot:'arma',kind:'arm',k:gear.arma});
- const pieces=armorSets.has(armorEq)?armorPieces.filter(p=>armor['arm_'+armorEq+'_'+p]&&!armorOff['arm_'+armorEq+'_'+p]):[];
+ const pieces=armorSets.has(armorEq)?(armorEq === "vegetal" ? ["pecho"] : armorPieces).filter(p=>armor['arm_'+armorEq+'_'+p]&&!armorOff['arm_'+armorEq+'_'+p]):[];
  if(pieces.length)candidates.push({slot:'set',kind:'armorset',k:armorEq});
  const dropSlots=[],labels=[];
  for(const p of candidates){
