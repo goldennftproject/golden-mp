@@ -214,13 +214,21 @@ function actividadEvidencias(a,b,ahora,desdeServidor=0,evento=false){
 }
 // Misiones diarias: las acciones sólo registran progreso. Cobro explícito y CAS.
 const JORNADA_META=200;
+// Misma jornada UTC y mismos premios que el cliente.
+const JORNADA_BALANCE_DESDE = '2026-11-20';
 const JORNADA_MISIONES=[
- {id:'siembra',tipo:'plant',meta:20,plata:500},
- {id:'cocina',tipo:'platos',meta:30,plata:500},
- {id:'madera',tipo:'chop',meta:10,plata:500},
- {id:'mineria',tipo:'mine',meta:10,plata:500},
+ {id:'siembra',tipo:'plant',meta:20,plata:400},
+ {id:'cocina',tipo:'platos',meta:30,plata:400},
+ {id:'madera',tipo:'chop',meta:10,plata:400},
+ {id:'mineria',tipo:'mine',meta:10,plata:400},
  {id:'jornada',tipo:'energia',meta:200,plata:3000}
 ];
+function jornadaPlataMision(mision, dia) {
+  return dia < JORNADA_BALANCE_DESDE && mision.tipo !== 'energia' ? 500 : mision.plata;
+}
+function jornadaMaximo(dia) {
+  return JORNADA_MISIONES.reduce((total, mision) => total + jornadaPlataMision(mision, dia), 0);
+}
 function jornadaLibro(prev,ahora){
  const dia=new Date(ahora).toISOString().slice(0,10),old=prev?.actividadGranja?.jornada;
  if(old?.dia===dia&&old.v===2){const j=JSON.parse(JSON.stringify(old));if(j.cobradas?.cosecha&&!j.cobradas.cocina)j.cobradas.cocina=j.cobradas.cosecha;return j;}
@@ -248,8 +256,9 @@ function jornadaOperacion(data,id,dia,ahora,op){
  if(j.cobradas[id])return {error:'Ya has reclamado esta misión hoy'};
  const progreso=m.tipo==='energia'?num(j.energia):num(j.progreso[m.tipo]);
  if(progreso<m.meta)return {error:'Todavía no has completado esta misión'};
- const cobro=Math.min(m.plata,Math.max(0,5000-num(j.plata)));
- if(!cobro)return {error:'Ya has recibido el máximo diario de 5.000 Plata'};
+ const maximo=jornadaMaximo(j.dia);
+ const cobro=Math.min(jornadaPlataMision(m,j.dia),Math.max(0,maximo-num(j.plata)));
+ if(!cobro)return {error:'Ya has recibido el máximo diario de '+maximo.toLocaleString('es-UY')+' Plata'};
  j.cobradas[id]=cobro;j.plata+=cobro;j.ops.push({op,id,dia,cobro});
  a.jornada=j;a.bonoTotal+=cobro;d.actividadGranja=a;d.plata=num(d.plata)+cobro;
  return {data:d,cobro};

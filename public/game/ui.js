@@ -3013,7 +3013,7 @@ function bancoActualizarPrevia(){
   const tasaVista=$('banco-tasa');if(tasaVista)tasaVista.textContent=valida?tasa.toLocaleString('es-UY'):'—';
   boton.disabled=!(valida&&cantidad&&G.plata>=n*tasa&&CARGA_OK&&!SOLO_LOCAL&&!SAVE_CONFLICTOS.has(UID)&&!MERCADO_EN_CURSO);
 }
-function jornadaHtml(){const j=jornadaEstado();return '<section class="sub"><h4>📋 Misiones diarias · '+fmt(j.plata)+' / 5.000 Plata</h4><p>Completa objetivos y pulsa Reclamar. Reinicio a las 00:00 UTC.</p>'+JORNADA_MISIONES.map(m=>{const n=Math.min(m.meta,m.tipo==='energia'?j.energia:j.progreso[m.tipo]||0),hecha=!!j.cobradas[m.id],premio=Math.min(m.plata,Math.max(0,5000-j.plata));return '<div class="forge-row"><div class="finfo"><div class="fnm">'+m.nombre+'</div>'+(m.detalle?'<div class="fds">'+m.detalle+'</div>':'')+'<progress max="'+m.meta+'" value="'+n+'" aria-label="'+m.nombre+'"></progress><div class="fds">'+n+' / '+m.meta+' · '+fmt(hecha?Number(j.cobradas[m.id]):premio)+' Plata</div></div><button class="green sm" '+(hecha||n<m.meta||!premio?'disabled':'')+' onclick="jornadaReclamar(\''+m.id+'\')">'+(hecha?'✓ Reclamada':!premio?'Límite diario':n>=m.meta?'Reclamar':'En progreso')+'</button></div>';}).join('')+'</section>';}
+function jornadaHtml(){const j=jornadaEstado();return '<section class="sub"><h4>📋 Misiones diarias · '+fmt(j.plata)+' / '+j.max.toLocaleString('es-UY')+' Plata</h4><p>Completa objetivos y pulsa Reclamar. Reinicio a las 00:00 UTC.</p>'+JORNADA_MISIONES.map(m=>{const n=Math.min(m.meta,m.tipo==='energia'?j.energia:j.progreso[m.tipo]||0),hecha=!!j.cobradas[m.id],premio=Math.min(jornadaPlataMision(m,j.dia),Math.max(0,j.max-j.plata));return '<div class="forge-row"><div class="finfo"><div class="fnm">'+m.nombre+'</div>'+(m.detalle?'<div class="fds">'+m.detalle+'</div>':'')+'<progress max="'+m.meta+'" value="'+n+'" aria-label="'+m.nombre+'"></progress><div class="fds">'+n+' / '+m.meta+' · '+fmt(hecha?Number(j.cobradas[m.id]):premio)+' Plata</div></div><button class="green sm" '+(hecha||n<m.meta||!premio?'disabled':'')+' onclick="jornadaReclamar(\''+m.id+'\')">'+(hecha?'✓ Reclamada':!premio?'Límite diario':n>=m.meta?'Reclamar':'En progreso')+'</button></div>';}).join('')+'</section>';}
 function actividadGranjaHtml(){
   const a=actividadGranjaEstado();
   return jornadaHtml()+'<section class="sub"><h4>Actividad de granja · requisito para futuros retiros</h4><p>'+a.energia.toLocaleString('es-UY')+' / 2.000 de energía confirmada por el servidor</p><progress max="2000" value="'+a.energia+'" aria-label="Energía de granja confirmada"></progress><p>'+(a.cumplida?'Actividad cumplida permanentemente.':'Gasta energía realizando acciones de granja; el combate no cuenta.')+' '+(a.vip?'VIP activo.':'También se requerirá VIP activo al solicitar un retiro.')+'</p><p>Se alcanza una sola vez, no por retiro. No acredita actividad anterior a este registro. Los retiros USDT siguen desactivados; cumplir estos requisitos no habilita pagos ni garantiza retornos. El canje interno del Banco no exige este progreso.</p></section>';
@@ -4704,7 +4704,7 @@ function syncJornadaBadge() {
   const button=$('misiones-acceso'),badge=$('misiones-contador');
   if(!button||!badge||typeof jornadaEstado!=='function')return;
   // Sólo estado confirmado por el servidor: las acciones locales aún no guardadas no cuentan.
-  const j=jornadaEstado(),remaining=Math.max(0,5000-j.plata);
+  const j=jornadaEstado(),remaining=Math.max(0,j.max-j.plata);
   const n=remaining>0?JORNADA_MISIONES.filter(m=>!j.cobradas[m.id]&&
     (m.tipo==='energia'?j.energia:(j.progreso[m.tipo]||0))>=m.meta).length:0;
   const text=n?String(n):'';
@@ -5935,7 +5935,9 @@ function refreshPedidos() {
     return;
   }
   // VISTA: las notas del día
-  if (sub) sub.textContent = (e.dobles || 0) > 0 ? "Los vales se canjean aquí mismo." : "El primer pedido del día paga 🎟 doble.";
+  if (sub) sub.textContent = (e.dobles || 0) > 0 ? "Los vales se canjean aquí mismo."
+    : e.dia >= JORNADA_BALANCE_DESDE ? "El primer pedido diario paga el doble de vales y uno extra."
+    : "El primer pedido diario paga el doble de vales.";
   const rots = [-2.2, 1.6, -1.1];
   // 18/8: los tres escalones en una sola lista. El semanal y el mensual van al final, con su
   // propio color, porque son la parte que de verdad drena stock: piden un día y tres días de
@@ -5963,7 +5965,7 @@ function refreshPedidos() {
           (!p.hecho && !ok ? '<span class="falta">(tienes ' + stock + ')</span>' : "") + '</div>') +
       (p.hecho ? '<div class="sello">✓ ENTREGADO</div>'
         : tutorial ? '<div class="toca">pulsa la nota para entregar</div>'
-          : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + p.vales + (ok ? '<div class="toca">pulsa la nota para entregar</div>' : "") + '</div>') +
+          : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + pedidoVales(p, e) + (ok ? '<div class="toca">pulsa la nota para entregar</div>' : "") + '</div>') +
       '</div>';
   }).join("") +
   '<div style="text-align:center;margin-top:6px"><button class="ghost sm" data-pd-vista="canje">🎟 Canjear vales</button></div>';

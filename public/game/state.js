@@ -169,14 +169,22 @@ function actividadGranjaRecibir(a,acreditar=false){
   G.actividadGranja=JSON.parse(JSON.stringify(a));G.actividadAcciones=G.actividadAcciones||{};
   for(const k of Object.keys(ENERGIA_GRANJA_COSTO)){const n=a.registro&&a.registro[k];if(Number.isSafeInteger(n)&&n>=0)G.actividadAcciones[k]=Math.max(G.actividadAcciones[k]||0,n);}
 }
+// Misma jornada UTC y mismos premios que guardar.
+const JORNADA_BALANCE_DESDE = '2026-11-20';
 const JORNADA_MISIONES=[
- {id:'siembra',tipo:'plant',meta:20,plata:500,nombre:'🌱 Siembra 20 semillas'},
- {id:'cocina',tipo:'platos',meta:30,plata:500,nombre:'🍲 Cocina 30 platos',detalle:'Recoge los platos terminados de la Cocina'},
- {id:'madera',tipo:'chop',meta:10,plata:500,nombre:'🪓 Recoge madera 10 veces'},
- {id:'mineria',tipo:'mine',meta:10,plata:500,nombre:'⛏ Mina 10 veces'},
+ {id:'siembra',tipo:'plant',meta:20,plata:400,nombre:'🌱 Siembra 20 semillas'},
+ {id:'cocina',tipo:'platos',meta:30,plata:400,nombre:'🍲 Cocina 30 platos',detalle:'Recoge los platos terminados de la Cocina'},
+ {id:'madera',tipo:'chop',meta:10,plata:400,nombre:'🪓 Recoge madera 10 veces'},
+ {id:'mineria',tipo:'mine',meta:10,plata:400,nombre:'⛏ Mina 10 veces'},
  {id:'jornada',tipo:'energia',meta:200,plata:3000,nombre:'🌾 Completa tu jornada',detalle:'Usa 200 de energía en siembra, cosecha, tala, minería o animales'}
 ];
-function jornadaEstado(){const dia=new Date(nowMs()).toISOString().slice(0,10),old=G.actividadGranja?.jornada;const j=old?.dia===dia?old:null;return {dia,energia:j?.v===2?j.energia:0,plata:j?.plata||0,progreso:j?.v===2?j.progreso||{}:{},cobradas:j?.v===2?{...j.cobradas,...(j.cobradas?.cosecha?{cocina:j.cobradas.cosecha}:{})}:{},meta:200,max:5000};}
+function jornadaPlataMision(mision, dia) {
+  return dia < JORNADA_BALANCE_DESDE && mision.tipo !== 'energia' ? 500 : mision.plata;
+}
+function jornadaMaximo(dia) {
+  return JORNADA_MISIONES.reduce((total, mision) => total + jornadaPlataMision(mision, dia), 0);
+}
+function jornadaEstado(){const dia=new Date(nowMs()).toISOString().slice(0,10),old=G.actividadGranja?.jornada;const j=old?.dia===dia?old:null;return {dia,energia:j?.v===2?j.energia:0,plata:j?.plata||0,progreso:j?.v===2?j.progreso||{}:{},cobradas:j?.v===2?{...j.cobradas,...(j.cobradas?.cosecha?{cocina:j.cobradas.cosecha}:{})}:{},meta:200,max:jornadaMaximo(dia)};}
 async function jornadaReclamar(id){const j=jornadaEstado();await economiaSolicitar({mision:{id,dia:j.dia}});if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar();if(isOpen('ov-objetivos'))refreshObjetivos();}
 function actividadGranjaEstado(){const energia=Math.min(2000,Math.max(0,G.actividadGranja&&G.actividadGranja.energia||0));return {energia,objetivo:2000,cumplida:energia>=2000,vip:vipVigente(),usdt:false};}
 function energiaGranjaAgregar(key,n,tipo) {
@@ -11812,6 +11820,12 @@ function tablonAbierto() {
   if (!G.tuto || G.tuto.done) return true;
   return (TUTO_STEPS[G.tuto.step] || {}).id === "pedido";
 }
+function pedidoVales(pedido, estado) {
+  if (pedido.tipoEncargo === "tutorial") return 0;
+  if (pedido.tipoEncargo || estado.dobles > 0) return pedido.vales;
+  const extra = estado.dia >= JORNADA_BALANCE_DESDE ? 1 : 0;
+  return pedido.vales * 2 + extra;
+}
 function pedidoEntregar(i) {
   const e = pedidosEstado();
   // 18/8: "S" y "M" son el encargo de la semana y el del mes; los números, los tres diarios.
@@ -11828,9 +11842,7 @@ function pedidoEntregar(i) {
   if (p.tipo === "res") G.res[p.key] -= p.n;
   else if (p.tipo === "fish") G.fish[p.key] -= p.n;
   else if (p.tipo === "dish") G.dishes[p.key] -= p.n;
-  // el ×2 del primero del día es solo para los diarios: el semanal y el mensual ya pagan de más
-  const doble = !esTutorial && !(e.dobles > 0) && !p.tipoEncargo;
-  const vales = esTutorial ? 0 : p.vales * (doble ? 2 : 1);
+  const vales = pedidoVales(p, e);
   p.hecho = true; if (!p.tipoEncargo) e.dobles = (e.dobles || 0) + 1;
   if (!esTutorial) { G.plata += p.plata; G.vales = (G.vales || 0) + vales; }
   /* 18/8 (dirección): el tablón pagaba XP de Cultivo aunque le llevaras PIEDRA. Ahora paga a la
@@ -11840,7 +11852,7 @@ function pedidoEntregar(i) {
     toast("✓ Primer encargo entregado");
   } else {
     addXp(skillDeEntrega(p), p.xp);
-    log(p.de + " recibió " + p.n + " × " + pedidoLabel(p) + ": +" + p.plata + " plata y +" + vales + (vales > 1 ? " vales" : " vale") + (doble ? " (¡primer pedido del día ×2!)" : "") + ".", "gold");
+    log(p.de + " recibió " + p.n + " × " + pedidoLabel(p) + ": +" + p.plata + " plata y +" + vales + (vales > 1 ? " vales" : " vale") + ".", "gold");
     toast("🎟 +" + vales + " · 🪙 +" + p.plata);
   }
   if (typeof statAdd === "function") statAdd("pedido");        // 19/8: contador propio — el detector
