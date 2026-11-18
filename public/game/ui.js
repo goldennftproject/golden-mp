@@ -99,6 +99,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-cofre": () => refreshChest(),
   "ov-perfil": () => refreshPerfil(), "ov-config": () => refreshConfig(), "ov-lb": () => refreshLb() };
 OV_REFRESH["ov-noticias"] = () => { if (window.GoldenNews) window.GoldenNews.open(); };
+OV_REFRESH["ov-guia"] = () => window.GoldenGuia?.abrir();
 // los overlays NO bloquean el juego: podés seguir moviéndote/interactuando con la ventana abierta
 // sonido propio de cada edificio al abrir su ventana (pedido del diseñador)
 const OV_SFX = { "ov-pedidos": "shop", "ov-market": "shop", "ov-forge": "forge", "ov-barn": "door", "ov-cocina": "door", "ov-cofre": "door", "ov-paquete": "coin", "ov-altar": "forge", "ov-establo": "door", "ov-curtiduria": "forge" };
@@ -222,6 +223,7 @@ function closeOv(id) {
   if (id === "ov-objetivos") window.GoldenBellotas?.cerrar();
   if(id==='ov-config'&&typeof prepararReferidos.cancelarEvento==='function')prepararReferidos.cancelarEvento();
   if (id === "ov-noticias" && window.GoldenNews) window.GoldenNews.closeImage();
+  if (id === "ov-guia") window.GoldenGuia?.cerrar();
   /* 8/9: cerrar la puerta de la Zona por la × devuelve todo a la granja, igual que « Volver ».
      Dejar el contenedor cargado sería más « fiel » (en Tibia preparás la mochila y te vas cuando
      querés), pero acá el jugador vería desaparecer media bolsa sin entender a dónde fue. Una sola

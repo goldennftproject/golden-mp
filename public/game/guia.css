@@ -1,0 +1,104 @@
+#ov-guia > .guia-card {
+  position: relative;
+  width: min(880px, calc(100vw - 40px));
+  max-height: calc(100dvh - 84px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#ov-guia > .guia-card > h3 { flex: none; }
+#ov-guia .guia-buscador {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: none;
+  padding: 0 0 9px;
+  font-size: 14px;
+}
+#ov-guia #guia-busqueda {
+  box-sizing: border-box;
+  flex: 1;
+  width: 0;
+  height: 38px;
+  min-width: 0;
+  border: 1px solid #916d3b;
+  border-radius: 5px;
+  background: #fff7df;
+  color: #423119;
+  font-size: 16px;
+  padding: 6px 9px;
+  user-select: auto;
+}
+#ov-guia .guia-secciones { display: flex; flex-wrap: wrap; gap: 6px; flex: none; }
+#ov-guia button.guia-boton {
+  border: 1px solid #957343;
+  border-image: none;
+  border-radius: 5px;
+  box-shadow: none;
+  background: #efdfb9;
+  color: #473218 !important;
+  text-shadow: none;
+  min-height: 34px;
+  padding: 5px 11px;
+  font-size: 14px;
+  white-space: normal;
+}
+#ov-guia button.guia-boton[aria-pressed="true"] {
+  color: #fff7de !important;
+  background: #3e632d;
+  border-color: #28421e;
+}
+#ov-guia button.guia-boton:focus-visible, #ov-guia #guia-busqueda:focus-visible, #guia-resultados:focus-visible {
+  outline: 2px solid #274f1d;
+  outline-offset: 2px;
+}
+#ov-guia .guia-estado, #ov-guia .guia-nota-botin {
+  margin: 7px 0;
+  color: #5d472b;
+  line-height: 1.35;
+  font-size: 13px;
+  flex: none;
+}
+#ov-guia .guia-nota-botin[hidden] { display: none; }
+#ov-guia .guia-resultados {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  align-items: start;
+  gap: 9px;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 2px 4px 3px 1px;
+  touch-action: pan-y;
+}
+#ov-guia .guia-ficha {
+  min-width: 0;
+  background: #fff3d6;
+  color: #443218;
+  border: 1px solid #be9f67;
+  border-radius: 6px;
+  padding: 10px 12px;
+  line-height: 1.35;
+  text-shadow: none;
+  user-select: text;
+}
+#ov-guia .guia-ficha header { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+#ov-guia .guia-ficha img { width: 35px; height: 35px; object-fit: contain; flex: none; }
+#ov-guia .guia-ficha h4 { margin: 0; color: #50321a; font-size: 16px; line-height: 1.2; }
+#ov-guia .guia-ficha h5 { margin: 10px 0 3px; font-size: 13px; color: #315324; }
+#ov-guia .guia-subtitulo { margin: 3px 0 0; font-size: 12px; color: #634c2c; }
+#ov-guia .guia-datos { margin: 0; font-size: 13px; }
+#ov-guia .guia-datos div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-top: 1px solid #e3d1a7; }
+#ov-guia .guia-datos dt { color: #664c2c; }
+#ov-guia .guia-datos dd { margin: 0; text-align: right; overflow-wrap: anywhere; font-weight: 600; }
+#ov-guia .guia-ayuda { margin: 7px 0; font-size: 13px; }
+@media (max-width: 660px) {
+  #ov-guia > .guia-card { width: min(560px, calc(100vw - 22px)); max-height: calc(100dvh - 40px); }
+  #ov-guia .guia-resultados { grid-template-columns: minmax(0, 1fr); }
+  #ov-guia .guia-secciones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #ov-guia button.guia-boton { min-height: 40px; }
+}
