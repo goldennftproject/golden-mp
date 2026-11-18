@@ -1018,7 +1018,56 @@ function mercadoPermiso(uid, filas, ack, prev, next) {
   return { permiso, ack: nuevo };
 }
 
-function evaluarGuardado(prev, next, elapsedSeg, permiso) {
+const BOTIN_ENERGIA_MATERIALES = new Set(["madera", "piedra", "bronce", "oro", "hierro"]);
+
+function botinEnergiaMorral(nodo, nivel = 0, materiales = Object.create(null)) {
+  if (nodo == null) return materiales;
+  const huecos = nodo.c === "bag" ? 8 : nodo.c === "backpack" && nivel === 0 ? 20 : 0;
+  if (!huecos || !Array.isArray(nodo.items) || nodo.items.length > huecos || nivel > 1) return null;
+  for (const entrada of nodo.items) {
+    if (entrada?.c) {
+      if (nivel !== 0 || nodo.c !== "backpack" || entrada.c !== "bag" ||
+          !botinEnergiaMorral(entrada, nivel + 1, materiales)) return null;
+    } else if (entrada?.kind === "res" && BOTIN_ENERGIA_MATERIALES.has(entrada.k)) {
+      if (!Number.isSafeInteger(entrada.n) || entrada.n < 1) return null;
+      const cantidad = (materiales[entrada.k] || 0) + entrada.n;
+      if (!Number.isSafeInteger(cantidad)) return null;
+      materiales[entrada.k] = cantidad;
+    }
+  }
+  return materiales;
+}
+
+function botinEnergiaMarcarViaje(anterior, siguiente, ahora) {
+  const entrada = siguiente.zonaViaje?.t;
+  if (!Number.isSafeInteger(entrada) || entrada <= 0 || entrada > ahora || entrada >= ENERGIA_EVENTO_FIN) return null;
+  const yaConfirmado = anterior?.zonaViaje?.t === entrada && anterior._economiaControl?.viajeBotinEnergia === entrada;
+  return yaConfirmado || energiaEventoActivo(ahora) ? entrada : null;
+}
+
+function botinEnergiaTransferencia(anterior, siguiente, ahora, desdeServidor) {
+  const transferido = Object.create(null), pendiente = Object.create(null);
+  const viaje = anterior.zonaViaje;
+  const entradaConfirmada = Number.isSafeInteger(viaje?.t) && viaje.t > 0 && viaje.t <= ahora && viaje.t < ENERGIA_EVENTO_FIN &&
+    (energiaEventoActivo(desdeServidor) || anterior._economiaControl?.viajeBotinEnergia === viaje.t);
+  const regreso = !siguiente.zonaViaje && ahora >= ENERGIA_EVENTO_INICIO && entradaConfirmada;
+  const registrado = anterior._economiaControl?.botinEnergia;
+  if (!anterior.cont || (!regreso && !registrado)) return {transferido, pendiente};
+
+  // Solo el morral de una revisión confirmada acredita el traslado. Conservar
+  // el saldo que siguió en el morral permite vaciarlo más tarde desde la puerta.
+  const antes = botinEnergiaMorral(anterior.cont), despues = botinEnergiaMorral(siguiente.cont);
+  if (!antes || !despues) return {transferido, pendiente};
+  for (const clave of BOTIN_ENERGIA_MATERIALES) {
+    const disponible = regreso ? num(antes[clave]) : Math.min(num(antes[clave]), num(registrado[clave]));
+    const resta = Math.min(disponible, num(despues[clave]));
+    if (disponible > resta) transferido[clave] = disponible - resta;
+    if (resta > 0) pendiente[clave] = resta;
+  }
+  return {transferido, pendiente};
+}
+
+function evaluarGuardado(prev, next, elapsedSeg, permiso, ahora = Date.now(), desdeServidor = 0) {
   const per = (permiso && typeof permiso === "object") ? permiso : { plata: 0, res: {} };
   const perRes = (k) => num(per.res && per.res[k]);
   const sospechas = [], delta = {};
@@ -1065,17 +1114,18 @@ function evaluarGuardado(prev, next, elapsedSeg, permiso) {
   const plataMax = CELDAS_MAX * ANCLA * horas * MARGEN + 2000 + num(per.plata) + ventaStockPermiso(p, next);
   if ((delta.plata || 0) > plataMax) sospechas.push("plata imposible: +" + Math.round(delta.plata) + " en " + fmtHoras(horas) + " (techo " + Math.round(plataMax) + ")");
 
+  const {transferido: botinTransferido, pendiente: botinPendiente} = botinEnergiaTransferencia(p, next, ahora, desdeServidor);
   /* madera y piedra: nodos × su tasa. Las cargas GUARDAN producción, no la multiplican */
   for (const k of ["madera", "piedra"]) {
     const d = delta["res." + k] || 0;
-    const max = NODOS_MAX * TASA_NODO * horas * MARGEN + 100 + perRes(k);
+    const max = NODOS_MAX * TASA_NODO * horas * MARGEN + 100 + perRes(k) + num(botinTransferido[k]);
     if (d > max) sospechas.push(k + " imposible: +" + Math.round(d) + " en " + fmtHoras(horas) + " (techo " + Math.round(max) + ")");
   }
 
   /* minerales: UNA veta por tipo, relojes de 8-24 h — por día caben pocos de cada uno */
   for (const k of ["bronce", "hierro", "oro", "diamante", "netherita"]) {
     const d = delta["res." + k] || 0;
-    const max = 6 * (horas / 24) * MARGEN + 12 + perRes(k);
+    const max = 6 * (horas / 24) * MARGEN + 12 + perRes(k) + num(botinTransferido[k]);
     if (d > max) sospechas.push(k + " imposible: +" + Math.round(d) + " en " + fmtHoras(horas));
   }
 
@@ -1085,7 +1135,7 @@ function evaluarGuardado(prev, next, elapsedSeg, permiso) {
   if ((delta.expansiones || 0) < 0) sospechas.push("las expansiones no pueden bajar (" + delta.expansiones + ")");
   if ((delta.expansiones || 0) > 4 && horas < 1) sospechas.push("+" + delta.expansiones + " expansiones en " + fmtHoras(horas));
 
-  return { delta, sospechas };
+  return { delta, sospechas, botinPendiente };
 }
 
 function fmtHoras(h) { return h < 1 ? Math.round(h * 60) + " min" : (Math.round(h * 10) / 10) + " h"; }
@@ -1366,7 +1416,7 @@ Deno.serve(async (req) => {
     const mercado = mercadoPermiso(uid, filas ?? [], prevRow?.mercado_ack ?? null, prevRow?.data ?? null, data);
 
     /* las reglas miran, la bitácora recuerda */
-    const { delta, sospechas } = evaluarGuardado(prevRow?.data ?? null, data, elapsedSeg, mercado.permiso);
+    const { delta, sospechas, botinPendiente } = evaluarGuardado(prevRow?.data ?? null, data, elapsedSeg, mercado.permiso, ahora.getTime(), desdeServidor);
     const permisoUsado = mercado.permiso.plata || Object.keys(mercado.permiso.res).length;
     await admin.from("farm_saves_log").insert({
       user_id: uid, reglas_v: VERSION, elapsed_s: Math.round(elapsedSeg),
@@ -1375,6 +1425,9 @@ Deno.serve(async (req) => {
 
     /* modo rechazo (futuro, tras calibrar): un guardado con sospechas no entra */
     if (MODO === "rechazo" && sospechas.length) {await saveSupportRejected(admin,uid,body,prevRow,'heuristic',supportOriginal);return json({ error: "guardado rechazado", sospechas }, 422);}
+    if (botinPendiente && Object.keys(botinPendiente).length) data._economiaControl.botinEnergia = botinPendiente;
+    const viajeBotinEnergia = botinEnergiaMarcarViaje(prevRow?.data, data, ahora.getTime());
+    if (viajeBotinEnergia !== null) data._economiaControl.viajeBotinEnergia = viajeBotinEnergia;
     const acciones={};
     actividadActualizar(prevRow?.data??null,data,ahora.getTime(),bellotasHabilitadas?acciones:undefined,body.jornada===1,desdeServidor,bellotasHabilitadas);
     // El CAS protege el progreso y los recibos anteriores, también si se deshabilita el evento.

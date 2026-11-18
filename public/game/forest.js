@@ -1,5 +1,13 @@
 /* ForestScene: el Bosque (Fase D — combate). Entrás desde el borde derecho de la granja.
    Cuanto más a la derecha te metés, más fuertes los monstruos. Si te matan, despertás en la granja. */
+const BOTIN_EVENTO_ENERGIA = [
+  ["madera", 0.40, 5],
+  ["piedra", 0.40, 5],
+  ["bronce", 0.10, 3],
+  ["oro", 0.05, 3],
+  ["hierro", 0.03, 1],
+];
+
 class ForestScene extends Phaser.Scene {
   constructor() { super("forest"); }
 
@@ -1464,6 +1472,15 @@ class ForestScene extends Phaser.Scene {
     // if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) drops.push({ k: gk, n: 1, kind: "gear" }); }
     if (this.target === m) this.clearTarget();
     const loot = rollLoot(m.def);
+    // Cada material del evento se sortea por separado y entra al botín del cadáver.
+    if (this.zonaKey === "pantano" && ["rata", "murcielago", "larva"].includes(m.key)) {
+      const ahoraServidor = window.__gfAhoraServidor?.();
+      if (Number.isFinite(ahoraServidor) && energiaEventoActivo(ahoraServidor)) {
+        for (const [key, chance, max] of BOTIN_EVENTO_ENERGIA) {
+          if (Math.random() < chance) loot[key] = (loot[key] || 0) + 1 + Math.floor(Math.random() * max);
+        }
+      }
+    }
     Object.keys(loot).forEach(k => drops.push({ k, n: loot[k], kind: "res" }));
     if ((m.def.lvl || 0) >= 8 && Math.random() < 0.30) drops.push({ k: "esencia_runica", n: 1, kind: "res" });   // Altar: drop de mobs Nv 8+
     // ESENCIA OSCURA (10/8 · fix #1 11/8): SOLO la dan los mobs de nivel 10-12.
@@ -1789,16 +1806,7 @@ class ForestScene extends Phaser.Scene {
       this.leaving = true;
       irAEscena(this, "forest"); return;
     }
-    if (hero.x < 40) {
-      /* 8/9: la cuenta es de ESTA zona. Antes sumaba el suelo de las cuatro, así que salir del
-         pantano avisaba de objetos que estaban en la guarida. */
-      const left = (GF.forestDrops || []).filter(g => g.zona == null || g.zona === this.zonaKey).length;
-      if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si vuelves.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }
-      if (typeof zonaSalir === "function" && typeof mostrarResumenZona === "function") mostrarResumenZona(zonaSalir(false));
-      if (typeof saveFarm === "function") saveFarm();
-      this.leaving = true;
-      irAEscena(this, "farm"); return;
-    }
+    if (hero.x < 40) { void this.salirVoluntario(); return; }
 
     // detalles viernes (1): el clic izquierdo SOLO acerca y fija — el ataque es únicamente con clic derecho (auto cada 2s)
 
@@ -1813,6 +1821,49 @@ class ForestScene extends Phaser.Scene {
     this.updateMonsters(dt, t);
     this.updatePrompt();
     if (window.GoldenGraveGuide) GoldenGraveGuide.update(this);
+  }
+
+  terminarSalidaVoluntaria() {
+    const left = (GF.forestDrops || []).filter(g => g.zona == null || g.zona === this.zonaKey).length;
+    if (left) { log("Dejaste " + left + " objeto(s) en el suelo de la Zona Negra — siguen ahí si vuelves.", "bad"); toast("Dejaste " + left + " objeto(s) en el suelo"); }
+    if (typeof zonaSalir === "function" && typeof mostrarResumenZona === "function") mostrarResumenZona(zonaSalir(false));
+    if (typeof saveFarm === "function") saveFarm();
+    this.leaving = true;
+    irAEscena(this, "farm");
+  }
+
+  async salirVoluntario() {
+    const viaje = G.zonaViaje, raiz = contLlevado();
+    const servidor = window.__gfAhoraServidor?.();
+    const ahora = Number.isFinite(servidor) ? servidor : nowMs();
+    const huboEvento = viaje?.t > 0 && viaje.t < ENERGIA_EVENTO_FIN && ahora >= ENERGIA_EVENTO_INICIO;
+    // Con un botín grande, el guardado previo acredita el morral desde el que saldrá.
+    const requiereMorral = huboEvento && raiz && BOTIN_EVENTO_ENERGIA.some(([k]) => contContar(raiz, "res", k) > (k === "madera" || k === "piedra" ? 100 : 12));
+    if (!requiereMorral || typeof UID === "undefined" || !UID || SOLO_LOCAL) {
+      this.terminarSalidaVoluntaria();
+      return;
+    }
+
+    const uid = UID, contenido = JSON.stringify(raiz);
+    this.leaving = true;
+    try {
+      await conTope(saveFarm(true), 40000, "guardar el morral antes del regreso");
+      if (!this.scene.isActive()) return;
+      if (UID !== uid || G.zonaViaje !== viaje) { this.leaving = false; return; }
+      const guardado = JSON.parse(lastSavedKey || "null");
+      if (SAVE_BASES.get(uid) && !SAVE_CONFLICTOS.has(uid) && !guardadoTienePendiente(uid) &&
+          guardado?.d?.zonaViaje?.t === viaje.t && JSON.stringify(guardado.d.cont) === contenido &&
+          JSON.stringify(contLlevado()) === contenido) {
+        this.terminarSalidaVoluntaria();
+        return;
+      }
+    } catch (_) { /* El morral permanece contigo para reintentar la vuelta. */ }
+    if (!this.scene.isActive()) return;
+    this.leaving = false;
+    if (UID !== uid || G.zonaViaje !== viaje) return;
+    this.hero.x = Math.max(this.hero.x, 46);
+    this.moveTarget = null;
+    toast("El morral sigue contigo. Guarda y vuelve a intentar el regreso.");
   }
 
   updateMonsters(dt, t) {
