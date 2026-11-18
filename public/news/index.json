@@ -1,6 +1,15 @@
 {
   "items": [
     {
+      "id": "2026-11-17-evento-energia-pantano",
+      "title": "Evento flash de Golden Farm",
+      "date": "2026-11-17",
+      "image": "/news/evento-energia-pantano-20261117.webp",
+      "alt": "Evento flash de Golden Farm. 100 de energía Free y botín extra en el Pantano, con una rata, un murciélago y una larva venenosa.",
+      "content": "Del **martes 17 de noviembre** al **jueves 19 a las 00:00**, hora de Uruguay y Argentina.\n\n🌱 **Energía de granja Free** · Durante el evento, el máximo sube de **50 a 100**.\n\n🐀 **Botín extra en el Pantano** · Al derrotar ratas, murciélagos y larvas venenosas, cada material tiene su propia tirada.\n\n- **Madera y piedra** · 40 % cada una, de 1 a 5 unidades.\n- **Bronce** · 10 %, de 1 a 3 unidades.\n- **Oro** · 5 %, de 1 a 3 unidades.\n- **Hierro** · 3 %, 1 unidad.\n\nSi ya tenías el juego abierto, pulsá **Actualizar** para cargar el evento.\n\n🎮 https://goldenfarm.onrender.com/",
+      "discordUrl": "https://discord.com/channels/1564640221063024763/1564643673889841243/1572415055494906018"
+    },
+    {
       "id": "2026-11-13-bellotas-del-bosque",
       "title": "Bellotas del Bosque · Evento flash",
       "date": "2026-11-13",
