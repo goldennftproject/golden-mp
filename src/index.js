@@ -89,7 +89,7 @@ app.use((req, res, next) => {
 
 // Versión del deploy: en Render cambia el commit en cada deploy (no en reinicios).
 const VERSION = process.env.RENDER_GIT_COMMIT || "dev";
-app.get("/version", (req, res) => { res.set("Cache-Control", "no-store"); res.json({ v: VERSION }); });
+app.get("/version", (req, res) => { res.set("Cache-Control", "no-store"); res.json({ v: VERSION, ahora: Date.now() }); });
 
 // Canal de avisos en vivo (SSE): cada ventana del juego queda suscripta.
 // Al deployar, el server viejo muere → el navegador se reconecta solo al nuevo →

@@ -4,6 +4,8 @@
    al instante: push exacto. El sondeo queda de respaldo por si el stream no anda. */
 (function () {
   let current = null, shown = false, burstUntil = 0, timer = null;
+  let horaServidor = null;
+  window.__gfAhoraServidor = () => horaServidor ? horaServidor.ahora + performance.now() - horaServidor.recibido : NaN;
   let presenciaStream = null, presenciaId = null;
   let presenciaNombre = null;
   function cuentaPresencia() {
@@ -41,7 +43,8 @@
     try {
       const r = await fetch("/version", { cache: "no-store" });
       if (!r.ok) { enterBurst(); return; }
-      const { v } = await r.json();
+      const { v, ahora } = await r.json();
+      if (Number.isFinite(ahora)) horaServidor = { ahora, recibido: performance.now() };
       if (!v) return;
       window.__gfServerVersion=v;
       if (current === null) { current = v; anotar("sondeo: versión inicial " + v.slice(0, 7)); return; }      // versión con la que cargaste

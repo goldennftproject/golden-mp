@@ -37,7 +37,7 @@
   const project=data=>{const out=Object.create(null);for(const k of COMPARISON_FIELDS)if(!['visto','_saveOp','_economiaControl'].includes(k)&&Object.prototype.hasOwnProperty.call(data,k))out[k]=data[k];return out;};
   const left=project(a),right=project(b),avip=number(a.produccion?.vipHasta)?a.produccion.vipHasta:0,bvip=number(b.produccion?.vipHasta)?b.produccion.vipHasta:0;
   // A full, equal confirmed energy balance cannot regenerate further. Otherwise value and date stay inseparable.
-  const cap=avip>now?100:50;
+  const cap=typeof energiaCapacidad==="function"?energiaCapacidad(now,avip):avip>now?100:50;
   if(avip===bvip&&plain(left.energiaGranja)&&plain(right.energiaGranja)&&left.energiaGranja.actual===cap&&right.energiaGranja.actual===cap&&number(left.energiaGranja.at)&&number(right.energiaGranja.at)){
    left.energiaGranja={...left.energiaGranja};right.energiaGranja={...right.energiaGranja};delete left.energiaGranja.at;delete right.energiaGranja.at;
   }
@@ -959,7 +959,7 @@ function hydrate(d) {
   }
   /* ---- FASE 1 · APLICAR ---- */
   G.energiaGranja = d.energiaGranja && Number.isFinite(d.energiaGranja.actual) && Number.isFinite(d.energiaGranja.at)
-    ? {v:1,actual:Math.max(0,Math.min(100,d.energiaGranja.actual)),at:d.energiaGranja.at} : {v:1,actual:100,at:nowMs()};
+    ? {v:1,actual:Math.max(0,Math.min(100,d.energiaGranja.actual)),at:d.energiaGranja.at} : {v:1,actual:d.produccion?.vipHasta>nowMs()?100:50,at:nowMs()};
   G.artefactos = d.artefactos ? JSON.parse(JSON.stringify(d.artefactos)) : null;
   G.packs=d.packs?JSON.parse(JSON.stringify(d.packs)):null;
   G.banco = d.banco ? JSON.parse(JSON.stringify(d.banco)) : null;
@@ -2034,7 +2034,7 @@ function guardadoMismoContenido(peticion,fila) {
     if(energia.at<at)actual=energiaModelo(esperada,at);
     else {
       const hasta=Math.max(at,energia.at),fin=Number(esperada.produccion?.vipHasta)||0;
-      const adelantada=(Math.max(0,Math.min(hasta,fin)-at)*100+Math.max(0,hasta-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
+      const adelantada=energiaRegeneracion(at,hasta,fin);
       actual=Math.max(0,energia.actual-adelantada);
     }
     if(aceptada.actual===actual&&aceptada.at===at){energia.actual=actual;energia.at=at;}

@@ -114,19 +114,44 @@ function estadoDeCero() {
 const ENERGIA_GRANJA_MAX = 100, ENERGIA_GRANJA_MS = 4 * 3600000;
 function vipVigente(t=nowMs()){return !!(G.produccion && G.produccion.vipHasta>t);}
 function vipTiempoMult(){return vipVigente()?0.9:1;}
-function energiaGranjaMax(t=nowMs()){return vipVigente(t)?100:50;}
-function energiaModelo(d,t){
-  const e=d.energiaGranja,fin=Number(d.produccion && d.produccion.vipHasta)||0;
-  if(!e||!Number.isFinite(e.actual)||!Number.isFinite(e.at))return fin>t?100:50;
-  const at=e.at||t;let v=Math.max(0,e.actual);
-  if(at<fin)v=Math.min(100,v+Math.max(0,Math.min(t,fin)-at)*100/14400000);
-  if(t>=fin)v=Math.min(50,v+Math.max(0,t-Math.max(at,fin))*50/14400000);
-  return Math.max(0,Math.min(fin>t?100:50,v));
+const ENERGIA_EVENTO_INICIO = Date.parse("2026-11-18T00:43:00Z");
+const ENERGIA_EVENTO_FIN = Date.parse("2026-11-19T03:00:00Z");
+function energiaEventoActivo(t = nowMs()) {
+  return t >= ENERGIA_EVENTO_INICIO && t < ENERGIA_EVENTO_FIN;
+}
+function energiaCapacidad(t, finVip) {
+  return finVip > t || energiaEventoActivo(t) ? 100 : 50;
+}
+function energiaRegeneracion(desde, hasta, finVip) {
+  const vip = Math.max(0, Math.min(hasta, finVip) - desde);
+  const eventoSinVip = Math.max(0, Math.min(hasta, ENERGIA_EVENTO_FIN) - Math.max(desde, finVip, ENERGIA_EVENTO_INICIO));
+  return (Math.max(0, hasta - desde) + vip + eventoSinVip) * 50 / ENERGIA_GRANJA_MS;
+}
+// Aplicar el tope de cada tramo conserva la carga al subir y limita el saldo al bajar.
+function energiaPorTramos(actual, at, hasta, finVip) {
+  at = Math.min(at, hasta);
+  const limites = [finVip, ENERGIA_EVENTO_INICIO, ENERGIA_EVENTO_FIN]
+    .filter(limite => limite > at && limite < hasta).sort((a, b) => a - b);
+  let valor = Math.max(0, actual);
+  for (const fin of [...limites, hasta]) {
+    const cap = energiaCapacidad(at, finVip);
+    valor = Math.min(cap, valor + Math.max(0, fin - at) * cap / ENERGIA_GRANJA_MS);
+    at = fin;
+  }
+  return Math.min(energiaCapacidad(hasta, finVip), valor);
+}
+function energiaGranjaMax(t = nowMs()) {
+  return energiaCapacidad(t, Number(G.produccion?.vipHasta) || 0);
+}
+function energiaModelo(d, t) {
+  const e = d.energiaGranja, finVip = Number(d.produccion?.vipHasta) || 0;
+  if (!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) return finVip > t ? 100 : 50;
+  return energiaPorTramos(e.actual, e.at || t, t, finVip);
 }
 const ENERGIA_GRANJA_COSTO = {plant:1,harvest:1,chop:1,mine:1,fish:2,animal:2,craft:0,cook:1,nasa:2,auto:2};
 function energiaGranjaTick() {
   const t=nowMs(); let e=G.energiaGranja;
-  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) e=G.energiaGranja={v:1,actual:energiaGranjaMax(t),at:t};
+  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) e=G.energiaGranja={v:1,actual:vipVigente(t)?100:50,at:t};
   e.actual=energiaModelo(G,t);
   e.at=Math.max(t,e.at||t); return e.actual;
 }

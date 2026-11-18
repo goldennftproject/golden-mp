@@ -41,13 +41,36 @@ function mismoJSON(a,b) {
   const keys=Object.keys(a);
   return keys.length===Object.keys(b).length && keys.every(k=>Object.prototype.hasOwnProperty.call(b,k)&&mismoJSON(a[k],b[k]));
 }
-function energiaServidor(d,ahora) {
-  const e=d && d.energiaGranja,fin=num(d && d.produccion && d.produccion.vipHasta);
-  if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at))return fin>ahora?100:50;
-  const at=e.at||ahora;let v=Math.max(0,e.actual);
-  if(at<fin)v=Math.min(100,v+Math.max(0,Math.min(ahora,fin)-at)*100/ENERGIA_GRANJA_MS);
-  if(ahora>=fin)v=Math.min(50,v+Math.max(0,ahora-Math.max(at,fin))*50/ENERGIA_GRANJA_MS);
-  return Math.max(0,Math.min(fin>ahora?100:50,v));
+const ENERGIA_EVENTO_INICIO = Date.parse("2026-11-18T00:43:00Z");
+const ENERGIA_EVENTO_FIN = Date.parse("2026-11-19T03:00:00Z");
+function energiaEventoActivo(t) {
+  return t >= ENERGIA_EVENTO_INICIO && t < ENERGIA_EVENTO_FIN;
+}
+function energiaCapacidad(t, finVip) {
+  return finVip > t || energiaEventoActivo(t) ? 100 : 50;
+}
+function energiaRegeneracion(desde, hasta, finVip) {
+  const vip = Math.max(0, Math.min(hasta, finVip) - desde);
+  const eventoSinVip = Math.max(0, Math.min(hasta, ENERGIA_EVENTO_FIN) - Math.max(desde, finVip, ENERGIA_EVENTO_INICIO));
+  return (Math.max(0, hasta - desde) + vip + eventoSinVip) * 50 / ENERGIA_GRANJA_MS;
+}
+// Aplicar el tope de cada tramo conserva la carga al subir y limita el saldo al bajar.
+function energiaPorTramos(actual, at, hasta, finVip) {
+  at = Math.min(at, hasta);
+  const limites = [finVip, ENERGIA_EVENTO_INICIO, ENERGIA_EVENTO_FIN]
+    .filter(limite => limite > at && limite < hasta).sort((a, b) => a - b);
+  let valor = Math.max(0, actual);
+  for (const fin of [...limites, hasta]) {
+    const cap = energiaCapacidad(at, finVip);
+    valor = Math.min(cap, valor + Math.max(0, fin - at) * cap / ENERGIA_GRANJA_MS);
+    at = fin;
+  }
+  return Math.min(energiaCapacidad(hasta, finVip), valor);
+}
+function energiaServidor(d, ahora) {
+  const e = d?.energiaGranja, finVip = num(d?.produccion?.vipHasta);
+  if (!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) return finVip > ahora ? 100 : 50;
+  return energiaPorTramos(e.actual, e.at || ahora, ahora, finVip);
 }
 const ACTIVIDAD_OBJETIVO=2000;
 function picosUnificarEstado(d){
@@ -144,14 +167,13 @@ function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
   const hachas=Math.max(0,num(a.tools?.axe)+fabricadas-num(b.tools?.axe));
   const e=a.energiaGranja,finVip=num(a.produccion?.vipHasta);
   if(!e||!Number.isFinite(e.actual)||!Number.isFinite(b.energiaGranja?.actual)||b.energiaGranja.actual<0)return 0;
-  const regen=(desde,hasta)=>{const vip=Math.max(0,Math.min(hasta,finVip)-desde);return (vip*100+(Math.max(0,hasta-desde)-vip)*50)/ENERGIA_GRANJA_MS;};
   // La regeneración anterior al último guardado sólo puede llenar el depósito.
   // El intervalo posterior usa updated_at del servidor, nunca visto/at del cliente nuevo.
   const recibido=desdeServidor>0&&desdeServidor<=ahora?desdeServidor:ahora,anclaEnergia=num(a.energiaGranja?.at);
   const inicio=anclaEnergia>0&&anclaEnergia<=recibido?anclaEnergia:recibido;
-  const energiaInicio=Math.min(finVip>inicio?100:50,Math.max(0,e.actual)+regen(Math.min(inicio,Math.max(0,num(e.at)||inicio)),inicio));
+  const energiaInicio=energiaServidor(a,inicio);
   const finEnergia=Number.isFinite(b.energiaGranja?.at)?Math.min(ahora,Math.max(inicio,b.energiaGranja.at)):ahora;
-  const energia=Math.floor(Math.max(0,energiaInicio+regen(inicio,finEnergia)-b.energiaGranja.actual)+1e-6);
+  const energia=Math.floor(Math.max(0,energiaInicio+energiaRegeneracion(inicio,finEnergia,finVip)-b.energiaGranja.actual)+1e-6);
   return Math.min(probadas,stat,xp,Math.floor(hachas),energia);
 }
 function actividadEvidencias(a,b,ahora,desdeServidor=0,evento=false){
@@ -265,7 +287,7 @@ function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0
   const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
   // Sólo el intervalo representado por la muestra, sin reutilizar regeneración posterior.
   const finEnergia=Number.isFinite(next.energiaGranja?.at)?Math.min(ahora,Math.max(at,next.energiaGranja.at)):ahora;
-  const regen=(Math.max(0,Math.min(finEnergia,fin)-at)*100+Math.max(0,finEnergia-Math.max(at,fin))*50)/ENERGIA_GRANJA_MS;
+  const regen=energiaRegeneracion(at,finEnergia,fin);
   let presupuesto=e&&Number.isFinite(e.actual)?Math.max(0,e.actual+regen-num(next.energiaGranja?.actual)):0,credito=0;const acciones={};
   for(const k of Object.keys(ACTIVIDAD_COSTOS)){
     const anterior=Math.max(0,num(a.registro[k])),pedido=Number.isSafeInteger(pedidos[k])&&pedidos[k]>=0&&pedidos[k]<=1e9?Math.max(anterior,pedidos[k]):anterior;
@@ -801,7 +823,7 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   // Transportar valor e instante juntos; las fechas del cliente no amplían el saldo permitido.
   const energiaAt=energia ? Math.min(ahora,Math.max(0,num(antes.energiaGranja?.at),desdeServidor,num(energia.at))) : ahora;
   const energiaHasta=energia ? Math.max(energiaAt,num(energia.at)) : energiaAt,energiaFinVip=num(antes.produccion?.vipHasta);
-  const energiaAdelantada=(Math.max(0,Math.min(energiaHasta,energiaFinVip)-energiaAt)*100+Math.max(0,energiaHasta-Math.max(energiaAt,energiaFinVip))*50)/ENERGIA_GRANJA_MS;
+  const energiaAdelantada=energiaRegeneracion(energiaAt,energiaHasta,energiaFinVip);
   const energiaActual=energia ? num(energia.at)<energiaAt ? energiaServidor({energiaGranja:energia,produccion:antes.produccion},energiaAt) : Math.max(0,num(energia.actual)-energiaAdelantada) : energiaServidor(antes,energiaAt);
   next.energiaGranja={v:1,actual:Math.min(energiaActual,energiaServidor(antes,energiaAt)),at:energiaAt};
   let gastoVip = 0, reembolso = 0;
