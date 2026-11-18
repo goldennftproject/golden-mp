@@ -1471,7 +1471,7 @@ class ForestScene extends Phaser.Scene {
     // solo de la Curtiduría. Las tablas gearLoot quedan en los datos por si se revierte.
     // if (m.def.gearLoot) for (const [gk, ch] of m.def.gearLoot) { if (Math.random() < ch) drops.push({ k: gk, n: 1, kind: "gear" }); }
     if (this.target === m) this.clearTarget();
-    const loot = rollLoot(m.def);
+    const loot = rollLoot(botinManualDef(this.zonaKey, m.key, m.def));
     // Cada material del evento se sortea por separado y entra al botín del cadáver.
     if (this.zonaKey === "pantano" && ["rata", "murcielago", "larva"].includes(m.key)) {
       const ahoraServidor = window.__gfAhoraServidor?.();

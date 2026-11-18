@@ -1949,7 +1949,12 @@ class FarmScene extends Phaser.Scene {
     if (o.type === "dummy") {
       if (typeof dummyEntrenando === "function" && dummyEntrenando()) { dummyCobrar(); return; }   // volviste: cobrás los golpes acumulados
       const motivo = dummyMotivoArma();
-      if (motivo) { toast(motivo); return; }
+      if (motivo) {
+        askConfirm(motivo, () => this.abrirPracticaCombate(), {
+          title: "Muñeco de entrenamiento", yes: "Practicar reflejos", yesClass: "green", no: "Cerrar",
+        });
+        return;
+      }
       const dleft = (G.dummyUsedAt || 0) + DUMMY_CD_MS - nowMs();
       askConfirm((dleft > 0
           ? "El muñeco descansa (vuelve en " + fmtDur(dleft) + "), pero puedes dejar al granjero entrenando: acumulas golpes del arma por el tiempo que pase, hasta " + DUMMY_OFF_MAX_H + " h."
@@ -1958,6 +1963,17 @@ class FarmScene extends Phaser.Scene {
         () => { if (dleft > 0) { toast("El muñeco descansa — vuelve en " + fmtDur(dleft)); return; } this.trainDummy(o); },
         { title: "Muñeco de entrenamiento", yes: dleft > 0 ? "Cerrar" : "Entrenar ahora", yesClass: dleft > 0 ? "ghost" : "green",
           no: "Dejar entrenando", noClass: "gold", onNo: () => dummyIniciar() });
+      const mensaje = $("cf-msg");
+      if (mensaje) {
+        const practica = document.createElement("button");
+        practica.type = "button";
+        practica.className = "ghost sm";
+        practica.style.display = "block";
+        practica.style.marginTop = "8px";
+        practica.textContent = "Practicar reflejos";
+        practica.onclick = () => { cerrarConfirmacionLocal(); this.abrirPracticaCombate(); };
+        mensaje.appendChild(practica);
+      }
       return;
     }
     if (o.type === "boar") { o.sprite.destroy(); const i = this.threats.indexOf(o); if (i >= 0) this.threats.splice(i, 1); log("Espantaste al jabalí.", "good"); toast("¡Espantado!"); return; }   // XP de espada llega con el combate (necesita espada equipada)
@@ -4764,6 +4780,54 @@ class FarmScene extends Phaser.Scene {
       return true;
     }
     return false;
+  }
+
+  abrirPracticaCombate() {
+    const panel = "ov-practica-combate";
+    const estado = $("practica-combate-estado"), boton = $("practica-combate-golpe");
+    if (!estado || !boton) return;
+    this.cancelarPracticaCombate?.();
+
+    const total = 5;
+    let ronda = 0, aciertos = 0, reloj = null;
+    this.cancelarPracticaCombate = () => clearTimeout(reloj);
+    const esperar = (ms, accion) => {
+      reloj = setTimeout(() => { if (isOpen(panel)) accion(); }, ms);
+    };
+    const presentar = (texto, etiqueta, accion, estilo = "green") => {
+      estado.textContent = texto;
+      boton.textContent = etiqueta;
+      boton.className = estilo;
+      boton.onclick = accion;
+    };
+    const resolver = (mensaje, acierto) => {
+      clearTimeout(reloj);
+      if (acierto) aciertos++;
+      const sigue = ronda < total;
+      presentar(
+        mensaje + " Aciertos: " + aciertos + "/" + ronda + ".",
+        sigue ? "Siguiente ronda" : "Reintentar",
+        sigue ? comenzarRonda : comenzarPractica
+      );
+    };
+    const comenzarRonda = () => {
+      ronda++;
+      const progreso = "Ronda " + ronda + "/" + total + " · ";
+      presentar(progreso + "Esperá la señal.", "Golpear", () => resolver("Te adelantaste.", false), "ghost");
+      esperar(750 + Math.floor(Math.random() * 951), () => {
+        presentar(progreso + "¡Ahora!", "Golpear", () => resolver("¡Acertaste!", true));
+        esperar(1800, () => resolver("Se pasó el tiempo.", false));
+      });
+    };
+    const comenzarPractica = () => {
+      ronda = 0;
+      aciertos = 0;
+      comenzarRonda();
+    };
+
+    presentar("Listo para practicar.", "Empezar", comenzarPractica);
+    openOv(panel);
+    boton.focus({ preventScroll: true });
   }
 
   // entrenar con el dummy: 3 espadazos, golpes de la habilidad equipada y cooldown de 4 horas

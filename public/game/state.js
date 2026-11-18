@@ -8096,6 +8096,15 @@ const BOW_RANGE = GF.TILE * 4;
 // diseñador: multiplica la chance de TODOS los materiales. La plata garantizada no se toca
 // (chance 1), así matar siempre paga algo pero los materiales salen menos seguido.
 var DROP_CHANCE_MULT = 0.6;
+const BOTIN_MANUAL_PANTANO = {
+  rata: { plata: [3, 3, 1], carne: [1, 1, 0.35] },
+  murcielago: { plata: [4, 4, 1], carne: [1, 1, 0.40] },
+  larva: { plata: [5, 5, 1], carne: [1, 2, 0.50] },
+};
+function botinManualDef(zona, key, def = MONSTER_DEF[key]) {
+  if (!def || zona !== "pantano" || !Object.hasOwn(BOTIN_MANUAL_PANTANO, key)) return def;
+  return { ...def, loot: { ...def.loot, ...BOTIN_MANUAL_PANTANO[key] } };
+}
 function rollLoot(def) {
   const out = {};
   for (const k in def.loot) {
