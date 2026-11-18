@@ -260,7 +260,8 @@
     return { suerte, cofre, evento, clave };
   }
   function render(actual, reiniciarScroll = true) {
-    const terminos = normalizar(campo.value).trim().split(/\s+/).filter(Boolean);
+    const consulta = normalizar(campo.value).trim();
+    const terminos = consulta.split(/\s+/).filter(Boolean);
     const fuentes = {
       progreso, materiales, recetas,
       bestiario: () => bestiario(actual.suerte, actual.cofre, actual.evento),
@@ -271,6 +272,14 @@
       const palabras = normalizar([ficha.titulo, ficha.subtitulo, ficha.texto, ficha.datos.flat(), (ficha.grupos || []).flat(3)].join(" "));
       return terminos.every(termino => palabras.includes(termino));
     });
+    if (terminos.length) {
+      const prioridad = ficha => {
+        const titulo = normalizar(ficha.titulo);
+        if (titulo === consulta) return 0;
+        return terminos.every(termino => titulo.includes(termino)) ? 1 : 2;
+      };
+      fichas.sort((a, b) => prioridad(a) - prioridad(b));
+    }
     firma = actual.clave;
     for (const boton of botones) {
       boton.setAttribute("aria-pressed", String(!terminos.length && boton.dataset.guiaSeccion === seccion));
