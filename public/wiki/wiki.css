@@ -260,18 +260,19 @@ main { min-width: 0; }
 .steps {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .65rem;
-  max-width: 58rem;
+  gap: .85rem;
   margin: 0;
   padding: 0;
 }
-.steps > li {
-  padding: .72rem .95rem;
+.steps > li, .answer {
+  min-width: 0;
+  padding: clamp(.85rem, 2.25vw, 1.4rem);
   border: 1px solid var(--line);
-  border-radius: .48rem;
+  border-radius: .75rem;
   background: var(--card);
-  list-style-position: inside;
+  box-shadow: 0 2px 5px #4c3b260a;
 }
+.steps > li { list-style-position: inside; }
 .steps > li::marker { color: #80501c; font-weight: 850; }
 .steps p { margin: .35rem 0 0; color: var(--muted); }
 .shortcut-grid {
@@ -293,28 +294,35 @@ main { min-width: 0; }
 .shortcut-grid strong { display: block; font: 700 1.18rem/1.21 var(--heading); }
 .shortcut-grid img { width: 2.25rem; height: 2.25rem; object-fit: contain; margin-block-end: .55rem; }
 .shortcut-grid :where(span, p) { display: block; margin: .35rem 0 0; color: var(--muted); font-size: .91rem; }
-.answer {
-  max-width: 70ch;
-  margin-block: .82rem;
-  padding: .85rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: .55rem;
-  background: var(--card);
-}
+.answer { margin-block: .9rem; }
+.answer > :where(p, ol, ul, dl) { max-width: 70ch; }
 .answer h3 { margin: 0; font-size: 1.27rem; }
 .answer p:last-child { margin-block-end: 0; }
 .answer dl { margin-block-end: 0; }
 .answer dd { margin: .2rem 0 .8rem; }
 .answer dd:last-child { margin-block-end: 0; }
-.wiki-figure { margin: .85rem 0 .15rem; }
+.wiki-figure {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: .55rem;
+  margin: 1rem 0 0;
+  padding: clamp(.6rem, 1.65vw, 1.15rem);
+  border: 1px solid #e2dac8;
+  border-radius: .6rem;
+  background: linear-gradient(160deg, #f3ede0, #f9f5eb);
+  text-align: center;
+}
 .wiki-media {
   display: block;
   width: fit-content;
+  min-width: 0;
   max-width: 100%;
   overflow: hidden;
   border: 1px solid #cdbf9e;
-  border-radius: .42rem;
-  background: #f6efe0;
+  border-radius: .48rem;
+  background: #fffbf0;
+  box-shadow: 0 2px 6px #4c3b261a;
   color: var(--forest);
   cursor: zoom-in;
   text-decoration: none;
@@ -324,20 +332,18 @@ main { min-width: 0; }
 .wiki-figure-vertical img { width: auto; max-height: 27rem; }
 .wiki-media span {
   display: block;
-  padding: .16rem .65rem .2rem;
+  padding: .36rem .7rem;
   border-top: 1px solid #ded2b7;
-  text-align: right;
   font-size: .8rem;
   font-weight: 700;
   text-decoration: underline;
 }
 .wiki-figure figcaption {
-  margin-top: .3rem;
+  max-width: 60ch;
   color: var(--muted);
   font-size: .9rem;
 }
 .notice {
-  max-width: 75ch;
   margin: 1rem 0;
   padding: .85rem 1rem;
   border: 1px solid #d9bf83;
