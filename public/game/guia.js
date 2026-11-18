@@ -18,8 +18,53 @@
     .map(([clave, n]) => n + " " + etiqueta(clave)).join(" · ");
   const intervalo = (a, b) => a === b ? String(a) : a + "–" + b;
   const porcentaje = new Intl.NumberFormat("es", { style: "percent", maximumFractionDigits: 2 });
+  const cantidad = new Intl.NumberFormat("es");
   const duracion = segundos => fmtDur(segundos * 1000);
   const normalizar = valor => valor.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+
+  function proximaExpansion() {
+    const expansion = expansionSiguiente();
+    if (!expansion) return null;
+    const ficha = {
+      titulo: "Próxima expansión",
+      subtitulo: "Expansión " + expansion.n + " de " + EXPANSION_MAX,
+      accion: { texto: "Ver expansión", abrir: () => openOv("ov-expandir") },
+    };
+    const obra = expansionObra();
+    if (obra && obra.i === expansion.i) {
+      ficha.datos = typeof expansionObraPendiente === "function" && expansionObraPendiente()
+        ? [["Estado", "Inicio pendiente de confirmar"]]
+        : [["Estado", "Pagada · en obra"], ["Lista en", expansionObraTxt()]];
+      return ficha;
+    }
+
+    const nivel = G.level || 1;
+    const nivelNecesario = "Nivel " + expansion.nivel;
+    ficha.datos = [["Granja", nivel < expansion.nivel ? nivelNecesario + " · tienes nivel " + nivel : nivelNecesario + " alcanzado"]];
+    let materialesListos = true;
+    for (const [clave, pide] of Object.entries(expansion.costo)) {
+      if (pide <= 0) continue;
+      const tengo = Math.floor(costoTengo(clave));
+      const falta = pide - tengo;
+      const saldo = cantidad.format(tengo) + " de " + cantidad.format(pide);
+      const faltante = falta === 1 ? " · falta 1" : " · faltan " + cantidad.format(falta);
+      ficha.datos.push([etiqueta(clave), falta > 0 ? saldo + faltante : saldo]);
+      if (falta <= 0) continue;
+      materialesListos = false;
+      if (clave === "bronce" && G.produccion?.v === 1) {
+        ficha.accion = { texto: "Cómo conseguir bronce", abrir: () => abrirAyudaBronce() };
+      }
+    }
+    if (G.produccion?.v === 1 && !expansion.costo.bronce) {
+      const gastos = expansionCostos();
+      const futura = gastos.findIndex((costo, i) => i > expansion.i && costo.bronce > 0);
+      if (futura >= 0 && costoTengo("bronce") < gastos[futura].bronce) {
+        ficha.datos.push(["Para más adelante", "La expansión " + (futura + 1) + " pide " + costos({ bronce: gastos[futura].bronce })]);
+      }
+    }
+    if (materialesListos && nivel >= expansion.nivel) ficha.texto = "Ya puedes iniciar la expansión.";
+    return ficha;
+  }
 
   function progreso() {
     const filas = Object.entries(BUILD_DEF).filter(([id]) => !GF.esAltarOculto(id))
@@ -256,14 +301,16 @@
 
   function recalcular() {
     const suerte = luckMult(), cofre = chestBonus(), evento = eventoBotinActivo();
-    const clave = [suerte, cofre, evento, vipVigente(), G.produccion?.v].join("|");
-    return { suerte, cofre, evento, clave };
+    const proxima = seccion === "progreso" || campo.value.trim() ? proximaExpansion() : null;
+    const clave = JSON.stringify([suerte, cofre, evento, vipVigente(), G.produccion?.v, proxima]);
+    return { suerte, cofre, evento, proxima, clave };
   }
   function render(actual, reiniciarScroll = true) {
     const consulta = normalizar(campo.value).trim();
     const terminos = consulta.split(/\s+/).filter(Boolean);
     const fuentes = {
-      progreso, materiales, recetas,
+      progreso: () => actual.proxima ? [actual.proxima, ...progreso()] : progreso(),
+      materiales, recetas,
       bestiario: () => bestiario(actual.suerte, actual.cofre, actual.evento),
     };
     const candidatos = terminos.length ? Object.values(fuentes).flatMap(crear => crear()) : fuentes[seccion]();

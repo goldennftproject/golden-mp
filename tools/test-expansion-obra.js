@@ -103,7 +103,8 @@ console.log("\n5 · LA CARA: el botón del panel dice cuánto tarda (lectura de 
   ok("y el recuadro de REQUISITOS tiene su fila « Tiempo de obra »", /Tiempo de obra/.test(UI) && /expansionObraMinTxt\(minObra\)/.test(UI));
   ok("con el formato de horas cuando pasa de 60", g("expansionObraMinTxt(160)") === "2 h 40 min" && g("expansionObraMinTxt(60)") === "1 h" && g("expansionObraMinTxt(30)") === "30 min");
   ok("y en obra muestra el reloj y queda apagado", /"En obra · " \+ expansionObraTxt\(\)/.test(UI) && /btn\.disabled = true; btn\.onclick = null;/.test(UI));
-  ok("el HUD llama al tick cada segundo", /expansionObraTick\(\)/.test(UI.slice(UI.indexOf("setInterval(() => { if (typeof buffTick"))));
+  const latido = UI.split("\n").find(linea => linea.includes("setInterval(") && linea.includes("buffTick()"));
+  ok("el HUD llama al tick cada segundo", !!latido && /expansionObraTick\(\).*}, 1000\);/.test(latido));
 }
 
 console.log(fallos ? "\n✗ " + fallos + " fallo(s)\n" : "\n✓ la expansión se paga ahora y se abre cuando termina la obra\n");
