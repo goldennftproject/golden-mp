@@ -8,6 +8,22 @@
   overflow: hidden;
 }
 #ov-guia > .guia-card > h3 { flex: none; }
+#ov-guia .guia-wiki {
+  align-self: flex-start;
+  margin-bottom: 8px;
+  color: #315324;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+#ov-guia .guia-wiki-nueva {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 #ov-guia .guia-buscador {
   display: flex;
   gap: 8px;
@@ -49,7 +65,7 @@
   background: #3e632d;
   border-color: #28421e;
 }
-#ov-guia button.guia-boton:focus-visible, #ov-guia #guia-busqueda:focus-visible, #guia-resultados:focus-visible {
+#ov-guia button.guia-boton:focus-visible, #ov-guia #guia-busqueda:focus-visible, #guia-resultados:focus-visible, #ov-guia .guia-wiki:focus-visible {
   outline: 2px solid #274f1d;
   outline-offset: 2px;
 }

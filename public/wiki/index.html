@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Guía oficial de Golden Farm. Empezá tu granja y aprendé a cultivar, expandir, fabricar y explorar la Zona Negra.">
+  <meta property="og:title" content="Wiki de Golden Farm">
+  <meta property="og:description" content="De tu primera siembra a la Zona Negra. Aprendé a jugar y encontrá respuestas rápidas.">
+  <meta property="og:url" content="https://goldenfarm.onrender.com/wiki/">
+  <link rel="canonical" href="https://goldenfarm.onrender.com/wiki/">
+  <link rel="icon" href="/assets/visual-v2/skin/logo-stacked.png">
+  <link rel="stylesheet" href="./wiki.css">
+  <script src="./wiki.js" defer></script>
+  <title>Wiki de Golden Farm</title>
+</head>
+<body>
+  <a class="skip" href="#contenido">Ir al contenido</a>
+  <header class="topbar">
+    <div class="top-inner">
+      <a class="brand" href="#inicio">
+        <img src="/assets/visual-v2/skin/logo-stacked.png" alt="">
+        <span>Wiki de Golden Farm</span>
+      </a>
+      <a class="play" href="/">Jugar</a>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div role="search" hidden>
+        <label for="wiki-search">Buscar en la wiki</label>
+        <input id="wiki-search" type="search" placeholder="Bronce, parcela, espada…" autocomplete="off" aria-controls="wiki-results">
+        <p id="wiki-status" role="status"></p>
+        <ul id="wiki-results" hidden></ul>
+      </div>
+      <details class="wiki-nav" open>
+        <summary>Secciones</summary>
+        <nav aria-label="Secciones de la wiki">
+          <p class="nav-title">Primeros pasos</p>
+          <a href="#inicio" data-topic><img class="nav-icon" src="/assets/farm/chest_daily.png" alt="">Empezá acá</a>
+          <p class="nav-title">Cómo jugar</p>
+          <a href="#cultivos" data-topic><img class="nav-icon" src="/assets/farm/crop_papa.png" alt="">Granja y cultivos</a>
+          <a href="#construccion" data-topic><img class="nav-icon" src="/assets/farm/barn.png" alt="">Construcción y expansión</a>
+          <a href="#mineria" data-topic><img class="nav-icon" src="/assets/farm/pick_bronze.png" alt="">Recursos y minería</a>
+          <a href="#cocina-y-animales" data-topic><img class="nav-icon" src="/assets/farm/animal_alpaca.png" alt="">Cocina y animales</a>
+          <a href="#combate" data-topic><img class="nav-icon" src="/assets/farm/sword_wood.png" alt="">Combate y Zona Negra</a>
+          <a href="#misiones" data-topic><img class="nav-icon" src="/assets/farm/market.png" alt="">Misiones y recompensas</a>
+          <a href="#economia" data-topic><img class="nav-icon" src="/assets/farm/coin_plata.png" alt="">Economía y comercio</a>
+          <p class="nav-title">Soporte</p>
+          <a href="#ayuda" data-topic>Cuenta y ayuda</a>
+        </nav>
+      </details>
+    </aside>
+
+    <main id="contenido" tabindex="-1">
+      <article id="inicio" class="topic" aria-labelledby="titulo-inicio" data-keywords="getting started tutorial empezar crear cuenta primera vez">
+        <header class="hero">
+          <div class="hero-content">
+            <p class="kicker">Guía para principiantes</p>
+            <h1 id="titulo-inicio">Empezá acá</h1>
+            <p>Entrá con tu correo, hacé tu primera cosecha y prepará tu granja para explorar el bosque.</p>
+            <a class="primary" href="#primera-cosecha">Ver primeros pasos <span aria-hidden="true">↓</span></a>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <img class="hero-tree" src="/assets/farm/tree.png" alt="">
+            <img class="hero-barn" src="/assets/farm/barn.png" alt="">
+            <img class="hero-market" src="/assets/farm/market.png" alt="">
+          </div>
+        </header>
+
+        <h2 id="primera-cosecha">Tu primera cosecha</h2>
+        <ol class="steps">
+          <li><strong>Abrí el baúl de bienvenida</strong><p>Está junto al Granero. En PC, usá <b>Mostrar destino</b> en el objetivo de arriba si no lo encontrás.</p></li>
+          <li><strong>Comprá tres semillas de papa</strong><p>Andá al <b>Mercado → Semillas</b> y usá la Plata inicial. Seleccioná las semillas y plantá una en cada parcela.</p></li>
+          <li><strong>Cosechá y vendé las papas</strong><p>Cuando estén listas, tocá las plantas para cosechar. Volvé a <b>Mercado → Vender</b> y reservá Plata para volver a sembrar.</p></li>
+          <li><strong>Construí la Herrería</strong><p>Seguí el objetivo superior. En <b>Menú → Cobertizo</b>, elegí el plano, colocalo en la granja y llevá los materiales a la obra.</p></li>
+        </ol>
+        <h2 id="consultas-frecuentes">Consultas frecuentes</h2>
+        <div class="shortcut-grid">
+          <a href="#conseguir-bronce"><img src="/assets/farm/node_bronze.png" alt=""><span><strong>Conseguir bronce</strong><small>Activá tu primera veta.</small></span></a>
+          <a href="#parcela-pausada"><img src="/assets/farm/plot.png" alt=""><span><strong>Reactivar una parcela</strong><small>Liberá un cupo de producción.</small></span></a>
+          <a href="#primer-combate"><img src="/assets/farm/sword_wood.png" alt=""><span><strong>Entrar al Pantano</strong><small>Equipá un arma y elegí un objetivo.</small></span></a>
+        </div>
+      </article>
+
+      <article id="cultivos" class="topic" aria-labelledby="titulo-cultivos" data-keywords="granja cultivo cosechar semillas plantar granero estamina energia">
+        <header class="topic-heading">
+          <h2 id="titulo-cultivos">Granja y cultivos</h2>
+          <p>Comprá semillas en el Mercado, sembrá en una parcela activa y cosechá cuando estén listas.</p>
+        </header>
+        <section class="answer">
+          <h3 id="sembrar-y-cosechar">Cómo sembrar y cosechar</h3>
+          <ol>
+            <li>Comprá semillas en <b>Mercado → Semillas</b>. El nivel de <b>Cultivo</b> desbloquea nuevas variedades.</li>
+            <li>Elegí la semilla en tu barra y tocá una parcela vacía. El tiempo de crecimiento figura en el Mercado.</li>
+            <li>Cosechá cuando madure. Vendé una parte en el Mercado o guardala para cocinar, alimentar animales o completar pedidos.</li>
+          </ol>
+          <p>La <b>Energía</b> de arriba se usa en tareas productivas y se recupera con el tiempo. El combate tiene su propia estamina.</p>
+        </section>
+        <section class="answer">
+          <h3 id="parcela-pausada">¿Cómo reactivo una parcela pausada?</h3>
+          <p>Tocá la parcela marcada <b>Pausada</b>. Si te falta cupo, elegí qué otra producción pausar y confirmá el intercambio. Tu cultivo sigue en su parcela. El número que ves en el suelo coincide con el del <b>Cobertizo</b>.</p>
+        </section>
+        <section class="answer">
+          <h3 id="inventario-y-habilidades">Inventario y habilidades</h3>
+          <p>En <b>Menú → Inventario</b> ves tus semillas, objetos y materiales. En <b>Habilidades</b> podés consultar el nivel de Cultivo, Tala y Minería, entre otros. Los desbloqueos de terreno dependen del nivel de <b>Granja</b>.</p>
+        </section>
+        <p class="previous-next"><a href="#construccion">Construcción y expansión →</a></p>
+      </article>
+
+      <article id="construccion" class="topic" aria-labelledby="titulo-construccion" data-keywords="expandir ampliar terreno edificios planos granero cobertizo cupos vale">
+        <header class="topic-heading">
+          <h2 id="titulo-construccion">Construcción y expansión</h2>
+          <p>Construí talleres con planos y ampliá el terreno a medida que sube tu nivel de Granja.</p>
+        </header>
+        <section class="answer">
+          <h3 id="colocar-planos">¿Dónde coloco los planos?</h3>
+          <p>Buscá el plano disponible en <b>Menú → Cobertizo</b>. Colocalo sobre un espacio libre y tocá la obra para ver y entregar sus materiales. Consultá los niveles y costes de los edificios en <b>Menú → Guía → Progreso</b>.</p>
+        </section>
+        <section class="answer">
+          <h3 id="proxima-expansion">¿Qué me falta para expandir?</h3>
+          <p>Abrí <b>Menú → Guía → Progreso</b> y mirá <b>Próxima expansión</b>. Allí aparecen el nivel, tus materiales, lo que falta y el tiempo restante si la obra ya está pagada.</p>
+          <p>Al terminar ganás terreno, un cupo productivo y un vale para elegir una <b>parcela, árbol o roca</b> en el Cobertizo. Las vetas avanzadas se consiguen por separado.</p>
+        </section>
+        <p class="notice"><b>Prepará el bronce con tiempo.</b> Podés activar la primera veta desde Granja 3. La expansión 4 pide bronce. <a href="#conseguir-bronce">Ver cómo conseguirlo</a>.</p>
+      </article>
+
+      <article id="mineria" class="topic" aria-labelledby="titulo-mineria" data-keywords="recursos madera piedra talar picar hierro oro veta pico hacha herramienta">
+        <header class="topic-heading">
+          <h2 id="titulo-mineria">Recursos y minería</h2>
+          <p>Talá árboles para conseguir madera y picá rocas para conseguir piedra. Las vetas avanzadas piden una herramienta y un nivel de Minería concretos.</p>
+        </header>
+        <section class="answer">
+          <h3 id="conseguir-bronce" data-keywords="bronze bronzer pico veta bronce conseguir comprar desbloquear">¿Cómo consigo bronce?</h3>
+          <ol>
+            <li><b>Activá una veta.</b> Desde <b>Granja 3</b>, abrí <b>Menú → Cobertizo → Cómo conseguir bronce</b>. Necesitás un cupo productivo y un espacio libre en tu granja.</li>
+            <li><b>Prepará el pico.</b> Fabricá un <b>Pico de Bronce</b> en la Herrería con madera, piedra y Plata. Cada pico sirve para una extracción.</li>
+            <li><b>Picá la veta.</b> Cuando tenga carga y hayas alcanzado <b>Minería 3</b>, podés extraer el primer bronce. La carga base tarda cuatro horas.</li>
+          </ol>
+          <p>Si te falta cupo, podés pausar temporalmente una parcela, árbol o roca desde el Cobertizo. Si te falta espacio físico, usá <b>Editar</b> para despejar una celda.</p>
+        </section>
+        <section class="answer">
+          <h3 id="recetas-de-herramientas">Dónde ver herramientas y materiales</h3>
+          <p>En <b>Menú → Guía → Materiales</b>, buscá el mineral para ver el requisito, el pico, su receta y el tiempo base de reposición.</p>
+        </section>
+      </article>
+
+      <article id="cocina-y-animales" class="topic" aria-labelledby="titulo-cocina" data-keywords="cocina cocinar comida estofado animales alpaca establo fibra trigo armadura equipo">
+        <header class="topic-heading">
+          <h2 id="titulo-cocina">Cocina y animales</h2>
+          <p>Transformá cultivos y botín en comida. Criá animales para conseguir fibras y otros materiales de fabricación.</p>
+        </header>
+        <section class="answer">
+          <h3 id="cocinar">Cómo cocinar</h3>
+          <p>Abrí la <b>Cocina</b>, elegí una receta y preparala con tus ingredientes. Cuando termine, volvé a recogerla. La Guía muestra cada receta, sus materiales y su nivel.</p>
+        </section>
+        <section class="answer">
+          <h3 id="alpaca">Alpaca y alimentación</h3>
+          <p>El <b>Establo</b> muestra qué come cada animal y qué material produce. La alpaca come <b>Trigo</b>, que se desbloquea en <b>Cultivo 6</b>. Dale una ración completa para que empiece su ciclo de fibra.</p>
+        </section>
+        <section class="answer">
+          <h3 id="peto-vegetal">Tu primera armadura</h3>
+          <p>En la <b>Herrería</b> podés fabricar el <b>Peto de fibra vegetal</b> con papas y Plata. Equipalo desde <b>Menú → Equipo</b> antes de salir a cazar.</p>
+        </section>
+      </article>
+
+      <article id="combate" class="topic" aria-labelledby="titulo-combate" data-keywords="zona negra pantano entrenamiento monstruos espada enemigo botin tumbas calaveras">
+        <header class="topic-heading">
+          <h2 id="titulo-combate">Combate y Zona Negra</h2>
+          <p>Prepará tu equipo, practicá con el muñeco y explorá el Pantano desde el portal de la granja.</p>
+        </header>
+        <section class="answer">
+          <h3 id="primer-combate">Tu primer combate en el Pantano</h3>
+          <ol>
+            <li>Fabricá una espada en la <b>Herrería</b> y equipala en <b>Menú → Equipo</b>.</li>
+            <li>Entrá por el portal de <b>Zona Negra</b> y elegí <b>Pantano</b>.</li>
+            <li>En PC, hacé <b>clic derecho sobre el monstruo</b> para fijarlo y atacarlo. Elegí <b>Perseguir</b> o <b>Parado</b> según cómo quieras moverte. Un clic derecho sobre el suelo cancela el objetivo.</li>
+          </ol>
+          <p>Usá <b>? Combate</b> dentro de la zona para volver a ver los controles. En <b>Menú → Guía → Bestiario</b> podés consultar dificultad y botín.</p>
+        </section>
+        <section class="answer">
+          <h3 id="calavera">¿Cómo recojo una calavera?</h3>
+          <p>Acercate, pasá el cursor por encima para ver el dueño y el tiempo restante, y usá <b>clic izquierdo</b> para recoger. Si es tuya y está fuera de pantalla, seguí la flecha. Otros jugadores también pueden encontrar y recoger una calavera compartida.</p>
+        </section>
+      </article>
+
+      <article id="misiones" class="topic" aria-labelledby="titulo-misiones" data-keywords="misiones diarias hoy tareas jornada progreso tablón vales premios eventos ranking">
+        <header class="topic-heading">
+          <h2 id="titulo-misiones">Misiones y recompensas</h2>
+          <p>Revisá tus diarias, entregá pedidos y consultá las reglas de cada evento.</p>
+        </header>
+        <section class="answer">
+          <h3 id="diarias">¿Dónde cobro las misiones diarias?</h3>
+          <p>Abrí <b>Menú → Progreso</b>. Si completaste una tarea de siembra, cocina, tala, minería o Jornada, pulsá <b>Reclamar</b> en su tarjeta.</p>
+        </section>
+        <section class="answer">
+          <h3 id="tablon">¿Para qué sirve el Tablón de Pedidos?</h3>
+          <p>Tocá el cartel <b>Pedidos</b> de tu granja. Cada encargo muestra qué tenés que entregar y qué recompensa recibís. Ahí mismo podés consultar para qué sirven los vales del Tablón.</p>
+        </section>
+        <section class="answer">
+          <h3 id="eventos">¿Dónde veo los eventos?</h3>
+          <p>En <b>Noticias</b> se anuncian las fechas, reglas y premios. Abrí el evento dentro del juego para ver tu progreso o su clasificación cuando corresponda.</p>
+        </section>
+        <section class="answer">
+          <h3 id="premio-y-ruletas">Premio diario y ruletas</h3>
+          <p>En <b>Menú → Premio diario</b> podés reclamar la recompensa que te toque. En <b>Ruletas</b> ves los giros disponibles y los premios de cada rueda.</p>
+        </section>
+      </article>
+
+      <article id="economia" class="topic" aria-labelledby="titulo-economia" data-keywords="monedas plata golden recarga banco comercio mercado venta vip token crypto">
+        <header class="topic-heading">
+          <h2 id="titulo-economia">Economía y comercio</h2>
+          <p>La granja usa dos monedas. Podés ver ambas junto al nivel de Granja, en la barra superior.</p>
+        </header>
+        <section class="answer">
+          <h3 id="plata-y-golden">¿Para qué sirven Plata y Golden?</h3>
+          <dl>
+            <dt><b>Plata</b></dt><dd>Comprá semillas, fabricá herramientas y pagá obras. Conseguís Plata al vender cultivos, cobrar misiones y por otras actividades del juego.</dd>
+            <dt><b>Golden</b></dt><dd>Se usa para VIP, Objetos de Granja y determinadas mejoras. Consultá <b>Menú → Banco</b> para ver las opciones habilitadas durante la alfa.</dd>
+          </dl>
+        </section>
+        <section class="answer">
+          <h3 id="mercado-y-comercio">Mercado y comercio entre jugadores</h3>
+          <p>Usá el <b>Mercado de cultivos</b> para comprar semillas o vender tus cosechas al juego. En <b>Menú → Comercio entre jugadores</b> podés ver las ofertas disponibles. Revisá el objeto, el precio y la moneda antes de confirmar.</p>
+        </section>
+      </article>
+
+      <article id="ayuda" class="topic" aria-labelledby="titulo-ayuda" data-keywords="cuenta soporte error bug contraseña inicio sesión ayuda guardar discord preguntas frecuentes">
+        <header class="topic-heading">
+          <h2 id="titulo-ayuda">Cuenta y ayuda</h2>
+          <p>Usá el mismo correo para entrar a tu granja desde otro dispositivo.</p>
+        </header>
+        <section class="answer">
+          <h3 id="reportar-problema">¿Cómo reporto un problema?</h3>
+          <p>Contá qué estabas haciendo, qué esperabas que pasara y qué apareció en pantalla. Si podés, adjuntá una captura. En <b>Menú → Configuración → Copiar informe técnico</b> podés copiar el diagnóstico para compartirlo con soporte.</p>
+          <p><a href="https://discord.gg/fQZn9Bsvkd">Comunidad oficial en Discord</a></p>
+        </section>
+        <section class="answer">
+          <h3 id="guia-del-juego">¿Dónde veo mis niveles, recetas y costes?</h3>
+          <p>Dentro del juego abrí <b>Menú → Guía</b>. Buscá el material, edificio o criatura por nombre. Para comprobar un guardado pendiente, usá el <b>disquete</b> y leé su mensaje.</p>
+        </section>
+      </article>
+    </main>
+  </div>
+
+  <footer class="footer"><a href="#inicio">Wiki de Golden Farm</a><a href="/">Volver al juego</a></footer>
+</body>
+</html>
