@@ -7555,13 +7555,13 @@ const RECIPE_DEF = {
               con maíz del carril ancla (~590/intento → ~2.400 la doma: se paga en días, no gratis) */
   bocado_domador: { label:"Costillar Ahumado", emoji:"🍖", sprite:"dish_estofado", res:{carne:2, maiz:1, madera:1}, lvl:10,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:35,
-    desc:"Carne ahumada a la leña con choclo asado. Al orco, al lancero, al guerrero y al trol les ENCANTA: llevalo a la Zona Negra y, al vencerlos, se lo devoran — con suerte, te siguen a casa y atienden tus árboles y rocas." },
+    desc:"vence a un orco, lancero, guerrero o trol en la Zona Negra con el costillar guardado." },
   galletita_cereza: { label:"Galletita de Cereza", emoji:"🍪", sprite:"dish_pan_trigo", res:{cereza:2, papa:1}, lvl:4,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:8,
-    desc:"Masa de papa con cerezas del carril corto. A la RATA le encanta: véncela en la Zona Negra con una encima y quizás se mude a tu granja — escarba montículos y te junta lombrices mientras no estás." },
+    desc:"vence a una rata en la Zona Negra con la galletita guardada." },
   papilla_remolacha: { label:"Papilla de Remolacha", emoji:"🥣", sprite:"dish_crema_calabaza", res:{remolacha:2, calabaza:1}, lvl:7,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:28,
-    desc:"Dulce, espesa y de un violeta sospechoso. A la LARVA le encanta: véncela en la Zona Negra con una encima y quizás te siga — abona la tierra y tus cultivos avanzan mientras no estás." },
+    desc:"vence a una larva venenosa en la Zona Negra con la papilla guardada." },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:5,   // 22/8: baja 6→5 — sus ingredientes (carne + calabaza 2) ya están hace rato
     heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
     desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
@@ -7619,7 +7619,10 @@ function dishBuffLabel(b, pot) {
   }
   return b.label || "";
 }
-function dishDesc(r) { return r.desc || ("Cura " + r.heal + " HP · " + dishBuffLabel(r.buff, 1) + " (" + fmtSecs(DISH_BUFF_DUR) + ")"); }
+function dishDesc(r, id) {
+  if (r.desc && !esPlatoDoma(id)) return r.desc;
+  return "Cura " + r.heal + " HP · " + dishBuffLabel(r.buff, 1) + " (" + fmtSecs(DISH_BUFF_DUR) + ")";
+}
 function canCook(id) {
   const r = RECIPE_DEF[id]; if (!r) return false;
   if (r.lvl && cookLevel() < r.lvl) return false;   // receta bloqueada por nivel de cocina
@@ -7817,7 +7820,7 @@ function eatDish(id) {
     if (st && typeof stamAdd === "function") { stamAdd(st); toast("+" + st + " de estamina"); } }
   if (id === "guiso_campestre" || id === "estofado_cosecha") { if (cleanseStates(["sangrado", "veneno", "quemadura"])) { log("El guiso limpió tus heridas (sangrado/veneno/quemadura).", "good"); toast("Heridas limpiadas"); } }
   if (id === "pan_trigo" || id === "pan_maiz_trigo") { if (cleanseStates(["flaqueza", "fragilidad"])) { log("El pan disipó las maldiciones.", "good"); toast("Maldiciones disipadas"); } }
-  log(r.emoji + " Comiste " + r.label + ". " + dishDesc(r), "gold"); toast(r.emoji + " ¡Ñam!");
+  log(r.emoji + " Comiste " + r.label + ". " + dishDesc(r, id), "gold"); toast(r.emoji + " ¡Ñam!");
   if (typeof tutoEvent === "function") tutoEvent("eat");
   refreshHud(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
@@ -12133,6 +12136,16 @@ var DOMA_ESPECIES = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];  
    y cada rol tiene su plato favorito. */
 var DOMA_ROL = { orco: "brazos", lancero: "brazos", guerrero: "brazos", troll: "brazos", rata: "rata", larva: "larva" };
 var DOMA_PLATO = { brazos: "bocado_domador", rata: "galletita_cereza", larva: "papilla_remolacha" };   // v4: escalera 4 → 7 → 10, costo según el valor del ayudante
+function esPlatoDoma(id) { return Object.values(DOMA_PLATO).includes(id); }
+function domaActiva() { return typeof GF === "undefined" || !GF.MVP; }
+function domaAyudaReceta(id) {
+  if (!esPlatoDoma(id)) return null;
+  const activa = domaActiva();
+  return {
+    titulo: activa ? "Doma desde Granja " + DOMA_NIVEL : "Doma pausada en esta alfa",
+    texto: (activa ? "Para domar, " : "Con la doma activa, ") + RECIPE_DEF[id].desc + " El intento es automático.",
+  };
+}
 var DOMA_ROL_TXT = {
   brazos: "atiende tus árboles y rocas",
   rata: "escarba montículos y junta lombrices",
@@ -12154,7 +12167,7 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
      es justamente lo que molesta: mata una rata el día 2, sin el plato, y el juego le habla de
      un sistema que abre en el nivel 10 y que en la prueba no va a ver. Es el mismo silencio que
      la línea de abajo declara normal para los bichos que no se doman — acá ninguno se doma. */
-  if (typeof GF !== "undefined" && GF.MVP) return false;
+  if (!domaActiva()) return false;
   if (!DOMA_ESPECIES.includes(especie)) return false;   // este bicho no se doma: silencio, es lo normal
   const nomBicho = (MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho";
   // cada especie tiene SU plato — sin él no hay doma, y el que no lo conoce recibe la pista (1/día)

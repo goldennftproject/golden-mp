@@ -2413,7 +2413,7 @@ function itemView(d) {
     const f = FISH_DEF[d.key]; const glow = { raro: "glow-blue", epico: "glow-purple", legendario: "glow-gold" }[d.key] || "";
     return { sprite: f ? f.sprite : null, emoji: f ? f.emoji : "🐟", glow, label: f ? f.label : "Pez", dur: null };
   }
-  if (d.kind === "dish") { const r = RECIPE_DEF[d.key]; return { sprite: r ? r.sprite : null, emoji: r ? r.emoji : "🍲", label: r ? r.label + " · clic para comer (" + dishDesc(r) + ")" : "Plato", dur: null }; }
+  if (d.kind === "dish") { const r = RECIPE_DEF[d.key]; return { sprite: r ? r.sprite : null, emoji: r ? r.emoji : "🍲", label: r ? r.label + " · clic para comer (" + dishDesc(r, d.key) + ")" : "Plato", dur: null }; }
   if (d.kind === "chest") return { sprite: "cofre", emoji: "📦", label: "Cofre de depósito · clic para colocarlo en la granja", dur: null };
   return { sprite: null, emoji: "?", label: "", dur: null };
 }
@@ -4384,6 +4384,8 @@ function refreshCookingV2() {
   const own = Math.floor((G.dishes && G.dishes[_ckSel]) || 0);
   const vPlata = Math.round(dishPrice(r) * cookPot(r.lvl));
   let d = '<div class="big">' + ckIcono(r, "emo") + '</div><div class="nm">' + r.label + '</div>';
+  const doma = typeof domaAyudaReceta === "function" ? domaAyudaReceta(_ckSel) : null;
+  if (doma) d += '<div class="ck-efecto"><b>' + escapeHtml(doma.titulo) + '</b><br>' + escapeHtml(doma.texto) + '</div>';
   /* ingredientes: lo que tenés contra lo que pide, y en rojo lo que falta */
   if (r.fish) for (const k in r.fish) {
     const t = (typeof pezCuenta === "function") ? pezCuenta(k) : Math.floor((G.fish && G.fish[k]) || 0), n = r.fish[k];   // 2/9: suma las pilas con peso
@@ -4400,7 +4402,7 @@ function refreshCookingV2() {
      está cerrada. Este renglón ocupa el mismo lugar, pero dice qué puede hacer de verdad. */
   if (!(typeof DISH_VENTA_LIBRE !== "undefined" && DISH_VENTA_LIBRE)) d += '<div class="ck-fila ck-uso" title="Los platos no se venden en la Cocina"><span>🍽 Uso</span><b>Comer o Tablón</b></div>';
   d += '<div class="ck-fila"><span>🎒 tienes</span><b>' + fmt(own) + '</b></div>';
-  const efecto = (typeof dishDesc === "function") ? dishDesc(r) : "";
+  const efecto = (typeof dishDesc === "function") ? dishDesc(r, _ckSel) : "";
   if (efecto) d += '<div class="ck-efecto">' + efecto + '</div>';
   d += '<div class="acc">';
   if (locked) d += '<button class="green sm" disabled>Cocina nivel ' + r.lvl + '</button>';

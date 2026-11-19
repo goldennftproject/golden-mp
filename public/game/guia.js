@@ -169,6 +169,7 @@
     for (const id of RECIPE_ORDER) {
       const d = RECIPE_DEF[id];
       if (!GF.PESCA_ACTIVA && d.fish) continue;
+      const doma = domaAyudaReceta(id);
       filas.push({
         titulo: d.label, subtitulo: "Cocina", sprite: d.sprite,
         datos: [
@@ -176,6 +177,7 @@
           ["Ingredientes", [costos(d.res || {}), ...Object.entries(d.fish || {}).map(([tipo, n]) => n + " pescado " + etiqueta(tipo))].filter(Boolean).join(" · ")],
           ["Tiempo base", duracion(d.cookS)],
         ],
+        texto: doma ? doma.titulo + ". " + doma.texto : "",
       });
     }
     for (const id of PICK_ORDER) {
