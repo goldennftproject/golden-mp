@@ -1056,7 +1056,7 @@ function hydrate(d) {
   if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
   if (d.goblin && typeof d.goblin === "object") G.goblin = { date: d.goblin.date || "" };   // 22/8: Mercader Goblin
   if (d.logros && typeof d.logros === "object") G.logros = d.logros;   // 22/8: logros cobrados (🏆) — solo llaves true
-  if (d.doma && typeof d.doma === "object" && d.doma.bicho) G.doma = d.doma;   // 22/8: el bicho domado viaja entero
+  G.doma = d.doma && typeof d.doma === "object" && d.doma.bicho ? JSON.parse(JSON.stringify(d.doma)) : null;
   if (typeof d.hpMax === "number") G.hpMax = d.hpMax;
   G.combatXp = (typeof d.combatXp === "number") ? d.combatXp : 0;
   G.stats = (d.stats && typeof d.stats === "object") ? d.stats : {};

@@ -18,13 +18,46 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
   if (!m) { console.log("\n1 fallo(s)\n"); process.exit(1); }
   const ctx = { Math, isFinite, String, Object, Set, JSON };
   vm.createContext(ctx);
-  vm.runInContext(m[1] + "\nthis.evaluarGuardado = evaluarGuardado; this.MODO = MODO; this.VERSION = VERSION; this.mercadoPermiso = mercadoPermiso;", ctx);
-  const { evaluarGuardado, MODO, VERSION, mercadoPermiso } = ctx;
+  vm.runInContext(m[1] + "\nthis.evaluarGuardado = evaluarGuardado; this.MODO = MODO; this.VERSION = VERSION; this.mercadoPermiso = mercadoPermiso; this.protegerDoma = protegerDoma; this.premiumReloj = premiumReloj;", ctx);
+  const { evaluarGuardado, MODO, VERSION, mercadoPermiso, protegerDoma, premiumReloj } = ctx;
   const HORA = 3600;
 
   console.log("\nEL CONTRATO DEL ESCALÓN 1: MODO SOMBRA, VERSIONADO");
   ok("las reglas están en modo RECHAZO desde el 14/9 (proyecto nuevo, P2P abierto)", MODO === "rechazo", MODO);
   ok("y llevan versión (la bitácora anota cuál evaluó)", VERSION >= 2, "v" + VERSION);
+
+  console.log("\nDOMA, MORRAL Y RESERVA DE ALIMENTO");
+  {
+    const ahora = Date.now(), dia = 86400000;
+    const plato = { kind: "dish", k: "galletita_cereza", n: 1 };
+    const cont = { c: "backpack", items: [{ c: "bag", items: [plato] }] };
+    const antes = { level: 10, cont, zonaViaje: { t: ahora - 60000 }, stats: { matar: { rata: 2 } } };
+    const doma = { bicho: "rata", desde: ahora - 1000, comidaHasta: ahora - 1000 + dia, cont: 0, ultimo: null };
+    const domada = { ...antes, cont: { c: "backpack", items: [{ c: "bag", items: [] }] }, stats: { matar: { rata: 3 } }, visto: ahora, doma };
+    const validar = (a, b) => {
+      const errores = [];
+      protegerDoma(a, b, ahora, errores);
+      return errores;
+    };
+    ok("admite domar con el plato gastado en una bolsa dentro de la mochila", validar(antes, domada).length === 0);
+    ok("rechaza la adopción si el plato sigue en la mochila", validar(antes, { ...domada, cont }).length === 1);
+    ok("rechaza la adopción si no consta una derrota nueva de esa especie", validar(antes, { ...domada, stats: antes.stats }).length === 1);
+    const granja = { level: 10, dishes: { galletita_cereza: 1 }, stats: antes.stats };
+    const regreso = { ...domada, cont: null, zonaViaje: null, zonaCdHasta: ahora, res: { carne: 1 } };
+    ok("viajar, domar y volver caben en un único guardado", validar(granja, regreso).length === 0);
+    const alimentada = { ...regreso, res: { carne: 0 }, doma: { ...doma, comidaHasta: doma.comidaHasta + dia } };
+    ok("alimentar una vez consume una carne y suma un día", validar(regreso, alimentada).length === 0);
+    ok("rechaza alimentar en la granja sin gastar la carne", validar(regreso, { ...alimentada, res: regreso.res }).length === 1);
+  }
+  {
+    const ahora = Date.now(), ciclo = 1800000, key = "tree:0,1#86";
+    const visto = ahora - 1.5 * ciclo;
+    const antes = { visto, doma: { bicho: "orco", cont: 6, comidaHasta: ahora + ciclo }, nodos: { [key]: { readyAt: ahora - 2 * ciclo, cdIni: ahora - 3 * ciclo } } };
+    const despues = { doma: { bicho: "orco", cont: 7, ultimo: { at: ahora, madera: 0, piedra: 0, fee: 1 } }, nodos: { [key]: { readyAt: ahora - ciclo, cdIni: ahora - 2 * ciclo } } };
+    const errores = [];
+    premiumReloj(antes, despues, 86, { key, type: "tree" }, ahora, errores, visto);
+    ok("acepta el reloj Golden cuando el ayudante se llevó una sola carga de comisión", errores.length === 0);
+  }
 
   /* ═══ EL MERCADO, QUE EL PORTERO NO CONOCÍA HASTA EL 15/9 ════════════════════════════
      El P2P se abrió el 14/9 y el portero pasó a "rechazo" el MISMO día: nunca habían

@@ -17,7 +17,7 @@ import { bellotasActualizar, bellotasConRanking, bellotasEstado, bellotasReclama
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 14;       // 13/11: evidencia y cobros del evento de Bellotas.
+const VERSION = 15;       // 19/11: adopción y alimentación de criaturas.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -633,7 +633,9 @@ function premiumReloj(antes,next,i,o,ahora,errores,desdeServidor=0){
  // La mascota de brazos puede drenar backlog sin nodoSumar. Conserva el largo
  // anterior y deja una carga, con comida y una entrega registrados en esta sesión.
  const mascota=antes.doma,ultimo=next.doma?.ultimo;
- const atendido=mascota?.bicho&&num(mascota.comidaHasta)>num(antes.visto)&&num(ultimo?.at)>num(antes.visto)&&num(ultimo?.at)<=ahora+5000&&o.type!=='ore'&&q.readyAt<=ahora&&Math.abs(dur-oldDur)<2&&num(ultimo?.[o.type==='tree'?'madera':'piedra'])>0;
+ const entregado=num(ultimo?.[o.type==='tree'?'madera':'piedra'])>0;
+ const comision=num(ultimo?.fee)>0&&num(next.doma?.cont)>num(mascota?.cont);
+ const atendido=DOMA_PLATOS.get(mascota?.bicho)==='bocado_domador'&&num(mascota.comidaHasta)>num(antes.visto)&&num(ultimo?.at)>num(antes.visto)&&num(ultimo?.at)<=ahora+5000&&o.type!=='ore'&&q.readyAt<=ahora&&Math.abs(dur-oldDur)<2&&(entregado||comision);
  // VIP y la comida de -15% son los únicos multiplicadores del ciclo actual.
  // Los créditos generales de actividad/recursos siguen siendo comprobados abajo.
  if(!atendido&&(!(usos>0)||!(actos>=usos))){bad();return;}
@@ -755,6 +757,102 @@ function protegerForja(antes,next,errores){
     if(!mismoJSON(antes.armCd,next.armCd))errores.push('El enfriamiento de forja sólo cambia en el servidor');
   }
 }
+const DOMA_PLATOS = new Map([
+  ['rata', 'galletita_cereza'],
+  ['larva', 'papilla_remolacha'],
+  ['orco', 'bocado_domador'],
+  ['lancero', 'bocado_domador'],
+  ['guerrero', 'bocado_domador'],
+  ['troll', 'bocado_domador'],
+]);
+const DOMA_DIA_MS = 86400000;
+
+function domaCantidadPilas(items, kind, key, campo = 'k') {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((n, pila) => n + (pila?.kind === kind && pila?.[campo] === key ? num(pila.n) : 0), 0);
+}
+
+function domaCantidadMorral(cont, kind, key) {
+  if (!Array.isArray(cont?.items) || !['bag', 'backpack'].includes(cont.c)) return 0;
+  const raiz = domaCantidadPilas(cont.items, kind, key);
+  if (cont.c !== 'backpack') return raiz;
+  return cont.items.reduce((n, bolsa) => n + (bolsa?.c === 'bag' ? domaCantidadPilas(bolsa.items, kind, key) : 0), raiz);
+}
+
+function domaExistencias(d, kind, key) {
+  const bolsa = kind === 'dish' ? d.dishes : d.res;
+  const cofres = Array.isArray(d.chests) ? d.chests : [];
+  // La vuelta, una entrega y una caída pueden mover existencias sin consumirlas.
+  const entregas = (Array.isArray(d.mkPend) ? d.mkPend : []).reduce((n, p) =>
+    n + (p?.kind === kind && p?.item === key ? num(p?.qty) : 0), 0);
+  return num(bolsa?.[key]) + domaCantidadMorral(d.cont, kind, key) +
+    domaCantidadPilas(d.tumba?.items, kind, key) + entregas +
+    cofres.reduce((n, cofre) => n + domaCantidadPilas(cofre?.items, kind, key, 'key'), 0);
+}
+
+function protegerDoma(antes, next, ahora, errores) {
+  const anterior = antes.doma;
+  const nueva = next.doma;
+  if (!nueva?.bicho) {
+    if (anterior?.bicho && !(num(next.reinicio) > num(antes.reinicio) && esDeCero(next))) next.doma = anterior;
+    return;
+  }
+
+  if (anterior?.bicho && (nueva.bicho !== anterior.bicho || nueva.desde !== anterior.desde)) {
+    errores.push('La criatura domada ya está registrada');
+    return;
+  }
+
+  const reloj = Math.min(ahora + 300000, num(next.visto) || ahora);
+  const salida = num(antes.zonaViaje?.t);
+  const sigue = num(next.zonaViaje?.t);
+  const mismoViaje = salida > 0 && salida === sigue;
+  let comidaAntes = num(anterior?.comidaHasta);
+  if (!anterior?.bicho) {
+    const plato = DOMA_PLATOS.get(nueva.bicho);
+    const regreso = num(next.zonaCdHasta);
+    const desde = nueva.desde;
+    // El portal guarda de forma asíncrona. Un único snapshot puede incluir entrada y regreso.
+    const viaje = (salida > 0 && desde >= salida) || (sigue > 0 && desde >= sigue) ||
+      (regreso > num(antes.zonaCdHasta) && regreso >= desde && regreso <= reloj);
+    const bajas = num(next.stats?.matar?.[nueva.bicho]) - num(antes.stats?.matar?.[nueva.bicho]);
+    if (!plato || num(next.level) < 10 || !Number.isSafeInteger(desde) || desde <= 0 ||
+        desde > reloj || !viaje || !Number.isSafeInteger(bajas) || bajas < 1) {
+      errores.push('La doma requiere Granja 10 y una criatura vencida en la Zona Negra');
+      return;
+    }
+    const cocinados = Math.max(0, num(next.stats?.cocinar?.[plato]) - num(antes.stats?.cocinar?.[plato]));
+    const retiro = domaExistencias(antes, 'dish', plato) + cocinados - domaExistencias(next, 'dish', plato);
+    const gastoMorral = domaCantidadMorral(antes.cont, 'dish', plato) - domaCantidadMorral(next.cont, 'dish', plato);
+    if (retiro < 1 || (mismoViaje && gastoMorral < 1)) {
+      errores.push('La doma requiere consumir el plato de la criatura desde el contenedor');
+      return;
+    }
+    comidaAntes = desde + DOMA_DIA_MS;
+  }
+
+  const comida = nueva.comidaHasta;
+  if (anterior?.bicho && comida === anterior.comidaHasta) return;
+  if (!Number.isSafeInteger(comida) || comida < comidaAntes || comida > reloj + 4 * DOMA_DIA_MS) {
+    errores.push('La reserva de alimento de la criatura no es válida');
+    return;
+  }
+  // El plato de doma cubre un día. El cliente toma dos lecturas consecutivas del reloj.
+  const margenInicial = anterior?.bicho ? 0 : 1000;
+  if (comida - comidaAntes <= margenInicial) return;
+  const diasContiguos = Math.round((comida - comidaAntes) / DOMA_DIA_MS);
+  if (mismoViaje || (comidaAntes > reloj && Math.abs(comida - comidaAntes - diasContiguos * DOMA_DIA_MS) > margenInicial)) {
+    errores.push('Cada ración de la criatura debe cubrir un día completo');
+    return;
+  }
+  const diasMinimos = comidaAntes > reloj ? diasContiguos : Math.max(1, Math.ceil((comida - reloj) / DOMA_DIA_MS));
+  const carneGastada = domaExistencias(antes, 'res', 'carne') - domaExistencias(next, 'res', 'carne');
+  // Un regreso puede traer carne recogida de un cadáver ya vencido en el guardado anterior.
+  const conBotin = !!antes.zonaViaje || !!next.zonaViaje || num(next.zonaCdHasta) > num(antes.zonaCdHasta) ||
+    !mismoJSON(antes.incResumen, next.incResumen) || !mismoJSON(antes.regalos, next.regalos);
+  if (!conBotin && carneGastada < diasMinimos) errores.push('Alimentar a la criatura requiere una carne por día');
+}
+
 function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   picosUnificarEstado(next);
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
@@ -786,6 +884,7 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   else for(const entrega of next.mkPend){const i=pendientes.findIndex((p,i)=>!usados.has(i)&&mismoJSON(p,entrega));if(i<0){errores.push('Las entregas pendientes sólo se crean en el servidor');break;}usados.add(i);}
   protegerRepuestos(antes,next,pendientes,usados,errores);
   protegerForja(antes,next,errores);
+  protegerDoma(antes,next,ahora,errores);
   const ritmo=next.farmXpRitmo,ancla=antes.farmXpRitmo||{v:1,tala:Math.max(0,num(antes.skills?.tala)),mining:Math.max(0,num(antes.skills?.mining))};
   if((ritmo||antes.farmXpRitmo)&&(!ritmo||!mismoJSON(ritmo,ancla)))errores.push('No se puede modificar el ancla de XP aceptada');
 

@@ -20,13 +20,12 @@ const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Dat
   Number, String, Boolean, Set, Map, isNaN, isFinite, parseInt, parseFloat,
   performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval() {} };
 ctx.window = ctx; ctx.globalThis = ctx;
+ctx.location = { hash: "", search: "" };
 ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };
 vm.createContext(ctx);
 ["config", "nav", "state", "save"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
-/* 10/9: con GF.MVP = 1 la doma no se dispara (está escondida, no borrada). Este archivo custodia el
-   sistema que vuelve con GF.MVP = 0, así que se prueba con la bandera apagada. */
-vm.runInContext("GF.MVP = 0;", ctx);
+if (!vm.runInContext("GF.MVP === 1 && domaActiva()", ctx)) throw Error("La doma debe funcionar con el MVP activo");
 const avisos = [];
 ctx.toast = t => avisos.push(String(t)); ctx.log = t => avisos.push(String(t));
 ["isOpen", "refreshInv", "refreshHud", "saveFarm", "syncSlots", "refreshBarn", "recalcFarmLevel"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
@@ -50,7 +49,7 @@ console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UNA CRIATU
   ok("al orco NO se lo doma con la galletita de la rata: pide SU Costillar",
     (G.dishes.bocado_domador = 0, ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.galletita_cereza === 5));
   G.dishes.bocado_domador = 5;
-  ok("con Costillar y mala suerte (0,5 ≥ 25%): se lo come y se va", ctx.domaIntentar("orco", () => 0.5) === false && G.dishes.bocado_domador === 4);
+  ok("con Costillar y mala suerte (0,5 ≥ 1 de 6): se lo come y se va", ctx.domaIntentar("orco", () => 0.5) === false && G.dishes.bocado_domador === 4);
   ok("con Costillar y suerte: el orco te sigue a casa", ctx.domaIntentar("orco", () => 0.001) === true && G.doma.bicho === "orco");
   ok("y ese intento también costó su plato", G.dishes.bocado_domador === 3);
   ok("y no hay segunda criatura (ni gasta más platos)", ctx.domaIntentar("troll", () => 0.001) === false && G.dishes.bocado_domador === 3);
@@ -74,6 +73,31 @@ console.log("\nY CON UNA CRIATURA YA EN CASA, TAMBIÉN LO DICE");
   ok("no doma un segundo", ctx.domaIntentar("troll", () => 0.001) === false);
   ok("y avisa que ya tienes uno", avisos.some(a => /ya tienes/i.test(a)), avisos.join(" · "));
   ok("sin gastar el plato", G.dishes.bocado_domador === antes);
+}
+
+console.log("\nEL PLATO VIAJA EN EL CONTENEDOR EQUIPADO");
+{
+  G.level = 10; G.doma = null; G.dishes.galletita_cereza = 5;
+  ctx.GF.scene = "forest";
+  G.cont = ctx.contCrear("backpack");
+  const bolsa = ctx.contCrear("bag");
+  ctx.contMeter(bolsa, "dish", "galletita_cereza", 2);
+  ctx.contMeterBolsa(G.cont, bolsa);
+  const restantes = () => ctx.llevoTengo("dish", "galletita_cereza");
+  ctx.GF.DOMA_ACTIVA = false;
+  ok("puede pausarse sola y no gastar el plato", !ctx.domaIntentar("rata", () => 0) && restantes() === 2);
+  ctx.GF.DOMA_ACTIVA = true;
+  G.level = 9;
+  ok("el nivel insuficiente no cobra en la Zona", !ctx.domaIntentar("rata", () => 0) && restantes() === 2);
+  G.level = 10;
+  ok("un intento fallido sólo consume un plato llevado", !ctx.domaIntentar("rata", () => .99) && restantes() === 1);
+  ok("el intento acertado consume el último y registra la rata", ctx.domaIntentar("rata", () => 0) && restantes() === 0 && G.doma.bicho === "rata");
+  ok("la despensa sigue intacta", G.dishes.galletita_cereza === 5);
+  G.doma = null;
+  ok("con el plato sólo en la granja no hay intento", !ctx.domaIntentar("rata", () => 0) && G.dishes.galletita_cereza === 5);
+  G.cont = null;
+  ctx.GF.scene = "farm";
+  G.doma = { bicho: "orco", comidaHasta: FakeDate.now() + 24 * H, cont: 0 };
 }
 
 console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");

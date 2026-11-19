@@ -7555,13 +7555,13 @@ const RECIPE_DEF = {
               con maíz del carril ancla (~590/intento → ~2.400 la doma: se paga en días, no gratis) */
   bocado_domador: { label:"Costillar Ahumado", emoji:"🍖", sprite:"dish_estofado", res:{carne:2, maiz:1, madera:1}, lvl:10,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:35,
-    desc:"vence a un orco, lancero, guerrero o trol en la Zona Negra con el costillar guardado." },
+    desc:"lleva el costillar en la bolsa o mochila de viaje y vence a un orco, lancero, guerrero o trol en la Zona Negra." },
   galletita_cereza: { label:"Galletita de Cereza", emoji:"🍪", sprite:"dish_pan_trigo", res:{cereza:2, papa:1}, lvl:4,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:8,
-    desc:"vence a una rata en la Zona Negra con la galletita guardada." },
+    desc:"lleva la galletita en la bolsa o mochila de viaje y vence a una rata en la Zona Negra." },
   papilla_remolacha: { label:"Papilla de Remolacha", emoji:"🥣", sprite:"dish_crema_calabaza", res:{remolacha:2, calabaza:1}, lvl:7,
     heal:5, buff:{type:"regen", val:1}, cookS:420, xp:20, plata:28,
-    desc:"vence a una larva venenosa en la Zona Negra con la papilla guardada." },
+    desc:"lleva la papilla en la bolsa o mochila de viaje y vence a una larva venenosa en la Zona Negra." },
   banquete: { label:"Banquete del granjero", emoji:"🍗", sprite:"dish_banquete", fish:{raro:1}, res:{carne:2, calabaza:1, madera:1}, lvl:5,   // 22/8: baja 6→5 — sus ingredientes (carne + calabaza 2) ya están hace rato
     heal:9999, buff:{type:"yield",label:"Precio de venta +20%",mult:1.20,dur:180}, cookS:420, xp:25, plata:60,
     desc:"Cura TODA la vida · Precio de venta +20% (3 min)" },
@@ -12137,13 +12137,13 @@ var DOMA_ESPECIES = ["rata", "larva", "orco", "lancero", "guerrero", "troll"];  
 var DOMA_ROL = { orco: "brazos", lancero: "brazos", guerrero: "brazos", troll: "brazos", rata: "rata", larva: "larva" };
 var DOMA_PLATO = { brazos: "bocado_domador", rata: "galletita_cereza", larva: "papilla_remolacha" };   // v4: escalera 4 → 7 → 10, costo según el valor del ayudante
 function esPlatoDoma(id) { return Object.values(DOMA_PLATO).includes(id); }
-function domaActiva() { return typeof GF === "undefined" || !GF.MVP; }
+function domaActiva() { return typeof GF !== "undefined" && GF.DOMA_ACTIVA === true; }
 function domaAyudaReceta(id) {
   if (!esPlatoDoma(id)) return null;
   const activa = domaActiva();
   return {
     titulo: activa ? "Doma desde Granja " + DOMA_NIVEL : "Doma pausada en esta alfa",
-    texto: (activa ? "Para domar, " : "Con la doma activa, ") + RECIPE_DEF[id].desc + " El intento es automático.",
+    texto: (activa ? "Para domar, " : "Con la doma activa, ") + RECIPE_DEF[id].desc + " El intento es automático y usa un plato.",
   };
 }
 var DOMA_ROL_TXT = {
@@ -12163,18 +12163,14 @@ function domaAbre() { return (typeof farmLevel === "function" ? farmLevel() : G.
    puertas que no dependen de la suerte (nivel y bicho ocupado) NO consumen el plato: no hubo
    intento, así que no se cobra. */
 function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
-  /* 10/9 — MVP: la doma no existe en esta versión. Se corta ANTES de la pista, porque la pista
-     es justamente lo que molesta: mata una rata el día 2, sin el plato, y el juego le habla de
-     un sistema que abre en el nivel 10 y que en la prueba no va a ver. Es el mismo silencio que
-     la línea de abajo declara normal para los bichos que no se doman — acá ninguno se doma. */
   if (!domaActiva()) return false;
   if (!DOMA_ESPECIES.includes(especie)) return false;   // este bicho no se doma: silencio, es lo normal
   const nomBicho = (MONSTER_DEF[especie] && MONSTER_DEF[especie].label) || "bicho";
   // cada especie tiene SU plato — sin él no hay doma, y el que no lo conoce recibe la pista (1/día)
   const plato = DOMA_PLATO[DOMA_ROL[especie]] || DOMA_ITEM;
   const platoNom = (RECIPE_DEF[plato] && RECIPE_DEF[plato].label) || plato;
-  if (Math.floor((G.dishes && G.dishes[plato]) || 0) < 1) {
-    if (G._domaPistaDia !== dayStamp(0)) {
+  if (llevoTengo("dish", plato) < 1) {
+    if (domaAbre() && !G.doma?.bicho && G._domaPistaDia !== dayStamp(0)) {
       G._domaPistaDia = dayStamp(0);
       log("🐾 Ese " + nomBicho + " te miró con hambre antes de caer… En la Cocina dicen que a los suyos les encanta el " + platoNom.toUpperCase() + " (Cocina " + ((RECIPE_DEF[plato] && RECIPE_DEF[plato].lvl) || "?") + ").", "info");
       toast("🐾 Le gustaría un " + platoNom);
@@ -12193,7 +12189,8 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
     toast("La doma abre a granja " + DOMA_NIVEL);
     return false;   // sin intento, sin cobro
   }
-  G.dishes[plato] -= 1;   // se lo come, acepte o no: ya está servido
+  if (!llevoGastar("dish", plato, 1)) return false;
+  if (typeof syncSlots === "function") syncSlots();
   if ((rnd || Math.random)() >= domaChance(especie)) {
     log("🍖 La criatura devoró tu " + platoNom + "… y se fue igual. Grosero. (" + domaChanceTxt(especie) + " acepta.)", "warn");
     toast("Se comió el plato y se fue");
@@ -12215,10 +12212,11 @@ function domaHambriento() { return !!(G.doma && G.doma.bicho) && (G.doma.comidaH
 function domaAlimentar() {
   if (!G.doma || !G.doma.bicho) return { error: "sin criatura" };
   if (Math.floor(G.res.carne || 0) < 1) { toast("Necesitas 1 carne — la Zona Negra es su despensa"); return { error: "falta carne" }; }
-  const tope = nowMs() + 3 * DOMA_COMIDA_H * 3600000;   // guarda hasta 3 días de comida en la panza
-  if ((G.doma.comidaHasta || 0) >= tope) { toast("Ya está lleno — vuelve a tener hambre en unos días"); return { error: "lleno" }; }
+  const ahora = nowMs(), racion = DOMA_COMIDA_H * 3600000;
+  const comidaHasta = Math.max(ahora, G.doma.comidaHasta || 0) + racion;
+  if (comidaHasta > ahora + 3 * racion) { toast("Ya está lleno — prueba cuando le queden dos días de comida o menos"); return { error: "lleno" }; }
   G.res.carne -= 1;
-  G.doma.comidaHasta = Math.max(nowMs(), G.doma.comidaHasta || 0) + DOMA_COMIDA_H * 3600000;
+  G.doma.comidaHasta = comidaHasta;
   log("🍖 Tu criatura comió: trabaja hasta " + new Date(G.doma.comidaHasta).toLocaleString() + ".", "good");
   toast("🍖 Ñam — a trabajar");
   if (typeof refreshHud === "function") refreshHud();
@@ -12230,6 +12228,7 @@ function domaAlimentar() {
 function domaTrabajar(visto, ahora) {
   const d = G.doma; ahora = ahora || nowMs();
   if (!d || !d.bicho || !visto || visto >= ahora) return null;
+  visto = Math.max(visto, Number(d.desde) || 0);
   const hasta = Math.min(ahora, d.comidaHasta || 0);
   if (hasta <= visto) return null;   // estuvo con hambre toda tu ausencia
   const rol = DOMA_ROL[d.bicho] || "brazos";

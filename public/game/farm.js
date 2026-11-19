@@ -35,6 +35,7 @@ class FarmScene extends Phaser.Scene {
     this.auraFx = null; this.auraTw = null;
     this.clickHit = null; this.clickPond = false; this.buffer = null;
     this.corral = null; this.animales = null; this.corralCerca = null;
+    this.domaObj = null;
     this.nubes = null; this.maripos = null; this._part = 0; this._rafActiva = false; this._vaporAt = 0;   // efectos de ambiente
     this.queue = [];      // cola de acciones: clickeá varios objetivos y se hacen en orden
     // 16/8 (dirección): "el suelo será solo césped, no va a haber tierra de playa, arena ni
@@ -4469,21 +4470,24 @@ class FarmScene extends Phaser.Scene {
 
     /* ---- EL BICHO DOMADO (22/8, la doma v1) — vive cerca del establo/granero.
        Mismo patrón que el goblin: sprite global, sombra, y el clic lo alimenta. ---- */
-    const hayBicho = !!(G.doma && G.doma.bicho);
-    if (hayBicho && !this.domaObj && this.textures.exists(G.doma.bicho + "_idle_0")) {
-      const casa = (this.objs || []).find(x => x.type === "establo") || (this.objs || []).find(x => x.type === "barn");
-      const dx = casa ? casa.cx + 46 : 300, dy = casa ? casa.by + 6 : 220, dw = GF.TILE * 0.9;
-      const spr = this.add.sprite(dx, dy, G.doma.bicho + "_idle_0").setOrigin(0.5, 1).setDepth(dy);
-      spr.setScale(dw / spr.width);
-      try { if (this.anims.exists(G.doma.bicho + "_idle")) spr.play(G.doma.bicho + "_idle"); } catch (e) {}
-      this.tweens.add({ targets: spr, scaleY: spr.scaleY * 0.96, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira aunque no tenga anim
-      const shadow = this.add.ellipse(dx, dy + 2, dw * 0.7, 5, 0x000000, 0.22).setDepth(dy - 1);
-      this.domaObj = { i: "domabicho", type: "domabicho", cx: dx, by: dy, w: dw, rw: dw, baseKey: G.doma.bicho + "_idle_0", sprite: spr, shadow, shadowDy: 2, shadowDepthDy: -1, readyAt: 0 };
-      this.objs.push(this.domaObj);
-    } else if (!hayBicho && this.domaObj) {
+    const especie = G.doma && MONSTER_DEF[G.doma.bicho];
+    const animacion = especie && especie.sprite ? especie.sprite + "_idle" : null;
+    const baseKey = animacion ? animacion + "_0" : null;
+    if (this.domaObj && this.domaObj.baseKey !== baseKey) {
       const bo = this.domaObj; this.domaObj = null;
       if (bo.sprite) bo.sprite.destroy(); if (bo.shadow) bo.shadow.destroy();
-      const ix2 = this.objs.indexOf(bo); if (ix2 >= 0) this.objs.splice(ix2, 1);
+      const ix = this.objs.indexOf(bo); if (ix >= 0) this.objs.splice(ix, 1);
+    }
+    if (baseKey && !this.domaObj && this.textures.exists(baseKey)) {
+      const casa = (this.objs || []).find(x => x.type === "establo") || (this.objs || []).find(x => x.type === "barn");
+      const dx = casa ? casa.cx + 46 : 300, dy = casa ? casa.by + 6 : 220, dw = GF.TILE * 0.9;
+      const spr = this.add.sprite(dx, dy, baseKey).setOrigin(0.5, 1).setDepth(dy);
+      spr.setScale(dw / spr.width);
+      try { if (this.anims.exists(animacion)) spr.play(animacion); } catch (e) {}
+      this.tweens.add({ targets: spr, scaleY: spr.scaleY * 0.96, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira aunque no tenga anim
+      const shadow = this.add.ellipse(dx, dy + 2, dw * 0.7, 5, 0x000000, 0.22).setDepth(dy - 1);
+      this.domaObj = { i: "domabicho", type: "domabicho", cx: dx, by: dy, w: dw, rw: dw, baseKey, sprite: spr, shadow, shadowDy: 2, shadowDepthDy: -1, readyAt: 0 };
+      this.objs.push(this.domaObj);
     }
     if (this.domaObj && this.domaObj.sprite) {   // con hambre se pone gris — se ve desde lejos
       const gris = (typeof domaHambriento === "function") && domaHambriento();
