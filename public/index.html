@@ -2315,8 +2315,20 @@
     <h3>Establo</h3>
     <div class="sub">Compra el animal con Plata y dale una ración completa por ciclo para que produzca su material. Sin comida no produce. Los materiales se usan para fabricar en la Curtiduría. <b id="establo-cupo"></b></div>
     <!-- 23/8 (QoL): con hasta 20 animales, el clic por especie era un castigo -->
-    <div class="row" style="gap:8px;margin:4px 0 6px"><button class="green sm" id="est-alim-todo">🍽 Alimentar todo</button><button class="gold sm" id="est-rec-todo">🧺 Recoger todo</button></div>
+    <div class="row" style="gap:8px;margin:4px 0 6px"><button class="green sm" id="est-alim-todo">🍽 Alimentar todo</button><button class="gold sm" id="est-rec-todo">🧺 Recoger todo</button><button type="button" class="ghost sm" data-panel="ov-doma">Criaturas domadas</button></div>
     <div class="forge-list" id="establo-list" style="max-height:56vh"></div>
+  </div></div>
+
+  <div class="ov" id="ov-doma" role="dialog" aria-labelledby="doma-titulo"><div class="card" style="width:min(500px,94%)">
+    <button type="button" class="close" data-close="ov-doma" aria-label="Cerrar ventana">×</button>
+    <h3 id="doma-titulo">Criaturas domadas</h3>
+    <p class="sub" id="doma-estado"></p>
+    <div class="forge-list" id="doma-lista"></div>
+    <details id="doma-recetas" class="info">
+      <summary>Platos para domar</summary>
+      <p class="sub">Lleva el plato en la mochila de viaje y vence a la criatura en la Zona Negra. Puedes domar una de cada especie.</p>
+      <div id="doma-platos"></div>
+    </details>
   </div></div>
 
   <div class="ov" id="ov-altar"><div class="card" style="width:min(640px,94%)">
@@ -2419,6 +2431,7 @@
       <button class="gmi" title="Ver tu nombre, cambiarlo y gestionar Discord." data-panel="ov-perfil"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></span><span class="menu-label">Mi perfil</span></button>
       <button class="gmi" title="Objetos, semillas y materiales que llevas." data-panel="ov-inv"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8V6a6 6 0 0 1 12 0v2 M4 8h16v13H4z M8 12h8v5H8z"/></svg></span><span class="menu-label">Inventario</span></button>
       <button class="gmi" title="Capacidad, nodos y objetos por colocar en tu granja." data-panel="ov-cobertizo"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7 M5 9v12h14V9 M9 21v-7h6v7"/></svg></span><span class="menu-label">Cobertizo</span><b class="menu-badge" id="gm-cob"></b></button>
+      <button class="gmi" title="Elegir qué criatura ayuda en tu granja." data-panel="ov-doma"><span class="menu-icon" aria-hidden="true">🐾</span><span class="menu-label">Criaturas domadas</span></button>
       <button class="gmi" title="Elegir armas, armaduras y herramientas." data-panel="ov-equip"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 18 M19 3L5 21 M3 17l4 4 M17 21l4-4"/></svg></span><span class="menu-label">Equipo</span></button>
       <button class="gmi" title="Niveles de cultivo, tala, minería y combate." data-panel="ov-skills"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11h4v9 M10 20V6h4v14 M16 20V3h4v17"/></svg></span><span class="menu-label">Habilidades</span></button>
       <button class="gmi" title="Elegir a qué zona viajar." data-panel="ov-mapa"><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2z M9 3v16 M15 5v16"/></svg></span><span class="menu-label">Mapa</span></button>

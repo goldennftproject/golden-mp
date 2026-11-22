@@ -17,7 +17,7 @@ import { bellotasActualizar, bellotasConRanking, bellotasEstado, bellotasReclama
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 15;       // 19/11: adopción y alimentación de criaturas.
+const VERSION = 16;       // 22/11: colección de criaturas y elección del ayudante.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -632,10 +632,14 @@ function premiumReloj(antes,next,i,o,ahora,errores,desdeServidor=0){
  const actos=num(next.stats?.[stat]?.[res])-num(antes.stats?.[stat]?.[res]);
  // La mascota de brazos puede drenar backlog sin nodoSumar. Conserva el largo
  // anterior y deja una carga, con comida y una entrega registrados en esta sesión.
- const mascota=antes.doma,ultimo=next.doma?.ultimo;
+ const seleccion=antes.domaColeccion;
+ const mascota=seleccion?(seleccion.activa?seleccion.criaturas?.[seleccion.activa]:null):antes.doma;
+ const trabajo=next.domaColeccion?.criaturas?.[mascota?.bicho] ?? next.doma;
+ const ultimo=trabajo?.bicho===mascota?.bicho?trabajo?.ultimo:null;
  const entregado=num(ultimo?.[o.type==='tree'?'madera':'piedra'])>0;
- const comision=num(ultimo?.fee)>0&&num(next.doma?.cont)>num(mascota?.cont);
- const atendido=DOMA_PLATOS.get(mascota?.bicho)==='bocado_domador'&&num(mascota.comidaHasta)>num(antes.visto)&&num(ultimo?.at)>num(antes.visto)&&num(ultimo?.at)<=ahora+5000&&o.type!=='ore'&&q.readyAt<=ahora&&Math.abs(dur-oldDur)<2&&(entregado||comision);
+ const comision=num(ultimo?.fee)>0&&num(trabajo?.cont)>num(mascota?.cont);
+ const desdeTurno=Math.max(num(antes.visto),num(seleccion?.activaDesde),num(mascota?.desde));
+ const atendido=DOMA_PLATOS.get(mascota?.bicho)==='bocado_domador'&&num(mascota.comidaHasta)>desdeTurno&&num(ultimo?.at)>desdeTurno&&num(ultimo?.at)<=ahora+5000&&o.type!=='ore'&&q.readyAt<=ahora&&Math.abs(dur-oldDur)<2&&(entregado||comision);
  // VIP y la comida de -15% son los únicos multiplicadores del ciclo actual.
  // Los créditos generales de actividad/recursos siguen siendo comprobados abajo.
  if(!atendido&&(!(usos>0)||!(actos>=usos))){bad();return;}
@@ -790,67 +794,124 @@ function domaExistencias(d, kind, key) {
     cofres.reduce((n, cofre) => n + domaCantidadPilas(cofre?.items, kind, key, 'key'), 0);
 }
 
-function protegerDoma(antes, next, ahora, errores) {
-  const anterior = antes.doma;
-  const nueva = next.doma;
-  if (!nueva?.bicho) {
-    if (anterior?.bicho && !(num(next.reinicio) > num(antes.reinicio) && esDeCero(next))) next.doma = anterior;
-    return;
-  }
+function domaFecha(desde) {
+  return Number.isSafeInteger(desde) && desde > 0 ? desde : 0;
+}
 
-  if (anterior?.bicho && (nueva.bicho !== anterior.bicho || nueva.desde !== anterior.desde)) {
-    errores.push('La criatura domada ya está registrada');
-    return;
-  }
+function domaColeccionLegada(mascota) {
+  const activa = mascota?.bicho || null;
+  return { v: 1, activa, activaDesde: activa ? domaFecha(mascota.desde) : 0, criaturas: activa ? { [activa]: mascota } : {} };
+}
 
-  const reloj = Math.min(ahora + 300000, num(next.visto) || ahora);
-  const salida = num(antes.zonaViaje?.t);
-  const sigue = num(next.zonaViaje?.t);
-  const mismoViaje = salida > 0 && salida === sigue;
-  let comidaAntes = num(anterior?.comidaHasta);
-  if (!anterior?.bicho) {
-    const plato = DOMA_PLATOS.get(nueva.bicho);
-    const regreso = num(next.zonaCdHasta);
-    const desde = nueva.desde;
-    // El portal guarda de forma asíncrona. Un único snapshot puede incluir entrada y regreso.
-    const viaje = (salida > 0 && desde >= salida) || (sigue > 0 && desde >= sigue) ||
-      (regreso > num(antes.zonaCdHasta) && regreso >= desde && regreso <= reloj);
-    const bajas = num(next.stats?.matar?.[nueva.bicho]) - num(antes.stats?.matar?.[nueva.bicho]);
-    if (!plato || num(next.level) < 10 || !Number.isSafeInteger(desde) || desde <= 0 ||
-        desde > reloj || !viaje || !Number.isSafeInteger(bajas) || bajas < 1) {
-      errores.push('La doma requiere Granja 10 y una criatura vencida en la Zona Negra');
-      return;
-    }
-    const cocinados = Math.max(0, num(next.stats?.cocinar?.[plato]) - num(antes.stats?.cocinar?.[plato]));
-    const retiro = domaExistencias(antes, 'dish', plato) + cocinados - domaExistencias(next, 'dish', plato);
-    const gastoMorral = domaCantidadMorral(antes.cont, 'dish', plato) - domaCantidadMorral(next.cont, 'dish', plato);
-    if (retiro < 1 || (mismoViaje && gastoMorral < 1)) {
-      errores.push('La doma requiere consumir el plato de la criatura desde el contenedor');
-      return;
-    }
-    comidaAntes = desde + DOMA_DIA_MS;
-  }
+function domaColeccionValida(coleccion) {
+  if (coleccion?.v !== 1 || !coleccion.criaturas || typeof coleccion.criaturas !== 'object' || Array.isArray(coleccion.criaturas)) return false;
+  const { activa, activaDesde, criaturas } = coleccion;
+  if (!Number.isSafeInteger(activaDesde) || activaDesde < 0) return false;
+  if (activa === null ? activaDesde !== 0 : !DOMA_PLATOS.has(activa) || criaturas[activa]?.bicho !== activa || activaDesde < domaFecha(criaturas[activa].desde)) return false;
+  return Object.entries(criaturas).every(([bicho, criatura]) => DOMA_PLATOS.has(bicho) && criatura?.bicho === bicho);
+}
 
+function domaRaciones(anterior, nueva, reloj, mismoViaje, errores) {
+  const comidaAntes = anterior ? num(anterior.comidaHasta) : nueva.desde + DOMA_DIA_MS;
   const comida = nueva.comidaHasta;
-  if (anterior?.bicho && comida === anterior.comidaHasta) return;
+  if (anterior && comida === anterior.comidaHasta) return 0;
   if (!Number.isSafeInteger(comida) || comida < comidaAntes || comida > reloj + 4 * DOMA_DIA_MS) {
     errores.push('La reserva de alimento de la criatura no es válida');
-    return;
+    return 0;
   }
   // El plato de doma cubre un día. El cliente toma dos lecturas consecutivas del reloj.
-  const margenInicial = anterior?.bicho ? 0 : 1000;
-  if (comida - comidaAntes <= margenInicial) return;
+  const margenInicial = anterior ? 0 : 1000;
+  if (comida - comidaAntes <= margenInicial) return 0;
   const diasContiguos = Math.round((comida - comidaAntes) / DOMA_DIA_MS);
   if (mismoViaje || (comidaAntes > reloj && Math.abs(comida - comidaAntes - diasContiguos * DOMA_DIA_MS) > margenInicial)) {
     errores.push('Cada ración de la criatura debe cubrir un día completo');
+    return 0;
+  }
+  return comidaAntes > reloj ? diasContiguos : Math.max(1, Math.ceil((comida - reloj) / DOMA_DIA_MS));
+}
+
+function protegerDoma(antes, next, ahora, errores) {
+  const reinicio = num(next.reinicio) > num(antes.reinicio) && esDeCero(next);
+  const anterior = reinicio ? domaColeccionLegada(null) : (antes.domaColeccion ?? domaColeccionLegada(antes.doma));
+  const clienteNuevo = next.domaColeccion !== undefined;
+  if (!clienteNuevo && !next.doma?.bicho && !reinicio && antes.doma?.bicho) next.doma = antes.doma;
+  let siguiente = clienteNuevo ? next.domaColeccion : domaColeccionLegada(next.doma);
+  if (!clienteNuevo && antes.domaColeccion && !reinicio) {
+    if (anterior.activa || Object.keys(anterior.criaturas).length) {
+      const vigente = anterior.activa && anterior.criaturas[anterior.activa];
+      if (next.doma?.bicho && (next.doma.bicho !== vigente?.bicho || next.doma.desde !== vigente.desde)) {
+        errores.push('Actualizá el juego para guardar la nueva criatura');
+        return;
+      }
+      siguiente = { ...anterior, criaturas: { ...anterior.criaturas } };
+      if (vigente && next.doma?.bicho) siguiente.criaturas[vigente.bicho] = next.doma;
+    }
+  }
+  if (!domaColeccionValida(siguiente)) {
+    errores.push('La colección de criaturas no es válida');
     return;
   }
-  const diasMinimos = comidaAntes > reloj ? diasContiguos : Math.max(1, Math.ceil((comida - reloj) / DOMA_DIA_MS));
-  const carneGastada = domaExistencias(antes, 'res', 'carne') - domaExistencias(next, 'res', 'carne');
-  // Un regreso puede traer carne recogida de un cadáver ya vencido en el guardado anterior.
-  const conBotin = !!antes.zonaViaje || !!next.zonaViaje || num(next.zonaCdHasta) > num(antes.zonaCdHasta) ||
-    !mismoJSON(antes.incResumen, next.incResumen) || !mismoJSON(antes.regalos, next.regalos);
-  if (!conBotin && carneGastada < diasMinimos) errores.push('Alimentar a la criatura requiere una carne por día');
+  const activa = siguiente.activa === null ? null : siguiente.criaturas[siguiente.activa];
+  if (clienteNuevo && !mismoJSON(next.doma, activa)) {
+    errores.push('El ayudante activo no coincide con la colección');
+    return;
+  }
+  const reloj = Math.min(ahora + 300000, num(next.visto) || ahora);
+  if (clienteNuevo && activa && (siguiente.activa !== anterior.activa || siguiente.activaDesde !== anterior.activaDesde) &&
+      (siguiente.activaDesde > reloj || (siguiente.activa === anterior.activa && siguiente.activaDesde < anterior.activaDesde))) {
+    errores.push('El reloj del ayudante activo no es válido');
+    return;
+  }
+  for (const [bicho, criatura] of Object.entries(anterior.criaturas)) {
+    if (!siguiente.criaturas[bicho] || siguiente.criaturas[bicho].desde !== criatura.desde) {
+      errores.push('Las criaturas domadas se conservan en la colección');
+      return;
+    }
+  }
+  const salida = num(antes.zonaViaje?.t);
+  const sigue = num(next.zonaViaje?.t);
+  const mismoViaje = salida > 0 && salida === sigue;
+  const platos = new Map();
+  let raciones = 0;
+  for (const [bicho, mascota] of Object.entries(siguiente.criaturas)) {
+    const previa = anterior.criaturas[bicho];
+    if (!previa) {
+      const regreso = num(next.zonaCdHasta);
+      const desde = mascota.desde;
+      // El portal guarda de forma asíncrona. Un único snapshot puede incluir entrada y regreso.
+      const viaje = (salida > 0 && desde >= salida) || (sigue > 0 && desde >= sigue) ||
+        (regreso > num(antes.zonaCdHasta) && regreso >= desde && regreso <= reloj);
+      const bajas = num(next.stats?.matar?.[bicho]) - num(antes.stats?.matar?.[bicho]);
+      if (num(next.level) < 10 || !Number.isSafeInteger(desde) || desde <= 0 || desde > reloj ||
+          !viaje || !Number.isSafeInteger(bajas) || bajas < 1) {
+        errores.push('La doma requiere Granja 10 y una criatura vencida en la Zona Negra');
+        return;
+      }
+      const plato = DOMA_PLATOS.get(bicho);
+      platos.set(plato, (platos.get(plato) || 0) + 1);
+    }
+    raciones += domaRaciones(previa, mascota, reloj, mismoViaje, errores);
+  }
+  for (const [plato, cantidad] of platos) {
+    const cocinados = Math.max(0, num(next.stats?.cocinar?.[plato]) - num(antes.stats?.cocinar?.[plato]));
+    const retiro = domaExistencias(antes, 'dish', plato) + cocinados - domaExistencias(next, 'dish', plato);
+    const gastoMorral = domaCantidadMorral(antes.cont, 'dish', plato) - domaCantidadMorral(next.cont, 'dish', plato);
+    if (retiro < cantidad || (mismoViaje && gastoMorral < cantidad)) {
+      errores.push('Cada doma requiere consumir su plato desde el contenedor');
+      return;
+    }
+  }
+  if (raciones) {
+    // Un regreso puede traer carne recogida de un cadáver ya vencido en el guardado anterior.
+    const conBotin = !!antes.zonaViaje || !!next.zonaViaje || num(next.zonaCdHasta) > num(antes.zonaCdHasta) ||
+      !mismoJSON(antes.incResumen, next.incResumen) || !mismoJSON(antes.regalos, next.regalos);
+    const carneGastada = domaExistencias(antes, 'res', 'carne') - domaExistencias(next, 'res', 'carne');
+    if (!conBotin && carneGastada < raciones) errores.push('Alimentar a cada criatura requiere una carne por día');
+  }
+  if (!clienteNuevo && antes.domaColeccion && !reinicio) {
+    next.domaColeccion = siguiente;
+    next.doma = activa;
+  }
 }
 
 function protegerEconomia(prev, next, ahora, desdeServidor=0) {
@@ -1286,7 +1347,7 @@ const json = (obj: unknown, status = 200) =>
 
 // SAVE_SUPPORT_V1: private diagnostics only; never a restore, reward or save decision.
 const SAVE_SUPPORT_PROJECT='ulspkdaljeuleqqdokfk';
-const SAVE_SUPPORT_FIELDS=new Set(["_economiaControl","_graveProtocol","_saveOp","actividadAcciones","actividadGranja","amarres","animals","armCd","armasUnlocked","armor","armorDur","armorEq","armorOff","artefactos","banco","bowOwned","buffCultivoHasta","buffs","built","buzonArchivo","buzonLeidas","canaElegida","canas","canasDur","canasDurV","chestCap","chests","cobertizo","combatXp","cont","conts","cooking","cosEq","cosmeticos","daily","decoBolsa","decos","dishes","doma","dummyTrain","dummyUsedAt","edif2","editVisto","emergBuys","energiaGranja","escamas","escamasLonja","espacioV","establoV","estrellaMax","excav","expObra","expParcelasDadas","expansiones","farmXpBase","farmXpEdificios","farmXpRitmo","firstCropDone","firstSeeds","fish","forjaOps","gear","ghInv","goblin","godHand","golden","hbInit","horno","hotSel","hotbar","hp","hpMax","incDia","incResumen","incursion","incursionTutorialUsada","infraestructura","iniciado","invRows","kitReclamado","layout","layoutPlots","layoutPond","level","logros","logrosAcciones","logrosV2","lombDia","lombricario","lonja","lonjaCap","lonjaEntregados","lonjaMes","marea","mejorasPasivas","mercadoVentas","mkPend","modoPelea","nasaPlanos","nasas","nfts","nodoUsos","nodos","obraDep","obras","ofrendaLog","ofrendaPts","packs","pass","pedidos","pescaDesde","pescaDia","pescaHasta","pescaStats","pescaTiene","pescaV4","picks","planos","plata","plots","plotsCompradas","plotsFicha","plotsOwned","presion","prestige","produccion","recientes","regalos","reinicio","res","rocksOpen","runaOro","seedBuys","seeds","selSeed","senales","sflStock","skills","slots","stam","stamAcc","stamFullAt","stamLastAt","stamRec","stats","statsBase","swordOwned","swordWoodOwned","tituloPesca","tools","torneo","torneoCobrado","torneoPodioCobrado","trampas","treesOpen","triesV","tumba","tuto","vales","visitas","visto","vistos","weaponSpares","weaponSparesOps","weapons","zonaCdHasta","zonaViaje","zonasVistas"]);
+const SAVE_SUPPORT_FIELDS=new Set(["_economiaControl","_graveProtocol","_saveOp","actividadAcciones","actividadGranja","amarres","animals","armCd","armasUnlocked","armor","armorDur","armorEq","armorOff","artefactos","banco","bowOwned","buffCultivoHasta","buffs","built","buzonArchivo","buzonLeidas","canaElegida","canas","canasDur","canasDurV","chestCap","chests","cobertizo","combatXp","cont","conts","cooking","cosEq","cosmeticos","daily","decoBolsa","decos","dishes","doma","domaColeccion","dummyTrain","dummyUsedAt","edif2","editVisto","emergBuys","energiaGranja","escamas","escamasLonja","espacioV","establoV","estrellaMax","excav","expObra","expParcelasDadas","expansiones","farmXpBase","farmXpEdificios","farmXpRitmo","firstCropDone","firstSeeds","fish","forjaOps","gear","ghInv","goblin","godHand","golden","hbInit","horno","hotSel","hotbar","hp","hpMax","incDia","incResumen","incursion","incursionTutorialUsada","infraestructura","iniciado","invRows","kitReclamado","layout","layoutPlots","layoutPond","level","logros","logrosAcciones","logrosV2","lombDia","lombricario","lonja","lonjaCap","lonjaEntregados","lonjaMes","marea","mejorasPasivas","mercadoVentas","mkPend","modoPelea","nasaPlanos","nasas","nfts","nodoUsos","nodos","obraDep","obras","ofrendaLog","ofrendaPts","packs","pass","pedidos","pescaDesde","pescaDia","pescaHasta","pescaStats","pescaTiene","pescaV4","picks","planos","plata","plots","plotsCompradas","plotsFicha","plotsOwned","presion","prestige","produccion","recientes","regalos","reinicio","res","rocksOpen","runaOro","seedBuys","seeds","selSeed","senales","sflStock","skills","slots","stam","stamAcc","stamFullAt","stamLastAt","stamRec","stats","statsBase","swordOwned","swordWoodOwned","tituloPesca","tools","torneo","torneoCobrado","torneoPodioCobrado","trampas","treesOpen","triesV","tumba","tuto","vales","visitas","visto","vistos","weaponSpares","weaponSparesOps","weapons","zonaCdHasta","zonaViaje","zonasVistas"]);
 const SAVE_SUPPORT_SECRETS=new Set(["authorization","cookie","cookies","headers","password","passwd","accesstoken","refreshtoken","idtoken","jwt","apikey","servicerolekey","sbkey","email","correo","token","secret","clientsecret","privatekey","mnemonic","seedphrase","session","cookiestore","auth"]);
 const SAVE_SUPPORT_LIMITS={"depth":12,"nodes":8192,"objectKeys":256,"arrayLength":512,"snapshotBytes":131072,"captureBodyBytes":700000,"clientBatchBytes":262144,"clientItems":3,"ordinaryCaptureTimeoutMs":250,"clientCaptureBudgetMs":1000,"clientTransportTimeoutMs":3000};
 function saveSupportBytes(value){try{return new TextEncoder().encode(JSON.stringify(value)).length;}catch{return Infinity;}}

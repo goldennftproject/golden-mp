@@ -18,8 +18,8 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
   if (!m) { console.log("\n1 fallo(s)\n"); process.exit(1); }
   const ctx = { Math, isFinite, String, Object, Set, JSON };
   vm.createContext(ctx);
-  vm.runInContext(m[1] + "\nthis.evaluarGuardado = evaluarGuardado; this.MODO = MODO; this.VERSION = VERSION; this.mercadoPermiso = mercadoPermiso; this.protegerDoma = protegerDoma; this.premiumReloj = premiumReloj;", ctx);
-  const { evaluarGuardado, MODO, VERSION, mercadoPermiso, protegerDoma, premiumReloj } = ctx;
+  vm.runInContext(m[1] + "\nthis.evaluarGuardado = evaluarGuardado; this.MODO = MODO; this.VERSION = VERSION; this.mercadoPermiso = mercadoPermiso; this.protegerDoma = protegerDoma; this.premiumReloj = premiumReloj; this.protegerEconomia = protegerEconomia;", ctx);
+  const { evaluarGuardado, MODO, VERSION, mercadoPermiso, protegerDoma, premiumReloj, protegerEconomia } = ctx;
   const HORA = 3600;
 
   console.log("\nEL CONTRATO DEL ESCALÓN 1: MODO SOMBRA, VERSIONADO");
@@ -57,6 +57,102 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
     const errores = [];
     premiumReloj(antes, despues, 86, { key, type: "tree" }, ahora, errores, visto);
     ok("acepta el reloj Golden cuando el ayudante se llevó una sola carga de comisión", errores.length === 0);
+    const pausada = { ...despues, doma: null, domaColeccion: { v: 1, activa: null, activaDesde: 0, criaturas: { orco: despues.doma } } };
+    premiumReloj(antes, pausada, 86, { key, type: "tree" }, ahora, errores, visto);
+    ok("el reloj Golden conserva el turno del ayudante que ahora descansa", errores.length === 0);
+  }
+  {
+    const dia = 86400000;
+    let reloj = Date.UTC(2026, 10, 22, 12);
+    class Fecha extends Date { static now() { return reloj; } }
+    const silencio = () => {};
+    const cliente = vm.createContext({
+      Date: Fecha, console: { log: silencio, warn: silencio, error: silencio, info: silencio },
+      performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval: silencio,
+      location: { hash: "", search: "" }, localStorage: { getItem: () => null, setItem: silencio, removeItem: silencio },
+      document: { getElementById: () => null, addEventListener: silencio, querySelectorAll: () => [] },
+    });
+    cliente.window = cliente;
+    for (const f of ["config", "nav", "state", "save"]) vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), cliente);
+    for (const f of ["toast", "log", "refreshHud", "saveFarm", "syncSlots", "refreshBarn", "recalcFarmLevel"]) cliente[f] = silencio;
+    cliente.isOpen = () => false;
+    const copiar = valor => JSON.parse(JSON.stringify(valor));
+    const capturar = () => copiar(cliente.snapshot());
+    const validar = (a, b) => {
+      const errores = [];
+      protegerDoma(a, b, reloj, errores);
+      return errores;
+    };
+    const confirmar = (a, b) => {
+      const aceptado = copiar(b);
+      const base = reloj - 1000;
+      const errores = protegerEconomia(copiar(a), aceptado, reloj, base);
+      return errores.length === 0 && cliente.guardadoMismoContenido(
+        { body: { data: b, base: new Date(base).toISOString() } },
+        { data: aceptado, updated_at: new Date(reloj).toISOString() }
+      );
+    };
+    const G = cliente.G;
+    cliente.domaCargar({ doma: { bicho: "larva", desde: reloj - dia, comidaHasta: reloj + dia, cont: 0, ultimo: null } });
+    G.level = 10;
+    G.res.carne = 3;
+    cliente.GF.scene = "forest";
+    G.cont = cliente.contCrear("backpack");
+    const bolsa = cliente.contCrear("bag");
+    cliente.contMeter(bolsa, "dish", "bocado_domador", 2);
+    cliente.contMeterBolsa(G.cont, bolsa);
+    cliente.zonaEntrar();
+    const anterior = capturar();
+    delete anterior.domaColeccion;
+    reloj += 60000;
+    for (const bicho of ["orco", "troll"]) {
+      cliente.statAdd("matar", bicho);
+      ok("el cliente doma " + bicho + " sin reemplazar la larva", cliente.domaIntentar(bicho, () => 0) === true);
+    }
+    const domadas = capturar();
+    ok("confirma la migración y dos adopciones reales con dos platos de la mochila", confirmar(anterior, domadas) && domadas.doma.bicho === "larva");
+    const unPlato = copiar(anterior);
+    unPlato.cont.items.find(pila => pila.c === "bag").items[0].n = 1;
+    ok("dos especies del mismo plato exigen pagar ambos en el mismo guardado", validar(unPlato, domadas).some(s => /plato/.test(s)));
+    const desaparecida = copiar(domadas);
+    delete desaparecida.domaColeccion.criaturas.troll;
+    ok("impide perder una criatura ya confirmada", validar(domadas, desaparecida).some(s => /conservan/.test(s)));
+    const aliasViejo = { ...domadas, doma: null };
+    ok("rechaza un alias que contradice a la colección", validar(domadas, aliasViejo).some(s => /activo/.test(s)));
+    const sinDomar = copiar(domadas);
+    sinDomar.domaColeccion.activa = "rata";
+    ok("sólo se puede activar una criatura de la colección", validar(domadas, sinDomar).some(s => /colección/.test(s)));
+    const hijaDeOtro = copiar(domadas);
+    hijaDeOtro.domaColeccion.criaturas.orco.desde -= 1;
+    ok("conserva la identidad de la criatura confirmada", validar(domadas, hijaDeOtro).some(s => /conservan/.test(s)));
+    reloj += 1000;
+    cliente.zonaSalir(false);
+    cliente.GF.scene = "farm";
+    const granja = capturar();
+    ok("la partida real vuelve a la granja y confirma la colección intacta", confirmar(domadas, granja));
+    reloj += 1000;
+    cliente.domaAlimentar();
+    cliente.domaElegir("orco");
+    cliente.domaAlimentar();
+    const alimentadas = capturar();
+    ok("dos raciones y un cambio de ayudante confirman en un guardado", confirmar(granja, alimentadas) &&
+      alimentadas.res.carne === 1 && alimentadas.doma.bicho === "orco");
+    const unaCarne = { ...alimentadas, res: { ...alimentadas.res, carne: 2 } };
+    ok("dos criaturas no pueden usar la misma carne", validar(granja, unaCarne).some(s => /carne/.test(s)));
+    const pestañaAnterior = copiar(alimentadas);
+    delete pestañaAnterior.domaColeccion;
+    pestañaAnterior.doma.comidaHasta += dia;
+    pestañaAnterior.res.carne = 0;
+    ok("la pestaña anterior puede alimentar al activo y conserva las otras criaturas",
+      validar(alimentadas, pestañaAnterior).length === 0 && pestañaAnterior.domaColeccion?.criaturas.troll?.bicho === "troll" &&
+      pestañaAnterior.domaColeccion.criaturas.orco.comidaHasta === pestañaAnterior.doma.comidaHasta);
+    cliente.domaElegir(null);
+    const descanso = capturar();
+    ok("guardar el descanso conserva las especies y sus reservas", confirmar(alimentadas, descanso) &&
+      descanso.doma === null && descanso.domaColeccion.activa === null && Object.keys(descanso.domaColeccion.criaturas).length === 3);
+    cliente.estadoDeCero();
+    G.reinicio = reloj + 1;
+    ok("un reinicio conforme al guardado existente borra la colección", validar(descanso, capturar()).length === 0);
   }
 
   /* ═══ EL MERCADO, QUE EL PORTERO NO CONOCÍA HASTA EL 15/9 ════════════════════════════

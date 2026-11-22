@@ -1643,6 +1643,7 @@ class FarmScene extends Phaser.Scene {
       return of ? ("Mercader Goblin — cambia " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) + " por " + of.entrega + " " + (RES_LABEL[of.da] || of.da) + " 🤝") : "Mercader Goblin 🤝";
     }
     if (o.type === "domabicho") {   // LA DOMA (22/8): el bicho cuenta su estado desde el hover
+      if (o !== this.domaObj || o.especieDoma !== G.doma?.bicho) return "";
       const nom = (typeof MONSTER_DEF !== "undefined" && G.doma && MONSTER_DEF[G.doma.bicho]) ? MONSTER_DEF[G.doma.bicho].label : "Criatura";
       if (typeof domaHambriento === "function" && domaHambriento()) return nom + " domado — tiene HAMBRE: clic para darle 1 carne 🍖";
       const u = G.doma && G.doma.ultimo;
@@ -1825,6 +1826,7 @@ class FarmScene extends Phaser.Scene {
       return;
     }
     if (o.type === "domabicho") {   // LA DOMA (22/8): el clic lo alimenta (1 carne = 1 día de trabajo)
+      if (o !== this.domaObj || o.especieDoma !== G.doma?.bicho) return;
       if (typeof domaAlimentar === "function") {
         const r = domaAlimentar();
         if (r && r.ok && this.premioFx) this.premioFx(o.cx, o.by - 10, resSprite("carne"), "ñam");
@@ -4467,18 +4469,24 @@ class FarmScene extends Phaser.Scene {
       if (go.sprite) go.sprite.destroy(); if (go.shadow) go.shadow.destroy();
       const ix = this.objs.indexOf(go); if (ix >= 0) this.objs.splice(ix, 1);
     }
+  }
 
-    /* ---- EL BICHO DOMADO (22/8, la doma v1) — vive cerca del establo/granero.
-       Mismo patrón que el goblin: sprite global, sombra, y el clic lo alimenta. ---- */
-    const especie = G.doma && MONSTER_DEF[G.doma.bicho];
-    const animacion = especie && especie.sprite ? especie.sprite + "_idle" : null;
-    const baseKey = animacion ? animacion + "_0" : null;
-    if (this.domaObj && this.domaObj.baseKey !== baseKey) {
+  actualizarDoma() {
+    const especieDoma = G.doma?.bicho;
+    if (this.domaObj && this.domaObj.especieDoma !== especieDoma) {
       const bo = this.domaObj; this.domaObj = null;
-      if (bo.sprite) bo.sprite.destroy(); if (bo.shadow) bo.shadow.destroy();
+      this.tweens.killTweensOf(bo.sprite);
+      bo.sprite.destroy();
+      bo.shadow.destroy();
       const ix = this.objs.indexOf(bo); if (ix >= 0) this.objs.splice(ix, 1);
     }
-    if (baseKey && !this.domaObj && this.textures.exists(baseKey)) {
+    if (!especieDoma) return;
+    if (!this.domaObj) {
+      const spriteKey = MONSTER_DEF[especieDoma]?.sprite;
+      if (!spriteKey) return;
+      const animacion = spriteKey + "_idle";
+      const baseKey = animacion + "_0";
+      if (!this.textures.exists(baseKey)) return;
       const casa = (this.objs || []).find(x => x.type === "establo") || (this.objs || []).find(x => x.type === "barn");
       const dx = casa ? casa.cx + 46 : 300, dy = casa ? casa.by + 6 : 220, dw = GF.TILE * 0.9;
       const spr = this.add.sprite(dx, dy, baseKey).setOrigin(0.5, 1).setDepth(dy);
@@ -4486,7 +4494,7 @@ class FarmScene extends Phaser.Scene {
       try { if (this.anims.exists(animacion)) spr.play(animacion); } catch (e) {}
       this.tweens.add({ targets: spr, scaleY: spr.scaleY * 0.96, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira aunque no tenga anim
       const shadow = this.add.ellipse(dx, dy + 2, dw * 0.7, 5, 0x000000, 0.22).setDepth(dy - 1);
-      this.domaObj = { i: "domabicho", type: "domabicho", cx: dx, by: dy, w: dw, rw: dw, baseKey, sprite: spr, shadow, shadowDy: 2, shadowDepthDy: -1, readyAt: 0 };
+      this.domaObj = { i: "domabicho", type: "domabicho", especieDoma, cx: dx, by: dy, w: dw, rw: dw, baseKey, sprite: spr, shadow, shadowDy: 2, shadowDepthDy: -1, readyAt: 0 };
       this.objs.push(this.domaObj);
     }
     if (this.domaObj && this.domaObj.sprite) {   // con hambre se pone gris — se ve desde lejos
@@ -6306,6 +6314,7 @@ class FarmScene extends Phaser.Scene {
 
   updateReal(time, deltaMs) {
     if (this.leaving || !this.hero) return;   // cambiando de escena: no tocar nada más
+    this.actualizarDoma();
     this.acabadosEdificios();
     this.rotulosEdificios();
     this.tickDestinoGuia();

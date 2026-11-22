@@ -18,6 +18,7 @@ const G = {
   stam: null, stamAcc: 0, stamFullAt: 0, stamLastAt: 0, stamRec: null, // regeneración continua con reloj persistente
   stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, logrosV2:null, logrosAcciones:{}, infraestructura:null, farmXpEdificios:0, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
+  domas: {}, doma: null, domaActivaKey: null, domaActivaDesde: 0,
   armor: {}, armorDur: {}, armorEq: null,   // Curtiduría: piezas crafteadas, su durabilidad y el set equipado
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
   nodoUsos: {},                  // cuántas veces se recogió de cada nodo (para el arranque rápido)
@@ -12143,7 +12144,8 @@ function domaAyudaReceta(id) {
   const activa = domaActiva();
   return {
     titulo: activa ? "Doma desde Granja " + DOMA_NIVEL : "Doma pausada en esta alfa",
-    texto: (activa ? "Para domar, " : "Con la doma activa, ") + RECIPE_DEF[id].desc + " El intento es automático y usa un plato.",
+    texto: (activa ? "Para domar, " : "Con la doma activa, ") + RECIPE_DEF[id].desc + " El intento es automático y usa un plato." +
+      (activa ? " Elige tu ayudante en Menú → Criaturas domadas." : ""),
   };
 }
 var DOMA_ROL_TXT = {
@@ -12154,13 +12156,39 @@ var DOMA_ROL_TXT = {
 var DOMA_RATA_HORAS = 8, DOMA_RATA_TOPE = 3;    // 1 lombriz cada 8 h de ausencia, tope 3 por vuelta (como los montículos: 3/día)
 var DOMA_LARVA_PCT = 0.15;                       // recorta el 15% del tiempo RESTANTE de cada cultivo en crecimiento
 function domaAbre() { return (typeof farmLevel === "function" ? farmLevel() : G.level || 1) >= DOMA_NIVEL; }
+function domaCargar(guardado) {
+  const coleccion = guardado.domaColeccion;
+  const guardadoActual = coleccion?.v === 1;
+  const legado = guardado.doma;
+  const criaturas = guardadoActual ? coleccion.criaturas : legado?.bicho ? { [legado.bicho]: legado } : {};
+  G.domas = {};
+  for (const especie of DOMA_ESPECIES) {
+    const criatura = criaturas?.[especie];
+    if (criatura?.bicho === especie) G.domas[especie] = JSON.parse(JSON.stringify(criatura));
+  }
+  const clave = guardadoActual ? coleccion.activa : legado?.bicho;
+  G.domaActivaKey = Object.hasOwn(G.domas, clave) ? clave : null;
+  G.doma = G.domas[G.domaActivaKey] || null;
+  const desde = guardadoActual ? coleccion.activaDesde : legado?.desde;
+  G.domaActivaDesde = G.doma && Number.isSafeInteger(desde) && desde > 0 ? desde : 0;
+}
+function domaElegir(especie) {
+  if (!domaActiva() || enZona()) return { error: "Elige tu ayudante en la granja." };
+  if (especie !== null && !Object.hasOwn(G.domas, especie)) return { error: "Todavía no domaste esa criatura." };
+  if (G.domaActivaKey === especie) return { ok: true };
+  G.domaActivaKey = especie;
+  G.doma = G.domas[especie] || null;
+  G.domaActivaDesde = G.doma ? Math.max(nowMs(), Number(G.doma.desde) || 0) : 0;
+  if (typeof saveFarm === "function") saveFarm(true);
+  return { ok: true };
+}
 /* 24/8 — EL INTENTO DE DOMA NO PUEDE SER MUDO. Reporte del diseñador: « estoy intentando tomar
    una rata con la Galletita de Cereza y no sale nada: ni si falla, ni si acierta ».
    La causa: la primera línea cortaba EN SILENCIO cuando faltaba el nivel de granja o cuando ya
    tenías un bicho. El jugador con el plato correcto en la bolsa mataba la rata y no pasaba nada
    — ni un mensaje —, que es exactamente la clase de fallo que no se puede diagnosticar desde
    dentro del juego. Regla nueva: SI LLEVÁS EL PLATO CORRECTO, SIEMPRE hay respuesta. Y las dos
-   puertas que no dependen de la suerte (nivel y bicho ocupado) NO consumen el plato: no hubo
+   puertas que no dependen de la suerte (nivel y especie ya domada) NO consumen el plato: no hubo
    intento, así que no se cobra. */
 function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
   if (!domaActiva()) return false;
@@ -12170,7 +12198,7 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
   const plato = DOMA_PLATO[DOMA_ROL[especie]] || DOMA_ITEM;
   const platoNom = (RECIPE_DEF[plato] && RECIPE_DEF[plato].label) || plato;
   if (llevoTengo("dish", plato) < 1) {
-    if (domaAbre() && !G.doma?.bicho && G._domaPistaDia !== dayStamp(0)) {
+    if (domaAbre() && !G.domas[especie] && G._domaPistaDia !== dayStamp(0)) {
       G._domaPistaDia = dayStamp(0);
       log("🐾 Ese " + nomBicho + " te miró con hambre antes de caer… En la Cocina dicen que a los suyos les encanta el " + platoNom.toUpperCase() + " (Cocina " + ((RECIPE_DEF[plato] && RECIPE_DEF[plato].lvl) || "?") + ").", "info");
       toast("🐾 Le gustaría un " + platoNom);
@@ -12178,10 +12206,9 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
     return false;
   }
   /* de acá para abajo el jugador SÍ trae el plato: cualquier "no" viene con su motivo */
-  if (G.doma && G.doma.bicho) {
-    const suyo = (MONSTER_DEF[G.doma.bicho] && MONSTER_DEF[G.doma.bicho].label) || "bicho";
-    log("🐾 Ese " + nomBicho + " olfateó tu " + platoNom + "… pero ya tienes un " + suyo + " en la granja. Solo cabe uno.", "warn");
-    toast("Ya tienes un " + suyo + " en casa");
+  if (G.domas[especie]) {
+    log("🐾 Ya tienes esa especie en tu granja. Guardaste tu " + platoNom + ".", "info");
+    toast("Ya tienes esa especie en casa");
     return false;   // sin intento, sin cobro
   }
   if (!domaAbre()) {
@@ -12202,8 +12229,16 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
      o sea HAMBRIENTA desde el primer segundo: el premio llegaba pidiendo. Y era absurdo por
      partida doble, porque para domarla le acabás de dar un plato de la Cocina. Ese plato cuenta:
      el bicho entra a la granja con su primer día de trabajo ya pago. */
-  G.doma = { bicho: especie, desde: nowMs(), comidaHasta: nowMs() + DOMA_COMIDA_H * 3600000, cont: 0, ultimo: null };
-  log("🐾 ¡" + nom + " bajó las orejas y te siguió a casa! Vive en tu granja: dale 1 carne por día y " + (DOMA_ROL_TXT[DOMA_ROL[especie]] || "trabaja") + " mientras no estés. El plato que le diste ya le cubre el primer día.", "gold");
+  const primera = Object.keys(G.domas).length === 0;
+  const ahora = nowMs();
+  const criatura = { bicho: especie, desde: ahora, comidaHasta: ahora + DOMA_COMIDA_H * 3600000, cont: 0, ultimo: null };
+  G.domas[especie] = criatura;
+  if (primera) {
+    G.domaActivaKey = especie;
+    G.domaActivaDesde = ahora;
+    G.doma = criatura;
+  }
+  log("🐾 ¡" + nom + " se sumó a tu granja! El plato cubre su primer día. Elige tu ayudante en Menú → Criaturas domadas.", "gold");
   toast("🐾 ¡Domaste un " + nom + "!");
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
@@ -12228,7 +12263,7 @@ function domaAlimentar() {
 function domaTrabajar(visto, ahora) {
   const d = G.doma; ahora = ahora || nowMs();
   if (!d || !d.bicho || !visto || visto >= ahora) return null;
-  visto = Math.max(visto, Number(d.desde) || 0);
+  visto = Math.max(visto, Number(d.desde) || 0, G.domaActivaDesde);
   const hasta = Math.min(ahora, d.comidaHasta || 0);
   if (hasta <= visto) return null;   // estuvo con hambre toda tu ausencia
   const rol = DOMA_ROL[d.bicho] || "brazos";

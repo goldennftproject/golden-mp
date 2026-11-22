@@ -1,7 +1,7 @@
 /* LA DOMA v1 (22/8, dirección — GDD §13.1: el tiempo offline)
    Un monstruo domado atiende los nodos mientras el jugador está desconectado. Contratos:
      · se abre en granja 10; antes, ningún bicho te sigue (ni con suerte);
-     · un bicho a la vez, solo especies con sprite de granja, chance 8%;
+     · una criatura por especie, con un solo ayudante activo y descanso opcional;
      · come 1 carne = 24 h de trabajo (panza tope 3 días); con hambre NO trabaja;
      · SOLO recoge cargas maduradas EN TU AUSENCIA (ventana visto→ahora∩comida) — jamás
        reemplaza al jugador presente;
@@ -34,9 +34,9 @@ const G = ctx.G, H = 3600000;
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UNA CRIATURA A LA VEZ");
+console.log("\nLA PUERTA: GRANJA 10 Y EL PLATO FAVORITO DE CADA ESPECIE");
 {
-  G.level = 9; G.doma = null; G.dishes = { bocado_domador: 5, galletita_cereza: 5, papilla_remolacha: 5 };
+  G.level = 9; ctx.domaCargar({}); G.dishes = { bocado_domador: 5, galletita_cereza: 5, papilla_remolacha: 5 };
   ok("a granja 9 ni el 0,001 doma", ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.bocado_domador === 5);
   /* 24/8 — EL "NO" TIENE QUE HABLAR. El diseñador reportó: « intento tomar una rata con la
      Galletita y no sale nada, ni si falla ni si acierta ». Cortaba en silencio por nivel. */
@@ -52,7 +52,7 @@ console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UNA CRIATU
   ok("con Costillar y mala suerte (0,5 ≥ 1 de 6): se lo come y se va", ctx.domaIntentar("orco", () => 0.5) === false && G.dishes.bocado_domador === 4);
   ok("con Costillar y suerte: el orco te sigue a casa", ctx.domaIntentar("orco", () => 0.001) === true && G.doma.bicho === "orco");
   ok("y ese intento también costó su plato", G.dishes.bocado_domador === 3);
-  ok("y no hay segunda criatura (ni gasta más platos)", ctx.domaIntentar("troll", () => 0.001) === false && G.dishes.bocado_domador === 3);
+  ok("un segundo orco no gasta otro plato", ctx.domaIntentar("orco", () => 0.001) === false && G.dishes.bocado_domador === 3);
   const R = vm.runInContext("RECIPE_DEF", ctx);
   ok("la escalera de platos sigue al valor del ayudante: galletita 4 · papilla 7 · costillar 10",
     R.galletita_cereza.lvl === 4 && R.papilla_remolacha.lvl === 7 && R.bocado_domador.lvl === 10);
@@ -66,18 +66,43 @@ console.log("\nLA PUERTA: GRANJA 10, EL PLATO FAVORITO DE CADA UNO, Y UNA CRIATU
     /orco/i.test(R.bocado_domador.desc) && /RATA/i.test(R.galletita_cereza.desc) && /LARVA/i.test(R.papilla_remolacha.desc));
 }
 
-console.log("\nY CON UNA CRIATURA YA EN CASA, TAMBIÉN LO DICE");
+console.log("\nUNA CRIATURA POR ESPECIE, UN SOLO AYUDANTE ACTIVO");
 {
   avisos.length = 0;
   const antes = G.dishes.bocado_domador;
-  ok("no doma un segundo", ctx.domaIntentar("troll", () => 0.001) === false);
-  ok("y avisa que ya tienes uno", avisos.some(a => /ya tienes/i.test(a)), avisos.join(" · "));
-  ok("sin gastar el plato", G.dishes.bocado_domador === antes);
+  ok("puede domar un trol con un orco en casa", ctx.domaIntentar("troll", () => 0.001) === true);
+  ok("el orco sigue activo y el trol queda disponible", G.doma === G.domas.orco && !!G.domas.troll);
+  ok("el plato se consume una vez", G.dishes.bocado_domador === antes - 1);
+  ok("puede pasar el trol a activo", ctx.domaElegir("troll").ok && G.doma === G.domas.troll);
+  ok("una especie que no tiene no reemplaza la actual", !!ctx.domaElegir("rata").error && G.doma === G.domas.troll);
+  ctx.GF.scene = "forest";
+  ok("la selección se hace en la granja", !!ctx.domaElegir(null).error);
+  ctx.GF.scene = "farm";
+  ok("puede dejar a todos descansando", ctx.domaElegir(null).ok && G.doma === null && ctx.domaTrabajar(T0 - H) === null);
+  ok("domar una especie estando en descanso conserva la elección", ctx.domaIntentar("larva", () => 0) && G.doma === null && !!G.domas.larva);
+  ok("no gasta otro plato con la misma especie descansando", !ctx.domaIntentar("larva", () => 0) && G.dishes.papilla_remolacha === 4);
+  const foto = JSON.parse(JSON.stringify(ctx.snapshot()));
+  ctx.domaCargar({});
+  ctx.hydrate(foto);
+  ok("la carga recupera la colección con todos en descanso", Object.keys(G.domas).length === 3 && G.doma === null);
+  ok("la comida de cada criatura sigue guardada", G.domas.troll.comidaHasta === foto.domaColeccion.criaturas.troll.comidaHasta);
+  ok("puede elegir a la larva al volver a abrir", ctx.domaElegir("larva").ok && G.doma.bicho === "larva");
+  const activa = JSON.parse(JSON.stringify(ctx.snapshot()));
+  ctx.domaCargar({});
+  ctx.hydrate(activa);
+  ok("la carga recupera la especie elegida", G.domaActivaKey === "larva" && G.doma === G.domas.larva);
+  ok("la colección y su alias coinciden al volver a guardar", JSON.stringify(ctx.snapshot().doma) === JSON.stringify(ctx.snapshot().domaColeccion.criaturas.larva));
+  ok("cargar separa los registros que se pueden modificar", G.doma !== activa.domaColeccion.criaturas.larva);
+  ctx.domaCargar({ doma: { bicho: "rata", desde: T0 - 24 * H, comidaHasta: T0 + 24 * H, cont: 4 } });
+  ok("la partida anterior conserva su rata y su comida", G.domaActivaKey === "rata" && G.doma.cont === 4 && Object.keys(G.domas).length === 1);
+  ctx.domaElegir(null);
+  ctx.domaElegir("rata");
+  ok("la recién activada no cobra horas de descanso", ctx.domaTrabajar(T0 - 12 * H, T0 + H) === null);
 }
 
 console.log("\nEL PLATO VIAJA EN EL CONTENEDOR EQUIPADO");
 {
-  G.level = 10; G.doma = null; G.dishes.galletita_cereza = 5;
+  G.level = 10; ctx.domaCargar({}); G.dishes.galletita_cereza = 5;
   ctx.GF.scene = "forest";
   G.cont = ctx.contCrear("backpack");
   const bolsa = ctx.contCrear("bag");
@@ -93,11 +118,11 @@ console.log("\nEL PLATO VIAJA EN EL CONTENEDOR EQUIPADO");
   ok("un intento fallido sólo consume un plato llevado", !ctx.domaIntentar("rata", () => .99) && restantes() === 1);
   ok("el intento acertado consume el último y registra la rata", ctx.domaIntentar("rata", () => 0) && restantes() === 0 && G.doma.bicho === "rata");
   ok("la despensa sigue intacta", G.dishes.galletita_cereza === 5);
-  G.doma = null;
+  ctx.domaCargar({});
   ok("con el plato sólo en la granja no hay intento", !ctx.domaIntentar("rata", () => 0) && G.dishes.galletita_cereza === 5);
   G.cont = null;
   ctx.GF.scene = "farm";
-  G.doma = { bicho: "orco", comidaHasta: FakeDate.now() + 24 * H, cont: 0 };
+  ctx.domaCargar({ doma: { bicho: "orco", comidaHasta: FakeDate.now() + 24 * H, cont: 0 } });
 }
 
 console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");
@@ -151,7 +176,7 @@ console.log("\nEL TURNO: SOLO LO MADURADO EN TU AUSENCIA, COMISIÓN 30%, EL NODO
   /* un árbol con reloj de 2 h que quedó VACÍO al irte (readyAt = ahora+2h)… y te vas 10 h:
      maduran 4 relojes (t+2,4,6,8h) pero el tope de cargas es 4 → recoge cargas-1 = 3 */
   const ahora0 = FakeDate.now();
-  G.doma = { bicho: "orco", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
+  ctx.domaCargar({ doma: { bicho: "orco", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null } });
   G.nodos = { "tree:10,10": { readyAt: ahora0 + 2 * H, cdIni: ahora0, halfAt: 0 } };
   G.res.madera = 0;
   desfase = 10 * H;
@@ -184,7 +209,7 @@ console.log("\nCON HAMBRE NO TRABAJA — Y CONTIGO ADENTRO, TAMPOCO");
 console.log("\nLOS MINERALES QUEDAN AFUERA Y EL TURNO CORRE EN HYDRATE");
 {
   const ahora0 = FakeDate.now();
-  G.doma = { bicho: "orco", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
+  ctx.domaCargar({ doma: { bicho: "orco", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null } });
   G.nodos = { "ore:5,5": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };
   desfase += 10 * H;
   ok("una veta jamás entra al turno", ctx.domaTrabajar(ahora0) === null);
@@ -205,7 +230,7 @@ console.log("\nCADA CRIATURA, SU OFICIO: LA RATA ESCARBA Y LA LARVA ABONA (v3, d
 {
   /* la rata: 1 lombriz cada 8 h cubiertas, tope 3 */
   const ahora0 = FakeDate.now();
-  G.doma = { bicho: "rata", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null };
+  ctx.domaCargar({ doma: { bicho: "rata", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null } });
   G.nodos = { "tree:20,20": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };   // árboles llenos que NO son lo suyo
   G.res.lombriz = 0; const madera1 = Math.floor(G.res.madera || 0);
   desfase += 20 * H;
@@ -218,7 +243,7 @@ console.log("\nCADA CRIATURA, SU OFICIO: LA RATA ESCARBA Y LA LARVA ABONA (v3, d
   ok("100 h afuera: tope de 3 por vuelta", ctx.domaTrabajar(ahora1).lombriz === 3);
   /* la larva: recorta el 15% de lo que le falta a cada cultivo creciendo */
   const ahora2 = FakeDate.now();
-  G.doma = { bicho: "larva", desde: ahora2, comidaHasta: ahora2 + 72 * H, cont: 0, ultimo: null };
+  ctx.domaCargar({ doma: { bicho: "larva", desde: ahora2, comidaHasta: ahora2 + 72 * H, cont: 0, ultimo: null } });
   G.plots = [{ state: "growing", cropKey: "maiz", readyAt: ahora2 + 34 * H, growTotal: 24 * H, witherAt: 0 },
              { state: "ready", cropKey: "papa", readyAt: 0, witherAt: 0 }];
   desfase += 10 * H;

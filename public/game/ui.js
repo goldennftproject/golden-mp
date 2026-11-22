@@ -89,6 +89,7 @@ const OV_REFRESH = { "ov-entrenando": () => entrenarSync(), "ov-clan": () => ref
   "ov-horno": () => refreshHorno(),
   "ov-altar": () => refreshAltar(),
   "ov-establo": () => refreshEstablo(),
+  "ov-doma": () => refreshDoma(),
   "ov-curtiduria": () => refreshCurtiduria(),
   "ov-ofrendas": () => refreshOfrendas(),
   "ov-incursion": () => refreshIncursion(),
@@ -5178,6 +5179,63 @@ function refreshCurtiduria() {
   box.querySelectorAll("[data-carmor]").forEach(b => b.onclick = () => { const [s2, p2] = b.dataset.carmor.split(":"); craftArmor(s2, p2); });
   box.querySelectorAll("[data-rarmor]").forEach(b => b.onclick = () => { const [s2, p2] = b.dataset.rarmor.split(":"); repararArmor(s2, p2); refreshCurtiduria(); });
   box.querySelectorAll("[data-eqset]").forEach(b => b.onclick = () => equiparSet(b.dataset.eqset));
+}
+
+function refreshDoma() {
+  const estado = $("doma-estado"), lista = $("doma-lista");
+  if (!estado || !lista) return;
+  const habilitada = domaActiva();
+  const criaturas = G.domas ?? (G.doma?.bicho ? { [G.doma.bicho]: G.doma } : {});
+  const elegida = G.domaActivaKey === undefined ? G.doma?.bicho : G.domaActivaKey;
+  const especies = DOMA_ESPECIES.filter(especie => criaturas[especie]);
+  const enGranja = GF.scene === "farm";
+  estado.textContent = !habilitada ? "La doma está pausada." :
+    !especies.length ? (domaAbre() ? "Todavía no domaste ninguna criatura." : "La doma se desbloquea en Granja " + DOMA_NIVEL + ".") :
+    enGranja ? "Elige una criatura para que trabaje mientras estás fuera. Las demás quedan en descanso." :
+    "Vuelve a tu granja para elegir o alimentar a tu ayudante.";
+  const guia = $("doma-recetas"), platos = $("doma-platos");
+  guia.hidden = !habilitada;
+  platos.innerHTML = Object.entries(DOMA_PLATO).map(([rol, plato]) => {
+    const bichos = DOMA_ESPECIES.filter(especie => DOMA_ROL[especie] === rol).map(especie => MONSTER_DEF[especie].label);
+    return "<div><b>" + escapeHtml(RECIPE_DEF[plato].label) + "</b> · " + escapeHtml(bichos.join(", ")) + "</div>";
+  }).join("");
+  const ahora = nowMs(), puedeCambiar = habilitada && enGranja;
+  const tieneCarne = Math.floor(G.res.carne || 0) > 0;
+  lista.innerHTML = especies.map(especie => {
+    const criatura = criaturas[especie], def = MONSTER_DEF[especie], activa = elegida === especie;
+    const restante = (criatura.comidaHasta || 0) - ahora;
+    const motivoAlimento = !tieneCarne ? "Necesitas 1 carne" :
+      restante > 2 * DOMA_COMIDA_H * 3600000 ? "Todavía tiene más de dos días de comida" : "";
+    const seleccionar = activa ? "Dejar descansar" : "Activar";
+    const trabajo = DOMA_ROL_TXT[DOMA_ROL[especie]];
+    return '<div class="forge-row' + (activa ? ' eq' : '') + '"><div class="fic">' +
+      '<img class="animal-ic" src="' + GF.spr(def.sprite + "_idle_0") + '" alt="" draggable="false"></div>' +
+      '<div class="finfo"><div class="fnm">' + escapeHtml(def.label) + (activa ? ' <span class="tag">Activa</span>' : '') + "</div>" +
+      '<div class="fds">' + escapeHtml(trabajo.charAt(0).toUpperCase() + trabajo.slice(1)) + "</div>" +
+      '<div class="fds">' + (activa ? "" : "En descanso · ") +
+      (restante > 0 ? "Comida para " + fmtDur(restante) : "Con hambre") + "</div></div>" +
+      '<div class="fbtns"><button type="button" class="' + (activa ? "ghost" : "green") +
+      ' sm" data-doma-accion="elegir" data-doma-especie="' + especie + '" aria-label="' + seleccionar + ' · ' +
+      escapeHtml(def.label) + '"' + (puedeCambiar ? "" : " disabled") + ">" + seleccionar + "</button>" +
+      (activa ? '<button type="button" class="gold sm" data-doma-accion="alimentar" data-doma-especie="' +
+        especie + '" title="' + escapeHtml(motivoAlimento || "Una carne suma un día de comida") + '"' +
+        (puedeCambiar && !motivoAlimento ? "" : " disabled") + ">Alimentar · 1 carne</button>" : "") + "</div></div>";
+  }).join("");
+  lista.querySelectorAll("[data-doma-accion]").forEach(boton => boton.onclick = () => {
+    if (boton.disabled || GF.scene !== "farm") return;
+    const { domaAccion, domaEspecie } = boton.dataset;
+    const teniaFoco = document.activeElement === boton;
+    if (domaAccion === "alimentar") domaAlimentar();
+    else domaElegir(elegida === domaEspecie ? null : domaEspecie);
+    if (!isOpen("ov-doma")) return;
+    refreshDoma();
+    if (teniaFoco) {
+      const fila = '[data-doma-especie="' + domaEspecie + '"]';
+      const siguiente = lista.querySelector(fila + '[data-doma-accion="' + domaAccion + '"]:enabled') ||
+        lista.querySelector(fila + '[data-doma-accion="elegir"]:enabled');
+      if (siguiente) siguiente.focus();
+    }
+  });
 }
 
 /* ---- Establo: animales, felicidad y producción ("2das mejoras") ---- */
