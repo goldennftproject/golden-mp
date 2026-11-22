@@ -150,16 +150,16 @@ function energiaModelo(d, t) {
   return energiaPorTramos(e.actual, e.at || t, t, finVip);
 }
 const ENERGIA_GRANJA_COSTO = {plant:1,harvest:1,chop:1,mine:1,fish:2,animal:2,craft:0,cook:1,nasa:2,auto:2};
-function energiaGranjaTick() {
-  const t=nowMs(); let e=G.energiaGranja;
+function energiaGranjaTick(t=nowMs()) {
+  let e=G.energiaGranja;
   if(!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) e=G.energiaGranja={v:1,actual:vipVigente(t)?100:50,at:t};
   e.actual=energiaModelo(G,t);
   e.at=Math.max(t,e.at||t); return e.actual;
 }
-function energiaGranjaPuede(tipo,n=1) { return energiaGranjaTick()+1e-9 >= (ENERGIA_GRANJA_COSTO[tipo]||0)*n; }
-function energiaGranjaPagar(tipo,n=1,silencio=false) {
+function energiaGranjaPuede(tipo,n=1,t=nowMs()) { return energiaGranjaTick(t)+1e-9 >= (ENERGIA_GRANJA_COSTO[tipo]||0)*n; }
+function energiaGranjaPagar(tipo,n=1,silencio=false,t=nowMs()) {
   if(!Number.isSafeInteger(n)||n<1) return false;
-  if(!energiaGranjaPuede(tipo,n)){if(!silencio)toast('Sin energía de granja — se recupera sola; de vacía a llena tarda 4 h');return false;}
+  if(!energiaGranjaPuede(tipo,n,t)){if(!silencio)toast('Sin energía de granja — se recupera sola; de vacía a llena tarda 4 h');return false;}
   G.energiaGranja.actual=Math.max(0,G.energiaGranja.actual-(ENERGIA_GRANJA_COSTO[tipo]||0)*n);
   if(ENERGIA_GRANJA_COSTO[tipo]){G.actividadAcciones=G.actividadAcciones||{};G.actividadAcciones[tipo]=Math.min(1e9,(G.actividadAcciones[tipo]||0)+n);}
   return true;
@@ -188,10 +188,10 @@ function jornadaMaximo(dia) {
 function jornadaEstado(){const dia=new Date(nowMs()).toISOString().slice(0,10),old=G.actividadGranja?.jornada;const j=old?.dia===dia?old:null;return {dia,energia:j?.v===2?j.energia:0,plata:j?.plata||0,progreso:j?.v===2?j.progreso||{}:{},cobradas:j?.v===2?{...j.cobradas,...(j.cobradas?.cosecha?{cocina:j.cobradas.cosecha}:{})}:{},meta:200,max:jornadaMaximo(dia)};}
 async function jornadaReclamar(id){const j=jornadaEstado();await economiaSolicitar({mision:{id,dia:j.dia}});if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar();if(isOpen('ov-objetivos'))refreshObjetivos();}
 function actividadGranjaEstado(){const energia=Math.min(2000,Math.max(0,G.actividadGranja&&G.actividadGranja.energia||0));return {energia,objetivo:2000,cumplida:energia>=2000,vip:vipVigente(),usdt:false};}
-function energiaGranjaAgregar(key,n,tipo) {
-  if(!energiaGranjaPuede(tipo))return false;
+function energiaGranjaAgregar(key,n,tipo,t=nowMs()) {
+  if(!energiaGranjaPuede(tipo,1,t))return false;
   if(!tryAddRes(key,n))return false;
-  energiaGranjaPagar(tipo);
+  energiaGranjaPagar(tipo,1,false,t);
   if((tipo==='chop'||tipo==='mine')&&(key==='madera'||key==='piedra')){G.logrosAcciones=G.logrosAcciones||{};G.logrosAcciones[key]=Math.min(1e9,Math.round(((G.logrosAcciones[key]||0)+n)*100)/100);}
   return true;
 }
@@ -710,7 +710,7 @@ var NODO_CARGAS_MAX = 4;
    seis sitios de farm.js, y mientras estuvo escrito a mano nadie podía moverlo sin romper cinco
    medidores en silencio. Ahora todos lo leen de acá. */
 var NODO_POR_CARGA = 1;
-function nodoCargas(o, cdBaseSeg) {
+function nodoCargas(o, cdBaseSeg, ahora = nowMs()) {
   if (!o) return 1;
   /* EL NODO VIRGEN NACE LLENO (22/8, dirección: "el regalito de bienvenida del terreno").
      Un árbol que nunca se taló no tiene reloj corriendo (readyAt 0) — y un árbol parado ahí
@@ -721,11 +721,11 @@ function nodoCargas(o, cdBaseSeg) {
      siempre; el F5 no lo resucita porque el reloj viaja al guardado. Las vetas de MINERAL ni
      pasan por acá (sus cargas son siempre 1, decisión de dirección). */
   if (!o.readyAt) return NODO_CARGAS_MAX;
-  if (nowMs() < o.readyAt) return 1;
+  if (ahora < o.readyAt) return 1;
   /* el reloj del nodo es EL SUYO: el último ciclo que corrió (readyAt - cdIni trae los buffs de
      enfriamiento con los que se cortó); si no hay historia, el reloj base de su especie */
   const cdMs = (o.cdIni && o.readyAt > o.cdIni) ? (o.readyAt - o.cdIni) : cdBaseSeg * 1000;
-  const extra = Math.floor((nowMs() - o.readyAt) / Math.max(1000, cdMs));
+  const extra = Math.floor((ahora - o.readyAt) / Math.max(1000, cdMs));
   return Math.min(NODO_CARGAS_MAX, 1 + Math.max(0, extra));
 }
 /* Consume UNA carga de un nodo que tenía 2 o más: mueve readyAt un reloj hacia AHORA, de modo
@@ -733,10 +733,10 @@ function nodoCargas(o, cdBaseSeg) {
    No hay contador nuevo que guardar: las cargas viven en readyAt, que ya viaja al guardado, así
    que un F5 a mitad de vaciado no puede ni regalar ni comerse cargas. Con la última carga esta
    función NO se llama: el que tala pone el enfriamiento normal, como siempre. */
-function nodoGastarCarga(o, cdBaseSeg) {
+function nodoGastarCarga(o, cdBaseSeg, ahora = nowMs()) {
   const cdMs = Math.max(1000, (o.cdIni && o.readyAt > o.cdIni) ? (o.readyAt - o.cdIni) : cdBaseSeg * 1000);
-  const quedan = nodoCargas(o, cdBaseSeg) - 1;
-  o.readyAt = nowMs() - (quedan - 1) * cdMs;   // quedan≥1 ⇒ readyAt ≤ ahora: sigue talable ya
+  const quedan = nodoCargas(o, cdBaseSeg, ahora) - 1;
+  o.readyAt = ahora - (quedan - 1) * cdMs;   // quedan≥1 ⇒ readyAt ≤ ahora: sigue talable ya
   o.cdIni = o.readyAt - cdMs;                  // conserva el largo del reloj para las siguientes
   return quedan;
 }
@@ -2821,6 +2821,7 @@ function produccionPausarEn(item, t, sinEscena) {
     : (sc && sc.objs && sc.objs.find(o => o.i === item.i)) || (G.nodos || {})[produccionNodoKey(item.i)] || {};
   const estado = {};
   for (const k of ["readyAt", "halfAt", "cdIni", "witherAt", "state", "cropKey", "growTotal"]) if (fuente[k] !== undefined) estado[k] = fuente[k];
+  if (item.type === "plot" && fuente.abonadaDoma === true) estado.abonadaDoma = true;
   G.produccion.pausas[produccionClave(item)] = { at: t, estado };
 }
 function produccionVipTick(sinEscena) {
@@ -2960,8 +2961,9 @@ function produccionPlanReactivar(clave) {
   if (fuente.state === "locked" || fuente.locked || fuente.oculto) return fallo("Esa producción todavía no está disponible en tu terreno.");
   if (!pausa) return fallo("Esa producción ya está activa.");
   if (!pausa.estado || typeof pausa.estado !== "object" || Array.isArray(pausa.estado) || !Number.isFinite(pausa.at) || pausa.at < 0) return fallo("No se pudo leer la pausa. Vuelve a sincronizar la granja.");
-  const camposPausa = ["readyAt","halfAt","cdIni","witherAt","state","cropKey","growTotal"];
+  const camposPausa = ["readyAt","halfAt","cdIni","witherAt","state","cropKey","growTotal","abonadaDoma"];
   if (Object.keys(pausa.estado).some(k => !camposPausa.includes(k))) return fallo("La pausa contiene datos que no se pueden reactivar. Vuelve a sincronizar la granja.");
+  if (pausa.estado.abonadaDoma !== undefined && (destino.type !== "plot" || pausa.estado.abonadaDoma !== true)) return fallo("La pausa contiene un abono inválido.");
   if (destino.type === "plot" && (!Array.isArray(G.plots) || !["dry","growing","ready","withered"].includes(pausa.estado.state))) return fallo("No se pudo leer el cultivo pausado. Vuelve a sincronizar la granja.");
   if (pausa.estado.cropKey != null && (typeof pausa.estado.cropKey !== "string" || !CROP_DEF[pausa.estado.cropKey])) return fallo("No se pudo leer el cultivo pausado. Vuelve a sincronizar la granja.");
   for (const k of ["readyAt","halfAt","cdIni","witherAt","growTotal"]) if (pausa.estado[k] != null && (!Number.isFinite(pausa.estado[k]) || pausa.estado[k] < 0)) return fallo("Los tiempos de la pausa no están sincronizados.");
@@ -10518,9 +10520,9 @@ function excavEstado() {
   if (e.dia !== dayStamp(0)) { e.dia = dayStamp(0); e.hechos = []; }
   return e;
 }
-function excavAzar(n) {   // 0..1 determinístico del día para este jugador (FNV-1a)
+function excavAzar(n, dia = dayStamp(0)) {   // 0..1 determinístico del día para este jugador (FNV-1a)
   let h = 2166136261;
-  const str = dayStamp(0) + "|" + (window.NICK || "granjero") + "|" + n;
+  const str = dia + "|" + (window.NICK || "granjero") + "|" + n;
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
   return ((h >>> 0) % 100000) / 100000;
 }
@@ -10556,25 +10558,35 @@ function granjaAtascada() {
    superficie tiene un precio real en vez de ser un regalo de la tierra. Es también lo que hace
    que el pez mariposa valga el doble que la orilla: su cadena se come un montículo que no
    gastaste en lombrices. Sin elección, ese argumento no existiría. */
-function excavBotin(i, carnada) {   // 15/8 v2 (dirección): tierra removida = CARNADA — la de la pesca
+function excavBotin(i, carnada, dia = dayStamp(0)) {   // 15/8 v2 (dirección): tierra removida = CARNADA — la de la pesca
   if (granjaAtascada()) return { seed: "papa", n: 1, txt: "+1 Semilla de papa" };
-  const r = excavAzar(100 + i);
+  const r = excavAzar(100 + i, dia);
   const n = r < 0.7 ? 1 : 2;   // a veces la tierra viene generosa
   /* la v4 tiene UNA carnada que sale de la tierra. El parámetro « carnada » queda por si el
      mundo todavía lo pasa, pero ya no elige nada: el grillo era de las tres familias de la v3. */
   return { res: "lombriz", n, txt: "+" + n + " " + (RES_LABEL.lombriz || "Lombriz") + (n > 1 ? "s" : "") };
 }
-function excavCavar(i, carnada) {   // devuelve el botín si se pudo cavar
-  const e = excavEstado();
+function excavCavar(i, carnada, porDoma = false, e = excavEstado()) {   // devuelve el botín si se pudo cavar
+  if (!Number.isInteger(i) || i < 0 || i >= excavPorDia()) return null;
   /* 24/8 (auditoría de silencios): clicar un montículo YA CAVADO devolvía null y el clic
      moría mudo — el mismo patrón que el intento de doma que reportó el diseñador. */
-  if (e.hechos.includes(i)) { toast("Ese montículo ya lo cavaste — mañana hay " + excavPorDia() + " nuevos"); return null; }
-  const b = excavBotin(i, carnada);
-  if(!energiaGranjaPuede('mine')){energiaGranjaPagar('mine');return null;}
-  if (b.res) { if (!tryAddRes(b.res, b.n)) { toast("Bolsa llena — haz lugar y vuelve"); return null; } }
+  if (e.hechos.includes(i)) {
+    if (!porDoma) toast("Ese montículo ya lo cavaste — mañana hay " + excavPorDia() + " nuevos");
+    return null;
+  }
+  const b = excavBotin(i, carnada, e.dia);
+  if (porDoma && b.res !== "lombriz") return null;
+  if (!porDoma && !energiaGranjaPuede("mine")) { energiaGranjaPagar("mine"); return null; }
+  if (b.res) {
+    if (!tryAddRes(b.res, b.n)) {
+      if (!porDoma) toast("Bolsa llena — haz lugar y vuelve");
+      return null;
+    }
+  }
   else if (b.seed) G.seeds[b.seed] = (G.seeds[b.seed] || 0) + b.n;
-  energiaGranjaPagar('mine');
   e.hechos.push(i);
+  if (porDoma) return b;
+  energiaGranjaPagar("mine");
   log("Excavaste un montículo: " + b.txt + ".", "good");
   if (typeof tutoEvent === "function") tutoEvent("excavar");   // 19/8: es un paso del tutorial
   refreshHud(); if (typeof syncSlots === "function") syncSlots();
@@ -12095,9 +12107,7 @@ function goblinAceptar() {
      · Al VENCER un monstruo con sprite de granja (rata, larva, orco, lancero, guerrero, troll)
        hay un 8% de que te siga a casa. UN bicho a la vez.
      · Come 1 CARNE por día (sumidero: la carne por fin tiene gasto diario). Sin comer, no trabaja.
-     · Trabaja SOLO EN TU AUSENCIA: al cargar la partida recoge las cargas de árboles y rocas que
-       maduraron entre tu última visita (d.visto) y ahora — nunca las que maduran con vos adentro,
-       para que el bicho no reemplace al jugador presente.
+     · Trabaja en la granja abierta: busca un objetivo de su oficio y actúa al llegar.
      · SE QUEDA EL 30% como comisión (el número del simulador): 7 de cada 10 cargas van a tu
        bolsa, 3 se las come. Determinístico por contador, sin azar que discutir.
      · Las vetas de mineral quedan afuera (sin cargas, decisión del 21/8). El tope natural es el
@@ -12149,11 +12159,10 @@ function domaAyudaReceta(id) {
   };
 }
 var DOMA_ROL_TXT = {
-  brazos: "atiende tus árboles y rocas",
-  rata: "escarba montículos y junta lombrices",
-  larva: "abona la tierra: los cultivos avanzan",
+  brazos: "recoge cargas maduras de árboles y rocas y deja una para ti",
+  rata: "recoge las lombrices de los montículos de la granja",
+  larva: "abona una vez cada cultivo en crecimiento",
 };
-var DOMA_RATA_HORAS = 8, DOMA_RATA_TOPE = 3;    // 1 lombriz cada 8 h de ausencia, tope 3 por vuelta (como los montículos: 3/día)
 var DOMA_LARVA_PCT = 0.15;                       // recorta el 15% del tiempo RESTANTE de cada cultivo en crecimiento
 function domaAbre() { return (typeof farmLevel === "function" ? farmLevel() : G.level || 1) >= DOMA_NIVEL; }
 function domaCargar(guardado) {
@@ -12243,7 +12252,7 @@ function domaIntentar(especie, rnd) {   // lo llama la Zona Negra al vencer
   if (typeof saveFarm === "function") saveFarm(true);
   return true;
 }
-function domaHambriento() { return !!(G.doma && G.doma.bicho) && (G.doma.comidaHasta || 0) < nowMs(); }
+function domaHambriento() { return !!G.doma?.bicho && (G.doma.comidaHasta || 0) <= nowMs(); }
 function domaAlimentar() {
   if (!G.doma || !G.doma.bicho) return { error: "sin criatura" };
   if (Math.floor(G.res.carne || 0) < 1) { toast("Necesitas 1 carne — la Zona Negra es su despensa"); return { error: "falta carne" }; }
@@ -12258,79 +12267,165 @@ function domaAlimentar() {
   if (typeof saveFarm === "function") saveFarm(true);
   return { ok: true };
 }
-/* El turno de trabajo: corre UNA vez al cargar la partida, sobre G.nodos (el almacén puro de
-   relojes), con la ventana [visto, min(ahora, comidaHasta)]. Devuelve el parte del turno. */
-function domaTrabajar(visto, ahora) {
-  const d = G.doma; ahora = ahora || nowMs();
-  if (!d || !d.bicho || !visto || visto >= ahora) return null;
-  visto = Math.max(visto, Number(d.desde) || 0, G.domaActivaDesde);
-  const hasta = Math.min(ahora, d.comidaHasta || 0);
-  if (hasta <= visto) return null;   // estuvo con hambre toda tu ausencia
-  const rol = DOMA_ROL[d.bicho] || "brazos";
-  const nomBicho = (MONSTER_DEF[d.bicho] && MONSTER_DEF[d.bicho].label) || "bicho";
-  /* --- LA RATA: escarba montículos — 1 lombriz cada 8 h cubiertas, tope 3 por vuelta --- */
+function domaPuedeAtender(o, ahora = nowMs()) {
+  const mascota = G.doma;
+  if (!o || !domaActiva() || GF.scene !== "farm" || !mascota ||
+      mascota.bicho !== G.domaActivaKey || mascota.comidaHasta <= ahora ||
+      !Number.isFinite(mascota.comidaHasta)) return false;
+  const rol = DOMA_ROL[mascota.bicho];
   if (rol === "rata") {
-    const lombrices = Math.min(DOMA_RATA_TOPE, Math.floor((hasta - visto) / (DOMA_RATA_HORAS * 3600000)));
-    let dadas = 0;
-    for (let i = 0; i < lombrices; i++) { if (typeof tryAddRes === "function" ? tryAddRes("lombriz", 1) : (G.res.lombriz = (G.res.lombriz || 0) + 1, true)) dadas++; else break; }
-    if (!dadas) return null;
-    d.ultimo = { at: ahora, lombriz: dadas };
-    log("🐾 Tu " + nomBicho + " escarbó mientras no estabas: +" + dadas + (dadas > 1 ? " lombrices" : " lombriz") + " para la caña.", "gold");
-    return { lombriz: dadas };
+    const hoy = excavEstado();
+    if (o.type !== "excav" || o.dia !== hoy.dia || !Number.isInteger(o.idx) ||
+        o.idx < 0 || o.idx >= excavPorDia() || hoy.hechos.includes(o.idx)) return false;
+    const b = excavBotin(o.idx);
+    return b.res === "lombriz" && roomForRes(b.res, b.n);
   }
-  /* --- LA LARVA: abona — cada cultivo en crecimiento recorta el 15% de lo que le falta --- */
+  if (!Number.isInteger(o.i) || o.i < 0 || o.locked || o.oculto || produccionPausada(o)) return false;
   if (rol === "larva") {
-    let abonados = 0;
-    (G.plots || []).forEach((pl, i) => {
-      if (produccionPausada({type:"plot",i})) return;
-      if (!pl || pl.state !== "growing" || !(pl.readyAt > ahora)) return;
-      pl.readyAt -= Math.round((pl.readyAt - ahora) * DOMA_LARVA_PCT);
-      abonados++;
-    });
-    if (!abonados) return null;
-    d.ultimo = { at: ahora, abonados };
-    log("🐾 Tu " + nomBicho + " abonó la tierra mientras no estabas: " + abonados + (abonados > 1 ? " cultivos avanzan" : " cultivo avanza") + " más rápido.", "gold");
-    return { abonados };
+    return o.type === "plot" && o.state === "growing" && o.readyAt > ahora && !o.abonadaDoma &&
+      Math.round((o.readyAt - ahora) * DOMA_LARVA_PCT) > 0;
   }
-  /* --- LOS BRAZOS (orco, lancero, guerrero, trol): árboles y rocas, como siempre --- */
+  if (rol !== "brazos" || !domaNodoDisponible(o) || o.readyAt > ahora ||
+      nodoCargas(o, CD[o.type], ahora) <= 1) return false;
+  return domaCobraComision(mascota) || energiaModelo(G, ahora) + 1e-9 >= ENERGIA_GRANJA_COSTO.mine;
+}
+
+function domaMaterialNodo(o) { return o.type === "tree" ? "madera" : "piedra"; }
+function domaNodoDisponible(o) {
+  return (o.type === "tree" || o.type === "rock") && Number.isInteger(o.i) && o.i >= 0 &&
+    !o.locked && !o.oculto && !o.golpes && !produccionPausada(o) &&
+    Number.isFinite(o.readyAt) && roomForRes(domaMaterialNodo(o), NODO_POR_CARGA);
+}
+function domaCobraComision(mascota) {
+  return ((mascota.cont || 0) + 1) % 10 >= 10 - Math.round(DOMA_COMISION * 10);
+}
+
+// El mundo entrega el objetivo real en ambos pasos. Se comprueba otra vez al
+// llegar, porque un clic, una pausa o el cambio de día pudo consumirlo.
+function domaAtender(o, ahora = nowMs()) {
+  if (!domaPuedeAtender(o, ahora)) return null;
+  const mascota = G.doma;
+  if (o.type === "excav") {
+    const b = excavCavar(o.idx, null, true);
+    if (b) mascota.ultimo = { at: ahora, lombriz: b.n };
+    return b;
+  }
+  if (o.type === "plot") {
+    o.readyAt -= Math.round((o.readyAt - ahora) * DOMA_LARVA_PCT);
+    o.abonadaDoma = true;
+    mascota.ultimo = { at: ahora, abonados: 1 };
+    return { abonada: true, txt: "Abonado" };
+  }
+  const res = domaMaterialNodo(o);
+  const comision = domaCobraComision(mascota);
+  if (!comision && !energiaGranjaAgregar(res, NODO_POR_CARGA, "mine", ahora)) return null;
+  nodoGastarCarga(o, CD[o.type], ahora);
+  mascota.cont = (mascota.cont || 0) + 1;
+  const trabajos = mascota.trabajos || (mascota.trabajos = {});
+  trabajos[o.i] = { n: (trabajos[o.i]?.n || 0) + 1, at: ahora, activaDesde: G.domaActivaDesde };
+  const n = comision ? 0 : NODO_POR_CARGA;
+  mascota.ultimo = { at: ahora, [res]: n, fee: comision ? 1 : 0 };
+  return { res, n, txt: comision ? "Comisión" : "+" + n + " " + RES_LABEL[res] };
+}
+
+const DOMA_PASO_MS = 500;
+function domaPrepararRegreso(d) {
+  const mascota = G.doma;
+  const desde = Math.max(Number(d.visto) || 0, Number(mascota?.desde) || 0, G.domaActivaDesde) + DOMA_PASO_MS;
+  const hasta = Math.min(nowMs(), Number(mascota?.comidaHasta) || 0, desde + 3 * DOMA_COMIDA_H * 3600000);
+  G._domaPendiente = d.visto > 0 && desde < hasta && mascota ? {
+    mascota, desde, hasta, eleccion: G.domaActivaDesde,
+    excav: d.excav && { dia: d.excav.dia, hechos: Array.isArray(d.excav.hechos) ? d.excav.hechos.slice() : [] },
+    energia: { ...G.energiaGranja },
+  } : null;
+}
+
+// Se reconstruyen los mismos montículos con la semilla del día y el terreno real.
+function domaExcavarAusencia(pendiente, monticulos) {
+  const diaMs = 86400000, hoy = excavEstado();
+  let total = 0, momento = pendiente.desde;
+  for (let fecha = Math.floor(momento / diaMs) * diaMs; fecha < pendiente.hasta; fecha += diaMs) {
+    const dia = new Date(fecha).toISOString().slice(0, 10);
+    const excav = dia === hoy.dia ? hoy : pendiente.excav?.dia === dia ? pendiente.excav : { dia, hechos: [] };
+    momento = Math.max(momento, fecha + DOMA_PASO_MS);
+    const finDia = Math.min(pendiente.hasta, fecha + diaMs);
+    for (const i of monticulos(dia)) {
+      if (momento >= finDia) break;
+      const b = excavCavar(i, null, true, excav);
+      if (!b) continue;
+      total += b.n;
+      momento += DOMA_PASO_MS;
+    }
+  }
+  return total;
+}
+
+function domaNodosAusencia(pendiente, nodos) {
+  const anteriores = G.energiaGranja;
+  G.energiaGranja = { ...pendiente.energia };
   const parte = { madera: 0, piedra: 0, fee: 0 };
-  const nodos = G.nodos || {};
-  for (const key in nodos) {
-    if (G.produccion && Object.keys(G.produccion.pausas).some(k => k.startsWith("n:") && produccionNodoKey(+k.slice(2)) === key)) continue;
-    const rec = nodos[key];
-    const tipo = key.split(":")[0];
-    if (tipo !== "tree" && tipo !== "rock") continue;   // minerales afuera (21/8)
-    if (!rec || !rec.readyAt || !rec.cdIni) continue;
-    const cdMs = rec.readyAt - rec.cdIni; if (!(cdMs > 0)) continue;
-    // cargas de HOY y cuántos relojes maduraron dentro de la ventana atendida
-    const cargas = Math.min(NODO_CARGAS_MAX, 1 + Math.max(0, Math.floor((ahora - rec.readyAt) / cdMs)));
-    if (cargas <= 1) continue;   // una carga la deja siempre: es la del jugador que vuelve
-    let maduradas = 0;
-    for (let k = 0; k < cargas; k++) { const t = rec.readyAt + k * cdMs; if (t > visto && t <= hasta) maduradas++; }
-    let recoger = Math.min(cargas - 1, maduradas);
-    if (recoger <= 0) continue;
-    const recurso = tipo === "tree" ? "madera" : "piedra";
-    let juntadas = 0;
-    for (let k = 0; k < recoger; k++) {
-      d.cont = (d.cont || 0) + 1;
-      if ((d.cont % 10) > 10 - 1 - Math.round(DOMA_COMISION * 10)) { parte.fee++; juntadas++; continue; }   // su comisión, determinística (las 3 de cada 10 ÚLTIMAS: el jugador cobra primero)
-      if (energiaGranjaAgregar(recurso, 1, 'mine')) { parte[recurso]++; juntadas++; }
-      else { break; }   // bolsa llena: se para acá y el nodo conserva el resto
+  let momento = pendiente.desde;
+  while (momento < pendiente.hasta) {
+    let siguiente = null, listo = pendiente.hasta;
+    for (const o of nodos) {
+      if (!domaNodoDisponible(o)) continue;
+      const ciclo = o.cdIni && o.cdIni < o.readyAt ? o.readyAt - o.cdIni : CD[o.type] * 1000;
+      const at = o.readyAt ? Math.max(momento, Math.ceil(o.readyAt + Math.max(1000, ciclo))) : momento;
+      if (at < listo) { siguiente = o; listo = at; }
     }
-    if (juntadas > 0) {   // drenar el almacén igual que nodoGastarCarga: el reloj sigue corriendo
-      const quedan = cargas - juntadas;
-      rec.readyAt = ahora - Math.max(0, quedan - 1) * cdMs;
-      rec.cdIni = rec.readyAt - cdMs;
+    if (!siguiente) break;
+    const energia = energiaModelo(G, listo);
+    if (!domaCobraComision(G.doma) && energia + 1e-9 < ENERGIA_GRANJA_COSTO.mine) {
+      momento = listo + Math.max(DOMA_PASO_MS, Math.ceil((ENERGIA_GRANJA_COSTO.mine - energia) * ENERGIA_GRANJA_MS / 50));
+      continue;
     }
+    const b = domaAtender(siguiente, listo);
+    if (!b) break;
+    parte[b.res] += b.n;
+    if (!b.n) parte.fee++;
+    momento = listo + DOMA_PASO_MS;
   }
-  if (parte.madera || parte.piedra || parte.fee) {
-    d.ultimo = { at: ahora, madera: parte.madera, piedra: parte.piedra, fee: parte.fee };
-    const nom = (MONSTER_DEF[d.bicho] && MONSTER_DEF[d.bicho].label) || "bicho";
-    log("🐾 Tu " + nom + " trabajó mientras no estabas: +" + parte.madera + " madera, +" + parte.piedra +
-      " piedra (se quedó " + parte.fee + " de comisión).", "gold");
-    return parte;
+  const hizo = parte.madera + parte.piedra + parte.fee > 0;
+  if (hizo) energiaGranjaTick();
+  else G.energiaGranja = anteriores;
+  return hizo ? parte : null;
+}
+
+// Un solo turno al volver. El corte se guarda junto con los recursos cobrados.
+function domaResolverAusencia({ nodos, parcelas, monticulos }) {
+  const turno = G._domaPendiente;
+  if (!turno || GF.scene !== "farm") return null;
+  G._domaPendiente = null;
+  if (!domaActiva() || G.doma !== turno.mascota || G.domaActivaDesde !== turno.eleccion) return null;
+  const rol = DOMA_ROL[G.doma.bicho], at = nowMs();
+  if (rol === "rata") {
+    const lombriz = domaExcavarAusencia(turno, monticulos);
+    if (!lombriz) return null;
+    G.doma.ultimo = { at, lombriz };
+    log("Tu rata recogió " + lombriz + (lombriz === 1 ? " lombriz" : " lombrices") + " mientras no estabas.", "good");
+    return { excav: true };
   }
-  return null;
+  if (rol === "larva") {
+    let abonados = 0, momento = turno.desde;
+    for (const o of parcelas) {
+      if (momento >= turno.hasta) break;
+      const desdeSiembra = o?.growTotal > 0 ? o.readyAt - o.growTotal : 0;
+      const trabajo = Math.max(momento, desdeSiembra);
+      if (trabajo < turno.hasta && domaAtender(o, trabajo)?.abonada) {
+        abonados++;
+        momento = trabajo + DOMA_PASO_MS;
+      }
+    }
+    if (!abonados) return null;
+    G.doma.ultimo = { at, abonados };
+    log("Tu larva abonó " + abonados + (abonados === 1 ? " cultivo" : " cultivos") + " mientras no estabas.", "good");
+    return { parcelas: true };
+  }
+  const parte = domaNodosAusencia(turno, nodos);
+  if (!parte) return null;
+  G.doma.ultimo = { at, ...parte };
+  log("Tu ayudante dejó " + parte.madera + " madera y " + parte.piedra + " piedra mientras no estabas.", "good");
+  return { nodos: true };
 }
 
 /* ================== EL ÁLBUM DE LA GRANJA (23/8) ==================

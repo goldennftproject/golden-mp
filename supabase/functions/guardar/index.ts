@@ -17,7 +17,7 @@ import { bellotasActualizar, bellotasConRanking, bellotasEstado, bellotasReclama
    la bitácora (que ningún jugador honesto dispare sospechas). Los techos salen del
    ancla del juego (20 plata/celda-hora) con margen ×3 y colchones: generosos a
    propósito — acá un falso positivo es peor que un tramposo sin cazar. */
-const VERSION = 16;       // 22/11: colección de criaturas y elección del ayudante.
+const VERSION = 17;       // 22/11: recolección de ayudantes validada contra cargas de cada nodo.
 const MODO = "rechazo";   // 14/9: fuera de sombra en el proyecto nuevo (P2P abierto → el portero rechaza)
 
 const ANCLA = 20;          // plata por celda-hora
@@ -607,7 +607,7 @@ function premiumSitio(d     ,o     ,lp     ,ignore=-1)          {
 }
 /* END PREMIUM GEOMETRY */
 function nodosPoseidos(d) { return NODOS_CONTRATO.filter(([i,t,lock,exp]) => !!(d.produccion && d.produccion.nodos && d.produccion.nodos[i]) || (exp == null && lock != null && (t==='tree'||t==='rock') && (d[t==='tree'?'treesOpen':'rocksOpen']||[]).includes(lock))); }
-function premiumReloj(antes,next,i,o,ahora,errores,desdeServidor=0){
+function premiumReloj(antes,next,i,o,ahora,errores,desdeServidor=0,trabajosDoma=0){
  const key=o.key,b=antes.nodos?.[key];
  if(!b||!num(b.readyAt))return; // Todo soporte comprado nace con reloj SQL; compatibilidad de datos previos.
  const usos=num(next.nodoUsos?.[i])-num(antes.nodoUsos?.[i]);
@@ -618,18 +618,24 @@ function premiumReloj(antes,next,i,o,ahora,errores,desdeServidor=0){
  const q=next.nodos[key];
  if(!q||!Number.isFinite(q.readyAt)||q.readyAt<=0||!Number.isFinite(q.cdIni)||q.cdIni<0||q.cdIni>=q.readyAt){bad();return;}
  if(q.halfAt===undefined)q.halfAt=b.halfAt||0;
- if(q.readyAt===b.readyAt&&q.cdIni===b.cdIni){if(usos>0)bad();return;}
+ if(q.readyAt===b.readyAt&&q.cdIni===b.cdIni){if(usos>0||trabajosDoma>0)bad();return;}
  if(q.readyAt<b.readyAt){bad();return;}
  const oldDur=b.readyAt-b.cdIni,dur=q.readyAt-q.cdIni;
+ const base=o.type==='tree'?1800000:o.type==='rock'?2400000:14400000;
+ const stat=o.type==='tree'?'talar':'minar',res=o.type==='tree'?'_':o.type==='rock'?'piedra':'bronce';
+ const actos=num(next.stats?.[stat]?.[res])-num(antes.stats?.[stat]?.[res]);
+ // El recibo de la doma ya acreditó sus cargas en este nodo. Los usos manuales
+ // conservan su propia prueba, incluso si ambos trabajaron antes del guardado.
+ if(trabajosDoma>0){
+   if(actos<usos||(!usos&&Math.abs(dur-oldDur)>=2)||dur<base*.9*.85-1000||dur>base+1000||q.cdIni>ahora+5000)bad();
+   return;
+ }
  const pausa=antes.produccion?.pausas?.['n:'+i],sigue=next.produccion?.pausas?.['n:'+i];
  // Reanudar desplaza el mismo reloj por el tiempo pausado. No genera cargas.
  const reanuda=pausa&&!sigue;
  if(reanuda&&usos===0){const delta=q.readyAt-b.readyAt;if(delta>=0&&delta<=Math.max(0,ahora-num(pausa.at))+5000&&Math.abs(dur-oldDur)<2)return;bad();return;}
  const stockAt=reanuda?Math.min(ahora,num(pausa.at)):ahora;
  if(sigue||b.readyAt>stockAt+1000){bad();return;}
- const base=o.type==='tree'?1800000:o.type==='rock'?2400000:14400000;
- const stat=o.type==='tree'?'talar':'minar',res=o.type==='tree'?'_':o.type==='rock'?'piedra':'bronce';
- const actos=num(next.stats?.[stat]?.[res])-num(antes.stats?.[stat]?.[res]);
  // La mascota de brazos puede drenar backlog sin nodoSumar. Conserva el largo
  // anterior y deja una carga, con comida y una entrega registrados en esta sesión.
  const seleccion=antes.domaColeccion;
@@ -798,6 +804,91 @@ function domaFecha(desde) {
   return Number.isSafeInteger(desde) && desde > 0 ? desde : 0;
 }
 
+function domaRelojTrabajo(antes, next, nodo, recibo, reloj, desdeServidor) {
+  const { i, key, type } = nodo;
+  const previo = antes.nodos?.[key];
+  const propuesto = next.nodos?.[key];
+  const cd = type === 'tree' ? 1800000 : 2400000;
+  const cicloMinimo = cd * .9 * .85;
+  const usoManual = num(next.nodoUsos?.[i]) - num(antes.nodoUsos?.[i]);
+  const pausa = antes.produccion?.pausas?.['n:'+i];
+  const pausaFinal = next.produccion?.pausas?.['n:'+i];
+  const fin = pausaFinal ? Math.min(reloj, num(pausaFinal.at)) : reloj;
+  if (pausa && pausaFinal || recibo.at > fin || usoManual < 0 ||
+      !Number.isFinite(propuesto?.readyAt) || !Number.isFinite(propuesto.cdIni) ||
+      propuesto.readyAt <= propuesto.cdIni || propuesto.cdIni > fin + 1000 ||
+      (num(previo?.readyAt) && propuesto.readyAt <= previo.readyAt)) return false;
+
+  const duracion = r => r?.cdIni > 0 && r.readyAt > r.cdIni ? r.readyAt - r.cdIni : cd;
+  const cargas = (r, t) => !r?.readyAt ? 4 : r.readyAt > t ? 0 : Math.min(4, 1 + Math.floor((t - r.readyAt) / duracion(r)));
+  const inicio = Math.min(fin, desdeServidor || fin, num(antes.visto) || desdeServidor || fin);
+  const iniciales = cargas(previo, pausa ? Math.min(inicio, num(pausa.at)) : inicio);
+  const restantes = cargas(propuesto, fin + 1000);
+  if (duracion(propuesto) < cicloMinimo - 1000 || duracion(propuesto) > cd + 1000 ||
+      (usoManual === 0 && restantes < 1)) return false;
+  const primera = !previo?.readyAt || iniciales === 4 || pausa ? inicio + cicloMinimo :
+    Math.min(previo.readyAt + iniciales * duracion(previo), inicio + cicloMinimo);
+  const regeneradas = primera <= fin ? 1 + Math.floor((fin - primera) / cicloMinimo) : 0;
+  return recibo.n + usoManual + restantes <= iniciales + regeneradas;
+}
+
+function domaTrabajosNodos(antes, next, ahora, desdeServidor, errores) {
+  const recibos = new Map();
+  if (num(next.reinicio) > num(antes.reinicio) && esDeCero(next)) return recibos;
+  const anterior = antes.domaColeccion ?? domaColeccionLegada(antes.doma);
+  const siguiente = next.domaColeccion ?? domaColeccionLegada(next.doma);
+  const mundo = premiumMundo(next);
+  const reloj = Math.min(ahora + 5000, num(next.visto) || ahora);
+  const invalido = () => errores.push('El ayudante necesita un nodo disponible y una carga real');
+  for (const [especie, mascota] of Object.entries(siguiente.criaturas || {})) {
+    const previa = anterior.criaturas?.[especie];
+    const hecho = mascota?.trabajos;
+    const registrado = previa?.trabajos;
+    if (mismoJSON(hecho, registrado)) continue;
+    if (!hecho || typeof hecho !== 'object' || Array.isArray(hecho) ||
+        DOMA_PLATOS.get(especie) !== 'bocado_domador' ||
+        Object.keys(hecho).length > mundo.objects.length ||
+        Object.keys(registrado || {}).some(i => !Object.hasOwn(hecho, i))) {
+      invalido(); continue;
+    }
+    const activaDesde = Math.min(
+      anterior.activa === especie ? num(anterior.activaDesde) : Infinity,
+      siguiente.activa === especie ? num(siguiente.activaDesde) : Infinity,
+    );
+    for (const [id, trabajo] of Object.entries(hecho)) {
+      const guardado = registrado?.[id];
+      if (mismoJSON(trabajo, guardado)) continue;
+      const o = mundo.objects[Number(id)];
+      const inicio = Math.max(num(antes.visto), num(mascota.desde));
+      // El jugador puede usar y luego reemplazar un ayudante entre dos guardados.
+      // Su cambio sólo cuenta dentro de esa ventana y consume las mismas cargas.
+      const turno = trabajo?.activaDesde;
+      const cambio = Number.isSafeInteger(turno) && turno >= inicio && turno <= trabajo.at;
+      if (!o || id !== String(o.i) || (o.type !== 'tree' && o.type !== 'rock') ||
+          (!premiumPresente(next,o) && !(o.lock===0 && !o.premiumOnly &&
+            next[o.type==='tree'?'treesOpen':'rocksOpen']===undefined)) ||
+          !Number.isSafeInteger(trabajo?.n) || trabajo.n <= num(guardado?.n) ||
+          !Number.isSafeInteger(trabajo.at) || trabajo.at <= num(guardado?.at) ||
+          (turno !== undefined && (!Number.isSafeInteger(turno) || turno < 0 || turno > trabajo.at)) ||
+          trabajo.at < Math.max(inicio, Math.min(activaDesde, cambio ? turno : Infinity)) || trabajo.at > reloj ||
+          trabajo.at >= num(mascota.comidaHasta)) {
+        invalido(); continue;
+      }
+      const recibido = recibos.get(o.i) || { n: 0, at: 0 };
+      recibido.n += trabajo.n - num(guardado?.n);
+      recibido.at = Math.max(recibido.at, trabajo.at);
+      recibos.set(o.i, recibido);
+    }
+  }
+  for (const [i, recibo] of recibos) {
+    if (!domaRelojTrabajo(antes, next, mundo.objects[i], recibo, reloj, desdeServidor)) {
+      recibos.delete(i);
+      invalido();
+    }
+  }
+  return recibos;
+}
+
 function domaColeccionLegada(mascota) {
   const activa = mascota?.bicho || null;
   return { v: 1, activa, activaDesde: activa ? domaFecha(mascota.desde) : 0, criaturas: activa ? { [activa]: mascota } : {} };
@@ -917,6 +1008,8 @@ function protegerDoma(antes, next, ahora, errores) {
 function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   picosUnificarEstado(next);
   const errores = [], antes = prev || {}, p = antes.produccion, n = next.produccion;
+  protegerDoma(antes,next,ahora,errores);
+  const trabajosDoma=domaTrabajosNodos(antes,next,ahora,desdeServidor,errores);
   // El libro privado se proyecta desde PostgreSQL. El cliente sólo mueve nodos que
   // ya posee; una pestaña antigua que omite el libro conserva los derechos existentes.
   if(p?.premium && n && n.premium===undefined)n.premium=JSON.parse(JSON.stringify(p.premium));
@@ -934,7 +1027,7 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
     if(n && n.nodos?.[i]===undefined){n.nodos=n.nodos||{};n.nodos[i]=true;}
     if(next.layout?.[i]===undefined && antes.layout?.[i]){next.layout=next.layout||{};next.layout[i]=JSON.parse(JSON.stringify(antes.layout[i]));}
     if(!n?.nodos?.[i]||!premiumSitio(next,o,next.layout?.[i],i))errores.push('El nodo Golden necesita espacio libre dentro de tu terreno');
-    premiumReloj(antes,next,i,o,ahora,errores,desdeServidor);
+    premiumReloj(antes,next,i,o,ahora,errores,desdeServidor,trabajosDoma.get(i)?.n||0);
   }
   for(const k of Object.keys(n?.nodos||{}))if(+k>=86&&+k<=94&&!premiumActivos.has(+k))errores.push('Nodo Golden sin derecho confirmado');
   // Las entregas nacen en compras/transacciones autoritativas. Un snapshot sólo puede
@@ -945,7 +1038,6 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   else for(const entrega of next.mkPend){const i=pendientes.findIndex((p,i)=>!usados.has(i)&&mismoJSON(p,entrega));if(i<0){errores.push('Las entregas pendientes sólo se crean en el servidor');break;}usados.add(i);}
   protegerRepuestos(antes,next,pendientes,usados,errores);
   protegerForja(antes,next,errores);
-  protegerDoma(antes,next,ahora,errores);
   const ritmo=next.farmXpRitmo,ancla=antes.farmXpRitmo||{v:1,tala:Math.max(0,num(antes.skills?.tala)),mining:Math.max(0,num(antes.skills?.mining))};
   if((ritmo||antes.farmXpRitmo)&&(!ritmo||!mismoJSON(ritmo,ancla)))errores.push('No se puede modificar el ancla de XP aceptada');
 

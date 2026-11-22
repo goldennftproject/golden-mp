@@ -480,6 +480,7 @@ class FarmScene extends Phaser.Scene {
         obj.state = sv.state; obj.readyAt = sv.readyAt || 0; obj.cropKey = sv.cropKey || null;
         obj.witherAt = 0;   // 2/8: sin marchitado
         obj.growTotal = sv.growTotal || 0;
+        obj.abonadaDoma = sv.state === "growing" && sv.abonadaDoma === true;
         this.applyPlotVisual(obj);
       } else if (sv && sv.state === "withered") {
         // 2/8: los cultivos que quedaron marchitos de antes se recuperan como LISTOS si se sabe qué eran; si no, parcela libre
@@ -1643,16 +1644,16 @@ class FarmScene extends Phaser.Scene {
       return of ? ("Mercader Goblin — cambia " + of.cant + " " + (RES_LABEL[of.pide] || of.pide) + " por " + of.entrega + " " + (RES_LABEL[of.da] || of.da) + " 🤝") : "Mercader Goblin 🤝";
     }
     if (o.type === "domabicho") {   // LA DOMA (22/8): el bicho cuenta su estado desde el hover
-      if (o !== this.domaObj || o.especieDoma !== G.doma?.bicho) return "";
+      if (o !== this.domaObj || o.registroDoma !== G.doma || o.activaDesde !== G.domaActivaDesde) return "";
       const nom = (typeof MONSTER_DEF !== "undefined" && G.doma && MONSTER_DEF[G.doma.bicho]) ? MONSTER_DEF[G.doma.bicho].label : "Criatura";
       if (typeof domaHambriento === "function" && domaHambriento()) return nom + " domado — tiene HAMBRE: clic para darle 1 carne 🍖";
       const u = G.doma && G.doma.ultimo;
       const oficio = (typeof DOMA_ROL_TXT !== "undefined" && G.doma && DOMA_ROL_TXT[DOMA_ROL[G.doma.bicho]]) || "trabaja";
       let parte = "";
-      if (u) parte = u.lombriz != null ? " (último turno: +" + u.lombriz + " lombriz)" :
-        u.abonados != null ? " (último turno: " + u.abonados + " cultivos abonados)" :
-        " (último turno: +" + (u.madera || 0) + " madera, +" + (u.piedra || 0) + " piedra)";
-      return nom + " domado — " + oficio + " mientras no estás" + parte;
+      if (u) parte = u.lombriz != null ? " · Última tarea: +" + u.lombriz + (u.lombriz === 1 ? " lombriz" : " lombrices") :
+        u.abonados != null ? " · Última tarea: abonó " + (u.abonados === 1 ? "un cultivo" : u.abonados + " cultivos") :
+        " · Última tarea: +" + (u.madera || 0) + " madera, +" + (u.piedra || 0) + " piedra";
+      return nom + " domado · " + oficio + parte;
     }
     if (o.type === "cofre_diario") {
       if (!G.kitReclamado) return "¡Abre tu kit de bienvenida!";
@@ -1826,7 +1827,7 @@ class FarmScene extends Phaser.Scene {
       return;
     }
     if (o.type === "domabicho") {   // LA DOMA (22/8): el clic lo alimenta (1 carne = 1 día de trabajo)
-      if (o !== this.domaObj || o.especieDoma !== G.doma?.bicho) return;
+      if (o !== this.domaObj || o.registroDoma !== G.doma || o.activaDesde !== G.domaActivaDesde) return;
       if (typeof domaAlimentar === "function") {
         const r = domaAlimentar();
         if (r && r.ok && this.premioFx) this.premioFx(o.cx, o.by - 10, resSprite("carne"), "ñam");
@@ -1849,12 +1850,7 @@ class FarmScene extends Phaser.Scene {
          elección: es un peaje de un clic por montículo. */
       const b = (typeof excavCavar === "function") ? excavCavar(o.idx, this._excavCarnada) : null;
       this._excavCarnada = null;
-      if (!b) return;
-      if (this.puffFx) this.puffFx(o.cx, o.by - 4, 0x6b4a2b, 10);
-      if (this.premioFx) this.premioFx(o.cx, o.by, b.res ? resSprite(b.res) : "seed_papa", b.txt);
-      if (o.sprite) o.sprite.destroy();
-      const ix = this.objs.indexOf(o); if (ix >= 0) this.objs.splice(ix, 1);
-      const ex = (this.excavObjs || []).indexOf(o); if (ex >= 0) this.excavObjs.splice(ex, 1);
+      if (b) this.terminarExcavacion(o, b);
       return;
     }
     if (o.type === "tablon_pedidos") {   // TABLÓN (16/8): cerrado durante el tutorial…
@@ -2531,6 +2527,7 @@ class FarmScene extends Phaser.Scene {
       if (cd && (G.seeds[ck] || 0) > 0) {
         if (!energiaGranjaPagar('plant')) { this.action=null; return; }
         G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0;
+        o.abonadaDoma = false;
         // acelerador del tutorial (12/8): la papa crece rápido SOLO mientras el objetivo activo la pide
         // 14/8: el boost del tutorial aplica a CUALQUIER cultivo (antes solo papa) — el
         // sub-objetivo puede mandar a cebolla/zanahoria y tienen que crecer acelerados igual
@@ -4336,8 +4333,24 @@ class FarmScene extends Phaser.Scene {
   }
 
   // EXCAVACIONES DIARIAS (15/8): 3 montículos en celdas libres, fijos durante el día
+  excavUbicacion(i, dia) {
+    const T = GF.TILE;
+    for (let intento = 0; intento < 60; intento++) {
+      const r1 = excavAzar(i * 7 + intento * 2, dia), r2 = excavAzar(i * 7 + intento * 2 + 1, dia);
+      const x = GF.ORIG_X + 60 + r1 * (GF.WORLD_W - 120);
+      const y = GF.ORIG_Y + 70 + r2 * (GF.WORLD_H - 140);
+      if (!GF.blockedAt(x, y, 14) && !GF.PLOTS.some(pl =>
+        Math.abs((pl.col + 0.5) * T - x) < T && Math.abs((pl.row + 0.5) * T - y) < T)) return { x, y };
+    }
+    return null;
+  }
+
   crearExcavaciones() {
-    (this.excavObjs || []).forEach(o => { if (o.sprite) o.sprite.destroy(); const ix = this.objs.indexOf(o); if (ix >= 0) this.objs.splice(ix, 1); });
+    (this.excavObjs || []).forEach(o => {
+      this.soltarMariposasDe(o);
+      if (o.sprite) o.sprite.destroy();
+      const ix = this.objs.indexOf(o); if (ix >= 0) this.objs.splice(ix, 1);
+    });
     this.excavObjs = [];
     const e = (typeof excavEstado === "function") ? excavEstado() : null; if (!e) return;
     this._excavDia = e.dia;
@@ -4346,20 +4359,24 @@ class FarmScene extends Phaser.Scene {
        expansiones. Antes era la constante, así que el terreno crecía y la carnada no. */
     for (let i = 0; i < (typeof excavPorDia === "function" ? excavPorDia() : 3); i++) {
       if (e.hechos.includes(i)) continue;   // ya cavado hoy
-      // busca una celda libre determinística: arranca del azar del día y barre desde ahí
-      let px = 0, py = 0, ok = false;
-      for (let intento = 0; intento < 60 && !ok; intento++) {
-        const r1 = excavAzar(i * 7 + intento * 2), r2 = excavAzar(i * 7 + intento * 2 + 1);
-        px = GF.ORIG_X + 60 + r1 * (GF.WORLD_W - 120); py = GF.ORIG_Y + 70 + r2 * (GF.WORLD_H - 140);
-        ok = !GF.blockedAt(px, py, 14) && !GF.PLOTS.some(pl => Math.abs((pl.col + 0.5) * T - px) < T && Math.abs((pl.row + 0.5) * T - py) < T);
-      }
-      if (!ok) continue;
+      const ubicacion = this.excavUbicacion(i, e.dia);
+      if (!ubicacion) continue;
+      const { x: px, y: py } = ubicacion;
       const w = T * 0.55;
       const spr = this.add.image(px, py, "monticulo").setOrigin(0.5, 1).setDepth(py);
       spr.setScale(w / spr.width);
-      const o = { i: "excav" + i, type: "excav", idx: i, cx: px, by: py, w, rw: w, baseKey: "monticulo", sprite: spr, readyAt: 0, nace: this.time.now };   // 2/9: nace = su edad real para el imán de mariposas (readyAt 0 lo hacía "eterno")
+      const o = { i: "excav" + i, type: "excav", idx: i, dia: e.dia, cx: px, by: py, w, rw: w, baseKey: "monticulo", sprite: spr, readyAt: 0, nace: this.time.now };   // 2/9: nace = su edad real para el imán de mariposas (readyAt 0 lo hacía "eterno")
       this.objs.push(o); this.excavObjs.push(o);
     }
+  }
+
+  terminarExcavacion(o, botin) {
+    this.soltarMariposasDe(o);
+    this.puffFx(o.cx, o.by - 4, 0x6b4a2b, 10);
+    this.premioFx(o.cx, o.by, botin.res ? resSprite(botin.res) : "seed_papa", botin.txt);
+    if (o.sprite) o.sprite.destroy();
+    const ix = this.objs.indexOf(o); if (ix >= 0) this.objs.splice(ix, 1);
+    const ex = (this.excavObjs || []).indexOf(o); if (ex >= 0) this.excavObjs.splice(ex, 1);
   }
 
   // Todos los objetos arrastrables que llevan una sombra pasan por acá. Los acompañantes usan
@@ -4388,7 +4405,10 @@ class FarmScene extends Phaser.Scene {
     }
     if (tipo === "establo" || tipo === "barn") {
       const casa = (this.objs || []).find(o => o.type === "establo") || (this.objs || []).find(o => o.type === "barn");
-      if (casa) this.posicionarAcompanante(this.domaObj, casa.cx + 46, casa.by + 6);
+      if (casa && this.domaObj) {
+        this.domaObj.trabajo = null;
+        this.posicionarAcompanante(this.domaObj, casa.cx + 46, casa.by + 6);
+      }
     }
   }
 
@@ -4473,7 +4493,7 @@ class FarmScene extends Phaser.Scene {
 
   actualizarDoma() {
     const especieDoma = G.doma?.bicho;
-    if (this.domaObj && this.domaObj.especieDoma !== especieDoma) {
+    if (this.domaObj && (this.domaObj.registroDoma !== G.doma || this.domaObj.activaDesde !== G.domaActivaDesde)) {
       const bo = this.domaObj; this.domaObj = null;
       this.tweens.killTweensOf(bo.sprite);
       bo.sprite.destroy();
@@ -4494,13 +4514,141 @@ class FarmScene extends Phaser.Scene {
       try { if (this.anims.exists(animacion)) spr.play(animacion); } catch (e) {}
       this.tweens.add({ targets: spr, scaleY: spr.scaleY * 0.96, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });   // respira aunque no tenga anim
       const shadow = this.add.ellipse(dx, dy + 2, dw * 0.7, 5, 0x000000, 0.22).setDepth(dy - 1);
-      this.domaObj = { i: "domabicho", type: "domabicho", especieDoma, cx: dx, by: dy, w: dw, rw: dw, baseKey, sprite: spr, shadow, shadowDy: 2, shadowDepthDy: -1, readyAt: 0 };
+      this.domaObj = { i: "domabicho", type: "domabicho", especieDoma, registroDoma: G.doma, activaDesde: G.domaActivaDesde,
+        spriteKey, cx: dx, by: dy, w: dw, rw: dw, baseKey, sprite: spr, shadow, shadowDy: 2, shadowDepthDy: -1, readyAt: 0 };
       this.objs.push(this.domaObj);
     }
     if (this.domaObj && this.domaObj.sprite) {   // con hambre se pone gris — se ve desde lejos
       const gris = (typeof domaHambriento === "function") && domaHambriento();
       if (gris !== this.domaObj._gris) { this.domaObj._gris = gris; gris ? this.domaObj.sprite.setTint(0x9a9a9a) : this.domaObj.sprite.clearTint(); }
     }
+  }
+
+  animarTrabajoDoma(mascota, accion) {
+    const animacion = mascota.spriteKey + "_" + accion;
+    const sprite = mascota.sprite;
+    if (this.anims.exists(animacion) && (sprite.anims.currentAnim?.key !== animacion || !sprite.anims.isPlaying)) sprite.play(animacion);
+  }
+
+  buscarTrabajoDoma(mascota, objetos, disponible, ahora) {
+    // El número de objetos crece con la granja. Los destinos sin ruta se saltan hasta que se mueve el terreno.
+    if (ahora < (mascota.buscarDesde || 0)) return null;
+    mascota.buscarDesde = ahora + 700;
+    const candidatos = objetos.filter(o => !mascota.inaccesibles.has(o) && disponible(o));
+    candidatos.sort((a, b) => Math.hypot(a.cx - mascota.cx, a.by - mascota.by) - Math.hypot(b.cx - mascota.cx, b.by - mascota.by));
+    for (const o of candidatos.slice(0, 3)) {
+      const camino = this.findPath(mascota.cx, mascota.by, o.cx, o.by);
+      const fin = camino?.[camino.length - 1];
+      const alcance = GF.TILE * ((o.type === "excav" || o.type === "plot") ? 0.6 : 0.95);
+      if (fin && Math.hypot(fin.x - o.cx, fin.y - o.by) <= alcance) {
+        return { o, x: o.cx, y: o.by, camino, alcance, termina: 0 };
+      }
+      mascota.inaccesibles.add(o);
+    }
+    return null;
+  }
+
+  tickTrabajoDoma(dt, ahora) {
+    const mascota = this.domaObj;
+    if (!mascota) return;
+    if (this.leaving || GF.editMode || GF.uiOpen || document.hidden || domaHambriento()) {
+      mascota.trabajo = null;
+      this.animarTrabajoDoma(mascota, "idle");
+      return;
+    }
+    if (!mascota.inaccesibles || mascota.ocupacion !== GF._ocupVer || mascota.diaExcav !== this._excavDia) {
+      mascota.inaccesibles = new Set();
+      mascota.ocupacion = GF._ocupVer;
+      mascota.diaExcav = this._excavDia;
+      mascota.trabajo = null;
+      this.navOf().invalidate();
+      // Si el anclaje del Establo quedó dentro de una colisión, salir al terreno libre más próximo.
+      if (GF.blockedAt(mascota.cx, mascota.by, 6)) {
+        const nav = this.navOf();
+        if (!nav.grid) nav.build();
+        const libre = nav.nearestFree(mascota.cx, mascota.by);
+        if (libre) {
+          const punto = nav.pt(libre.i, libre.j);
+          this.posicionarAcompanante(mascota, punto.x, punto.y);
+        }
+      }
+    }
+    const rol = DOMA_ROL[mascota.especieDoma];
+    const objetos = rol === "rata" ? (this.excavObjs || []) : rol === "larva" ? this.plots : this.objs;
+    const disponible = o => this.action?.o !== o && this.pendingObj !== o && this.buffer?.o !== o && domaPuedeAtender(o, ahora);
+    const anterior = mascota.trabajo;
+    if (anterior && (!objetos.includes(anterior.o) || anterior.x !== anterior.o.cx || anterior.y !== anterior.o.by || !disponible(anterior.o))) {
+      mascota.trabajo = null;
+    }
+    if (!mascota.trabajo) mascota.trabajo = this.buscarTrabajoDoma(mascota, objetos, disponible, ahora);
+    const tarea = mascota.trabajo;
+    if (!tarea) { this.animarTrabajoDoma(mascota, "idle"); return; }
+    if (tarea.termina) {
+      if (ahora < tarea.termina) return;
+      mascota.trabajo = null;
+      this.animarTrabajoDoma(mascota, "idle");
+      if (Math.hypot(mascota.cx - tarea.o.cx, mascota.by - tarea.o.by) > tarea.alcance) return;
+      const resultado = domaAtender(tarea.o, ahora);
+      if (resultado) this.terminarTrabajoDoma(tarea.o, resultado);
+      return;
+    }
+    const punto = tarea.camino[0];
+    if (!punto) {
+      tarea.termina = ahora + 500;
+      this.animarTrabajoDoma(mascota, "atk");
+      return;
+    }
+    const dx = punto.x - mascota.cx, dy = punto.y - mascota.by, distancia = Math.hypot(dx, dy);
+    const avance = Math.min(distancia, 62 * Math.min(dt, 0.06));
+    if (distancia <= 0.05) { tarea.camino.shift(); return; }
+    const x = mascota.cx + dx / distancia * avance, y = mascota.by + dy / distancia * avance;
+    if (GF.blockedAt(x, y, 6)) {
+      mascota.inaccesibles.add(tarea.o);
+      mascota.trabajo = null;
+      this.animarTrabajoDoma(mascota, "idle");
+      return;
+    }
+    this.posicionarAcompanante(mascota, x, y);
+    if (Math.abs(dx) > 1) mascota.sprite.setFlipX(dx < 0);
+    this.animarTrabajoDoma(mascota, "walk");
+    if (avance === distancia) tarea.camino.shift();
+  }
+
+  terminarTrabajoDoma(o, resultado) {
+    if (o.type === "excav") this.terminarExcavacion(o, resultado);
+    else if (o.type === "plot") {
+      o.barraPct = null;
+      this.syncPlots();
+      this.puffFx(o.cx, o.by, 0xc0dd97, 6);
+      this.premioFx(o.cx, o.by, null, resultado.txt);
+    } else {
+      this.syncNodos();
+      this.puffFx(o.cx, o.by, o.type === "tree" ? 0x987638 : 0x949393, 6);
+      this.premioFx(o.cx, o.by, resultado.res ? resSprite(resultado.res) : null, resultado.txt);
+    }
+    if (typeof refreshHud === "function") refreshHud();
+    if (typeof syncSlots === "function") syncSlots();
+    if (typeof saveFarm === "function") saveFarm(true);
+  }
+
+  aplicarAusenciaDoma() {
+    if (!G._domaPendiente || document.hidden) return;
+    const resultado = domaResolverAusencia({
+      nodos: this.objs,
+      parcelas: this.plots,
+      monticulos: dia => {
+        const ids = [];
+        for (let i = 0; i < excavPorDia(); i++) if (this.excavUbicacion(i, dia)) ids.push(i);
+        return ids;
+      },
+    });
+    if (!resultado) return;
+    if (resultado.excav) this.crearExcavaciones();
+    if (resultado.nodos) this.syncNodos();
+    if (resultado.parcelas) this.syncPlots();
+    if (typeof refreshHud === "function") refreshHud();
+    if (typeof syncSlots === "function") syncSlots();
+    if (typeof saveFarm === "function") saveFarm(true);
   }
 
   /* ============ AMBIENTE VIVO (15/8, dirección: 1+2+3+5) ============
@@ -5099,7 +5247,7 @@ class FarmScene extends Phaser.Scene {
     GF.rehacerColisiones();                 // identidad: i, tipo, exp y número de orden
     const extra = [];
     (this.objs || []).forEach(o => {
-      if (o.type === "fish") return;
+      if (o.type === "fish" || o.type === "domabicho" || o.type === "excav") return;
       const r = GF.solidRect(o);
       if (typeof o.i === "number" && GF.COLLISIONS[o.i]) {
         /* Objeto del mundo: se le corrige la posición (pudo moverse en modo edición o haberse
@@ -5107,8 +5255,7 @@ class FarmScene extends Phaser.Scene {
         const c = GF.COLLISIONS[o.i];
         c.cx = r.cx; c.by = r.by; c.hw = r.hw; c.dep = r.dep;
       } else {
-        /* Lo que la escena crea aparte y no está en WORLD_OBJECTS: cofres colocados, montículos
-           del día, el paquete. No tienen nada que ocultar, así que van tal cual y con su tipo. */
+        // Los cofres colocados y el paquete conservan su propia caja.
         r.tipo = o.type; extra.push(r);
       }
     });
@@ -5584,7 +5731,8 @@ class FarmScene extends Phaser.Scene {
   // vuelca el estado de las parcelas a G.plots para que el autoguardado lo persista
   syncPlots() { if (this.plots) G.plots = this.plots.map(pl => {
     const pausa = G.produccion && G.produccion.pausas[produccionClave(pl)];
-    return pausa ? {...pausa.estado} : { state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0, growTotal: pl.growTotal || 0 };
+    return pausa ? {...pausa.estado} : { state: pl.state, readyAt: pl.readyAt, cropKey: pl.cropKey, witherAt: pl.witherAt || 0, growTotal: pl.growTotal || 0,
+      ...(pl.state === "growing" && pl.abonadaDoma === true ? { abonadaDoma: true } : {}) };
   }); }
   /* 18/8: el equivalente de syncPlots para los NODOS. Solo se anotan los que están enfriándose,
      así el guardado no engorda con treinta entradas en cero. Se guarda por índice de objeto, que
@@ -6334,6 +6482,7 @@ class FarmScene extends Phaser.Scene {
     const t = nowMs();
     this.tickCamaraGuia(t);   // sólo si el objetivo tutorial quedó fuera del área jugable
     produccionVipTick();
+    this.aplicarAusenciaDoma();
     this.actualizarCartelExpansion();   // la señal de expansión acompaña la cámara, no se corta en el borde
     for (const o of this.objs) {
       if (produccionPausada(o)) {
@@ -6474,6 +6623,7 @@ class FarmScene extends Phaser.Scene {
         }
       }
     }
+    this.tickTrabajoDoma(dt, t);
     // peces de la laguna: nadan de un punto a otro
     if (this.pondFish) for (const f of this.pondFish) {
       const dx = f.tgt.x - f.s.x, dy = f.tgt.y - f.s.y, d = Math.hypot(dx, dy);

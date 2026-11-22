@@ -83,9 +83,8 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
       protegerDoma(a, b, reloj, errores);
       return errores;
     };
-    const confirmar = (a, b) => {
+    const confirmar = (a, b, base = reloj - 1000) => {
       const aceptado = copiar(b);
-      const base = reloj - 1000;
       const errores = protegerEconomia(copiar(a), aceptado, reloj, base);
       return errores.length === 0 && cliente.guardadoMismoContenido(
         { body: { data: b, base: new Date(base).toISOString() } },
@@ -150,6 +149,100 @@ const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALL
     const descanso = capturar();
     ok("guardar el descanso conserva las especies y sus reservas", confirmar(alimentadas, descanso) &&
       descanso.doma === null && descanso.domaColeccion.activa === null && Object.keys(descanso.domaColeccion.criaturas).length === 3);
+
+    const baseNodo = copiar(descanso);
+    const indexNodo = 86, ciclo = 1800000;
+    const nodo = ctx.premiumMundo(baseNodo).objects[indexNodo];
+    baseNodo.nodos = { [nodo.key]: { readyAt: reloj - 2 * ciclo, cdIni: reloj - 3 * ciclo, halfAt: 0 } };
+    // El mismo soporte comprado y colocado que recibe un jugador real.
+    baseNodo.produccion.premium = { v: 1, compras: [{
+      id: "11111111-1111-4111-8111-111111111111", tipo: "tree", coste: 1, desde: reloj - dia, nodo: indexNodo,
+    }] };
+    baseNodo.produccion.nodos[indexNodo] = true;
+    const celdas = Array.from({ length: 49 }, (_, i) => ({
+      cx: (i % 7 + nodo.width / 2) * 42, by: (Math.floor(i / 7) + 1) * 42,
+    }));
+    baseNodo.layout[indexNodo] = celdas.find(pos => ctx.premiumSitio(baseNodo, nodo, pos));
+    reloj += 1000;
+    const tarea = copiar(baseNodo);
+    tarea.visto = reloj;
+    tarea.energiaGranja.actual -= 1;
+    tarea.domaColeccion.activa = "orco";
+    tarea.domaColeccion.activaDesde = reloj - 250;
+    tarea.doma = tarea.domaColeccion.criaturas.orco;
+    tarea.doma.trabajos = { [indexNodo]: { n: 1, at: reloj - 100 } };
+    tarea.res.madera = 1;
+    tarea.nodos[nodo.key] = { readyAt: reloj - 100 - ciclo, cdIni: reloj - 100 - 2 * ciclo, halfAt: 0 };
+    ok("el primer trabajo Golden y la elección del ayudante confirman juntos con carga real", confirmar(baseNodo, tarea));
+    const entreCambios = copiar(tarea);
+    entreCambios.domaColeccion.criaturas.orco.trabajos[indexNodo].activaDesde = reloj - 250;
+    entreCambios.domaColeccion.activa = "larva";
+    entreCambios.domaColeccion.activaDesde = reloj - 10;
+    entreCambios.doma = entreCambios.domaColeccion.criaturas.larva;
+    ok("el trabajo del ayudante intermedio se conserva al cambiar en el mismo guardado", confirmar(baseNodo, entreCambios));
+    ok("una lectura idéntica del trabajo no consume otra carga", confirmar(tarea, tarea));
+    const estadoInvalido = (mutar, anterior=baseNodo) => {
+      const mod = copiar(tarea);
+      mutar(mod);
+      if (mod.doma) mod.doma = mod.domaColeccion.criaturas[mod.doma.bicho];
+      return protegerEconomia(copiar(anterior), mod, reloj, reloj - 1000).some(e => e.includes("ayudante") || e.includes("reloj"));
+    };
+    ok("el trabajo necesita retirar realmente una carga", estadoInvalido(n => {
+      n.nodos[nodo.key] = copiar(baseNodo.nodos[nodo.key]);
+    }));
+    ok("un solo reloj drenado no acredita más de una carga", estadoInvalido(n => {
+      n.domaColeccion.criaturas.orco.trabajos[indexNodo].n = 2;
+    }));
+    const hambriento = copiar(baseNodo);
+    hambriento.domaColeccion.criaturas.orco.comidaHasta = reloj - 101;
+    ok("un ayudante actuando con comida vencida no acredita carga", estadoInvalido(n => {
+      n.domaColeccion.criaturas.orco.comidaHasta = reloj - 101;
+    }, hambriento));
+    ok("el ayudante reserva una carga para el jugador", estadoInvalido(n => {
+      n.nodos[nodo.key] = { readyAt: reloj + ciclo, cdIni: reloj, halfAt: 0 };
+    }));
+    const eliminado = copiar(tarea);
+    delete eliminado.domaColeccion.criaturas.orco.trabajos;
+    eliminado.doma = eliminado.domaColeccion.criaturas.orco;
+    ok("el guardado conserva el contador de trabajos que ya está aceptado",
+      protegerEconomia(copiar(tarea), eliminado, reloj, reloj).some(s => /ayudante/.test(s)));
+
+    const desdeAusencia = reloj;
+    const noche = copiar(tarea);
+    const panza = desdeAusencia + 6 * ciclo;
+    noche.domaColeccion.criaturas.orco.comidaHasta = panza;
+    noche.doma = noche.domaColeccion.criaturas.orco;
+    const vuelta = copiar(noche);
+    const recuperado = vuelta.nodos[nodo.key];
+    const orco = vuelta.domaColeccion.criaturas.orco;
+    vuelta.doma = orco;
+    let cargas = 0;
+    for (reloj = desdeAusencia; reloj < panza; reloj += ciclo) {
+      if (cliente.nodoCargas(recuperado, ciclo / 1000) <= 1) continue;
+      cliente.nodoGastarCarga(recuperado, ciclo / 1000);
+      orco.trabajos[indexNodo] = { n: orco.trabajos[indexNodo].n + 1, at: reloj, activaDesde: vuelta.domaColeccion.activaDesde };
+      cargas++;
+    }
+    reloj += 4 * ciclo;
+    vuelta.visto = reloj;
+    vuelta.res.madera += cargas;
+    vuelta.energiaGranja.actual -= cargas;
+    ok("se aceptan cargas de varios ciclos hechos durante la ausencia antes de quedar con hambre",
+      cargas > 4 && confirmar(noche, vuelta, desdeAusencia));
+
+    const fecha = () => new Date(reloj).toISOString().slice(0, 10);
+    cliente.domaCargar({ doma: { bicho: "rata", comidaHasta: reloj + 2 * dia, desde: reloj - dia } });
+    G.excav = { dia: fecha(), hechos: [0] };
+    const ratAntes = capturar(), sello = reloj;
+    reloj += dia;
+    G.excav = { dia: fecha(), hechos: [0, 1] };
+    G.res.lombriz = 4;
+    G.doma.ultimo = { at: reloj, lombriz: 4 };
+    const ratDespues = capturar(), reciboRata = {};
+    ctx.actividadActualizar(copiar(ratAntes), copiar(ratDespues), reloj, reciboRata, false, sello);
+    ok("la bolsa y el consumo de montículos pueden confirmarse al volver en otro día",
+      confirmar(ratAntes, ratDespues, sello) && evaluarGuardado(ratAntes, ratDespues, dia / 1000).sospechas.length === 0);
+    ok("las lombrices del ayudante no acreditan una acción manual de minería", reciboRata.mine === 0);
     cliente.estadoDeCero();
     G.reinicio = reloj + 1;
     ok("un reinicio conforme al guardado existente borra la colección", validar(descanso, capturar()).length === 0);

@@ -5191,7 +5191,7 @@ function refreshDoma() {
   const enGranja = GF.scene === "farm";
   estado.textContent = !habilitada ? "La doma está pausada." :
     !especies.length ? (domaAbre() ? "Todavía no domaste ninguna criatura." : "La doma se desbloquea en Granja " + DOMA_NIVEL + ".") :
-    enGranja ? "Elige una criatura para que trabaje mientras estás fuera. Las demás quedan en descanso." :
+    enGranja ? "Tu ayudante recorre la granja y hace su tarea mientras tiene comida, incluso con el juego cerrado. Una carne le alcanza para 24 h." :
     "Vuelve a tu granja para elegir o alimentar a tu ayudante.";
   const guia = $("doma-recetas"), platos = $("doma-platos");
   guia.hidden = !habilitada;
@@ -5218,7 +5218,7 @@ function refreshDoma() {
       ' sm" data-doma-accion="elegir" data-doma-especie="' + especie + '" aria-label="' + seleccionar + ' · ' +
       escapeHtml(def.label) + '"' + (puedeCambiar ? "" : " disabled") + ">" + seleccionar + "</button>" +
       (activa ? '<button type="button" class="gold sm" data-doma-accion="alimentar" data-doma-especie="' +
-        especie + '" title="' + escapeHtml(motivoAlimento || "Una carne suma un día de comida") + '"' +
+        especie + '" title="' + escapeHtml(motivoAlimento || "Una carne suma 24 h de comida") + '"' +
         (puedeCambiar && !motivoAlimento ? "" : " disabled") + ">Alimentar · 1 carne</button>" : "") + "</div></div>";
   }).join("");
   lista.querySelectorAll("[data-doma-accion]").forEach(boton => boton.onclick = () => {

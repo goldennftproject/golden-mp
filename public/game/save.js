@@ -1293,9 +1293,7 @@ function hydrate(d) {
   }
   if (G.pass) G.pass.vip = produccionVipActivo();
   produccionVipTick(true);  // sin leer la escena anterior durante un cambio de cuenta
-  /* LA DOMA (22/8): el turno del bicho corre acá, con el estado ENTERO delante (necesita
-     G.nodos, la bolsa y d.visto). Solo recoge lo madurado en tu ausencia. */
-  try { if (typeof domaTrabajar === "function" && typeof d.visto === "number") domaTrabajar(d.visto); } catch (e) {}
+  domaPrepararRegreso(d);  // el turno usa los objetivos reales cuando cargue la granja
   /* LAS TRAMPAS (25/8, tanda 3): el mismo gesto que el parte de la doma, y por la misma razón.
      « El que entra dos minutos tiene que enterarse ANTES de decidir qué hace con esos dos
      minutos. » Una boya que cabecea sin decirlo es cebo perdido en silencio — y una trampa que

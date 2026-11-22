@@ -1,15 +1,14 @@
-/* LA DOMA v1 (22/8, dirección — GDD §13.1: el tiempo offline)
-   Un monstruo domado atiende los nodos mientras el jugador está desconectado. Contratos:
+/* DOMA Y TAREAS DE LA GRANJA
+   La criatura activa trabaja con objetivos reales mientras tiene comida. Contratos:
      · se abre en granja 10; antes, ningún bicho te sigue (ni con suerte);
      · una criatura por especie, con un solo ayudante activo y descanso opcional;
      · come 1 carne = 24 h de trabajo (panza tope 3 días); con hambre NO trabaja;
-     · SOLO recoge cargas maduradas EN TU AUSENCIA (ventana visto→ahora∩comida) — jamás
-       reemplaza al jugador presente;
+     · resuelve los mismos recursos con la granja abierta o al volver de una ausencia;
      · se queda el 30% de comisión, determinístico, y el jugador cobra primero;
-     · deja SIEMPRE una carga en el nodo (la del que vuelve) y dren a como nodoGastarCarga:
+     · deja una carga en el nodo y descuenta con nodoGastarCarga:
        el reloj sigue corriendo, el F5 no duplica;
      · minerales afuera (sin cargas, 21/8); bolsa llena = para de juntar sin perder nada;
-     · el turno corre en hydrate: cargar la partida ES volver a casa.
+     · al cargar, el turno espera a que el mapa tenga sus montículos, nodos y parcelas.
      node tools/test-doma.js                                                                   */
 const fs = require("fs"), vm = require("vm");
 
@@ -78,7 +77,7 @@ console.log("\nUNA CRIATURA POR ESPECIE, UN SOLO AYUDANTE ACTIVO");
   ctx.GF.scene = "forest";
   ok("la selección se hace en la granja", !!ctx.domaElegir(null).error);
   ctx.GF.scene = "farm";
-  ok("puede dejar a todos descansando", ctx.domaElegir(null).ok && G.doma === null && ctx.domaTrabajar(T0 - H) === null);
+  ok("puede dejar a todos descansando", ctx.domaElegir(null).ok && G.doma === null);
   ok("domar una especie estando en descanso conserva la elección", ctx.domaIntentar("larva", () => 0) && G.doma === null && !!G.domas.larva);
   ok("no gasta otro plato con la misma especie descansando", !ctx.domaIntentar("larva", () => 0) && G.dishes.papilla_remolacha === 4);
   const foto = JSON.parse(JSON.stringify(ctx.snapshot()));
@@ -97,7 +96,8 @@ console.log("\nUNA CRIATURA POR ESPECIE, UN SOLO AYUDANTE ACTIVO");
   ok("la partida anterior conserva su rata y su comida", G.domaActivaKey === "rata" && G.doma.cont === 4 && Object.keys(G.domas).length === 1);
   ctx.domaElegir(null);
   ctx.domaElegir("rata");
-  ok("la recién activada no cobra horas de descanso", ctx.domaTrabajar(T0 - 12 * H, T0 + H) === null);
+  ctx.domaPrepararRegreso({ visto: T0 - 12 * H });
+  ok("la recién activada no cobra horas de descanso", !G._domaPendiente);
 }
 
 console.log("\nEL PLATO VIAJA EN EL CONTENEDOR EQUIPADO");
@@ -143,118 +143,125 @@ console.log("\nLA PANZA: 1 CARNE = 24 H, TOPE 3 DÍAS, SIN CARNE NO HAY TRATO");
   ok("la panza guarda hasta 3 días", !!ctx.domaAlimentar().error, "carne restante " + G.res.carne);
 }
 
-console.log("\nLA SUERTE SE DERIVA DEL REPAGO (24/8; el diseñador proponía 1 de cada 100)");
+console.log("\nLA SUERTE POR ESPECIE SE CONSERVA");
 {
-  /* Regla: el REPAGO —en cuántos días de su propio trabajo se paga el ayudante— cae en una banda
-     de 2 a 10 días. El plato ya separa los casos cien veces (12 la galletita, 1.228 el costillar)
-     y la suerte termina de acomodar. La cuenta completa vive en tools/auditar-doma.js. */
-  const CH = vm.runInContext("DOMA_CHANCE_ROL", ctx);
-  const R = vm.runInContext("RECIPE_DEF", ctx), C = vm.runInContext("CROP_DEF", ctx), PR = vm.runInContext("PRICE", ctx);
-  const costo = (res) => Object.keys(res).reduce((a, k) => a + ((C[k] ? C[k].price : PR[k]) || 0) * res[k], 0);
-  const RENTA = { rata: 18, brazos: 1247 };   // plata/día de cada ayudante (ver auditar-doma.js)
-  const repago = (rol, plato) => (costo(R[plato].res) / CH[rol]) / RENTA[rol];
-
-  ok("la rata sigue en 1 de cada 4 (es el ayudante de entrada)", CH.rata === 0.25);
-  ok("el orco y los suyos, más difíciles: 1 de cada 6", Math.round(1 / CH.brazos) === 6);
-  ok("el que produce más es el más difícil", CH.brazos < CH.rata);
-  ok("y el aviso dice la suerte de ESA criatura, no una fija",
-    ctx.domaChanceTxt("rata") === "1 de cada 4" && ctx.domaChanceTxt("orco") === "1 de cada 6");
-
-  const rRata = repago("rata", "galletita_cereza"), rOrco = repago("brazos", "bocado_domador");
-  ok("la rata no sale gratis ni es inalcanzable (2-10 días)", rRata >= 2 && rRata <= 10, rRata.toFixed(1) + " días");
-  ok("el orco tampoco", rOrco >= 2 && rOrco <= 10, rOrco.toFixed(1) + " días");
-  ok("y el que más produce tarda más en pagarse", rOrco > rRata,
-    rRata.toFixed(1) + " vs " + rOrco.toFixed(1) + " días");
-  /* y el número que proponía el diseñador, medido: por qué no */
-  const cien = (costo(R.bocado_domador.res) / 0.01) / RENTA.brazos;
-  ok("a 1 de cada 100 el orco tardaría más de 60 días en pagarse (por eso no)", cien > 60,
-    Math.round(cien) + " días · " + Math.round(costo(R.bocado_domador.res) / 0.01) + " de plata");
+  ok("la rata y la larva siguen en 1 de cada 4", ctx.domaChance("rata") === 0.25 && ctx.domaChance("larva") === 0.25);
+  ok("orco, lancero, guerrero y trol siguen en 1 de cada 6", ["orco", "lancero", "guerrero", "troll"].every(bicho => ctx.domaChance(bicho) === 1 / 6));
+  ok("el aviso muestra la probabilidad de cada especie", ctx.domaChanceTxt("rata") === "1 de cada 4" && ctx.domaChanceTxt("orco") === "1 de cada 6");
 }
 
-console.log("\nEL TURNO: SOLO LO MADURADO EN TU AUSENCIA, COMISIÓN 30%, EL NODO SIGUE VIVO");
+function prepararAyudante(bicho, comidaHasta = FakeDate.now() + 24 * H, cont = 0) {
+  ctx.GF.scene = "farm";
+  ctx.domaCargar({ doma: { bicho, desde: FakeDate.now() - 2 * H, comidaHasta, cont } });
+}
+
+console.log("\nRATA: VISITA LOS MONTÍCULOS QUE YA EXISTEN");
 {
-  /* un árbol con reloj de 2 h que quedó VACÍO al irte (readyAt = ahora+2h)… y te vas 10 h:
-     maduran 4 relojes (t+2,4,6,8h) pero el tope de cargas es 4 → recoge cargas-1 = 3 */
-  const ahora0 = FakeDate.now();
-  ctx.domaCargar({ doma: { bicho: "orco", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null } });
-  G.nodos = { "tree:10,10": { readyAt: ahora0 + 2 * H, cdIni: ahora0, halfAt: 0 } };
+  prepararAyudante("rata");
+  G.seeds.papa = 1;
+  G.res.lombriz = 0;
+  G.energiaGranja = { v: 1, actual: 0, at: FakeDate.now() };
+  const dia = ctx.dayStamp(0);
+  const primero = { type: "excav", idx: 0, dia }, segundo = { type: "excav", idx: 1, dia };
+  const premio = ctx.excavBotin(0).n;
+  ok("puede ir a un montículo apenas está visible", ctx.domaPuedeAtender(primero));
+  ok("recoge el botín real sin usar energía de la granja", ctx.domaAtender(primero)?.n === premio && G.res.lombriz === premio && G.energiaGranja.actual === 0);
+  ok("el montículo queda consumido también para el jugador", ctx.excavCavar(0) === null && G.excav.hechos.includes(0));
+  ok("elige el otro montículo sin esperar ocho horas", ctx.domaAtender(segundo)?.res === "lombriz" && G.excav.hechos.includes(1));
+  ok("deja los montículos del día anterior", ctx.domaAtender({ type: "excav", idx: 2, dia: ctx.dayStamp(-1) }) === null);
+  ok("rechaza un montículo inexistente", ctx.domaAtender({ type: "excav", idx: 999, dia }) === null);
+  const tercero = { type: "excav", idx: 2, dia };
+  const intentaAñadir = ctx.tryAddRes;
+  ctx.tryAddRes = () => false;
+  ok("con la bolsa llena conserva el montículo", ctx.domaAtender(tercero) === null && !G.excav.hechos.includes(2));
+  ctx.tryAddRes = intentaAñadir;
+  G.seeds = {}; G.res = {}; G.plata = 0; G.plots = [];
+  ok("la rata deja el montículo de rescate que entregaría una semilla", ctx.domaAtender(tercero) === null && !G.excav.hechos.includes(2));
+  G.seeds.papa = 1;
+  G.doma.comidaHasta = FakeDate.now();
+  ok("al terminar la ración se detiene en el acto", ctx.domaHambriento() && ctx.domaAtender(tercero) === null);
+  G.doma.comidaHasta += H;
+  ctx.domaElegir(null);
+  ok("ningún ayudante actúa si el jugador eligió descanso", ctx.domaAtender(tercero) === null);
+}
+
+console.log("\nÁRBOLES Y ROCAS: LA CARGA REAL QUEDA GUARDADA");
+{
+  prepararAyudante("orco");
+  const ahora = FakeDate.now(), ciclo = ctx.CD.tree * 1000;
+  G.energiaGranja = { v: 1, actual: 40, at: ahora };
   G.res.madera = 0;
-  desfase = 10 * H;
-  const parte = ctx.domaTrabajar(ahora0);
-  ok("recogió 3 cargas del árbol (dejó 1 esperándote)", parte && (parte.madera + parte.fee) === 3,
-    JSON.stringify(parte));
-  ok("el jugador cobró primero (comisión al final del ciclo de 10)", parte.madera === 3 && parte.fee === 0);
-  const rec = G.nodos["tree:10,10"];
-  const cargasAhora = Math.min(4, 1 + Math.max(0, Math.floor((FakeDate.now() - rec.readyAt) / (rec.readyAt - rec.cdIni))));
-  ok("el nodo quedó con 1 carga y el reloj corriendo", cargasAhora === 1, cargasAhora + " cargas");
-  const otra = ctx.domaTrabajar(ahora0);
-  ok("correr el turno DOS veces no duplica (ya está drenado)", otra === null);
+  const nodo = { i: 0, type: "tree", readyAt: ahora - 3 * ciclo, cdIni: ahora - 4 * ciclo };
+  ok("una veta de mineral no es una tarea del orco", !ctx.domaPuedeAtender({ ...nodo, type: "ore" }));
+  ok("espera si el jugador ya está talando", !ctx.domaPuedeAtender({ ...nodo, golpes: 1 }));
+  ok("espera a que haya una carga para él y otra para el jugador", !ctx.domaPuedeAtender({ ...nodo, readyAt: ahora, cdIni: ahora - ciclo }));
+  ok("recoge tres cargas reales y deja una", [0, 1, 2].every(() => ctx.domaAtender(nodo)?.n === 1) &&
+    ctx.nodoCargas(nodo, ctx.CD.tree) === 1 && G.res.madera === 3);
+  ok("conserva la energía por unidad y el registro por nodo", G.energiaGranja.actual === 37 &&
+    G.doma.trabajos[0].n === 3 && G.doma.trabajos[0].activaDesde === G.domaActivaDesde);
+  G.doma.cont = 6;
+  const comision = { ...nodo, readyAt: ahora - ciclo, cdIni: ahora - 2 * ciclo };
+  ok("la séptima carga se usa como comisión", ctx.domaAtender(comision)?.n === 0 && G.res.madera === 3 &&
+    ctx.nodoCargas(comision, ctx.CD.tree) === 1 && G.energiaGranja.actual === 37 && G.doma.cont === 7);
 }
 
-console.log("\nCON HAMBRE NO TRABAJA — Y CONTIGO ADENTRO, TAMPOCO");
+console.log("\nLARVA: ABONA CADA SIEMBRA UNA VEZ");
 {
-  const ahora0 = FakeDate.now();
-  G.doma.comidaHasta = ahora0 - 1;   // panza vacía desde antes de irte
-  G.nodos = { "tree:11,11": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };
-  desfase += 10 * H;
-  ok("hambriento: el turno no junta nada", ctx.domaTrabajar(ahora0) === null);
-  ok("y domaHambriento() lo delata para el tinte gris", ctx.domaHambriento() === true);
-  /* cargas maduradas ANTES de irte (visto DESPUÉS de la maduración): no son suyas */
-  const ahora1 = FakeDate.now();
-  G.doma.comidaHasta = ahora1 + 72 * H;
-  G.nodos = { "tree:12,12": { readyAt: ahora1 - 8 * H, cdIni: ahora1 - 10 * H } };   // 4 cargas viejas
-  ok("lo madurado contigo presente no se toca (visto = ahora)", ctx.domaTrabajar(ahora1) === null);
+  prepararAyudante("larva");
+  const ahora = FakeDate.now();
+  const parcela = { type: "plot", i: 0, state: "growing", cropKey: "maiz", readyAt: ahora + 2 * H };
+  ok("la larva aplica el 15 % al crecimiento pendiente", ctx.domaAtender(parcela)?.abonada &&
+    parcela.readyAt === ahora + 2 * H * 0.85 && parcela.abonadaDoma === true);
+  ok("la misma siembra no se abona dos veces", ctx.domaAtender(parcela) === null);
+  ok("deja los cultivos ya maduros", ctx.domaAtender({ ...parcela, state: "ready", abonadaDoma: false }) === null);
+  G.plots = [{ ...parcela }];
+  ctx.produccionPausarEn({ type: "plot", i: 0 }, ahora, true);
+  ok("pausar conserva el abono de la siembra", G.produccion.pausas["p:0"]?.estado.abonadaDoma === true);
+  delete G.produccion.pausas["p:0"];
 }
 
-console.log("\nLOS MINERALES QUEDAN AFUERA Y EL TURNO CORRE EN HYDRATE");
+console.log("\nCON EL JUEGO CERRADO: TRABAJO REAL ANTES DE QUE TERMINE LA RACIÓN");
 {
-  const ahora0 = FakeDate.now();
-  ctx.domaCargar({ doma: { bicho: "orco", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null } });
-  G.nodos = { "ore:5,5": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };
-  desfase += 10 * H;
-  ok("una veta jamás entra al turno", ctx.domaTrabajar(ahora0) === null);
-  /* hydrate con visto viejo dispara el turno */
-  const ahora1 = FakeDate.now();
-  G.nodos = { "tree:13,13": { readyAt: ahora1 + 2 * H, cdIni: ahora1 } };
-  G.doma.comidaHasta = ahora1 + 72 * H;
-  const snap = JSON.parse(JSON.stringify(ctx.snapshot()));   // visto = ahora1
-  desfase += 10 * H;
-  const madera0 = Math.floor(G.res.madera || 0);
-  ctx.hydrate(snap);
-  ok("cargar la partida ES volver: la criatura entrega su parte", Math.floor(G.res.madera || 0) > madera0,
-    madera0 + " → " + Math.floor(G.res.madera || 0));
-  ok("y el parte queda anotado para el hover", !!(G.doma.ultimo && G.doma.ultimo.at));
+  const cambioDia = Date.parse("2025-08-22T00:00:00Z");
+  desfase = cambioDia - H - T0;
+  prepararAyudante("rata", cambioDia + H);
+  G.seeds.papa = 1;
+  G.res.lombriz = 0;
+  G.excav = { dia: ctx.dayStamp(0), hechos: [0] };
+  const guardado = JSON.parse(JSON.stringify(ctx.snapshot()));
+  const diaAnterior = guardado.excav.dia;
+  desfase += 3 * H;
+  const diaActual = ctx.dayStamp(0);
+  ctx.hydrate(guardado);
+  ok("al cargar espera a los recursos reales de la granja", G.res.lombriz === 0 && !!G._domaPendiente);
+  G.seeds.papa = 1;
+  const granja = { nodos: [], parcelas: [], monticulos: dia => dia === diaAnterior ? [0, 1] : [2] };
+  const esperadas = ctx.excavBotin(1, null, diaAnterior).n + ctx.excavBotin(2, null, diaActual).n;
+  ok("recoge el pendiente de ayer y el que apareció hoy antes de quedarse sin comida",
+    ctx.domaResolverAusencia(granja)?.excav && G.res.lombriz === esperadas && ctx.domaHambriento());
+  ok("respeta los índices reales y marca el montículo de hoy", G.excav.dia === diaActual &&
+    G.excav.hechos.length === 1 && G.excav.hechos[0] === 2);
+  ok("el mismo regreso no vuelve a pagar", ctx.domaResolverAusencia(granja) === null && G.res.lombriz === esperadas);
+  const confirmado = JSON.parse(JSON.stringify(ctx.snapshot()));
+  ctx.hydrate(confirmado);
+  ok("recargar el guardado con las lombrices no las vuelve a cobrar",
+    ctx.domaResolverAusencia(granja) === null && G.res.lombriz === esperadas);
 }
 
-console.log("\nCADA CRIATURA, SU OFICIO: LA RATA ESCARBA Y LA LARVA ABONA (v3, dirección)");
 {
-  /* la rata: 1 lombriz cada 8 h cubiertas, tope 3 */
-  const ahora0 = FakeDate.now();
-  ctx.domaCargar({ doma: { bicho: "rata", desde: ahora0, comidaHasta: ahora0 + 72 * H, cont: 0, ultimo: null } });
-  G.nodos = { "tree:20,20": { readyAt: ahora0 + 2 * H, cdIni: ahora0 } };   // árboles llenos que NO son lo suyo
-  G.res.lombriz = 0; const madera1 = Math.floor(G.res.madera || 0);
-  desfase += 20 * H;
-  const pr = ctx.domaTrabajar(ahora0);
-  ok("20 h afuera: la rata trae 2 lombrices (8 h cada una)", pr && pr.lombriz === 2, JSON.stringify(pr));
-  ok("y NO toca los árboles (no es lo suyo)", Math.floor(G.res.madera || 0) === madera1);
-  const ahora1 = FakeDate.now();
-  G.doma.comidaHasta = ahora1 + 72 * H;
-  desfase += 100 * H;
-  ok("100 h afuera: tope de 3 por vuelta", ctx.domaTrabajar(ahora1).lombriz === 3);
-  /* la larva: recorta el 15% de lo que le falta a cada cultivo creciendo */
-  const ahora2 = FakeDate.now();
-  ctx.domaCargar({ doma: { bicho: "larva", desde: ahora2, comidaHasta: ahora2 + 72 * H, cont: 0, ultimo: null } });
-  G.plots = [{ state: "growing", cropKey: "maiz", readyAt: ahora2 + 34 * H, growTotal: 24 * H, witherAt: 0 },
-             { state: "ready", cropKey: "papa", readyAt: 0, witherAt: 0 }];
-  desfase += 10 * H;
-  const antes = G.plots[0].readyAt;
-  const pl = ctx.domaTrabajar(ahora2);
-  ok("la larva abona el cultivo en crecimiento", pl && pl.abonados === 1, JSON.stringify(pl));
-  const recorte = antes - G.plots[0].readyAt, falta = antes - FakeDate.now();
-  ok("y le recorta el 15% de lo que le faltaba", Math.abs(recorte - falta * 0.15) < 2000,
-    (recorte / H).toFixed(1) + " h de " + (falta / H).toFixed(1));
-  ok("el cultivo LISTO no se toca (no hay nada que abonar)", G.plots[1].readyAt === 0);
+  const salida = FakeDate.now();
+  prepararAyudante("orco", salida + 2 * H);
+  G.res.madera = 0;
+  G.energiaGranja = { v: 1, actual: 20, at: salida };
+  const ciclo = ctx.CD.tree * 1000;
+  const nodo = { i: 0, type: "tree", readyAt: salida, cdIni: salida - ciclo };
+  desfase += 3 * H;
+  ctx.domaPrepararRegreso({ visto: salida });
+  const granja = { nodos: [nodo], parcelas: [], monticulos: () => [] };
+  ok("al volver recoge de los ciclos ocurridos dentro de la ración, aunque ahora tenga hambre",
+    ctx.domaResolverAusencia(granja)?.nodos && G.res.madera === 3 && G.doma.trabajos[0].at < G.doma.comidaHasta);
+  ok("los ciclos posteriores a la ración quedan para el jugador", ctx.nodoCargas(nodo, ctx.CD.tree) > 1);
 }
 
-console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: la granja ya no duerme sola.\n");
+console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: tareas reales dentro y fuera de la granja.\n");
 process.exit(fallos ? 1 : 0);
