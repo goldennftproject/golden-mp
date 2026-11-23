@@ -157,18 +157,34 @@ function energiaGranjaTick(t=nowMs()) {
   e.at=Math.max(t,e.at||t); return e.actual;
 }
 function energiaGranjaPuede(tipo,n=1,t=nowMs()) { return energiaGranjaTick(t)+1e-9 >= (ENERGIA_GRANJA_COSTO[tipo]||0)*n; }
-function energiaGranjaPagar(tipo,n=1,silencio=false,t=nowMs()) {
+const PRODUCCION_MANUAL_SIN_ENERGIA = new Set(['plant', 'harvest', 'chop', 'mine']);
+function produccionManualSinEnergia(tipo, manual, t) {
+  return manual && PRODUCCION_MANUAL_SIN_ENERGIA.has(tipo) && t >= Date.parse(JORNADA_CAMBIO + 'T00:00:00Z');
+}
+function energiaGranjaPagar(tipo,n=1,silencio=false,t=nowMs(),manual=false) {
   if(!Number.isSafeInteger(n)||n<1) return false;
-  if(!energiaGranjaPuede(tipo,n,t)){if(!silencio)toast('Sin energía de granja — se recupera sola; de vacía a llena tarda 4 h');return false;}
-  G.energiaGranja.actual=Math.max(0,G.energiaGranja.actual-(ENERGIA_GRANJA_COSTO[tipo]||0)*n);
-  if(ENERGIA_GRANJA_COSTO[tipo]){G.actividadAcciones=G.actividadAcciones||{};G.actividadAcciones[tipo]=Math.min(1e9,(G.actividadAcciones[tipo]||0)+n);}
+  if (!produccionManualSinEnergia(tipo, manual, t)) {
+    if(!energiaGranjaPuede(tipo,n,t)){if(!silencio)toast('Sin energía de granja — se recupera sola; de vacía a llena tarda 4 h');return false;}
+    G.energiaGranja.actual=Math.max(0,G.energiaGranja.actual-(ENERGIA_GRANJA_COSTO[tipo]||0)*n);
+  }
+  if (ENERGIA_GRANJA_COSTO[tipo]) {
+    G.actividadAcciones = G.actividadAcciones || {};
+    G.actividadAcciones[tipo] = Math.min(1e9, (G.actividadAcciones[tipo] || 0) + n);
+    if (produccionManualSinEnergia(tipo, manual, t)) {
+      const key = 'manual_' + tipo;
+      G.actividadAcciones[key] = Math.min(1e9, (G.actividadAcciones[key] || 0) + n);
+    }
+  }
   return true;
 }
 function actividadGranjaRecibir(a,acreditar=false){
   if(!a||a.v!==1||!Number.isSafeInteger(a.energia)||a.energia<0||a.energia>2000)return;
   if(acreditar){const premio=Math.max(0,(Number(a.bonoTotal)||0)-(Number(G.actividadGranja?.bonoTotal)||0));if(premio){G.plata+=premio;if(typeof log==='function')log('Misión diaria: +'+premio+' Plata');}}
   G.actividadGranja=JSON.parse(JSON.stringify(a));G.actividadAcciones=G.actividadAcciones||{};
-  for(const k of Object.keys(ENERGIA_GRANJA_COSTO)){const n=a.registro&&a.registro[k];if(Number.isSafeInteger(n)&&n>=0)G.actividadAcciones[k]=Math.max(G.actividadAcciones[k]||0,n);}
+  for (const k of [...Object.keys(ENERGIA_GRANJA_COSTO), ...Array.from(PRODUCCION_MANUAL_SIN_ENERGIA, tipo => 'manual_' + tipo)]) {
+    const n = a.registro?.[k];
+    if (Number.isSafeInteger(n) && n >= 0) G.actividadAcciones[k] = Math.max(G.actividadAcciones[k] || 0, n);
+  }
 }
 // Misma jornada UTC y mismos premios que guardar.
 const JORNADA_BALANCE_DESDE = '2026-11-20';
@@ -179,19 +195,58 @@ const JORNADA_MISIONES=[
  {id:'mineria',tipo:'mine',meta:10,plata:400,nombre:'⛏ Mina 10 veces'},
  {id:'jornada',tipo:'energia',meta:200,plata:3000,nombre:'🌾 Completa tu jornada',detalle:'Usa 200 de energía en siembra, cosecha, tala, minería o animales'}
 ];
+const JORNADA_CAMBIO = '2026-11-23';
+const JORNADA_PRODUCCION = { harvest: 10, chop: 5 };
+const JORNADA_MISION_PRODUCCION = {id:'jornada',tipo:'produccion',meta:15,plata:600,nombre:'🌾 Jornada de cosecha y tala'};
+function jornadaModo(jornada) {
+  if (jornada.dia < JORNADA_CAMBIO) return 'energia';
+  if (jornada.dia !== JORNADA_CAMBIO) return 'produccion';
+  if (jornada.modo === 'energia' || jornada.modo === 'produccion') return jornada.modo;
+  return (Number(jornada.energia) >= 200 || Number(jornada.cobradas?.jornada) === 3000) ? 'energia' : 'produccion';
+}
+function jornadaMisiones(jornada) {
+  return jornadaModo(jornada) === 'energia' ? JORNADA_MISIONES : JORNADA_MISIONES.map(mision =>
+    mision.id === 'jornada' ? JORNADA_MISION_PRODUCCION : mision);
+}
+function jornadaProgreso(mision, jornada) {
+  if (mision.tipo === 'energia') return Number(jornada.energia) || 0;
+  if (mision.tipo !== 'produccion') return Number(jornada.progreso?.[mision.tipo]) || 0;
+  return Object.entries(JORNADA_PRODUCCION).reduce((suma, [tipo, meta]) => {
+    return suma + Math.min(meta, Number(jornada.progreso?.[tipo]) || 0);
+  }, 0);
+}
 function jornadaPlataMision(mision, dia) {
-  return dia < JORNADA_BALANCE_DESDE && mision.tipo !== 'energia' ? 500 : mision.plata;
+  return dia < JORNADA_BALANCE_DESDE && mision.id !== 'jornada' ? 500 : mision.plata;
 }
-function jornadaMaximo(dia) {
-  return JORNADA_MISIONES.reduce((total, mision) => total + jornadaPlataMision(mision, dia), 0);
+function jornadaMaximo(jornada) {
+  const limite = jornadaMisiones(jornada).reduce((total, mision) => total + jornadaPlataMision(mision, jornada.dia), 0);
+  return Math.max(limite, Number(jornada.plata) || 0);
 }
-function jornadaEstado(){const dia=new Date(nowMs()).toISOString().slice(0,10),old=G.actividadGranja?.jornada;const j=old?.dia===dia?old:null;return {dia,energia:j?.v===2?j.energia:0,plata:j?.plata||0,progreso:j?.v===2?j.progreso||{}:{},cobradas:j?.v===2?{...j.cobradas,...(j.cobradas?.cosecha?{cocina:j.cobradas.cosecha}:{})}:{},meta:200,max:jornadaMaximo(dia)};}
-async function jornadaReclamar(id){const j=jornadaEstado();await economiaSolicitar({mision:{id,dia:j.dia}});if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar();if(isOpen('ov-objetivos'))refreshObjetivos();}
+function jornadaDetalle(mision, jornada) {
+  if (mision.tipo !== 'produccion') return mision.detalle || '';
+  const cosechas = Math.min(JORNADA_PRODUCCION.harvest, Number(jornada.progreso.harvest) || 0);
+  const talas = Math.min(JORNADA_PRODUCCION.chop, Number(jornada.progreso.chop) || 0);
+  return 'Cosechas confirmadas: ' + cosechas + '/' + JORNADA_PRODUCCION.harvest
+    + ' · Talas confirmadas: ' + talas + '/' + JORNADA_PRODUCCION.chop;
+}
+function jornadaEstado() {
+  const dia = new Date(nowMs()).toISOString().slice(0, 10);
+  const old = G.actividadGranja?.jornada;
+  const j = old?.dia === dia ? old : null;
+  const estado = { dia, modo: j?.modo, energia: j?.v === 2 ? j.energia : 0, plata: j?.plata || 0,
+    progreso: j?.v === 2 ? j.progreso || {} : {},
+    cobradas: j?.v === 2 ? {...j.cobradas, ...(j.cobradas?.cosecha ? {cocina:j.cobradas.cosecha} : {})} : {} };
+  return {...estado, max: jornadaMaximo(estado)};
+}
+async function jornadaReclamar(id){const j=jornadaEstado();await economiaSolicitar({mision:{id,dia:j.dia,reglas:2}});if(typeof actividadGranjaRefrescar==='function')actividadGranjaRefrescar();if(isOpen('ov-objetivos'))refreshObjetivos();}
 function actividadGranjaEstado(){const energia=Math.min(2000,Math.max(0,G.actividadGranja&&G.actividadGranja.energia||0));return {energia,objetivo:2000,cumplida:energia>=2000,vip:vipVigente(),usdt:false};}
-function energiaGranjaAgregar(key,n,tipo,t=nowMs()) {
-  if(!energiaGranjaPuede(tipo,1,t))return false;
+function produccionManualAgregar(key, n, tipo) {
+  return energiaGranjaAgregar(key, n, tipo, nowMs(), true);
+}
+function energiaGranjaAgregar(key,n,tipo,t=nowMs(),manual=false) {
+  if ((!produccionManualSinEnergia(tipo, manual, t)) && !energiaGranjaPuede(tipo, 1, t)) return false;
   if(!tryAddRes(key,n))return false;
-  energiaGranjaPagar(tipo,1,false,t);
+  energiaGranjaPagar(tipo,1,false,t,manual);
   if((tipo==='chop'||tipo==='mine')&&(key==='madera'||key==='piedra')){G.logrosAcciones=G.logrosAcciones||{};G.logrosAcciones[key]=Math.min(1e9,Math.round(((G.logrosAcciones[key]||0)+n)*100)/100);}
   return true;
 }
@@ -8852,11 +8907,19 @@ let marketCur = "plata";
    ser una LISTA, porque un cero implícito es un cero que mañana alguien rellena sin querer. */
 var NO_VENDIBLE = { cebo_vivo: "El cebo vivo no se vende: solo sirve para cebar el palangre" };
 function esVendible(res) { return !NO_VENDIBLE[res] && !["madera","piedra","bronce","hierro","oro","diamante","netherita","tablon","barra_piedra","barra_bronce","barra_hierro","barra_oro"].includes(res); }
-function precioVentaBase(res) {
+function mercadoMargenCultivoBase(res) {
+  const cultivo = CROP_DEF[res];
+  return cultivo ? (cultivo.price - cultivo.seedCost) * (res === "papa" ? 1 : 0.5) : 0;
+}
+function precioVentaBase(res, cotizacion = null) {
   if (!esVendible(res)) return 0;
-  const c = CROP_DEF[res];
-  if (!c) return priceOf(res) * ventaMult();
-  return c.seedCost + (c.price - c.seedCost) * ventaMult();
+  const cultivo = CROP_DEF[res];
+  if (!cultivo) return priceOf(res) * ventaMult();
+  const semilla = cotizacion?.semilla ?? cultivo.seedCost;
+  const margen = cotizacion
+    ? ((cotizacion.precio ?? cultivo.price) - semilla) * (cotizacion.factorMargen ?? 1)
+    : mercadoMargenCultivoBase(res);
+  return semilla + margen * ventaMult();
 }
 /* Mercado del juego real. Con cuenta conectada usa presión compartida del servidor;
    el cálculo local se conserva para pruebas y partidas antiguas sin comprador conectado. Al vender mucho
@@ -8874,8 +8937,9 @@ function cotizarVenta(res, q, t) {
   const volumen = Math.max(0, Number(prev.volumen) || 0) * Math.exp(-Math.max(0, at - (prev.at || at)) / 21600000);
   const resto = Math.max(0, Math.min(0.999999999, Number(prev.resto) || 0));
   const factor = global ? global.factor || 1 : 1, unidades = q * factor;
-  const base = precioVentaBase(res) / factor, c = CROP_DEF[res];
-  const piso = c ? c.seedCost + Math.max(0, base - c.seedCost) * 0.2 : base * (global ? global.piso || 0.5 : 0.5);
+  const base = precioVentaBase(res, global) / factor, c = CROP_DEF[res];
+  const semilla = global?.semilla ?? c?.seedCost ?? 0;
+  const piso = c ? semilla + Math.max(0, base - semilla) * 0.2 : base * (global ? global.piso || 0.5 : 0.5);
   const demanda = global ? global.demanda : 100, libres = Math.min(unidades, Math.max(0, Math.ceil(3 - volumen))), pendientes = unidades - libres;
   const prima = libres + (pendientes ? Math.exp(-Math.max(0, volumen + libres - 3) / demanda) * (-Math.expm1(-pendientes / demanda)) / (-Math.expm1(-1 / demanda)) : 0);
   const exacto = unidades * piso + (base - piso) * prima + resto;
@@ -11571,8 +11635,36 @@ function pedAzar(n) {   // 0..1 determinístico del día para este jugador (FNV-
   return ((h >>> 0) % 100000) / 100000;
 }
 // qué puede producir el jugador HOY — de acá salen los pedidos
+const PED_CULTIVO_MINUTOS = { diaria: 60, semanal: 1440, mensual: 4320, evento: 2880 };
+function parcelasActivasTablon() {
+  return produccionItems().filter(item => item.type === "plot" && !produccionPausada(item)).length;
+}
+function pedidoPrecioCultivo(key) {
+  return CROP_DEF[key].seedCost + mercadoMargenCultivoBase(key);
+}
+function pedidoAjustarCultivo(pedido, escalon) {
+  if (pedido.tipo !== "res" || !CROP_DEF[pedido.key]) return pedido;
+  const cultivo = CROP_DEF[pedido.key];
+  const minutosCiclo = Math.max(1, Math.ceil(cultivo.grow / 60));
+  const parcelas = Math.max(1, parcelasActivasTablon());
+  const unidadesCosecha = Math.max(1, cultivo.yield || 1);
+  const horizonte = PED_CULTIVO_MINUTOS[escalon];
+  const ciclos = Math.max(1, Math.floor(horizonte / minutosCiclo));
+  const dias = Math.ceil(horizonte / 1440);
+  const tope = Math.min(parcelas * ciclos, seedDailyMax() * dias) * unidadesCosecha;
+  const n = Math.min(pedido.n, tope);
+  const plata = Math.floor(pedidoPrecioCultivo(pedido.key) * n + 1e-9);
+  const factorVales = escalon === "diaria" ? 1 : 0.6;
+  return {
+    ...pedido, n, plata,
+    xp: Math.max(1, Math.round(plata * 0.8)),
+    vales: Math.floor(plata * factorVales / VALE_EMISION),
+    minutosProduccion: Math.ceil(n / (parcelas * unidadesCosecha)) * minutosCiclo
+  };
+}
 function pedPool() {
   const pool = [];
+  const tieneParcelas = parcelasActivasTablon() > 0;
   for (const k in CROP_DEF) {
     const cd = CROP_DEF[k];
     /* 18/8: el tablón pedía cultivos por NIVEL DE GRANJA, pero desde que las semillas se abren con
@@ -11582,7 +11674,7 @@ function pedPool() {
     if (typeof cropUnlocked === "function" ? !cropUnlocked(k) : (farmLevel() < cd.lvl)) continue;
     const min = Math.round(cd.growH * 60);
     const n = min <= 30 ? 3 : min <= 90 ? 2 : 1;   // cultivos cortos piden tandas, anclas piden 1
-    pool.push({ tipo: "res", key: k, n: n, val: (cd.price || 1) * n });
+    if (tieneParcelas) pool.push({ tipo: "res", key: k, n: n, val: (cd.price || 1) * n });
   }
   pool.push({ tipo: "res", key: "madera", n: 3, val: (priceOf("madera") || 2) * 3 });
   pool.push({ tipo: "res", key: "piedra", n: 3, val: (priceOf("piedra") || 3) * 3 });
@@ -11643,7 +11735,7 @@ function pedPool() {
   }
   return pool;
 }
-function pedidoGenerar(seed) {
+function pedidoGenerar(seed, encargoGrande = false) {
   const pool = pedPool(); if (!pool.length) return null;
   const p = pool[Math.floor(pedAzar(seed) * pool.length) % pool.length];
   const extra = pedAzar(seed + 31);   // tanda chica / media / grande
@@ -11667,8 +11759,9 @@ function pedidoGenerar(seed) {
      producción — vales y XP —, que es el modelo que Sunflower usa con la moneda de su capítulo.
      Los vales suben para compensar: la ganancia sigue existiendo, pero en una moneda que solo
      sale del tablón y solo se gasta en el tablón. */
-  return { tipo: p.tipo, key: p.key, n: n, plata: Math.max(2, Math.round(val)), xp: Math.max(1, Math.round(val * 0.8)),
-    vales: valesPremio(val), de: rem[0], nota: rem[1], hecho: false };   // 31/8: la EMISIÓN tiene su propia vara (prima 25 %, ver VALE_EMISION)
+  const pedido = { tipo: p.tipo, key: p.key, n, plata: Math.max(2, val), xp: Math.max(1, Math.round(val * 0.8)),
+    vales: valesPremio(val), de: rem[0], nota: rem[1], hecho: false };
+  return encargoGrande ? pedido : pedidoAjustarCultivo(pedido, "diaria");
 }
 /* El primer contacto con el tablón no puede heredar la economía completa de los pedidos
    recurrentes. A esta altura de la ruta el jugador puede haber gastado o vendido todo lo que
@@ -11710,7 +11803,7 @@ function semanaStamp() { const d = new Date(); const t = Date.UTC(d.getUTCFullYe
 function mesStamp() { const d = new Date(); return "M" + d.getUTCFullYear() + "-" + d.getUTCMonth(); }
 // Un encargo grande: el mismo generador, pero pidiendo N veces lo de un pedido diario.
 function pedidoGrande(seed, veces, etiqueta) {
-  const p = pedidoGenerar(seed);
+  const p = pedidoGenerar(seed, true);
   if (!p) return null;
   const mult = Math.max(2, Math.round(veces * 10));   // la diaria es el 10% del día
   p.n = Math.max(2, Math.round(p.n * mult));
@@ -11719,7 +11812,7 @@ function pedidoGrande(seed, veces, etiqueta) {
   p.vales = Math.max(3, Math.round(p.vales * mult * 0.6));   // el premio va en VALES, no en plata
   p.tipoEncargo = etiqueta;
   p.nota = etiqueta === "semanal" ? "el encargo de la semana" : "el gran encargo del mes";
-  return p;
+  return pedidoAjustarCultivo(p, etiqueta);
 }
 /* ============ LA MISIÓN DE EVENTO (22/8, dirección) ================================
    « Están las misiones diarias, semanales, mensuales y las de EVENTO. Las de evento también
@@ -11757,9 +11850,10 @@ function pedidoEvento() {
     let n = Math.max(2, Math.round(b.n * mult));
     if (unidad > 0 && n * unidad < VALE_EMISION) n = Math.ceil(VALE_EMISION / unidad);   // 31/8: el piso respalda el vale que emite
     const val = Math.round(unidad * n);
-    return { tipo: b.tipo, key: b.key, n: n, plata: Math.max(2, val), xp: Math.max(1, Math.round(val * 0.8)),
-      vales: Math.max(3, Math.round(valesPremio(val) * 0.6)),   // 31/8: emisión con su vara (VALE_EMISION), misma poda que los grandes
+    const pedido = { tipo: b.tipo, key: b.key, n, plata: Math.max(2, val), xp: Math.max(1, Math.round(val * 0.8)),
+      vales: Math.max(3, Math.round(valesPremio(val) * 0.6)),
       de: "🎪 " + tema.label, nota: "solo este fin de semana", hecho: false, tipoEncargo: "evento", tema: tema.id };
+    return pedidoAjustarCultivo(pedido, "evento");
   }
   return null;
 }
@@ -11847,7 +11941,7 @@ function tablonAbierto() {
 }
 function pedidoVales(pedido, estado) {
   if (pedido.tipoEncargo === "tutorial") return 0;
-  if (pedido.tipoEncargo || estado.dobles > 0) return pedido.vales;
+  if (pedido.tipoEncargo || estado.dobles > 0 || pedido.vales <= 0) return pedido.vales;
   const extra = estado.dia >= JORNADA_BALANCE_DESDE ? 1 : 0;
   return pedido.vales * 2 + extra;
 }
@@ -11868,7 +11962,7 @@ function pedidoEntregar(i) {
   else if (p.tipo === "fish") G.fish[p.key] -= p.n;
   else if (p.tipo === "dish") G.dishes[p.key] -= p.n;
   const vales = pedidoVales(p, e);
-  p.hecho = true; if (!p.tipoEncargo) e.dobles = (e.dobles || 0) + 1;
+  p.hecho = true; if (!p.tipoEncargo && p.vales > 0) e.dobles = (e.dobles || 0) + 1;
   if (!esTutorial) { G.plata += p.plata; G.vales = (G.vales || 0) + vales; }
   /* 18/8 (dirección): el tablón pagaba XP de Cultivo aunque le llevaras PIEDRA. Ahora paga a la
      skill de lo que entregás — que es lo que el jugador ha trabajado de verdad. */
