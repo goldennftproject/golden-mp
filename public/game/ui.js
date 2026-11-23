@@ -237,6 +237,7 @@ function closeOv(id) {
   const e = $(id);
   const cerro = !!(e && e.classList.contains("show"));
   if (e) { desenfocarAlCerrar(e); e.classList.remove("show"); }
+  if (id === "ov-inv") cancelarPapeleraInventario();
   refrescarGuiaTrasCerrarOv(cerro);
 }
 
@@ -300,6 +301,7 @@ function entrenarFin() {
 function closeAllOv() {
   let cerro = false;
   document.querySelectorAll(".ov.show:not(.bloquea)").forEach(e => { desenfocarAlCerrar(e); e.classList.remove("show"); cerro = true; });
+  cancelarPapeleraInventario();
   refrescarGuiaTrasCerrarOv(cerro);
 }
 
@@ -2439,11 +2441,11 @@ function fishIc(k) { const f = FISH_DEF[k], nm = f ? f.label : "Pez"; return f &
 function coinIc(cur) { const nm = cur === "esencia" ? "$Golden" : "Plata"; return `<img class="ric" title="${nm}" src="${GF.spr(cur === "esencia" ? "coin_esencia" : "coin_plata")}" onerror="this.outerHTML='${cur === "esencia" ? "✨" : "🪙"}'">`; }
 function invCellHtml(d, i, rem, zone) {
   if (!d) return `<div class="slot" data-slot="${i}" data-zone="${zone}"></div>`;
-  let cnt = "";
+  let cnt = "", cantidad = 1;
   /* sin contador: las cañas de la v4 se tienen o no se tienen, y un « 1 » en cada casilla es
      ruido que compite con los números que sí dicen algo. */
   if (d.kind === "cana") { cnt = ""; }
-  else if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && d.key === "axe") || d.kind === "pick") { const k = d.kind + ":" + d.key; const n = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - n; cnt = `<span class="cnt">${fmt(n)}</span>`; }
+  else if (d.kind === "res" || d.kind === "seed" || d.kind === "fish" || d.kind === "dish" || d.kind === "chest" || (d.kind === "tool" && d.key === "axe") || d.kind === "pick") { const k = d.kind + ":" + d.key; cantidad = Math.min(99, rem[k] || 0); rem[k] = (rem[k] || 0) - cantidad; cnt = `<span class="cnt">${fmt(cantidad)}</span>`; }
   const v = itemView(d);
   const sel = (d.kind === "seed" && G.selSeed === d.key) ? " sel" : "";
   const eq = pickEqCls(d);
@@ -2467,10 +2469,55 @@ function invCellHtml(d, i, rem, zone) {
   const rar = (typeof rarezaDe === "function") ? rarezaDe(d.kind, d.key) : null;
   const rc = (rar && rar !== "comun") ? " r-" + rar : "";
   const repuestoMarca = d.kind === "arm_spare" ? '<span class="cnt" aria-hidden="true">R</span>' : '';
+  if (zone === "inv" && modoPapeleraInventario) {
+    const elegible = infoPapelera(d, cantidad);
+    const etiqueta = elegible ? "Borrar " + elegible.n + " × " + elegible.nombre : v.label + " · no se puede borrar";
+    const accion = elegible ? ' data-inv-trash-item role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) + '"' : "";
+    return `<div class="slot filled k-${d.kind === "arm_spare" ? "arm" : d.kind}${rc}" data-slot="${i}" data-zone="inv"${accion} title="${escapeHtml(etiqueta)}">${itemIcon(v)}${cnt}${repuestoMarca}${durBar(v)}</div>`;
+  }
   return `<div class="slot filled k-${d.kind === "arm_spare" ? "arm" : d.kind}${rc}${sel}${eq}" draggable="true" data-slot="${i}" data-zone="${zone}"${semillaAttrs}${repuestoAttrs} title="${escapeHtml(v.label)}${semillaElegible ? " — seleccionar para plantar" : ""}${d.kind === "dish" || d.kind === "res" || d.kind === "seed" || d.kind === "fish" ? " — clic derecho (o dedo apretado) lo manda a la barra" : ""}">${itemIcon(v)}${cnt}${repuestoMarca}${durBar(v)}</div>`;
 }
+let modoPapeleraInventario = false;
+
+function actualizarPapeleraInventario() {
+  const zona = typeof enZona === "function" && enZona();
+  const boton = $("inv-trash"), aviso = $("inv-trash-status"), label = $("inv-trash-label");
+  const barra = boton?.parentElement;
+  if (barra) barra.hidden = !!zona;
+  $("ov-inv")?.classList.toggle("papelera-activa", modoPapeleraInventario);
+  boton?.setAttribute("aria-pressed", String(modoPapeleraInventario));
+  if (label) label.textContent = modoPapeleraInventario ? "Cancelar papelera" : "Papelera";
+  if (aviso) aviso.textContent = modoPapeleraInventario ? "Selecciona el objeto que quieres borrar." : "";
+}
+
+function finalizarPapeleraInventario() {
+  const activo = modoPapeleraInventario;
+  modoPapeleraInventario = false;
+  if (activo && isOpen("ov-inv") && !enZona()) refreshInv();
+  else actualizarPapeleraInventario();
+  if (isOpen("ov-inv") && !enZona()) $("inv-trash")?.focus({ preventScroll: true });
+}
+
+function cancelarPapeleraInventario() {
+  const pregunta = $("ov-confirm");
+  if (pregunta?._alCerrarConfirmacion === finalizarPapeleraInventario) {
+    if (!cerrarConfirmacionLocal()) pregunta._alCerrarConfirmacion = null;
+  }
+  if (modoPapeleraInventario) {
+    modoPapeleraInventario = false;
+    actualizarPapeleraInventario();
+  }
+}
+
 function bindTrash() {
   const tr = $("inv-trash"); if (!tr || tr._bound) return; tr._bound = true;
+  tr.addEventListener("click", () => {
+    if (enZona() || !isOpen("ov-inv") || isOpen("ov-confirm")) return;
+    if (modoPapeleraInventario) { finalizarPapeleraInventario(); return; }
+    modoPapeleraInventario = true;
+    refreshInv();
+    $("inv-slots")?.querySelector("[data-inv-trash-item]")?.focus({ preventScroll: true });
+  });
   tr.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; tr.classList.add("hot"); });
   tr.addEventListener("dragleave", () => tr.classList.remove("hot"));
   tr.addEventListener("drop", e => { e.preventDefault(); tr.classList.remove("hot"); dndActive = false; dndDrop(e.dataTransfer.getData("text/plain"), "trash", 0); });
@@ -2582,9 +2629,10 @@ function enfocarSemillaBolsaPc(caja, slot) {
 }
 function refreshInv() {
   window._bolsaFirma = (typeof bolsaFirma === "function") ? bolsaFirma() : null;   // 24/8: al repintar, la firma queda al día
-  if (typeof enZona === "function" && enZona()) { refreshInvZona(); refreshHotbar(); return; }
+  if (typeof enZona === "function" && enZona()) { cancelarPapeleraInventario(); actualizarPapeleraInventario(); refreshInvZona(); refreshHotbar(); return; }
   syncSlots();
   bindTrash();
+  actualizarPapeleraInventario();
   const grilla = $("inv-slots");
   const focoSemilla = semillaEnFocoBolsa(grilla);
   const cap = invSlots(), rem = {};
@@ -2602,12 +2650,12 @@ function refreshInv() {
   const used = canonicalStacks().length, cap2 = $("inv-cap"); if (cap2) cap2.textContent = `Bolsa: ${used}/${cap} · recursos y semillas apilan hasta 99`;
   const ss = $("inv-selseed"); if (ss && CROP_DEF[G.selSeed]) ss.innerHTML = `Plantando: <img class="ric" src="${GF.spr("seed_" + G.selSeed)}" onerror="this.outerHTML='${CROP_DEF[G.selSeed].emoji}'"> ` + CROP_DEF[G.selSeed].label + " · clic una semilla para cambiar";
   renderInvExpand();
-  bindZoneDnD(grilla, "inv");
+  if (!modoPapeleraInventario) bindZoneDnD(grilla, "inv");
   grilla.querySelectorAll("[data-slot]").forEach(c => {
     c.addEventListener("click", () => invCellClick(+c.dataset.slot));
-    bindALaBarra(c, () => G.slots[+c.dataset.slot]);   // clic derecho o dedo apretado → a la barra
+    if (!modoPapeleraInventario) bindALaBarra(c, () => G.slots[+c.dataset.slot]);
   });
-  grilla.querySelectorAll("[data-inv-seed], [data-inv-spare]").forEach(c => {
+  grilla.querySelectorAll("[data-inv-seed], [data-inv-spare], [data-inv-trash-item]").forEach(c => {
     activarAccionConTeclado(c, () => invCellClick(+c.dataset.slot));
   });
   enfocarSemillaBolsaPc(grilla, focoSemilla);
@@ -3208,6 +3256,8 @@ async function usarArmaRepuesto(id) {
   } finally { armaRepuestoEnCurso = false; }
 }
 function invCellClick(i) {
+  if (isOpen("ov-confirm")) return;
+  if (modoPapeleraInventario) { preguntarPapelera(i); return; }
   const d = G.slots[i]; if (!d) return;
   if (d.kind === "arm_spare") { usarArmaRepuesto(d.key); return; }
   if (d.kind === "armor") { armorAlternarPieza(d.key); return; }
@@ -3471,13 +3521,9 @@ function dndDrop(src, tz, ti) {
   else if (sz === "inv" && tz === "hot") { const d = G.slots[si]; if (d) G.hotbar[ti] = { kind: d.kind, key: d.key }; }
   else if (sz === "hot" && tz === "hot") { const a = G.hotbar[si]; G.hotbar[si] = G.hotbar[ti]; G.hotbar[ti] = a; }
   else if (sz === "hot" && tz === "inv") { G.hotbar[si] = null; }
-  else if (tz === "trash") {   // tirar a la basura (detalless.docx) — con confirmación (30/7)
+  else if (tz === "trash") {
     if (sz === "hot") { G.hotbar[si] = null; toast("Quitado de la barra"); }
-    else { const d = G.slots[si]; if (d) {
-      const inf = trashInfo(d);
-      if (!inf) toast("Eso no se puede tirar");
-      else if (inf.n > 0) askConfirm("¿Seguro que quieres tirar " + inf.n + " × " + inf.lbl + "? No se puede recuperar.", () => { trashStack(d); if (isOpen("ov-inv")) refreshInv(); else refreshHotbar(); });
-    } }
+    else if (sz === "inv") { preguntarPapelera(si); return; }
   }
   if (isOpen("ov-inv")) refreshInv(); else refreshHotbar();
 }
@@ -3488,6 +3534,9 @@ function cerrarConfirmacionLocal() {
   if (!ov || !ov.classList.contains("show")) return false;
   desenfocarAlCerrar(ov);
   ov.classList.remove("show");
+  const alCerrar = ov._alCerrarConfirmacion;
+  ov._alCerrarConfirmacion = null;
+  if (typeof alCerrar === "function") alCerrar();
   return true;
 }
 // En PC la tarjeta pequeña puede estar sobre Inventario, Mercado, etc. El fondo debe ser una
@@ -3521,62 +3570,104 @@ function pedirAporteObra(t,onAportar){
 function askConfirm(msg, onYes, opts) {
   opts = opts || {};
   const ov = $("ov-confirm"); if (!ov) { onYes(); return; }
+  if (ov._alCerrarConfirmacion) cerrarConfirmacionLocal();
+  ov._alCerrarConfirmacion = opts.onClose;
   enlazarFondoConfirmacionPc();
   const tt = $("cf-title"); if (tt) tt.textContent = opts.title || "Tirar a la papelera";
   const m = $("cf-msg"); if (m) m.textContent = msg;
   ov.classList.add("show"); enfocarOvPc(ov);
   const yes = $("cf-yes"), no = $("cf-no");
-  if (yes) { yes.textContent = opts.yes || "Tirar"; yes.className = opts.yesClass || "red"; yes.onclick = () => { cerrarConfirmacionLocal(); onYes(); }; }
-  if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => { cerrarConfirmacionLocal(); if (typeof opts.onNo === "function") opts.onNo(); }; }
+  if (yes) { yes.textContent = opts.yes || "Tirar"; yes.className = opts.yesClass || "red"; yes.onclick = () => { if (cerrarConfirmacionLocal()) onYes(); }; }
+  if (no) { no.textContent = opts.no || "Cancelar"; no.className = (opts.noClass || "ghost") + " sm"; no.onclick = () => { if (cerrarConfirmacionLocal() && typeof opts.onNo === "function") opts.onNo(); }; }
   // La pregunta empieza en la salida segura. Además evita que un botón o input del panel de
   // abajo conserve el foco y reciba Enter/Espacio mientras la confirmación tapa la interfaz.
   if (window.innerWidth > 640 && no && typeof no.focus === "function") {
     try { no.focus({ preventScroll: true }); } catch (e) { no.focus(); }
   }
 }
-// qué se tiraría de una pila (cantidad + nombre) — null si no se puede tirar
-function trashInfo(d) {
-  if (d.kind === "arm")  return { n: 1, lbl: (ARM_DEF[d.key] || {}).label || "arma" };
-  if (d.kind === "res")  return { n: Math.min(99, Math.floor(G.res[d.key] || 0)), lbl: RES_LABEL[d.key] || d.key };
-  if (d.kind === "seed") return { n: Math.min(99, Math.floor(G.seeds[d.key] || 0)), lbl: "semillas de " + (CROP_DEF[d.key] ? CROP_DEF[d.key].label : d.key) };
-  if (d.kind === "cana") return { n: ((G.canas || {})[d.key] ? 1 : 0), lbl: (typeof CANA_V4_DEF !== "undefined" && CANA_V4_DEF[d.key]) ? CANA_V4_DEF[d.key].label : "la caña" };
-  if (d.kind === "fish") { const pid = (typeof pezDeClave === "function") ? pezDeClave(d.key).id : d.key;
-    return { n: Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)),
-      lbl: (typeof PEZ_DEF !== "undefined" && PEZ_DEF[pid]) ? PEZ_DEF[pid].label : (FISH_DEF[d.key] ? FISH_DEF[d.key].label : "peces") }; }
-  if (d.kind === "dish") return { n: Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)), lbl: (RECIPE_DEF[d.key] ? RECIPE_DEF[d.key].label : "platos") };
-  // herramientas y picos SÍ se tiran (pedido del diseñador 31/7); apilables: se tira la pila
-  if (d.kind === "tool") {
-    if (d.key === "axe" || d.key === "rod") return { n: Math.min(99, toolCount(d.key)), lbl: TOOL_DEF[d.key].label };   // rod: solo por si un guardado viejo la trae antes de la mudanza
-    return { n: 1, lbl: TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta" };
+function infoPapelera(d, cantidad) {
+  if (["res", "seed", "dish", "fish", "arm", "armor", "tool", "pick"].includes(d.kind)) {
+    if (d.kind === "tool" && !TOOL_DEF[d.key]) return null;
+    const v = itemView(d);
+    const nombre = d.kind === "seed" ? "semillas de " + CROP_DEF[d.key].label : v.label.split(" · ")[0];
+    return cantidad > 0 ? { n: cantidad, nombre } : null;
   }
-  if (d.kind === "pick") return { n: Math.min(99, pickCount(d.key)), lbl: PICK_DEF[d.key] ? PICK_DEF[d.key].label : "el pico" };
+  if (d.kind === "arm_spare" && G.weaponSpares?.[d.key]) {
+    const arm = G.weaponSpares[d.key];
+    return { n: 1, nombre: ARM_DEF[arm.key].label + " (repuesto)" };
+  }
   return null;
 }
-// tirar una pila de recursos/semillas/pescados (las herramientas no se tiran)
-function trashStack(d) {
+
+function cantidadPapelera(d, index) {
+  if (["arm", "armor", "arm_spare"].includes(d.kind)) return 1;
+  const total = d.kind === "pick" ? pickCount(d.key)
+    : d.kind === "tool" ? (d.key === "axe" || d.key === "rod" ? toolCount(d.key) : 1)
+    : mkTengo(d.kind, d.key);
+  const anteriores = G.slots.slice(0, index).filter(a => a?.kind === d.kind && a.key === d.key).length;
+  return Math.min(99, Math.max(0, total - anteriores * 99));
+}
+
+function fichaPapelera(d) {
+  if (d.kind === "arm_spare") return G.weaponSpares?.[d.key];
+  if (d.kind === "arm") return G.weapons?.[d.key];
+  if (d.kind === "armor") return [G.armor?.[d.key], G.armorDur?.[d.key]];
+  return null;
+}
+
+function preguntarPapelera(index) {
+  if (enZona() || !isOpen("ov-inv") || isOpen("ov-confirm") || !$("ov-confirm") || !$("cf-yes") || !$("cf-no")) return;
+  const d = G.slots[index];
+  if (!d) return;
+  const info = infoPapelera(d, cantidadPapelera(d, index));
+  if (!info) { toast("Este objeto no se puede borrar desde el inventario"); return; }
+  const ficha = fichaPapelera(d), firma = JSON.stringify(ficha);
+  const cuenta = typeof UID === "undefined" ? null : UID;
+  askConfirm("¿Quieres borrar " + info.n + " × " + info.nombre + "? No podrás recuperarlo.", () => {
+    if (enZona() || !isOpen("ov-inv") || G.slots[index] !== d || cantidadPapelera(d, index) !== info.n ||
+      (typeof UID !== "undefined" && UID !== cuenta) || JSON.stringify(fichaPapelera(d)) !== firma ||
+      (typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO)) {
+      toast("El inventario cambió. Vuelve a seleccionar el objeto.");
+      return;
+    }
+    if (d.kind === "arm_spare") {
+      void economiaSolicitar({descartarRepuesto: {id: d.key, ficha: JSON.parse(firma)}});
+      return;
+    }
+    borrarPila(d, index, info);
+  }, { title: "Borrar objeto", yes: "Sí, borrar", no: "No", onClose: finalizarPapeleraInventario });
+}
+
+function borrarPila(d, index, info) {
+  const { kind, key } = d, n = info.n;
+  if (kind === "tool") {
+    if (key === "axe" || key === "rod") G.tools[key] = toolCount(key) - n;
+    else {
+      if (key === "sword") G.swordOwned = false;
+      else if (key === "sword_wood") G.swordWoodOwned = false;
+      else if (key === "bow") G.bowOwned = false;
+      else return;
+      delete G.tools[key];
+      if (G.gear.arma === key) G.gear.arma = null;
+    }
+  } else if (kind === "pick") {
+    G.picks.dur[key] = pickCount(key) - n;
+    if (!G.picks.dur[key]) destroyPick(key);
+  } else if (!mkSacar(kind, key, n)) return;
+
+  G.slots[index] = null;
+  syncSlots();
+  if (!G.slots.some(a => a?.kind === kind && a.key === key)) {
+    G.hotbar = G.hotbar.map(a => (a?.kind === kind && a.key === key) ? null : a);
+    if (kind === "res" && key === "flecha") G.gear.municion = false;
+  }
+  if (kind === "arm" || kind === "armor") applyCombatHp();
+  if (typeof saveFarm === "function") saveFarm(true);
   if (window.sfx) sfx("trash");
-  if (d.kind === "res")  { const n = Math.min(99, Math.floor(G.res[d.key] || 0));  if (n <= 0) return; G.res[d.key] -= n;  toast("Tiraste " + n + " " + RES_LABEL[d.key]); }
-  else if (d.kind === "seed") { const n = Math.min(99, Math.floor(G.seeds[d.key] || 0)); if (n <= 0) return; G.seeds[d.key] -= n; toast("Tiraste " + n + " semillas"); }
-  else if (d.kind === "fish") { const n = Math.min(99, Math.floor((G.fish && G.fish[d.key]) || 0)); if (n <= 0) return; G.fish[d.key] -= n; toast("Tiraste " + n + " peces"); }
-  else if (d.kind === "dish") { const n = Math.min(99, Math.floor((G.dishes && G.dishes[d.key]) || 0)); if (n <= 0) return; G.dishes[d.key] -= n; toast("Tiraste " + n + " platos"); }
-  else if (d.kind === "tool") {   // herramientas y armas (pedido del diseñador 31/7)
-    if (d.key === "sword") { G.swordOwned = false; delete G.tools.sword; if (G.gear.arma === "sword") G.gear.arma = null; }
-    else if (d.key === "sword_wood") { G.swordWoodOwned = false; delete G.tools.sword_wood; if (G.gear.arma === "sword_wood") G.gear.arma = null; }
-    else if (d.key === "bow") { G.bowOwned = false; delete G.tools.bow; if (G.gear.arma === "bow") G.gear.arma = null; }
-    else if (d.key === "axe" || d.key === "rod") { const n = Math.min(99, toolCount(d.key)); G.tools[d.key] = toolCount(d.key) - n; }   // tira la pila (hasta 99)
-    G.hotbar = G.hotbar.map(h => (h && h.kind === "tool" && h.key === d.key && toolDur(d.key) <= 0) ? null : h);
-    toast("Tiraste " + (TOOL_DEF[d.key] ? TOOL_DEF[d.key].label : "la herramienta"));
-    if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-forge")) refreshForge();
-  }
-  else if (d.kind === "pick") {
-    const n = Math.min(99, pickCount(d.key));
-    G.picks.dur[d.key] = pickCount(d.key) - n;
-    if (G.picks.dur[d.key] <= 0) { delete G.picks.owned[d.key]; delete G.picks.dur[d.key]; if (G.picks.eq === d.key) G.picks.eq = PICK_ORDER.find(id => G.picks.owned[id]) || null; G.hotbar = G.hotbar.map(h => (h && h.kind === "pick" && h.key === d.key) ? null : h); }
-    toast("Tiraste " + n + " × " + (PICK_DEF[d.key] ? PICK_DEF[d.key].label : "pico"));
-    if (isOpen("ov-forge")) refreshForge();
-  }
-  else { toast("Eso no se puede tirar"); return; }
-  syncSlots(); if (typeof saveFarm === "function") saveFarm();
+  toast("Borraste " + n + " × " + info.nombre);
+  refreshHud(); refreshInv();
+  if (isOpen("ov-equip")) refreshEquip();
+  if (isOpen("ov-forge")) refreshForge();
 }
 
 /* ---- skills ---- */
@@ -7528,7 +7619,8 @@ function initUI() {
       // La pregunta de PC está delante de cualquier contexto efímero (carrete, aparejos o
       // cadáver). Escape resuelve primero lo que el jugador está viendo; no puede cancelar una
       // pesca por detrás y dejar una confirmación flotando sin haberla tocado.
-      if (window.innerWidth > 640 && cerrarConfirmacionLocal()) return;
+      if ((window.innerWidth > 640 || $("ov-confirm")?._alCerrarConfirmacion === finalizarPapeleraInventario) && cerrarConfirmacionLocal()) return;
+      if (modoPapeleraInventario) { finalizarPapeleraInventario(); return; }
       // El selector numérico es igual de local: Escape cancela sólo esa cantidad y deja la
       // puerta de la Zona abierta para poder elegir otra pila.
       if (window.innerWidth > 640 && cerrarCantidadLocal()) return;

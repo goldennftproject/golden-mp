@@ -401,8 +401,18 @@
   .invexp{margin-top:10px}
   .invexp .exmax{font-size:12px;color:var(--muted);font-weight:700}
   .invrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  #inv-trash{margin-top:10px;padding:8px 12px;border:2px dashed #cbb98a;border-radius:10px;font-size:13px;font-weight:700;color:#8a6d1e;user-select:none}
-  #inv-trash.hot{background:#fbe3dc;border-color:var(--red);color:var(--red)}
+  .inv-herramientas{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 8px}
+  .inv-herramientas[hidden]{display:none!important}
+  #inv-trash{display:inline-flex;align-items:center;gap:8px;min-height:34px;white-space:nowrap;font-weight:700}
+  .inv-papelera-icono{position:relative;display:inline-block;width:11px;height:12px;margin:5px 2px 0;border:2px solid currentColor;border-radius:0 0 2px 2px}
+  .inv-papelera-icono::before,.inv-papelera-icono::after{content:"";position:absolute;background:currentColor}
+  .inv-papelera-icono::before{width:15px;height:2px;left:-4px;top:-4px}
+  .inv-papelera-icono::after{width:5px;height:3px;left:1px;top:-7px;border-radius:2px 2px 0 0}
+  #inv-trash.hot,#inv-trash[aria-pressed="true"]{background:#8b3025!important;border-color:#63241a!important;color:#fff2e0!important}
+  #inv-trash-status{font-size:12px;font-weight:700;color:inherit}
+  #ov-inv.papelera-activa .slot.filled{opacity:.56;cursor:not-allowed}
+  #ov-inv.papelera-activa .slot[data-inv-trash-item]{opacity:1;cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAASElEQVR4nGNgGAWDHrCwSPzHhqlmwf+PV/5jw2S5FJdhxGK8Phv6FlBiEUmRTncLZhtr4OWPWjBqwSCwYGhmNHIw0RaMAnQAAIgi2FkWwaFnAAAAAElFTkSuQmCC") 10 10,crosshair}
+  #ov-inv.papelera-activa .slot[data-inv-trash-item]:is(:hover,:focus-visible){outline:2px solid #a6382d;outline-offset:-2px;background:#f4d1b9}
   .glow-blue{filter:drop-shadow(0 0 3px #6ab0f0) drop-shadow(0 0 6px rgba(106,176,240,.6))}
   .glow-purple{filter:drop-shadow(0 0 3px #b06af0) drop-shadow(0 0 6px rgba(176,106,240,.6))}
   .glow-gold{filter:drop-shadow(0 0 3px #f0c53a) drop-shadow(0 0 7px rgba(240,197,58,.7))}
@@ -1868,9 +1878,15 @@
     <button class="close" data-close="ov-inv" aria-label="Cerrar ventana">×</button>
     <h3>Inventario</h3>
     <div class="sub" id="inv-cap">Bolsa: 0/0 · recursos y semillas apilan hasta 99</div>
+    <div class="inv-herramientas">
+      <button type="button" class="ghost sm" id="inv-trash" aria-pressed="false" title="Selecciona un objeto o arrástralo a la papelera">
+        <span class="inv-papelera-icono" aria-hidden="true"></span><span id="inv-trash-label">Papelera</span>
+      </button>
+      <span id="inv-trash-status" role="status"></span>
+    </div>
     <div class="slots" id="inv-slots"></div>
     <div class="sub" id="inv-selseed"></div>
-    <div class="invrow"><div class="invexp" id="inv-expand"></div><div id="inv-trash" title="Arrastra un objeto aquí para tirarlo">Tirar</div></div>
+    <div class="invrow"><div class="invexp" id="inv-expand"></div></div>
   </div></div>
 
   <!-- 18/8 (dirección): "la bolsa se llena de recursos farmeables y termina todo mezclado con las
@@ -2366,7 +2382,7 @@
     </div>
   </div></div>
 
-  <div class="ov" id="ov-confirm"><div class="card" style="width:min(330px,90%)">
+  <div class="ov" id="ov-confirm" role="dialog" aria-modal="true" aria-labelledby="cf-title" aria-describedby="cf-msg"><div class="card" style="width:min(330px,90%)">
     <h3 id="cf-title">Tirar a la papelera</h3>
     <div class="sub" id="cf-msg" style="margin-bottom:14px"></div>
     <div class="row" style="justify-content:center;gap:10px"><button class="red" id="cf-yes">Tirar</button><button class="ghost sm" id="cf-no">Cancelar</button></div>

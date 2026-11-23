@@ -395,7 +395,7 @@ async function economiaSolicitar(detalle) {
     const mensaje=MERCADO_EN_CURSO?'Hay otra operación en curso. Espera a que termine.':SAVE_CONFLICTOS.has(UID)?'Hay un conflicto de guardado. Pulsa Revisar guardado o el disquete antes de comprobar el mismo pago.':'La sesión aún no está conectada y cargada desde el servidor. Espera o vuelve a iniciar sesión; no repitas el pago.';
     toast(detalle.usdt?mensaje:'Necesitas conexión y guardado sincronizado');if(detalle.usdt)usdtMensaje(mensaje);return;
   }
-  const uid=UID, desbloquear=mercadoBloquearPantalla(detalle.bellotas?'Confirmando las bellotas…':'Confirmando la operación del objeto…');
+  const uid=UID, desbloquear=mercadoBloquearPantalla(detalle.bellotas?'Confirmando las bellotas…':detalle.descartarRepuesto?'Confirmando el descarte…':'Confirmando la operación del objeto…');
   if(detalle.usdt)usdtMensaje('Confirmando el guardado antes de acreditar…');
   const confirmadas=SAVE_CONFIRMACIONES.get(uid)||0, flush=saveFarm(true);
   MERCADO_EN_CURSO=(async()=>{
@@ -421,6 +421,10 @@ async function economiaSolicitar(detalle) {
       hydrate(data.data);SAVE_BASES.set(uid,data.updated_at);copiaGuardar(snapshot(),true);mercadoLimpiarPendiente(uid);
       if(detalle.forja){
         toast('Arma forjada; entrega confirmada','success','fabricar');
+        return data;
+      }
+      if(detalle.descartarRepuesto){
+        toast('Repuesto descartado','success');
         return data;
       }
       if(detalle.repuesto){

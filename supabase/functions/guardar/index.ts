@@ -807,15 +807,30 @@ function protegerRepuestos(antes,next,pendientes,retenidas,errores){
   const siguientesOps=next.weaponSparesOps===undefined?[]:next.weaponSparesOps;
   if(!Array.isArray(ops)||!Array.isArray(siguientesOps)||!mismoJSON(ops,siguientesOps))errores.push('Los recibos de repuestos sólo se escriben en el servidor');
 }
-function repuestoOperacion(prev,p,op){
-  if(!repuestoMapa(p)||!repuestoIdValido(p.id))return {error:'Repuesto inválido'};
+function repuestoOperacion(prev,p,op,accion='equipar'){
+  if(!repuestoMapa(p)||!repuestoIdValido(p.id)||(p.accion!==undefined&&p.accion!==accion))return {error:'Repuesto inválido'};
+  const descartar=accion==='descartar';
+  if(descartar&&!repuestoFichaValida(p.ficha))return {error:'Falta la ficha del repuesto seleccionado'};
   const ops=Array.isArray(prev.weaponSparesOps)?prev.weaponSparesOps:[];
   const recibo=ops.find(r=>r?.op===op);
-  if(recibo)return recibo.id===p.id?{data:JSON.parse(JSON.stringify(prev)),repetido:true}:{error:'Recibo reutilizado para otro repuesto'};
-  if(prev.zonaViaje)return {error:'Vuelve a la granja para cambiar un repuesto'};
+  if(recibo){
+    const mismaAccion=(recibo.accion??'equipar')===accion;
+    return recibo.id===p.id&&mismaAccion?{data:JSON.parse(JSON.stringify(prev)),repetido:true}:{error:'Recibo reutilizado para otra operación de repuesto'};
+  }
+  if(prev.zonaViaje)return {error:descartar?'Vuelve a la granja para descartar un repuesto':'Vuelve a la granja para cambiar un repuesto'};
   const mapa=prev.weaponSpares;
   if(!repuestoMapa(mapa)||!Object.prototype.hasOwnProperty.call(mapa,p.id)||!repuestoFichaValida(mapa[p.id]))return {error:'Este repuesto ya no está disponible'};
-  const data=JSON.parse(JSON.stringify(prev)),e=data.weaponSpares[p.id],key=e.key;
+  if(descartar&&!mismoJSON(mapa[p.id],p.ficha))return {error:'El repuesto seleccionado cambió. Volvé a elegirlo en el inventario.'};
+  const data=JSON.parse(JSON.stringify(prev));
+  if(descartar){
+    delete data.weaponSpares[p.id];
+    for(const campo of ['slots','hotbar']){
+      if(Array.isArray(data[campo]))data[campo]=data[campo].map(casilla=>casilla?.kind==='arm_spare'&&casilla.key===p.id?null:casilla);
+    }
+    data.weaponSparesOps=[...ops,{op,id:p.id,accion}].slice(-20);
+    return {data};
+  }
+  const e=data.weaponSpares[p.id],key=e.key;
   data.weapons=repuestoMapa(data.weapons)?data.weapons:{};
   const activa=Object.prototype.hasOwnProperty.call(data.weapons,key)?data.weapons[key]:null;
   data.weapons[key]=e.w;
@@ -1690,16 +1705,17 @@ Deno.serve(async (req) => {
       return json(data);
     }
     // Cobros y canjes autoritativos: saldo, reloj, recibo y compare-and-swap en el servidor.
-    if(bellotas || body?.forja || body?.repuesto || body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
+    if(bellotas || body?.forja || body?.repuesto || body?.descartarRepuesto || body?.infra || body?.mejora || body?.pack || body?.artefacto || body?.banco || body?.diario || body?.visita || body?.logro || body?.mision){
       const a=body.artefacto;
+      if(body.descartarRepuesto&&body.repuesto)return json({error:'Pedí un solo cambio de repuesto'},400);
       if(body.cuenta!==uid)return json({error:'La sesión cambió de cuenta; recargá antes de operar'},409);
       if(typeof body.op!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.op)||typeof body.base!=='string')return json({error:'Pedido inválido'},400);
       const {data:row,error:err}=await admin.from('farms').select('*').eq('user_id',uid).maybeSingle();
       if(err)return json({error:'No se pudo leer la granja'},503);
       if(!row)return json({error:'Primero sincronizá tu granja'},409);
       const reloj=Date.now(),ahora=Math.max(reloj,new Date(row.updated_at).getTime()+1);
-      const r=bellotas ? bellotasReclamar(row.data,bellotas.id,reloj,body.op) : body.forja ? forjaOperacion(row.data,body.forja,ahora,body.op) : body.repuesto ? repuestoOperacion(row.data,body.repuesto,body.op) : body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op,body.mision.reglas) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
-      const jornada=bellotasHabilitadas&&!bellotas&&!body.forja&&!body.repuesto&&body.mision;
+      const r=bellotas ? bellotasReclamar(row.data,bellotas.id,reloj,body.op) : body.forja ? forjaOperacion(row.data,body.forja,ahora,body.op) : body.descartarRepuesto ? repuestoOperacion(row.data,body.descartarRepuesto,body.op,'descartar') : body.repuesto ? repuestoOperacion(row.data,body.repuesto,body.op) : body.mision ? jornadaOperacion(row.data,body.mision.id,body.mision.dia,ahora,body.op,body.mision.reglas) : body.infra ? infraOperacion(row.data,body.infra.id,body.op) : body.mejora ? mejoraOperacion(row.data,body.mejora.id,body.op) : body.pack ? packOperacion(row.data,body.pack.id,ahora,body.op) : body.logro ? logroOperacion(row.data,body.logro.key,body.op) : body.visita ? (body.visita.accion==='ver'?logroVisita(row.data,body.visita.destino,uid,ahora,body.op):visitaOperacion(row.data,body.visita.destino,uid,ahora,body.op)) : body.diario ? (body.diario.accion==='reclamar'?diarioOperacion(row.data,ahora,body.op):{error:'Operación diaria inválida'}) : body.banco ? bancoOperacion(row.data,body.banco,body.op,tasaBanco) : artefactoOperacion(row.data,a.accion,a.id,ahora,body.op);
+      const jornada=bellotasHabilitadas&&!bellotas&&!body.forja&&!body.repuesto&&!body.descartarRepuesto&&body.mision;
       const estadoBellotas=(data)=>bellotas||jornada?{bellotas:bellotasEstado(data,reloj)}:{};
       if(r.repetido)return json({ok:true,data:row.data,updated_at:row.updated_at,cobro:r.cobro,premio:r.premio,repetido:true,granja:granjaVisitada,...estadoBellotas(row.data)});
       if(body.base!==row.updated_at)return json({error:'Otra sesión guardó; recargá antes de operar',conflicto:true},409);
