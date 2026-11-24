@@ -2933,7 +2933,7 @@ function refreshProduccionGranja() {
     '<details class="ayuda-menu"><summary>Cómo funcionan los cupos y el VIP</summary><p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p><p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Sin VIP, sin borrar nada. Sin cobro externo ni canje por USDT.</p></details>';
   if(G.produccion.vipNodos>0)h+='<p class="verde">VIP: '+G.produccion.vipNodos+' nodos incluidos a elegir. Una sola entrega; respeta nivel, terreno y cupos.</p>';
   if (G.produccion.vale) h += '<p class="verde">Tienes '+G.produccion.vale+' vale(s) de expansión: cada uno permite elegir gratis un árbol, una roca o una parcela. Elegir una opción consume un vale; las otras no se entregan automáticamente.</p>';
-  const tipos = { plot: ["Parcela", 20, 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
+  const tipos = { plot: ["Parcela", plotUnlockCost(), 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
   const filaNodo = k => {
     const d = tipos[k], fuente = produccionFuenteNodo(k), gratis = fuente !== 'plata';
     const motivo=G.level<d[2]?'Requiere granja nivel '+d[2]:!libres?'Sin cupos: pausa un nodo o expande':!gratis&&G.plata<d[1]?'Faltan '+fmtPlata(d[1]-G.plata)+' Plata':k==='plot'&&(G.plotsOwned||3)>=PLOT_MAX?'Máximo de parcelas alcanzado':k!=='plot'&&produccionEmplazamiento(k)<0?'Sin emplazamiento: libera terreno o expande':'';
@@ -4084,7 +4084,7 @@ function refreshForge() {
     });
   }
   const astr = G.armasUnlocked ? Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ") : "";
-  if (G.armasUnlocked) armas += '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×10</div><div class="fds">Tienes ' + fmt(G.res.flecha || 0) + ' · Coste: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Fabricar</button><button class="green sm" ' + (canAfford(ARROW_COST) && vipVigente() ? "" : "disabled") + ' id="forge-arrows5" title="Fabricar 50 flechas requiere VIP">×5 · VIP</button></div></div>';
+  if (G.armasUnlocked) armas = '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×' + ARROW_BATCH + '</div><div class="fds">Tienes ' + fmt(G.res.flecha || 0) + ' · Coste: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Fabricar</button><button class="green sm" ' + (canAfford(ARROW_COST) && vipVigente() ? "" : "disabled") + ' id="forge-arrows5" title="Fabricar ' + (ARROW_BATCH * 5) + ' flechas requiere VIP">×5 · VIP</button></div></div>' + armas;
   // cofre depósito: 10 espacios + 1% de materiales por cofre
   G.chests = G.chests || [];
   const chn = G.chests.length, chFull = chn >= CHEST_MAX;
@@ -4434,8 +4434,10 @@ function refreshCookingV2() {
   if (bRecC) bRecC.onclick = () => { cocinaRecoger(); refreshCooking(); if (isOpen("ov-inv")) refreshInv(); };
 
   /* --- el recetario: una grilla de íconos, por nivel --- */
-  const orden = RECIPE_ORDER.slice().sort((a, b) => (RECIPE_DEF[a].lvl || 1) - (RECIPE_DEF[b].lvl || 1));
-  if (!_ckSel || !RECIPE_DEF[_ckSel]) _ckSel = orden[0];
+  const orden = RECIPE_ORDER.filter(id => GF.PESCA_ACTIVA ||
+    Object.entries(RECIPE_DEF[id].fish || {}).every(([pez, cantidad]) => pezCuenta(pez) >= cantidad))
+    .sort((a, b) => (RECIPE_DEF[a].lvl || 1) - (RECIPE_DEF[b].lvl || 1));
+  if (!orden.includes(_ckSel)) _ckSel = orden[0];
   /* 24/8 — la grilla se rehace SOLO si cambió (firma, el patrón de la casa). Motivo doble: el
      reloj de las ollas repinta cada segundo, y rehacer el HTML debajo del cursor MATA el clic
      en curso — el navegador solo dispara `click` si el apretar y el soltar caen en el mismo
@@ -5613,19 +5615,22 @@ function infraOpcionalHtml(id){
  const puede=!hecha&&posee&&(G.plata||0)>=d.plata&&Object.entries(d.res).every(([k,q])=>(G.res[k]||0)>=q);
  return '<div class="secc">'+(god?'GOD HAND · EFICIENCIA':'MERCADO · MENOR COMISIÓN')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(god?'10% menos Plata por trabajo':'Comisión Sin VIP 8% · VIP 5%')+'</div><div class="fds">'+(god?'Conserva los 300 espacios de semillas y hasta 24 h de trabajo. Requiere God Hand.':'Sólo publicaciones nuevas. Las anteriores conservan su comisión. No aumenta el cupo.')+'</div>'+(!hecha?'<div class="fds">Compra única: '+infraCosteOpcional(id)+'</div>':'')+'</div><div class="fbtns"><button class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Mejorada':posee?'Mejorar':'Requiere God Hand')+'</button></div></div>';
 }
+function infraVentajaCola(nivel) {
+  return nivel === 2 ? "+1 puesto en la cola de Cocina" : "+1 puesto en la cola del Horno";
+}
 function infraHtml(id){
  const tienda=id==='tienda',n=infraNivel(),d=INFRA_GRANJA[n],hecha=tienda?!!G.infraestructura?.tienda:!d;
  const coste=tienda?'10 Golden':d?Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · '):'';
  const puede=!hecha&&(tienda?(G.golden||0)>=INFRA_TIENDA_GOLDEN:G.level>=d.nivel&&Object.entries(d.coste).every(([k,q])=>(G.res[k]||0)>=q));
  const motivo=hecha?'':tienda?((G.golden||0)<INFRA_TIENDA_GOLDEN?'Faltan '+fmtGolden(INFRA_TIENDA_GOLDEN-(G.golden||0))+' Golden':''):G.level<d.nivel?'Requiere granja nivel '+d.nivel:Object.entries(d.coste).filter(([k,q])=>(G.res[k]||0)<q).map(([k,q])=>'Faltan '+(q-(G.res[k]||0))+' '+RES_LABEL[k]).join(' · ');
- return '<div class="secc">'+(tienda?'TIENDITA · COMERCIO ENTRE JUGADORES':'MEJORAR LA GRANJA')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(tienda?'🏪 +1 anuncio de venta al día':'🏡 Nivel de mejora '+n+'/3 · +'+infraBono()+'% XP')+'</div><div class="fds">'+(tienda?'Permanente · Comercio entre jugadores. Sin VIP: 2 anuncios/día · VIP: 11 anuncios/día. Cancelar no devuelve cupo.':d?'Siguiente: +'+d.bono+'% XP productiva total · requiere granja nivel '+d.nivel+'. Sólo XP futura de cultivar, talar y minar.':'Bono máximo: +5% de XP productiva futura.')+'</div>'+(!hecha?'<div class="fds">Coste: '+coste+'</div>':'')+(motivo?'<div class="falta-receta">'+escapeHtml(motivo)+'</div>':'')+'</div><div class="fbtns"><button title="'+escapeHtml(motivo||'Mejora disponible')+'" class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Completada':tienda?'Comprar':'Mejorar')+'</button></div></div>';
+ return '<div class="secc">'+(tienda?'TIENDITA · COMERCIO ENTRE JUGADORES':'MEJORAR LA GRANJA')+'</div><div class="forge-row"><div class="finfo"><div class="fnm">'+(tienda?'🏪 +1 anuncio de venta al día':'🏡 Nivel de mejora '+n+'/3 · +'+infraBono()+'% XP')+'</div><div class="fds">'+(tienda?'Permanente · Comercio entre jugadores. Sin VIP: 2 anuncios/día · VIP: 11 anuncios/día. Cancelar no devuelve cupo.':d?'Siguiente: +'+d.bono+'% XP productiva total · requiere granja nivel '+d.nivel+'. Sólo XP futura de cultivar, talar y minar. '+infraVentajaCola(n+1)+'.':'Bono máximo: +5% de XP productiva futura.')+'</div>'+(!tienda&&n?'<div class="fds">Colas actuales: Horno '+hornoSlots()+' · Cocina '+cookSlots()+'</div>':'')+(!hecha?'<div class="fds">Coste: '+coste+'</div>':'')+(motivo?'<div class="falta-receta">'+escapeHtml(motivo)+'</div>':'')+'</div><div class="fbtns"><button title="'+escapeHtml(motivo||'Mejora disponible')+'" class="gold sm" data-infra="'+id+'" '+(puede?'':'disabled')+'>'+(hecha?'Completada':tienda?'Comprar':'Mejorar')+'</button></div></div>';
 }
 function infraEnlazar(box){
  box.querySelectorAll('[data-infra]').forEach(b=>b.onclick=()=>{
  const id=b.dataset.infra;
  if(id==='godhand'||id==='mercado'){askConfirm((id==='godhand'?'Reducir un 10% la tarifa de God Hand':'Reducir 2 puntos la comisión de nuevas publicaciones P2P')+' por '+infraCosteOpcional(id)+'. Compra única, sin energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Mejorar',yesClass:'gold',no:'Cancelar'});return;}
  const d=INFRA_GRANJA[infraNivel()],coste=id==='tienda'?'10 Golden':Object.entries(d.coste).map(([k,q])=>q+' '+RES_LABEL[k]).join(' · ');
- askConfirm((id==='tienda'?'Comprar +1 anuncio de venta al día, permanente':'Mejorar granja a +'+d.bono+'% de XP productiva futura')+' por '+coste+'. No consume energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Confirmar',yesClass:'gold',no:'Cancelar'});
+ askConfirm((id==='tienda'?'Comprar +1 anuncio de venta al día, permanente':'Mejorar granja a +'+d.bono+'% de XP productiva futura y '+infraVentajaCola(infraNivel()+1))+' por '+coste+'. No consume energía.',()=>infraSolicitar(id),{title:'Confirmar mejora',yes:'Confirmar',yesClass:'gold',no:'Cancelar'});
  });
 }
 function refreshNft() {
@@ -5760,7 +5765,7 @@ function refreshMarket() {
   });
   const golden = document.querySelector('.curbtn[data-cur="golden"]'), nota = $("mkt-cur-note");
   if (golden) { golden.disabled = ventaTutorial; golden.title = ventaTutorial ? "Completa este encargo cobrando en Plata" : "Cobra en $Golden a partir de 1 $Golden completo"; }
-  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata; otras cuentas no consumen tu cupo." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Vendes cultivos por Plata. Precios variables y cupos personales por familia; otros jugadores no consumen tu cupo. Para obtener Golden, usa el Banco." : "Vendes por Plata. El precio se recupera gradualmente; el cambio a Golden se hace en el Banco."); nota.classList.add("show"); }
+  if (nota) { nota.textContent = ventaTutorial ? "Tu primer encargo se cobra en Plata; otras cuentas no consumen tu cupo." : (typeof mercadoGlobalActivo === "function" && mercadoGlobalActivo() ? "Los cultivos pagan en Plata. El precio varía con la demanda y cada familia tiene su cupo. Las fracciones de Plata se guardan para la próxima venta." : "Vendes por Plata. El precio se recupera gradualmente; el cambio a Golden se hace en el Banco."); nota.classList.add("show"); }
   if (typeof tutoHighlight === "function") tutoHighlight();
   document.querySelectorAll(".curbtn").forEach(b => b.classList.toggle("active", b.dataset.cur === cur));
   marketReponerVentaFocoPc($("mkt-list"));
@@ -5846,6 +5851,8 @@ document.addEventListener("pointerdown", (e) => {
 function refreshBaul() {
   const img = $("baul-img"), items = $("baul-items"), nota = $("baul-nota"), sub = $("baul-sub");
   if (!img || !items) return;
+  const accesoInventario = $("baul-ir-inventario");
+  if (accesoInventario) accesoInventario.hidden = !G.kitReclamado;
   img.setAttribute("draggable", "false");
   // 16/8: premios del nivel esperando (van DESPUÉS del kit)
   const regalos = (typeof regalosPendientes === "function") ? regalosPendientes() : 0;
@@ -5867,7 +5874,7 @@ function refreshBaul() {
     desactivarAccionBaul(img);
     items.innerHTML = "";
     sub.textContent = "";
-    nota.textContent = "Nada esperando por hoy.";
+    nota.textContent = "Sin premios pendientes.";
     return;
   }
   // el KIT a la vista, flotando sobre el baúl abierto
@@ -5898,6 +5905,7 @@ function refreshBaul() {
         items.innerHTML = "";
         sub.textContent = "";
         nota.textContent = "Todo tuyo. ¡A trabajar la granja!";
+        if (accesoInventario) accesoInventario.hidden = !G.kitReclamado;
       }, 900);
     }, 800);
   };
@@ -6015,9 +6023,73 @@ function refreshPaquete() {
    rincón (pocas palabras, toque directo, temblor antes de entregar) y DELEGACIÓN de
    clics con data-attrs — la lección aprendida con el buzón. ---- */
 var _pdVista = "pedidos";   // pedidos | canje
+function enfocarPedidoTablon(nota) {
+  if (window.innerWidth <= 640 || !isOpen("ov-pedidos")) return;
+  const destino = nota.isConnected ? nota
+    : $("pd-lista")?.querySelector("[data-pd-entregar], [data-pd-vista]");
+  destino?.focus({ preventScroll: true });
+}
+function solicitarEntregaTablon(nota, teclado = false) {
+  if (!nota.isConnected || !isOpen("ov-pedidos") || isOpen("ov-confirm") || nota._entregando) return;
+  const raw = nota.dataset.pdEntregar;
+  const i = /^\d+$/.test(raw) ? Number(raw) : raw;
+  const pedidoVigente = () => pedidosTodos().find(encargo => encargo.i === i)?.p;
+  const pedido = pedidoVigente();
+  if (!pedido || pedido.hecho || !tablonAbierto() || pedidoStock(pedido) < pedido.n) {
+    toast("El pedido cambió. Revisa el tablón.");
+    refreshPedidos();
+    if (teclado) enfocarPedidoTablon(nota);
+    return;
+  }
+  const cuenta = typeof UID === "undefined" ? null : UID;
+  const vigente = () => isOpen("ov-pedidos") && _pdVista === "pedidos" &&
+    (typeof UID === "undefined" ? null : UID) === cuenta && pedidoVigente() === pedido &&
+    !pedido.hecho && tablonAbierto() && pedidoStock(pedido) >= pedido.n;
+
+  // La nota de práctica sólo avanza el tutorial: no necesita confirmación.
+  if (pedido.tipo === "tutorial") {
+    nota._entregando = true;
+    nota.classList.add("shake");
+    setTimeout(() => {
+      nota._entregando = false;
+      nota.classList.remove("shake");
+      if (vigente()) pedidoEntregar(i);
+      if (teclado) enfocarPedidoTablon(nota);
+    }, 430);
+    return;
+  }
+
+  if (!$("ov-confirm") || !$("cf-yes") || !$("cf-no")) {
+    toast("No se pudo abrir la confirmación del pedido.");
+    return;
+  }
+  const cotizar = () => {
+    const oficio = skillDeEntrega(pedido);
+    const xp = oficio === "cooking" ? Math.round(pedido.xp * (1 + buffTotal("cookxp") / 100)) : pedido.xp;
+    return { tipo: pedido.tipo, key: pedido.key, n: pedido.n, plata: pedido.plata,
+      vales: pedidoVales(pedido, pedidosEstado()), oficio, xp };
+  };
+  const entrega = cotizar();
+  const firma = JSON.stringify(entrega);
+  const { plata, vales, oficio, xp } = entrega;
+  const recompensas = [plata + " Plata"];
+  if (vales > 0) recompensas.push(vales + (vales === 1 ? " vale" : " vales"));
+  if (xp > 0) recompensas.push(xp + " XP de " + SKILL_NAME[oficio]);
+  askConfirm("Entregarás " + pedido.n + " × " + pedidoLabel(pedido) + ". Recibirás " +
+    recompensas.join(" · ") + ".", () => {
+    if (nota.isConnected && vigente() && JSON.stringify(cotizar()) === firma) pedidoEntregar(i);
+    else {
+      toast("El pedido cambió. Revisa el tablón y vuelve a confirmarlo.");
+      if (isOpen("ov-pedidos")) refreshPedidos();
+    }
+    if (teclado) enfocarPedidoTablon(nota);
+  }, { title: "Entregar pedido", yes: "Entregar", no: "Cancelar", yesClass: "green sm",
+    onClose: teclado ? () => enfocarPedidoTablon(nota) : undefined });
+}
 document.addEventListener("pointerdown", (e) => {
   const cont = document.getElementById("ov-pedidos");
-  if (!cont || !cont.classList.contains("show") || !e.target || !e.target.closest) return;
+  if (!cont || !cont.classList.contains("show") || !e.target?.closest || !cont.contains(e.target) ||
+      e.button !== 0 || isOpen("ov-confirm")) return;
   const ent = e.target.closest("[data-pd-entregar]");
   const des = e.target.closest("[data-pd-desc]");
   const can = e.target.closest("[data-pd-canje]");
@@ -6026,26 +6098,7 @@ document.addEventListener("pointerdown", (e) => {
   e.preventDefault(); e.stopPropagation();
   if (des) { const i = +des.getAttribute("data-pd-desc"); askConfirm("¿Descartar este pedido? Otro vecino colgará el suyo.", () => pedidoDescartar(i)); return; }
   if (vis) { _pdVista = vis.getAttribute("data-pd-vista"); refreshPedidos(); return; }
-  if (ent) {   // temblor corto y a entregar (la gramática del rincón)
-    /* 18/8 (reporte del diseñador: "el papelito se mueve pero no se entrega nada").
-       DOS FALLOS ENCADENADOS, los dos de esta misma mañana al añadir los encargos semanal y mensual:
-       1. El índice se convertía a número con `+`. Los diarios son 0,1,2 y funcionaban, pero el
-          semanal y el mensual son "S" y "M" → `+"S"` es NaN → `e.lista[NaN]` es undefined y
-          pedidoEntregar salía en silencio. Los dos encargos grandes no se podían cobrar NUNCA.
-       2. El candado `_entregando` se ponía ANTES de intentar y no se soltaba si fallaba, así que
-          después del primer clic fallido la nota quedaba muerta hasta redibujar el panel. Eso es
-          lo que hacía que pareciera que "no responde": el temblor sale primero y el fallo no. */
-    const raw = ent.getAttribute("data-pd-entregar");
-    const i = /^\d+$/.test(raw) ? +raw : raw;   // los diarios son número; el semanal "S", el mensual "M" y el evento "E"
-    const nota = ent.closest(".pd-nota") || ent;
-    if (nota._entregando) return; nota._entregando = true;
-    nota.classList.add("shake");
-    setTimeout(() => {
-      const ok = pedidoEntregar(i);
-      if (!ok) { nota._entregando = false; nota.classList.remove("shake"); }   // falló: se puede reintentar
-    }, 430);
-    return;
-  }
+  if (ent) { solicitarEntregaTablon(ent); return; }
   if (can) valesCanjear(can.getAttribute("data-pd-canje"));
 }, true);
 function pdIcono(p) {
@@ -6106,7 +6159,9 @@ function refreshPedidos() {
     const cls = "pd-nota" + (p.hecho ? " hecha" : ok ? " lista" : "") + (tutorial ? " pd-tutorial" : "");
     const estilo = "transform:rotate(" + rots[idx % 3] + "deg)" +
       (grande ? ";box-shadow:0 0 0 2px " + colEsc + " inset" : tutorial ? ";box-shadow:0 0 0 2px #6fafe1 inset" : "");
-    return '<div class="' + cls + '" style="' + estilo + '"' + (ok ? ' data-pd-entregar="' + i + '"' : "") + '>' +
+    const entregar = tutorial ? "Entregar nota de prueba" : "Revisar entrega de " + p.n + " × " + pedidoLabel(p);
+    return '<div class="' + cls + '" style="' + estilo + '"' + (ok ? ' data-pd-entregar="' + i +
+      '" role="button" tabindex="0" aria-label="' + escapeHtml(entregar) + '"' : "") + '>' +
       (tutorial ? '<div class="de" style="color:#6fafe1"><b>✦ PRIMER ENCARGO</b></div>' : grande ? '<div class="de" style="color:' + colEsc + '"><b>' + titEsc + '</b></div>' : "") +
       (!p.hecho && !grande && !tutorial ? '<span class="pd-x" data-pd-desc="' + i + '" title="Descartar">✕</span>' : "") +
       '<div class="de">' + p.de + ' <i>— ' + p.nota + '</i></div>' +
@@ -6120,10 +6175,14 @@ function refreshPedidos() {
         '<div class="toca">Crecimiento estimado: ' + fmtSecs(p.minutosProduccion * 60) + '</div>' : "") +
       (p.hecho ? '<div class="sello">✓ ENTREGADO</div>'
         : tutorial ? '<div class="toca">pulsa la nota para entregar</div>'
-          : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + pedidoVales(p, e) + (ok ? '<div class="toca">pulsa la nota para entregar</div>' : "") + '</div>') +
+          : '<div class="paga">🪙 ' + p.plata + ' · 🎟 ' + pedidoVales(p, e) + (ok ? '<div class="toca">pulsa para revisar la entrega</div>' : "") + '</div>') +
       '</div>';
   }).join("") +
   '<div style="text-align:center;margin-top:6px"><button class="ghost sm" data-pd-vista="canje">🎟 Canjear vales</button></div>';
+  cont.querySelectorAll("[data-pd-entregar]").forEach(nota => {
+    activarAccionConTeclado(nota, () => solicitarEntregaTablon(nota, true));
+    nota.addEventListener("click", ev => { if (!ev.detail) solicitarEntregaTablon(nota, true); });
+  });
 }
 /* (pdSeccionPesca vivió acá unas horas del 31/8: los pedidos de pesca colgados de este tablón.
    Dirección lo vio y mandó lo contrario — cada tablero con su oficio: la pesca en la Lonja,
@@ -7812,6 +7871,41 @@ function p2pResumen(){
   if(link)link.hidden=p2pMine===null||!!p2pMineError||n===0;
   if(update)update.disabled=p2pLoading;
 }
+function p2pAgruparLotes(filas, uid) {
+  const grupos = new Map();
+  for (const fila of filas) {
+    if (!Number.isSafeInteger(fila.qty) || fila.qty < 1 || !Number.isSafeInteger(fila.price) || fila.price < 1) continue;
+    // Cada pieza de equipo tiene durabilidad, mejoras y otros datos propios.
+    const pieza = fila.kind === "arm" || fila.kind === "armor";
+    const clave = pieza ? "pieza:" + fila.id : fila.kind + ":" + fila.item;
+    if (!grupos.has(clave)) grupos.set(clave, []);
+    grupos.get(clave).push(fila);
+  }
+  for (const lotes of grupos.values()) {
+    lotes.sort((a, b) => {
+      const propio = Number(a.seller === uid) - Number(b.seller === uid);
+      if (propio) return propio;
+      const orden = BigInt(a.price) * BigInt(b.qty) - BigInt(b.price) * BigInt(a.qty);
+      if (orden !== 0n) return orden < 0n ? -1 : 1;
+      const fecha = String(a.created_at || "").localeCompare(String(b.created_at || ""));
+      return fecha || String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+    });
+  }
+  return [...grupos.values()];
+}
+
+function p2pFilaCompra(r, uid) {
+  const mio = r.seller === uid;
+  const equipo = r.kind === "arm" || r.kind === "armor";
+  const durabilidad = equipo && Number.isFinite(r.payload?.dur) ? ' · Durabilidad: ' + r.payload.dur : '';
+  const unidad = r.qty > 1 ? ' · ' + fmtDec(r.price / r.qty) + ' Plata/u.' : '';
+  return '<div class="forge-row"><div class="finfo"><div class="fnm">' +
+    escapeHtml(r.name || r.item) + ' ×' + r.qty + ' <span class="tag">' + escapeHtml(MARKET_KINDS[r.kind] || r.kind) + '</span></div>' +
+    '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (tú)" : "") + unidad + durabilidad + '</div></div>' +
+    '<div class="fbtns"><button class="green sm" ' + (mio || G.plata < r.price ? "disabled" : "") +
+    ' data-buy="' + escapeHtml(String(r.id)) + '">Comprar · ' + fmt(r.price) + '</button></div></div>';
+}
+
 async function refreshP2P(actualizar=false) {
   const box = $("p2p-list"); if (!box) return;
   const uid=p2pCuentaActual();
@@ -7904,13 +7998,14 @@ async function refreshP2P(actualizar=false) {
        crema que una publicación real. Conservamos la clase base para no rediseñar móvil antes
        de su pasada específica. */
     if (!filas.length) h += '<div class="fds">No hay publicaciones ahora mismo. Vuelve en un rato o publica algo tú.</div>';
-    filas.forEach(r => {
-      const mio = r.seller === (typeof UID === "string" ? UID : "");
-      h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + ' <span class="tag">' + (MARKET_KINDS[r.kind] || r.kind) + '</span></div>' +
-        '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (tú)" : "") +
-        (r.kind === "armor" ? ' · Durabilidad: ' + (r.payload && Number.isFinite(r.payload.dur) ? r.payload.dur + '/' + ARMOR_DUR_MAX : 'sin dato válido') : '') + '</div></div>' +
-        '<div class="fbtns"><button class="green sm" ' + (mio || G.plata < r.price ? "disabled" : "") + ' data-buy="' + r.id + '">Comprar · ' + fmt(r.price) + '</button></div></div>';
-    });
+    for (const lotes of p2pAgruparLotes(filas, uid)) {
+      const [primero, ...otros] = lotes;
+      h += p2pFilaCompra(primero, uid);
+      if (otros.length) h += '<details class="ayuda-menu"><summary>' + otros.length +
+        (otros.length === 1 ? ' lote más de ' : ' lotes más de ') +
+        escapeHtml(primero.name || primero.item) + '</summary>' +
+        otros.map(lote => p2pFilaCompra(lote, uid)).join('') + '</details>';
+    }
   }
   box.innerHTML = h;
   { const pb = $("p2p-pend"); if (pb) pb.onclick = () => { mkPendCobrar(); refreshP2P(); }; }

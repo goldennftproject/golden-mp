@@ -2716,15 +2716,25 @@ async function mkLecturaMercado(opciones, consultar, permiteSinUid = false) {
 }
 async function mkList(filtro, opciones = {}) {
   return mkLecturaMercado(opciones, async (cliente, uid, comprobar, signal) => {
-    comprobar();
-    let q = cliente.from("market").select("*").is("sold_to", null).order("created_at", { ascending: false }).limit(60);
-    if (filtro && filtro.kind) q = q.eq("kind", filtro.kind);
-    if (signal) q = q.abortSignal(signal);
-    const { data, error } = await q;
-    comprobar();
-    if (error) throw Error("No se pudo consultar el comercio. Vuelve a intentarlo.");
-    if (!Array.isArray(data)) throw Error("El servidor devolvió una lista de anuncios no válida.");
-    return data;
+    const filas = [];
+    let ultimoId = null;
+    const porPagina = 100;
+    for (;;) {
+      comprobar();
+      let q = cliente.from("market").select("*").is("sold_to", null).order("id", { ascending: true }).limit(porPagina);
+      if (filtro?.kind) q = q.eq("kind", filtro.kind);
+      if (ultimoId !== null) q = q.gt("id", ultimoId);
+      if (signal) q = q.abortSignal(signal);
+      const { data, error } = await q;
+      comprobar();
+      if (error) throw Error("No se pudo consultar el comercio. Vuelve a intentarlo.");
+      if (!Array.isArray(data)) throw Error("El servidor devolvió una lista de anuncios no válida.");
+      filas.push(...data);
+      if (data.length < porPagina) return filas;
+      const siguiente = data.at(-1).id;
+      if (siguiente == null || siguiente === ultimoId) throw Error("No se pudo recorrer el comercio completo. Intenta actualizar.");
+      ultimoId = siguiente;
+    }
   }, true);
 }
 async function mkMine(opciones = {}) {

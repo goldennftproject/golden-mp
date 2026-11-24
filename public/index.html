@@ -640,6 +640,10 @@
   .gmi:focus-visible{outline:3px solid #ffe08a;outline-offset:-3px}
   .ayuda-menu{margin:8px 0;padding:7px 9px;background:rgba(45,28,13,.12);border:1px solid rgba(93,58,25,.25);border-radius:6px}
   .ayuda-menu>summary{cursor:pointer;font-weight:700;font-size:12px}
+  #prod-granja details[id]:not(.ayuda-menu){margin:8px 0}
+  #prod-granja details[id]:not(.ayuda-menu)>summary{cursor:pointer;padding:8px 10px;border:1px solid #a17a48;border-radius:6px;background:#f1e5c4;color:#49301f;font-size:13px;font-weight:700;line-height:1.4}
+  #prod-granja details[id]:not(.ayuda-menu)>summary:hover,#prod-granja details[id]:not(.ayuda-menu)[open]>summary{background:#ebd6a7;border-color:#825c2f}
+  #prod-granja details[id]:not(.ayuda-menu)>summary:focus-visible{outline:2px solid #715225;outline-offset:2px}
   .resumen-menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
   .resumen-menu>span{padding:9px 5px;text-align:center;background:#f1e5c4;color:#49301f;border:1px solid #b58c51;border-radius:6px;font-size:11px}
   .resumen-menu b{display:block;font-size:16px;margin-bottom:3px}
@@ -1815,6 +1819,7 @@
     <div id="baul-items"></div>
     <img id="baul-img" src="assets/farm/baul_premios.png" alt="" style="height:110px;width:auto;image-rendering:pixelated;margin:2px auto 6px;display:block">
     <div id="baul-nota" style="background:#f6efdd;color:#4a3418;border-radius:9px;padding:9px 12px;margin:6px 4px;font-size:13px;box-shadow:0 2px 0 rgba(40,22,6,.25);transform:rotate(.6deg)"></div>
+    <button type="button" class="green sm" id="baul-ir-inventario" data-panel="ov-inv" hidden>Abrir Inventario</button>
   </div></div>
 
   <!-- TABLÓN DE PEDIDOS (16/8): los encargos diarios del pueblo + canje de vales -->
@@ -1856,7 +1861,7 @@
     <button class="close" data-close="ov-forge" aria-label="Cerrar ventana">×</button>
     <h3>⚒ Herrería</h3>
     <div class="shoptabs">
-      <button class="shoptab forgetab active" data-forge="craft">Fabricar</button>
+      <button class="shoptab forgetab active" data-forge="craft">Herramientas</button>
       <button class="shoptab forgetab" data-forge="armas">Armas</button>
       <button class="shoptab forgetab" data-forge="repair">Reparar</button>
     </div>

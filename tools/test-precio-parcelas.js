@@ -1,22 +1,4 @@
-/* MODELO ACTUAL: PARCELA DE 20 PLATA, LIMITADA POR CAPACIDAD (15/10).
-   No restaura la curva histórica de 200 +10%: comprueba el contrato productivo y conserva
-   debajo las pruebas de migración de contadores antiguos y la ausencia de cobro en Golden.
-   Antecedente histórico (20/8, dirección + diseñador):
-   "Las parcelas se den con las expansiones, y sumado a eso que se consigan con plata, y que cada
-    parcela cueste un poco más que la anterior. Lo de $Golden lo dejamos para cuando tenga sentido
-    venderlo así."
-
-   Segunda vuelta (20/8, más tarde): "que el precio solo se vea afectado por las compras. Si yo
-   adquiero una parcela por expansión, que no le afecte al precio de las que se venden."
-   La primera versión miraba plotsOwned y entonces convenía comprar ANTES de expandir: el orden
-   importaba. Ahora el precio mira G.plotsCompradas, un contador propio.
-
-   Tres reglas, y este test EJECUTA las tres — no lee el código:
-     1. El precio arranca en 200 (10 horas del ancla) y sube 10% por parcela COMPRADA.
-     2. Las parcelas regaladas por expansión NO tocan el precio: tu compra n°k cuesta lo mismo
-        la hagas cuando la hagas.
-     3. En la tienda no queda ningún botón de parcela en $Golden.
-     node tools/test-precio-parcelas.js                                                           */
+/* Curva de parcelas pagadas con Plata. Los vales conservan su precio y el contador de compras. */
 const fs = require("fs"), vm = require("vm");
 
 const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Date, JSON, Object, Array,
@@ -24,6 +6,7 @@ const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Dat
   performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval() {},
   requestAnimationFrame: () => 0 };
 ctx.window = ctx; ctx.globalThis = ctx;
+ctx.location = { hash: "", search: "", href: "http://127.0.0.1/" };
 ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null };
 vm.createContext(ctx);
 ["config", "nav", "state"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
@@ -36,25 +19,14 @@ require("./fixture-pesca-legado").activar(ctx);
 let fallos = 0;
 const ok = (n, c, d) => { if (!c) fallos++; console.log((c ? "  ok   " : "  FALLA") + "  " + n + (d ? "   " + d : "")); };
 
-console.log("\nEL PRECIO ACTUAL NO ESCALA POR COMPRAS ANTIGUAS");
+console.log("\nLA CURVA SOLO CUENTA COMPRAS CON PLATA");
 {
-  G.plotsOwned = 3; G.plotsCompradas = 0;
-  ok("la primera compra sale 20", ctx.plotUnlockCost() === 20);
-  G.plotsCompradas = 1;
-  ok("la segunda mantiene 20: limita la capacidad, no el coste exponencial", ctx.plotUnlockCost() === 20);
-  let previo = 0;
-  let monotona = true, suave = true;
-  for (let k = 0; k < 57; k++) {
-    G.plotsCompradas = k;
-    const c = ctx.plotUnlockCost();
-    if (c !== 20) monotona = false;
-    if (previo && c / previo > 1.11) suave = false;   // nunca salta más del 10% (+ redondeo)
-    previo = c;
+  G.plotsOwned = 3;
+  const muestras = [[0,20],[1,25],[2,31],[4,49],[8,119],[11,233],[15,500],[57,500]];
+  for (const [anteriores, coste] of muestras) {
+    G.plotsCompradas = anteriores;
+    ok("compra " + (anteriores + 1) + " cuesta " + coste + " Plata", ctx.plotUnlockCost() === coste);
   }
-  ok("los contadores heredados no encarecen una parcela nueva", monotona);
-  ok("y ninguna salta más del 10%", suave, "sin escalones sorpresa");
-  G.plotsCompradas = 40;   // el peor caso real: 60 − 3 de nacimiento − 16 de expansión − 1
-  ok("la última compra posible queda alcanzable", ctx.plotUnlockCost() < 15000, ctx.plotUnlockCost() + " plata: cara, no imposible");
 }
 
 console.log("\nLA EXPANSIÓN NO TOCA EL PRECIO DE LA TIENDA");
@@ -86,7 +58,7 @@ console.log("\nCOMPRAR DE VERDAD: PAGA, SUMA Y AVISA");
   G.plata = 10; avisos.length = 0;
   ctx.comprarParcela();
   ok("sin plata no cobra ni suma", G.plata === 10 && G.plotsOwned === 4 && G.plotsCompradas === 1);
-  ok("y dice qué falta", avisos.some(a => /faltan 20 de plata/i.test(a)), avisos.join(" · "));
+  ok("y dice qué falta", avisos.some(a => /faltan 25 de plata/i.test(a)), avisos.join(" · "));
   /* comprarParcela ya no acepta pagar con $Golden: aunque alguien llame con el argumento viejo,
      cobra plata igual — no hay camino que descuente G.golden. */
   G.plata = 1000; G.golden = 99; avisos.length = 0;

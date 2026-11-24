@@ -584,7 +584,7 @@ const CROP_DEF = {
   // 16/8: el calabacín era el único de la tabla fuera del ancla — rendía 26,7 plata/h y 120 XP/h
   // contra los 20 y 100 de sus vecinos. Reanclado: ganancia 15 (20/h) y 75 XP (100/h), con la
   // relación venta/semilla en 2,5 como el resto. Era 12 → 32 → 90.
-  calabacin: { label:"Calabacín", emoji:"🥒", lvl:12, seedCost:10,  growH:0.75, yield:1, price:25,   xp:110 },   // 45 min (v3 diseñador, reanclado 16/8)
+  calabacin: { label:"Calabacín", emoji:"🥒", lvl:4,  seedCost:10,  growH:0.75, yield:1, price:25,   xp:110 },   // 45 min (v3 diseñador, reanclado 16/8)
   repollo:   { label:"Repollo",   emoji:"🥬", lvl:14, seedCost:20,  growH:1.5,  yield:1, price:50,   xp:120 },  // 1 h 30 (v3 diseñador)
   calabaza:  { label:"Calabaza",  emoji:"🎃", lvl:2,  seedCost:40,  growH:3,    yield:1, price:100,  xp:30 },  // 3 h · 18/8: XP re-anclada (era 270 = 90 XP/h)
   // 16/8 (auditoría C): los cuatro de arriba se corren a la banda 11-50 del nivel de granja
@@ -1459,7 +1459,7 @@ function craftLote(fn, id, n) {
 }
 /* ---- LA COLA DEL HORNO (24/8) — mismo patrón que las ollas de la Cocina ---- */
 function hornoList() { if (!Array.isArray(G.horno)) G.horno = []; return G.horno; }
-function hornoSlots() { return HORNO_SLOTS; }
+function hornoSlots() { return HORNO_SLOTS + Number(infraNivel() >= 1) + Number(infraNivel() >= 3); }
 function hornoLibres() { return Math.max(0, hornoSlots() - hornoList().length); }
 function matCdMs(id) { return (MAT_CD_S[id] || 180) * 1000 * (edif2("horno") ? 1 - EDIF2_HORNO / 100 : 1); }
 function hornoFalta(p) { return Math.max(0, (p.listoAt || 0) - nowMs()); }
@@ -1538,7 +1538,7 @@ function hayPendientes() { return pendienteDe("horno") + pendienteDe("cocina") +
 
 function craftMat(id) {
   const md = MAT_DEF[id]; if (!md) { console.warn("[craftMat] material inexistente:", id); return; }
-  if (hornoLibres() <= 0) { toast("El horno está lleno (" + hornoSlots() + " al fuego)"); return; }
+  if (hornoLibres() <= 0) { toast("Cola del Horno llena (" + hornoSlots() + " puestos)"); return; }
   if (!canAfford(md.cost)) { toast("Te faltan materiales"); return; }
   if (!energiaGranjaPagar('craft')) return;
   payCost(md.cost);
@@ -2265,12 +2265,7 @@ function farmUnlockTxt(n) {
     partes.push(BUILD_DEF[FARM_EDIF2[n]].label + " nivel 2");
   if (typeof FARM_COFRE !== "undefined" && FARM_COFRE[n]) partes.push("+" + FARM_COFRE[n] + " de capacidad de cofre");
   if (typeof FARM_VALES !== "undefined" && FARM_VALES[n]) partes.push("+" + FARM_VALES[n] + " vales del tablón");
-  /* 19/8 (dirección): el bono también en PLATA/HORA, entre paréntesis, detrás de lo que ya sabe.
-     "+1,5% al precio de venta" no le dice nada a nadie; "+14 plata por hora" sí. Y es lo que hace
-     que el tramo del 20 al 50 se lea como lo que es: entre expansión y expansión el bono aporta
-     cerca de la mitad de lo que crece la granja, pero era invisible. */
-  const bph = typeof fmt === "function" ? fmt(bonoPlataH()) : String(bonoPlataH());
-  partes.push("+1,5% al precio de venta (≈ +" + bph + " de plata por hora)");
+  partes.push("+1,5% en el multiplicador del margen al vender cultivos");
   /* 10/9 — MVP y ley 3: el cartel del nivel no anuncia el cosmético como premio. Se sigue
      ENTREGANDO por debajo (es un texto en G.cosmeticos, y esconder no es borrar), pero un nivel
      que solo trae adorno tiene que verse como lo que es: un nivel que solo trae el bono. Anunciar
@@ -3171,7 +3166,7 @@ function produccionComprar(tipo) {
   if (tipo === "plot") {
     if ((G.plotsOwned || 3) >= PLOT_MAX) { toast("Ya alcanzaste el máximo de parcelas."); return false; }
     const valeBasico=G.produccion.vale>0;
-    const gratis = valeBasico || G.produccion.vipNodos>0, costo = 20;
+    const gratis = valeBasico || G.produccion.vipNodos>0, costo = plotUnlockCost();
     if (!gratis && G.plata < costo) { toast("Te faltan " + costo + " de plata."); return false; }
     if (valeBasico) G.produccion.vale--; else if(gratis) G.produccion.vipNodos--; else G.plata -= costo;
     confirmacion = "Parcela " + (gratis ? "canjeada" : "comprada por " + costo + " de plata");
@@ -7425,13 +7420,26 @@ function swordDmg() {   // legado: >0 si hay un arma CUERPO A CUERPO equipada y 
 
 // --- arco y flechas (combate a distancia; usa la skill Arco) ---
 const BOW_COST = { madera: 12, bronce: 2 };
-const ARROW_COST = { madera: 2, piedra: 1 };   // craftea 10 flechas
+const ARROW_COST = { madera: 2, piedra: 1 };
+const ARROW_BATCH = 20;
 function craftArrows() {
   if (!canAfford(ARROW_COST)) { toast("Te faltan materiales"); return; }
+  const pilas = cantidad => Math.ceil(Math.floor(cantidad) / 99);
+  const flechas = G.res.flecha || 0;
+  let cupos = canonicalStacks().length + pilas(flechas + ARROW_BATCH) - pilas(flechas);
+  // Consumir la última unidad de un material puede liberar la casilla que ocupará el lote.
+  for (const [material, cantidad] of Object.entries(ARROW_COST)) {
+    const disponible = G.res[material];
+    cupos += pilas(disponible - cantidad) - pilas(disponible);
+  }
+  if (cupos > invSlots()) { bagFull("fabricar flechas"); return; }
   if (!energiaGranjaPagar('craft')) return;
-  payCost(ARROW_COST); G.res.flecha = (G.res.flecha || 0) + 10;   // van a la bolsa, NO se autoequipan (detalles jueves)
+  payCost(ARROW_COST);
+  G.res.flecha = flechas + ARROW_BATCH;   // van a la bolsa, NO se autoequipan
   addXp("crafting", 3);
-  log("Has fabricado 10 flechas — están en tu bolsa; equípalas en el panel de Equipo.", "good"); toast("+10 flechas en la bolsa"); forgeWork();
+  log("Has fabricado " + ARROW_BATCH + " flechas — están en tu bolsa; equípalas en el panel de Equipo.", "good");
+  toast("+" + ARROW_BATCH + " flechas en la bolsa");
+  forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
 }
 // viernes (2): la pestaña Armas de la Herrería se desbloquea pagando
@@ -7561,9 +7569,9 @@ const RECIPE_DEF = {
   aceite_girasol:     { label:"Aceite de Girasol",      emoji:"🌻", sprite:"dish_aceite_girasol", res:{girasol:3, madera:2},                                     lvl:4,  heal:18, buff:{type:"luck",    val:10}, cookS:420, xp:26, plata:40 },
   pan_trigo:          { label:"Pan de Trigo",           emoji:"🍞", sprite:"dish_pan_trigo", res:{trigo:3, madera:2},                                       lvl:6,  heal:20, buff:{type:"cookxp",  val:10}, cookS:360, xp:18, plata:22 },
   sopa_zanahoria:     { label:"Sopa de Zanahoria",      emoji:"🍜", sprite:"dish_sopa_zanahoria", res:{zanahoria:2, remolacha:1},                                lvl:8,  heal:15, buff:{type:"speed",   val:8},  cookS:240,  xp:10, plata:14 },
-  tortilla_maiz:      { label:"Tortilla de Maíz",       emoji:"🌽", sprite:"dish_tortilla_maiz", res:{maiz:2, zanahoria:1, madera:2},                           lvl:9,  heal:27, buff:{type:"dmg",     val:10}, cookS:420, xp:28, plata:38 },
-  pan_maiz_trigo:     { label:"Pan de Maíz y Trigo",    emoji:"🥖", sprite:"dish_pan_maiz_trigo", res:{trigo:2, maiz:2, madera:3},                               lvl:10, heal:34, buff:{type:"hpmax",   val:20}, cookS:480, xp:42, plata:80,  goldenP:1 },
-  estofado_cosecha:   { label:"Estofado de la Cosecha", emoji:"🥘", sprite:"dish_estofado_cosecha", res:{calabaza:2, maiz:1, papa:1, zanahoria:1, madera:3},       lvl:11, heal:37, buff:{type:"dmg",     val:15}, cookS:540, xp:52, plata:110, goldenP:2 },
+  tortilla_maiz:      { label:"Tortilla de Maíz",       emoji:"🌽", sprite:"dish_tortilla_maiz", res:{maiz:2, zanahoria:1, madera:2},                           lvl:9,  heal:40, buff:{type:"dmg",     val:10}, cookS:420, xp:28, plata:38 },
+  pan_maiz_trigo:     { label:"Pan de Maíz y Trigo",    emoji:"🥖", sprite:"dish_pan_maiz_trigo", res:{trigo:2, maiz:2, madera:3},                               lvl:10, heal:46, buff:{type:"hpmax",   val:20}, cookS:480, xp:42, plata:80,  goldenP:1 },
+  estofado_cosecha:   { label:"Estofado de la Cosecha", emoji:"🥘", sprite:"dish_estofado_cosecha", res:{calabaza:2, maiz:1, papa:1, zanahoria:1, madera:3},       lvl:11, heal:48, buff:{type:"dmg",     val:15}, cookS:540, xp:52, plata:110, goldenP:2 },
   calabacin_salteado: { label:"Calabacín Salteado",     emoji:"🥒", sprite:"dish_calabacin_salteado", res:{calabacin:2, cebolla:1},                                  lvl:12, heal:18, buff:{type:"dmg",     val:6},  cookS:300, xp:14, plata:20 },
   guiso_campestre:    { label:"Guiso Campestre",        emoji:"🍲", sprite:"dish_guiso_campestre", res:{papa:1, zanahoria:1, cebolla:1, remolacha:1, madera:3},   lvl:13, heal:31, buff:{type:"combatxp",val:12}, cookS:480, xp:34, plata:55 },
   ensalada_repollo:   { label:"Ensalada de Repollo",    emoji:"🥗", sprite:"dish_ensalada_repollo", res:{repollo:2, zanahoria:1},                                  lvl:14, heal:17, buff:{type:"def",     val:6},  cookS:300, xp:14, plata:18 },
@@ -7730,7 +7738,7 @@ const COOK_MS = 180000;   // respaldo si una receta no trae tiempo propio (3 min
 // 3/8 (diseñador): los platos tardan MINUTOS y se pueden cocinar VARIOS a la vez (ollas en paralelo).
 var COOK_SLOTS = 3;       // ollas simultáneas de la Cocina (editable en el panel)
 function cookList() { if (!Array.isArray(G.cooking)) G.cooking = G.cooking ? [G.cooking] : []; return G.cooking; }
-function cookSlots() { return COOK_SLOTS + (edif2("cocina") ? EDIF2_COCINA_OLLA : 0); }
+function cookSlots() { return COOK_SLOTS + (edif2("cocina") ? EDIF2_COCINA_OLLA : 0) + Number(infraNivel() >= 2); }
 function cookFree() { return Math.max(0, cookSlots() - cookList().length); }
 /* cuándo EMPIEZA a cocinarse esta olla (las de la fila empiezan más tarde que ahora) */
 function cookEmpieza(c) { return (c.endAt || 0) - (c.total || 0); }
@@ -7765,7 +7773,7 @@ function cocinaRecoger() {
 
 function cook(id) {
   const r = RECIPE_DEF[id]; if (!r) { console.warn("[cook] receta inexistente:", id); return; }
-  if (cookFree() <= 0) { toast("Las " + cookSlots() + " ollas están ocupadas"); return; }
+  if (cookFree() <= 0) { toast("Cola de Cocina llena (" + cookSlots() + " puestos)"); return; }
   if (!canCook(id)) { toast("Te faltan ingredientes"); return; }
   if (!roomForDish(id)) { bagFull("cocinar " + r.label); return; }
   if (!energiaGranjaPagar('cook')) return;
@@ -10521,7 +10529,7 @@ function platoDuracionMult(estrella) {
 var PLOT_UNLOCK_BASE = 200;
 var PLOT_UNLOCK_SUBA = 1.10;
 function plotUnlockCost() {
-  if (G.produccion) return 20;
+  if (G.produccion) return Math.min(500, Math.round(20 * Math.pow(1.25, Math.max(0, G.plotsCompradas || 0))));
   return Math.round(PLOT_UNLOCK_BASE * Math.pow(PLOT_UNLOCK_SUBA, Math.max(0, G.plotsCompradas || 0)));
 }
 

@@ -799,11 +799,9 @@ class FarmScene extends Phaser.Scene {
       } else if (this.dragPlot) {
         const pl = this.dragPlot;
         if (pl.ground) pl.ground.setPosition(pt.worldX, pt.worldY).setDepth(99999);
-        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
-        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
-        const blocked = this.plotSpotBlocked(pl, col, row);
+        const { col, row, motivo } = this.destinoParcela(pt, pl);
         this.editHl.setPosition(col * T, (row + 1) * T).setSize(T, T)
-          .setFillStyle(blocked ? 0xd9534f : 0x7ec95a, 0.4).setVisible(true);
+          .setFillStyle(motivo ? 0xd9534f : 0x7ec95a, 0.4).setVisible(true);
       } else if (this.dragPond) {
         const p2 = GF.POND;
         this.pondImg.setPosition(pt.worldX, pt.worldY);
@@ -905,11 +903,10 @@ class FarmScene extends Phaser.Scene {
       // soltar una PARCELA
       if (this.dragPlot) {
         const pl = this.dragPlot; this.dragPlot = null;
-        const col = Phaser.Math.Clamp(Math.floor(pt.worldX / T), GF.C0, GF.C1 - 1);
-        const row = Phaser.Math.Clamp(Math.floor(pt.worldY / T), GF.R0, GF.R1 - 1);
-        if (this.plotSpotBlocked(pl, col, row)) {
+        const { col, row, motivo } = this.destinoParcela(pt, pl);
+        if (motivo) {
           if (pl.ground) pl.ground.setPosition(pl.cx, pl.by).setDepth(-998);
-          toast("Ahí ya hay algo — elige otra celda"); return;
+          toast(motivo); return;
         }
         this.moverParcela(pl, col, row);
         this.updateTutoArrow();   // la guía apunta a la tierra que acabás de reubicar
@@ -1657,7 +1654,7 @@ class FarmScene extends Phaser.Scene {
     }
     if (o.type === "cofre_diario") {
       if (!G.kitReclamado) return "¡Abre tu kit de bienvenida!";
-      return "Baúl de premios";
+      return this.baulTienePremios() ? "Baúl de premios" : "Abrir Inventario";
     }
     if (o.type === "barn") return "Granja";
     if (o.type === "market") return "Mercado";
@@ -1751,6 +1748,10 @@ class FarmScene extends Phaser.Scene {
     if (typeof produccionAbrirReactivacion === "function") produccionAbrirReactivacion(produccionClave(o));
     else toast("Producción pausada. Reactívala en el Cobertizo.");
     return true;
+  }
+
+  baulTienePremios() {
+    return !G.kitReclamado || (typeof regalosPendientes === "function" && regalosPendientes() > 0);
   }
 
   interactWith(o) {
@@ -1859,7 +1860,7 @@ class FarmScene extends Phaser.Scene {
       if (typeof tablonAbierto === "function" ? !tablonAbierto() : (G.tuto && !G.tuto.done)) { toast("El tablón abre cuando termines el tutorial"); return; }
       return openOv("ov-pedidos");
     }
-    if (o.type === "cofre_diario") return openOv("ov-baul");   // 15/8 v3: el baúl tiene su propia pantalla
+    if (o.type === "cofre_diario") return openOv(this.baulTienePremios() ? "ov-baul" : "ov-inv");
     if (o.type === "buzon") return openOv("ov-buzon");   // buzón (15/8)
     if (o.type === "barn") return openOv("ov-barn");
     if (o.type === "market") return openOv("ov-market");
@@ -3007,7 +3008,7 @@ class FarmScene extends Phaser.Scene {
 
   rotulosEdificios() {
     if(typeof window!=='undefined'&&window.innerWidth<=640){for(const o of this.objs||[])o._rotulo?.setVisible(false);return;}
-    const nombres={barn:'Granero',market:'Mercado',store:'Herrería',horno:'Horno',cocina:'Cocina',buzon:'Buzón',establo:'Establo',curtiduria:'Curtiduría',lombricario:'Lombricario',altar:'Altar',cofre_diario:G.kitReclamado?'Baúl':'Baúl · kit',tablon_pedidos:'Pedidos'};
+    const nombres={barn:'Granero',market:'Mercado',store:'Herrería',horno:'Horno',cocina:'Cocina',buzon:'Buzón',establo:'Establo',curtiduria:'Curtiduría',lombricario:'Lombricario',altar:'Altar',cofre_diario:!G.kitReclamado?'Baúl · kit':this.baulTienePremios()?'Baúl':'Inventario',tablon_pedidos:'Pedidos'};
     for(const o of this.objs||[]){
       if(!nombres[o.type]||!o.sprite)continue;
       const visible=!o.oculto&&o.sprite.visible!==false&&!GF.editMode;
@@ -3747,7 +3748,7 @@ class FarmScene extends Phaser.Scene {
       if (!GF.enCerca(c, r)) celdas.push({ c, r, d: Math.abs(c - cc) + Math.abs(r - cr) }); });
     celdas.sort((a, b) => a.d - b.d);
     for (const q of celdas) {
-      if (q.c >= p.col - 1 && q.c < p.col + p.cols + 1 && q.r >= p.row - 1 && q.r < p.row + p.rows + 1) continue;   // la laguna y su borde
+      if (GF.PESCA_ACTIVA && q.c >= p.col - 1 && q.c < p.col + p.cols + 1 && q.r >= p.row - 1 && q.r < p.row + p.rows + 1) continue;   // la laguna y su borde
       if (this.celdaLibreAdorno(q.c, q.r, -1)) return { col: q.c, row: q.r };
     }
     return null;
@@ -3756,7 +3757,7 @@ class FarmScene extends Phaser.Scene {
      invisibles el jugador se queda mirando pasto vacío sin entender. Devuelve el motivo en
      castellano o null si la celda está libre. celdaLibreAdorno se apoya en esto, así que no puede
      haber un motivo que la comprobación no vea ni al revés. */
-  porQueNoEntra(col, row, ignora) {
+  porQueNoEntra(col, row, ignora, tipoIgnorado = "adorno") {
     const NOMBRE_OBJETO = (t) => ({ tree: "un árbol", rock: "una roca", ore: "una veta",
       barn: "el granero", market: "el mercado", dummy: "el muñeco de entrenamiento",
       buzon: "el buzón", cofre_diario: "el baúl", tablon_pedidos: "el tablón", portal: "el portal",
@@ -3767,7 +3768,7 @@ class FarmScene extends Phaser.Scene {
     if (GF.enCerca && GF.enCerca(col, row)) return "La cerca se reserva esta franja — prueba una celda más adentro";
     const oc = GF.celdaOcupada(col, row);
     if (!oc) return null;
-    if (oc.tipo === "adorno" && oc.i === ignora) return null;
+    if (oc.tipo === tipoIgnorado && oc.i === ignora) return null;
     if (oc.tipo === "laguna") return "Ahí está la laguna";
     if (oc.tipo === "parcela") return "Ahí ya tienes una parcela";
     if (oc.tipo === "adorno") return "Ahí ya hay un adorno";
@@ -4439,10 +4440,7 @@ class FarmScene extends Phaser.Scene {
        Ahora la tapa se abre con CUALQUIER cosa esperando dentro. */
     const cf = (this.objs || []).find(x => x.type === "cofre_diario");
     if (cf && cf.sprite) {
-      let pend = 0;
-      try { pend = (typeof regalosPendientes === "function") ? regalosPendientes() : 0; } catch (e) {}
-      const listo = !G.kitReclamado || pend > 0;
-      const kc = listo ? "baul_premios_lleno" : "baul_premios";
+      const kc = this.baulTienePremios() ? "baul_premios_lleno" : "baul_premios";
       if (this.textures.exists(kc) && cf.sprite.texture.key !== kc) this.setObjTex(cf, kc, cf.rw || cf.w);
       if (cf.emoPremio) { cf.emoPremio.destroy(); cf.emoPremio = null; }   // 15/8: sin emoji — la tapa abierta ya lo dice
     }
@@ -4881,19 +4879,9 @@ class FarmScene extends Phaser.Scene {
     this.tweens.add({ targets: d, y: y - 16, alpha: { from: 1, to: 0 }, duration: 700, onComplete: () => d.destroy() });
   }
 
-  // ¿la celda destino de una PARCELA pisa un objeto, otra parcela o la laguna?
-  plotSpotBlocked(pl, col, row) {
-    const T = GF.TILE;
-    for (const q of this.objs) {
-      const qw = Math.max(1, Math.round(q.w / T));
-      const qc = Math.round((q.cx - qw * T / 2) / T), qr = Math.round(q.by / T);
-      if (row === qr - 1 && col >= qc && col < qc + qw) return true;
-    }
-    if (GF.parcelaEn(col, row, pl.i)) return true;   // 18/8: ídem — solo estorban las parcelas que ya tenés
-    const p = GF.POND;
-    if (col >= p.col && col < p.col + p.cols && row >= p.row && row < p.row + p.rows) return true;
-    if (GF.enCerca && GF.enCerca(col, row)) return true;   // 12/8: la CERCA perimetral es intocable
-    return false;
+  destinoParcela(pt, parcela) {
+    const col = Math.floor(pt.worldX / GF.TILE), row = Math.floor(pt.worldY / GF.TILE);
+    return { col, row, motivo: this.porQueNoEntra(col, row, parcela.i, "parcela") };
   }
 
   // ¿el rectángulo destino de la LAGUNA pisa objetos o parcelas?
@@ -6855,6 +6843,13 @@ class FarmScene extends Phaser.Scene {
       el.textContent = hu.libre
         ? ("Clic para colocar aquí" + (hu.ancho > 1 ? " (ocupa " + hu.ancho + " celdas)" : ""))
         : (hu.motivo || "Aquí no entra");
+      el.classList.add("show");
+      return;
+    }
+    if (GF.editMode && this.dragPlot) {
+      this.cargasBadge(null); this.previaSiembra(null);
+      const { motivo } = this.destinoParcela(this.input.activePointer, this.dragPlot);
+      el.textContent = motivo || "Suelta para mover la parcela aquí";
       el.classList.add("show");
       return;
     }
