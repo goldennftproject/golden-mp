@@ -12,6 +12,8 @@
 <link rel="preconnect" href="https://ulspkdaljeuleqqdokfk.supabase.co" crossorigin>
 <style>
   :root{--panel:#fffaf0;--ink:#2e2a1f;--muted:#8a7f66;--gold:#e2b23a;--gold-deep:#b9860b;--green:#5a8a3c;--red:#c0503a;--line:#e2d6b8;}
+  :root[data-fase-juego="release"] [data-solo-alfa],
+  :root:not([data-fase-juego="release"]) [data-solo-lanzamiento]{display:none!important}
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#243318;color:#f4ecd9;font-family:"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   /* nada de seleccionar texto en la interfaz (el cursor no cambia a I sobre las letras) */
@@ -1994,7 +1996,7 @@
       <section class="divisa-uso"><strong><img src="assets/farm/coin_plata.png?a=4" alt="">Plata</strong><small>Semillas · fabricación · obras</small><div class="row"><button class="ghost sm" data-panel="ov-market">Mercado</button><button class="ghost sm" data-panel="ov-forge">Herrería</button></div></section>
       <section class="divisa-uso"><strong><img src="assets/farm/coin_esencia.png?a=4" alt="">Golden</strong><small>VIP · objetos · mejoras</small><div class="row"><button class="ghost sm" data-panel="ov-vip">VIP</button><button class="ghost sm" data-panel="ov-reliquias">Objetos</button></div></section>
     </div>
-    <p class="sub">Alfa: Plata → Golden desactivado. Golden se compra con USDT. No hay retiros.</p>
+    <p class="sub"><span data-solo-alfa>Alfa: </span>Plata → Golden desactivado. Golden se compra con USDT. No hay retiros.</p>
     <section id="banco-interno" hidden style="display:none">
     <h4>Cambiar Plata por Golden</h4>
     <div class="cambio-tasa" aria-label="Tasa de cambio"><span class="cambio-numero"><img src="assets/farm/coin_plata.png?a=4" alt=""><b id="banco-tasa">—</b><small>Plata</small></span><b aria-hidden="true">→</b><span class="cambio-numero"><img src="assets/farm/coin_esencia.png?a=4" alt=""><b>1</b><small>Golden</small></span></div>
@@ -2003,7 +2005,7 @@
     <div class="banco-elegir"><label for="banco-cantidad">Quiero recibir</label><div><input id="banco-cantidad" type="number" min="1" max="1000000" step="1" value="1"><span>Golden</span></div></div>
     <div id="banco-visual" class="banco-visual" aria-hidden="true"></div><p id="banco-previa" class="cambio-previa" aria-live="polite"></p>
     </section><section id="usdt-panel" style="margin-top:16px;border-top:1px solid #ae884c;padding-top:12px"></section>
-    <details class="ayuda-menu"><summary>Condiciones de la alfa</summary><p class="sub">Plata → Golden desactivado. Compra: 1 USDT por 1 Golden, mediante una solicitud con importe exacto y sin vincular wallet. Retiros desactivados. El Golden comprado que no gastes se conserva para el lanzamiento; se gasta primero el obtenido jugando.</p></details><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="banco-actividad" aria-live="polite"></div></details>
+    <details class="ayuda-menu"><summary><span data-solo-alfa>Condiciones de la alfa</span><span data-solo-lanzamiento>Condiciones del Banco</span></summary><p class="sub">Plata → Golden desactivado. Compra: 1 USDT por 1 Golden, mediante una solicitud con importe exacto y sin vincular wallet. Retiros desactivados. <span data-solo-alfa>El Golden comprado que no gastes se conserva para el lanzamiento; se gasta primero el obtenido jugando.</span><span data-solo-lanzamiento>Se gasta primero el Golden obtenido jugando.</span></p></details><details class="ayuda-menu"><summary>Actividad para futuros retiros</summary><div id="banco-actividad" aria-live="polite"></div></details>
     </div>
     <div class="row banco-acciones" hidden style="display:none"><button id="banco-canjear" class="green" disabled>Canjear</button><button id="banco-actualizar" class="ghost">Actualizar tasa</button></div>
   </div></div>
@@ -2064,14 +2066,14 @@
 
   <div class="ov" id="ov-lb"><div class="card" style="width:min(660px,94%);max-height:calc(100dvh - 32px);overflow-y:auto">
     <button class="close" data-close="ov-lb" aria-label="Cerrar ventana">×</button>
-    <h3>🏅 Clasificación de la alfa</h3>
+    <h3>🏅 <span data-solo-alfa>Clasificación de la alfa</span><span data-solo-lanzamiento>Clasificación de granjas</span></h3>
     <div class="lbtabs">
       <button class="lbtab active" data-lb="granja">🌾 Granja</button>
       <button class="lbtab" data-lb="plata"><img class="ric" src="assets/farm/coin_plata.png?a=4"> Plata</button>
       <button class="lbtab" data-lb="exp">Experiencia</button>
       <button class="lbtab" data-lb="skill">Mejor habilidad</button>
     </div>
-    <div class="sub" id="lb-alfa-reglas"><b>Nivel de granja → XP</b> · Top 50 y tu posición<details><summary>Empates y premios</summary>Los empates comparten posición. Premios y fecha de cierre pendientes de definir; sin reparto automático.</details></div>
+    <div class="sub" id="lb-alfa-reglas"><b>Nivel de granja → XP</b> · Top 50 y tu posición<details><summary><span data-solo-alfa>Empates y premios</span><span data-solo-lanzamiento>Empates</span></summary>Los empates comparten posición. <span data-solo-alfa>Premios y fecha de cierre pendientes de definir; sin reparto automático.</span></details></div>
     <div class="lblist" id="lb-list"></div>
     <div id="lb-personal" hidden></div>
     <div class="lbnote" id="lb-note"></div>
@@ -2102,13 +2104,13 @@
     <div class="cfgsec"><h4>Aspecto</h4><div class="menu-actions" role="group" aria-label="Opciones de aspecto"><button class="ghost sm" id="cfg-visual-v2" aria-pressed="true" title="Alterna gráficos e interfaz, sin cambiar la partida.">Aspecto: Renovado</button> <button class="ghost sm" id="cfg-relief" aria-pressed="true">Iluminación: Suave</button> <button class="ghost sm" id="cfg-day-cycle" aria-pressed="true" title="Ciclo visual de 30 minutos. No cambia los tiempos ni la producción.">Ciclo: Activado</button></div></div>
     <div id="cfg-equipo" style="display:none"><a href="/equipo/" target="_blank" rel="noopener noreferrer">🛡 Panel del equipo</a></div>
     <div class="cfgsec">
-      <h4>Alfa de pruebas</h4>
-      <p>Al terminar la alfa se reinicia el progreso. Las compras permanentes se conservan; comprar VIP en alfa dará 30 días desde el lanzamiento, sin acumular renovaciones.</p>
+      <h4><span data-solo-alfa>Alfa de pruebas</span><span data-solo-lanzamiento>Compras y soporte</span></h4>
+      <p data-solo-alfa>Al terminar la alfa se reinicia el progreso. Las compras permanentes se conservan; comprar VIP en alfa dará 30 días desde el lanzamiento, sin acumular renovaciones.</p>
       <button class="ghost sm" id="cfg-alfa-compras">Ver mis compras conservadas</button>
       <div id="cfg-alfa-compras-lista" aria-live="polite"></div>
       <p>Depósitos USDT en BNB Smart Chain disponibles. Retiros desactivados. Si encuentras un fallo, copia el informe y cuéntanos cómo ocurrió.</p>
       <button class="ghost sm" id="cfg-alfa-copiar">Copiar informe técnico</button>
-      <textarea id="cfg-alfa-informe" hidden readonly aria-label="Informe técnico de la alfa" style="width:100%;box-sizing:border-box;min-height:160px;margin-top:8px;font:12px monospace"></textarea>
+      <textarea id="cfg-alfa-informe" hidden readonly aria-label="Informe técnico de Golden Farm" style="width:100%;box-sizing:border-box;min-height:160px;margin-top:8px;font:12px monospace"></textarea>
     </div>
     <div class="cfgsec" id="cfg-discord">
       <h4>Discord</h4>
@@ -2615,7 +2617,7 @@
     <div class="gcard">
       <h1>GOLDEN FARM</h1>
       <p id="gate-sub">Elige un apodo para entrar a tu granja.</p>
-      <p class="sub">Alfa de pruebas: el progreso se reiniciará al finalizar. Conservaremos las compras permanentes y 30 días de VIP desde el lanzamiento para quienes lo compren en alfa. Recargas USDT en BNB Smart Chain desde el Banco. Retiros desactivados.</p>
+      <p class="sub"><span data-solo-alfa>Alfa de pruebas: el progreso se reiniciará al finalizar. Conservaremos las compras permanentes y 30 días de VIP desde el lanzamiento para quienes lo compren en alfa. </span>Recargas USDT en BNB Smart Chain desde el Banco. Retiros desactivados.</p>
       <input id="nick" maxlength="14" placeholder="Tu apodo" autocomplete="off">
       <!-- 18/9 — el correo entra en la puerta. Antes vivía tres clics adentro (Configuración →
            Cuenta), o sea que el jugador lo encontraba DESPUÉS de tener una granja vacía

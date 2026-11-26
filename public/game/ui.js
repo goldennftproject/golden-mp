@@ -3295,7 +3295,7 @@ function renderUsdt(){
  box.innerHTML='<h4>Comprar Golden con USDT</h4><div class="cambio-tasa"><b>1 USDT → 1 Golden</b></div>'+
  '<section class="sub" style="border:2px solid #b58c32;padding:10px"><strong>Red: BNB Smart Chain (BSC)</strong><br>Token: <b>USDT · BEP-20</b></section><p class="sub">Sin conectar tu wallet al juego · Retiros desactivados</p>'+
  (!s?'<p>Consultando recargas…</p>':
- '<p class="sub">Golden comprado sin gastar: <b>'+Number(s.paid_remaining||0).toLocaleString('es',{maximumFractionDigits:6})+'</b> · se conserva para el lanzamiento.</p>'+
+ '<p class="sub">Golden comprado sin gastar: <b>'+Number(s.paid_remaining||0).toLocaleString('es',{maximumFractionDigits:6})+'</b><span data-solo-alfa> · se conserva para el lanzamiento.</span></p>'+
  (s.deposits?'<label>Golden que quieres recargar <input id="usdt-amount" type="number" min="1" max="10000" step="1" value="'+escapeHtml(oldAmount)+'"></label><button id="usdt-create" class="green sm">Preparar recarga</button>':'<p><b>Depósitos cerrados. No envíes fondos.</b></p>')+
  (o?'<hr><label>Solicitud <select id="usdt-order" style="max-width:100%">'+orders.map(r=>'<option value="'+escapeHtml(r.id)+'"'+(r.id===o.id?' selected':'')+'>'+escapeHtml(r.amount)+' USDT · '+(r.tx?'Pagada':r.verified_tx?'Pago confirmado · por sincronizar':Date.parse(r.expires_at)>Date.now()?'Pendiente':'Plazo terminado')+'</option>').join('')+'</select></label>'+
  (active&&s.deposits?'<p><b>Envía exactamente</b></p><input id="usdt-exact" readonly aria-label="Importe exacto USDT" value="'+escapeHtml(o.amount)+'" style="font-size:22px;width:100%;box-sizing:border-box"><button id="usdt-copy-amount" class="sm">Copiar importe</button><p>Recibirás <b>'+escapeHtml(o.amount)+' Golden</b>, incluidos los decimales. El importe identifica tu cuenta; no lo redondees.</p><label>Dirección receptora<input id="usdt-destination" readonly value="'+escapeHtml(s.destination)+'" style="width:100%;box-sizing:border-box"></label><button id="usdt-copy-address" class="sm">Copiar dirección</button><div id="usdt-qr" aria-label="QR de la dirección receptora"></div><p class="sub">Envía USDT desde tu billetera por BNB Smart Chain antes de '+escapeHtml(new Date(o.expires_at).toLocaleTimeString('es'))+'. El QR contiene solo la dirección: introduce el importe exacto indicado. La cantidad recibida debe ser exacta, sin descontar comisiones. Necesitas BNB para la comisión de red.</p>':
@@ -6922,7 +6922,8 @@ function refreshBarn() {
 
 function informeAlfa(){
  const conectado=typeof UID!=='undefined'&&!!UID,guardado=typeof alfaResumenGuardados==='function'?alfaResumenGuardados():{};
- return ['GOLDEN ALFA - INFORME TÉCNICO',new Date().toISOString(),'Build cliente: '+(typeof GF_BUILD!=='undefined'?GF_BUILD:'sin dato'),'Versión servidor: '+String(window.__gfServerVersion||'sin dato').slice(0,40),'Internet: '+(typeof navigator==='undefined'||navigator.onLine!==false),'Cuenta conectada: '+conectado,'Carga validada: '+(typeof CARGA_OK!=='undefined'&&CARGA_OK),'Modo local: '+(typeof SOLO_LOCAL!=='undefined'&&SOLO_LOCAL),'Conflicto de guardado: '+(conectado&&SAVE_CONFLICTOS.has(UID)),'Errores recientes detectados: '+(Array.isArray(window.__gfErr)?window.__gfErr.length:0),'Guardados de esta sesión: '+JSON.stringify(guardado),'','Añade qué estabas haciendo, qué esperabas y qué ocurrió.','Este informe no incluye correo, claves, identificador de cuenta ni inventario.'].join('\n');
+ const marca=GF.FASE_JUEGO==='release'?'GOLDEN FARM':'GOLDEN ALFA';
+ return [marca+' - INFORME TÉCNICO',new Date().toISOString(),'Build cliente: '+(typeof GF_BUILD!=='undefined'?GF_BUILD:'sin dato'),'Versión servidor: '+String(window.__gfServerVersion||'sin dato').slice(0,40),'Internet: '+(typeof navigator==='undefined'||navigator.onLine!==false),'Cuenta conectada: '+conectado,'Carga validada: '+(typeof CARGA_OK!=='undefined'&&CARGA_OK),'Modo local: '+(typeof SOLO_LOCAL!=='undefined'&&SOLO_LOCAL),'Conflicto de guardado: '+(conectado&&SAVE_CONFLICTOS.has(UID)),'Errores recientes detectados: '+(Array.isArray(window.__gfErr)?window.__gfErr.length:0),'Guardados de esta sesión: '+JSON.stringify(guardado),'','Añade qué estabas haciendo, qué esperabas y qué ocurrió.','Este informe no incluye correo, claves, identificador de cuenta ni inventario.'].join('\n');
 }
 async function copiarInformeAlfa(){
  const texto=informeAlfa(),campo=$('cfg-alfa-informe');if(campo){campo.value=texto;campo.hidden=false;}
@@ -7198,7 +7199,8 @@ function renderRankingGranja(){
   const d=lbFarmData;if(!d||d.uid!==UID)return;
   box.innerHTML=d.top.length?d.top.map(r=>lbFarmRow(r)).join(''):'Todavía no hay granjas clasificadas.';
   mine.hidden=false;mine.innerHTML=d.yo?'<div class="secc">Tu posición guardada</div>'+lbFarmRow(d.yo,true):'<p class="sub">Tu granja aparecerá después de su primer guardado confirmado.</p>';
-  note.textContent='Alfa · '+d.total+' granjas · datos guardados · '+new Date(d.actualizado).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})+'. Se actualiza al consultar, como máximo una vez cada 3 minutos.';
+  const fase=typeof GF!=='undefined'&&GF.FASE_JUEGO==='release'?'':'Alfa · ';
+  note.textContent=fase+d.total+' granjas · datos guardados · '+new Date(d.actualizado).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})+'. Se actualiza al consultar, como máximo una vez cada 3 minutos.';
   for(const b of [...box.querySelectorAll('[data-rank-visita]'),...mine.querySelectorAll('[data-rank-visita]')])b.onclick=async()=>{
     if(!vipVigente())return;const uid=UID;b.disabled=true;
     const r=await visitaConsultar('ver',b.dataset.rankVisita);

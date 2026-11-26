@@ -2,6 +2,9 @@
 window.GF = window.GF || {};
 GF.GRAVES_SHARED_ENABLED = true; // La disponibilidad real la confirma el servidor.
 GF.FASE_JUEGO = 'alpha'; // Cambiar sólo en el lanzamiento aprobado, junto al estado del servidor.
+if (typeof document !== "undefined" && document.documentElement?.dataset) {
+  document.documentElement.dataset.faseJuego = GF.FASE_JUEGO;
+}
 GF.ALTAR_ACTIVO = false; // Pausa de alfa reversible: no borrar edificios, planos ni materiales guardados.
 GF.esAltarOculto = tipo => !GF.ALTAR_ACTIVO && ["altar", "ofrendas", "ov-altar", "ov-ofrendas"].includes(tipo);
 GF.PLAZA_HABILITADA = false; // Plaza fuera de esta versión; conservar escena para recuperarla.
