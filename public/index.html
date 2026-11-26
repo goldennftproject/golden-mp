@@ -1580,6 +1580,11 @@
     #ov-p2p #p2p-cobros{flex:1 1 180px;min-width:0;font-size:13px;line-height:1.4}
     #ov-p2p #p2p-cobros.p2p-cobros-listos{padding:6px 8px;border-left:3px solid #597d38;background:#edf1d5;color:#385226;font-weight:700}
     #ov-p2p .p2p-toolbar button{flex:0 0 auto;margin:0}
+    #ov-p2p .shoptabs{flex-wrap:wrap}
+    #ov-p2p .p2p-oferta-form{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:end;margin:8px 0 14px}
+    #ov-p2p .p2p-oferta-form label{display:grid;gap:4px;font-size:12px;font-weight:700}
+    #ov-p2p .p2p-oferta-form input,#ov-p2p [data-oferta-cantidad]{width:80px}
+    #p2p-oferta-total{flex-basis:100%;margin:0}
     #ov-p2p #p2p-ver-cobros[hidden]{display:none}
     #misiones-acceso .jornada-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:4px;padding:0 4px;border:1px solid #c6ad73;border-radius:9px;background:#335123;color:#fff3cc;font:700 11px/1 sans-serif;letter-spacing:0;text-shadow:none;flex-shrink:0;vertical-align:middle}
     #misiones-acceso .jornada-badge[hidden]{display:none}
@@ -2230,6 +2235,7 @@
       <button class="shoptab active" data-p2p="comprar">Comprar</button>
       <button class="shoptab" data-p2p="vender">Vender</button>
       <button class="shoptab" data-p2p="mias">Mis anuncios y cobros</button>
+      <button class="shoptab" data-p2p="ofertas">Ofertas de compra</button>
     </div>
     <div class="p2p-toolbar menu-actions" role="group" aria-label="Consulta de comercio">
       <span class="fds" id="p2p-cobros" role="status" aria-live="polite" title="Se consulta al abrir o actualizar Comercio.">Consulta tus ventas al abrir Comercio.</span>

@@ -473,6 +473,192 @@ async function forjaSolicitar(id){
   if(typeof saveFarm==='function')await saveFarm(true);
   return resultado;
 }
+// Las ofertas conservan su propio UUID mientras no se confirme el resultado.
+const OFERTA_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function ofertaPlata(valor) {
+  return Number(valor).toLocaleString("es-UY", { maximumFractionDigits: 1 });
+}
+function ofertaClave(uid, op = "") {
+  return "gf-oferta-pendiente-" + SB_REF + "-" + uid + "-" + op;
+}
+function ofertaPendientes(uid) {
+  const pendientes = [];
+  if (!uid) return pendientes;
+  try {
+    const prefix = ofertaClave(uid);
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith(prefix)) continue;
+      let pedido;
+      try { pedido = JSON.parse(localStorage.getItem(key)); }
+      catch (_) { continue; }
+      if (pedido?.cuenta === uid && OFERTA_UUID.test(pedido.op || "") &&
+          key === ofertaClave(uid, pedido.op) && typeof pedido.base === "string" &&
+          /^oferta_(crear|cancelar|vender|recibir|cobrar)$/.test(pedido.p2pOferta?.accion || "")) {
+        pendientes.push(pedido);
+      }
+    }
+  } catch (_) {}
+  return pendientes;
+}
+
+function ofertaDisponible(uid) {
+  return !!(uid && uid === UID && sb && CARGA_OK && !SOLO_LOCAL && !enZona());
+}
+async function ofertaInvocar(uid, detalle) {
+  if (!ofertaDisponible(uid)) throw Error("Vuelve a tu granja y sincroniza tu partida para usar las ofertas.");
+  const { data, error } = await conTope(
+    sb.functions.invoke("ofertas-compra", { body: { ...detalle, cuenta: uid } }), 15000, "consultar ofertas");
+  if (UID !== uid) throw Error("La cuenta cambió");
+  if (error) {
+    let body;
+    try { body = await error.context?.json(); } catch (_) {}
+    const failure = Error(body?.error || "No se pudo confirmar la operación de las ofertas.");
+    failure.status = error.context?.status;
+    failure.code = body?.code;
+    throw failure;
+  }
+  if (!data?.ok) throw Error(data?.error || "El servidor no confirmó la operación de las ofertas.");
+  return data;
+}
+function ofertaConsultar() {
+  return ofertaInvocar(UID, { p2pOfertaEstado: true });
+}
+function ofertaCotizar(item, qty) {
+  return ofertaInvocar(UID, { p2pOfertaCotizar: { item, qty } });
+}
+function ofertaReciboCoincide(recibo, pedido) {
+  return recibo?.op === pedido.op && recibo.accion === pedido.p2pOferta.accion;
+}
+function ofertaRechazoConfirmado(fallo) {
+  return (fallo?.status === 409 && fallo.code === "OFERTA_CONFLICTO_BASE") ||
+    (fallo?.status === 400 && ["OFERTA_RECHAZADA", "COTIZACION_CAMBIO"].includes(fallo.code));
+}
+function ofertaMensajeConfirmado(detalle, recibo) {
+  switch (detalle.accion) {
+    case "oferta_crear": return "Oferta publicada. Se reservaron " + ofertaPlata(recibo.reserved) + " Plata.";
+    case "oferta_cancelar": return "Recuperaste " + ofertaPlata(recibo.refunded) + " Plata.";
+    case "oferta_vender": return "Venta confirmada. Tienes " + ofertaPlata(recibo.net) + " Plata por cobrar.";
+    case "oferta_recibir": return "Entrega lista para recoger en Entregas pendientes.";
+    case "oferta_cobrar": return "Cobraste " + ofertaPlata(recibo.net) + " Plata.";
+  }
+}
+async function ofertaResolverPedido(uid, pedido, comprobando = false) {
+  let respuesta, fallo;
+  for (let intento = 0; intento < 2; intento++) {
+    try {
+      respuesta = await ofertaInvocar(uid, pedido);
+      if (ofertaReciboCoincide(respuesta.recibo, pedido) && respuesta.data &&
+          typeof respuesta.data === "object" && !Array.isArray(respuesta.data) &&
+          typeof respuesta.updated_at === "string" && respuesta.updated_at) break;
+      respuesta = null;
+      fallo = Error("El servidor no confirmó el recibo de la oferta.");
+    } catch (error) {
+      fallo = error;
+      if (UID !== uid || ofertaRechazoConfirmado(error)) break;
+    }
+  }
+  if (UID !== uid) return null;
+  if (!respuesta) {
+    // Sólo el RPC comprueba el recibo antes de rechazar; Auth y otros fallos no son concluyentes.
+    if (ofertaRechazoConfirmado(fallo)) {
+      localStorage.removeItem(ofertaClave(uid, pedido.op));
+      if (fallo.code === "OFERTA_CONFLICTO_BASE" && SAVE_BASES.get(uid) === pedido.base) {
+        SAVE_CONFLICTOS.add(uid);
+        if (typeof showSaveError === "function") showSaveError();
+      }
+      toast(fallo.code === "COTIZACION_CAMBIO" ? "La oferta cambió. Revisa el precio y la cantidad de nuevo." : fallo.message);
+    } else {
+      if (typeof showSaveError === "function") showSaveError();
+      toast("El resultado quedó pendiente. Usa Comprobar operación en Ofertas de compra.");
+    }
+    return null;
+  }
+  const base = SAVE_BASES.get(uid);
+  const versionYaCargada = respuesta.repetido === true && respuesta.updated_at === base;
+  let archivado = false;
+  if (!versionYaCargada) {
+    if (comprobando && snapKey() !== lastSavedKey) {
+      const copia = { uid, baseServidor: base, nick: window.NICK || null, at: Date.now(), data: snapshot() };
+      archivado = copiaArchivarDiagnostico(copia, "oferta-pendiente", respuesta.data, respuesta.updated_at);
+      if (!archivado) {
+        toast("No se pudo conservar el avance local. La oferta sigue pendiente.");
+        return null;
+      }
+    }
+    hydrate(respuesta.data);
+    SAVE_BASES.set(uid, respuesta.updated_at);
+    copiaGuardar(snapshot(), true);
+    lastSavedKey = snapKey();
+  }
+  localStorage.removeItem(ofertaClave(uid, pedido.op));
+  const mensaje = ofertaMensajeConfirmado(pedido.p2pOferta, respuesta.recibo);
+  if (archivado) toast("Se cargó la versión del servidor. El avance anterior quedó en una copia local.");
+  else if (mensaje) toast(mensaje, "success");
+  return respuesta;
+}
+function ofertaConBloqueo(mensaje, ejecutar) {
+  const desbloquear = mercadoBloquearPantalla(mensaje);
+  MERCADO_EN_CURSO = Promise.resolve().then(ejecutar).finally(() => {
+    MERCADO_EN_CURSO = null;
+    desbloquear();
+    syncSlots();
+    refreshHud();
+    if (isOpen("ov-inv")) refreshInv();
+  });
+  return MERCADO_EN_CURSO;
+}
+async function ofertaOperar(detalle) {
+  const uid = UID;
+  if (!ofertaDisponible(uid) || MERCADO_EN_CURSO || SAVE_CONFLICTOS.has(uid) || ofertaPendientes(uid).length) {
+    toast("Sincroniza tu granja y comprueba cualquier operación pendiente antes de continuar.");
+    return null;
+  }
+  const confirmadas = SAVE_CONFIRMACIONES.get(uid) || 0;
+  // Iniciar el guardado antes de bloquear la cola de operaciones.
+  const guardar = saveFarm(true);
+  return ofertaConBloqueo("Confirmando operación de las ofertas…", async () => {
+    try {
+      await conTope(guardar, 15000, "guardar antes de la oferta");
+      const base = SAVE_BASES.get(uid);
+      if (!ofertaDisponible(uid) || SAVE_CONFLICTOS.has(uid) || ofertaPendientes(uid).length ||
+          (SAVE_CONFIRMACIONES.get(uid) || 0) <= confirmadas || guardadoTienePendiente(uid) || !base) {
+        if (UID === uid) toast("El guardado previo no se confirmó. No cambió la oferta.");
+        return null;
+      }
+      const pedido = { cuenta: uid, base, op: window.crypto.randomUUID(), p2pOferta: detalle };
+      // Si no se puede recordar la petición completa, no se envía.
+      localStorage.setItem(ofertaClave(uid, pedido.op), JSON.stringify(pedido));
+      return await ofertaResolverPedido(uid, pedido);
+    } catch (_) {
+      if (UID === uid) toast(ofertaPendientes(uid).length ? "La operación sigue pendiente. Compruébala en Ofertas de compra." :
+        "No se pudo iniciar la operación de las ofertas.");
+      return null;
+    }
+  });
+}
+async function ofertaComprobar(op) {
+  const uid = UID, pedido = ofertaPendientes(uid).find(p => p.op === op);
+  if (!pedido || !ofertaDisponible(uid) || MERCADO_EN_CURSO || SAVE_EN_CURSO ||
+      SAVE_CONFLICTOS.has(uid) || guardadoTienePendiente(uid)) return null;
+  const respuesta = await ofertaConBloqueo("Comprobando la operación pendiente…", async () => {
+    try {
+      const { recibo } = await ofertaInvocar(uid, { p2pOfertaRecibo: pedido.op });
+      if (recibo !== null && !ofertaReciboCoincide(recibo, pedido)) throw Error("Recibo distinto");
+      return await ofertaResolverPedido(uid, pedido, true);
+    } catch (_) {
+      if (UID === uid) toast("Aún no se pudo comprobar la operación. Se conserva pendiente.");
+      return null;
+    }
+  });
+  if (UID === uid && !ofertaPendientes(uid).length && !SAVE_CONFLICTOS.has(uid)) {
+    // La misma versión del servidor conserva el avance local y permite guardarlo.
+    if (snapKey() !== lastSavedKey) await saveFarm(true);
+    else if (typeof showSaved === "function") showSaved();
+  }
+  return respuesta;
+}
+
 async function mercadoP2POperar(detalle){
   const resultado=await economiaSolicitar({p2p:detalle});
   if(resultado&&['comprar','retirar'].includes(detalle.accion)&&mkPendCount())mkPendCobrar();
@@ -1697,7 +1883,7 @@ async function loadFarm() {
       if (data) {
         // Fire-and-forget private support; local preservation above remains a mandatory gate.
         try { if(soporteCopias)void soporteCliente.submit(soporteCarga,soporteCopias,data.data); } catch (_) {}
-        if (mercadoPendiente(uid) && respaldo && respaldo.uid === uid) copiaAparcar(respaldo);
+        if ((mercadoPendiente(uid) || ofertaPendientes(uid).length) && respaldo && respaldo.uid === uid) copiaAparcar(respaldo);
         hydrate(data.data);
         SAVE_BASES.set(uid,data.updated_at||null);SAVE_CONFLICTOS.delete(uid);
         window.NICK = data.name ? String(data.name).replace(/^\s*(\[[^\]]*\]\s*)+/,"") || data.name : null;
@@ -1706,6 +1892,7 @@ async function loadFarm() {
         if((typeof ruletasTieneReciboPendiente==='function'&&ruletasTieneReciboPendiente(uid))||(window.GoldenGraves&&GoldenGraves.hasPending(uid)))SAVE_CONFLICTOS.add(uid);
         else mercadoLimpiarPendiente(uid);
         lastSavedKey = snapKey();
+        if (ofertaPendientes(uid).length && typeof showSaveError === "function") showSaveError();
         setTimeout(() => { if (typeof torneoPodioCheck === "function") torneoPodioCheck(); },4000);
         setTimeout(()=>{if(UID===uid)usdtConsultar(true);},0);
         return true;
@@ -2086,7 +2273,7 @@ function saveFarm(force) {
     if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot());
     return MERCADO_EN_CURSO.then(() => UID===cuentaSolicitud?saveFarm(force):undefined);
   }
-  if (SAVE_CONFLICTOS.has(UID)) { if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot()); return Promise.resolve(); }
+  if (SAVE_CONFLICTOS.has(UID) || ofertaPendientes(UID).length) { if (CARGA_OK || SOLO_LOCAL) copiaGuardar(snapshot()); return Promise.resolve(); }
   let colaAnterior=null;
   if (SAVE_EN_CURSO) {
     const anterior=SAVE_EN_CURSO;
@@ -2669,7 +2856,7 @@ function startAutosave() {
   let actividad=Date.now(),guardado=false,intento=0,ciclo=0;
   for(const tipo of ['pointerdown','pointermove','keydown','input','wheel'])document.addEventListener(tipo,()=>{actividad=Date.now();guardado=false;ciclo++;},{passive:true});
   saveTimer = setInterval(async () => {
-    if(guardado||Date.now()-actividad<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||SAVE_EN_CURSO||MERCADO_EN_CURSO||(!guardadoTienePendiente(UID)&&snapKey()===lastSavedKey))return;
+    if(guardado||Date.now()-actividad<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||ofertaPendientes(UID).length||SAVE_EN_CURSO||MERCADO_EN_CURSO||(!guardadoTienePendiente(UID)&&snapKey()===lastSavedKey))return;
     intento=Date.now();const uid=UID,vuelta=ciclo,antes=SAVE_CONFIRMACIONES.get(uid)||0;
     try{await saveFarm();if(UID===uid&&ciclo===vuelta&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes&&!guardadoTienePendiente(uid))guardado=true;}catch{}
   },1000);

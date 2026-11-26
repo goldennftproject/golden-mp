@@ -734,6 +734,19 @@ function refreshMorral() {
 function viajeAccionAttr(dato, valor, etiqueta) {
   return ' data-' + dato + '="' + escapeHtml(valor) + '" role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) + '"';
 }
+function compraLocalPuedeGuardar(cuenta) {
+  if (cuenta && typeof ofertaPendientes === "function" && ofertaPendientes(cuenta).length) {
+    toast("Hay una oferta por comprobar. Revisa el recibo en Ofertas de compra.");
+    return false;
+  }
+  if ((typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) ||
+      (typeof SAVE_CONFLICTOS !== "undefined" && SAVE_CONFLICTOS.has(cuenta))) {
+    toast("Revisa el guardado antes de comprar.");
+    return false;
+  }
+  return true;
+}
+
 function refreshViaje() {
   const caja = $("viaje-cuerpo"); if (!caja) return;
   const raiz = (typeof contLlevado === "function") ? contLlevado() : null;
@@ -963,21 +976,13 @@ function engancharViaje(caja) {
       const d = CONT_DEF[c], precio = d.plata, cuenta = typeof UID === "undefined" ? null : UID;
       const puertaVigente = () => window.GF && GF.scene === "farm" && isOpen("ov-viaje") &&
         (typeof UID === "undefined" || UID === cuenta);
-      const guardadoDisponible = () => {
-        if ((typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) ||
-          (typeof SAVE_CONFLICTOS !== "undefined" && SAVE_CONFLICTOS.has(cuenta))) {
-          toast("Revisa el guardado antes de comprar.");
-          return false;
-        }
-        return true;
-      };
       const disponible = () => !contsTengo(c) && contLlevado()?.c !== c && CONT_DEF[c]?.plata === precio;
       const faltaPlata = () => (G.plata || 0) < precio;
-      if (!puertaVigente() || !guardadoDisponible()) return;
+      if (!puertaVigente() || !compraLocalPuedeGuardar(cuenta)) return;
       if (!disponible() || faltaPlata()) { rep([["vcont", c], ["vcomprar", c]]); return; }
       askConfirm("Comprar " + d.label + " de " + d.huecos + " espacios por " + fmtPlata(precio) +
         " Plata. Podrás elegirla aquí para el viaje.", () => {
-        if (!puertaVigente() || !guardadoDisponible()) return;
+        if (!puertaVigente() || !compraLocalPuedeGuardar(cuenta)) return;
         if (!disponible() || faltaPlata()) {
           toast("Cambió tu inventario, el precio o tu saldo. Revisa la compra.");
           rep([["vcont", c], ["vcomprar", c]]);
@@ -3011,6 +3016,8 @@ function produccionOpcionNodo(tipo, libres = produccionHayCupo()) {
 function confirmarProduccionNodo(boton) {
   const tipo = boton.dataset.prodBuy, fuente = boton.dataset.prodSource;
   if (!Object.prototype.hasOwnProperty.call(PRODUCCION_NODOS_UI,tipo)) return false;
+  const cuenta = typeof UID === "undefined" ? null : UID;
+  if (!compraLocalPuedeGuardar(cuenta)) return false;
   const opcion = produccionOpcionNodo(tipo);
   if (opcion.fuente !== fuente || opcion.motivo) {
     toast(opcion.motivo || "La opción cambió. Revisa los vales, regalos y precios actuales.");
@@ -3019,7 +3026,7 @@ function confirmarProduccionNodo(boton) {
   // askConfirm ejecuta el callback cuando falta el diálogo. Aquí nunca se gasta sin que se vea la pregunta.
   const ov = $("ov-confirm");
   if (!ov || !$("cf-title") || !$("cf-msg") || !$("cf-yes") || !$("cf-no") || ov.classList.contains("show")) return false;
-  const partida = G, libro = G.produccion, cuenta = typeof UID === "undefined" ? null : UID;
+  const partida = G, libro = G.produccion;
   const teniaFoco = document.activeElement === boton;
   const actualizarFoco = () => {
     if (!teniaFoco) return;
@@ -3031,7 +3038,8 @@ function confirmarProduccionNodo(boton) {
   const costo = "Usarás " + opcion.importe + " y ocuparás 1 cupo.";
   const tiempo = tipo === "plot" ? "" : " La primera carga empieza a recuperarse al activarlo.";
   askConfirm(costo + " " + opcion.preparacion.texto + tiempo, () => {
-    if (G !== partida || G.produccion !== libro || (typeof UID === "undefined" ? null : UID) !== cuenta) return false;
+    if (G !== partida || G.produccion !== libro || (typeof UID === "undefined" ? null : UID) !== cuenta ||
+        !compraLocalPuedeGuardar(cuenta)) return false;
     const actual = produccionOpcionNodo(tipo);
     if (actual.fuente !== opcion.fuente || actual.importe !== opcion.importe ||
         actual.motivo || actual.preparacion.texto !== opcion.preparacion.texto) {
@@ -7203,12 +7211,14 @@ function showSaving() {
 }
 function showSaveError(motivo) {
   const detenido=typeof UID!=='undefined'&&UID&&typeof SAVE_CONFLICTOS!=='undefined'&&SAVE_CONFLICTOS.has(UID);
-  if(!guardadoManualEnCurso)estadoGuardar('error',detenido?'Guardado detenido. Conserva esta pestaña y revisa el disquete.':typeof motivo==='string'?'Guardado '+motivo.toLowerCase()+'. Revisa la conexión.':'Guardado rechazado. Revisa el registro.');
+  const ofertaPendiente=typeof UID!=='undefined'&&UID&&typeof ofertaPendientes==='function'&&ofertaPendientes(UID).length>0;
+  if(!guardadoManualEnCurso)estadoGuardar('error',detenido?'Guardado detenido. Conserva esta pestaña y revisa el disquete.':ofertaPendiente?'Comprueba la oferta en Comercio. Hasta entonces tu avance queda en este navegador.':typeof motivo==='string'?'Guardado '+motivo.toLowerCase()+'. Revisa la conexión.':'Guardado rechazado. Revisa el registro.');
   const el = $("saveind"); if (!el) return;
-  el.className = detenido?'show save-blocked':'show'; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = detenido?'Guardado detenido · revisa el disquete':typeof motivo==='string'?motivo:"Rechazado"; clearTimeout(el._t);
+  const persistente=detenido||ofertaPendiente;
+  el.className = persistente?'show save-blocked':'show'; el.querySelector(".sdot").textContent = "🚫"; el.querySelector(".stxt").textContent = detenido?'Guardado detenido · revisa el disquete':ofertaPendiente?'Oferta pendiente · revisa el disquete':typeof motivo==='string'?motivo:"Rechazado"; clearTimeout(el._t);
   if (typeof placeSaveIndPc === "function") placeSaveIndPc();
   // Un conflicto no desaparece como un aviso de éxito: permanece hasta resolverlo.
-  if(!detenido)el._t = setTimeout(() => { el.classList.remove("show"); if (typeof placeSaveIndPc === "function") placeSaveIndPc(); }, 4000);
+  if(!persistente)el._t = setTimeout(() => { el.classList.remove("show"); if (typeof placeSaveIndPc === "function") placeSaveIndPc(); }, 4000);
 }   // 14/9: el portero dijo que no
 function showSaved() {
   if(!guardadoManualEnCurso)estadoGuardar('ok','Guardado confirmado');
@@ -7638,6 +7648,10 @@ async function guardarAhora(){
       if(guardadoManualEnCurso)return;guardadoManualEnCurso=true;estadoGuardar('saving','Consultando el guardado del servidor…');
       try{const ok=await recuperarGuardadoServidor();if(UID===uid)ok?estadoGuardar('ok','Versión del servidor recuperada'):fallo();}finally{guardadoManualEnCurso=false;}
     },{title:'Recuperar guardado',yes:'Cargar versión del servidor',no:'Cancelar'});return;
+  }
+  if(uid&&CARGA_OK&&!SOLO_LOCAL&&ofertaPendientes(uid).length&&!MERCADO_EN_CURSO){
+    estadoGuardar('error','Hay una oferta por comprobar. Revisa el recibo en Ofertas de compra.');
+    p2pTab='ofertas';openOv('ov-p2p');return;
   }
   if(!disponible()){fallo();return;}
   guardadoManualEnCurso=true;estadoGuardar('saving','Esperando confirmación del servidor…');
@@ -8078,10 +8092,12 @@ function refreshIncursion() {
 let p2pTab = "comprar", p2pCache = null, p2pLoading = false;
 let p2pUid = null, p2pGeneration = 0, p2pFlight = null;
 let p2pMine = null, p2pPublic = null, p2pMineError = "", p2pPublicError = "";
+let p2pOfertas = null, p2pOfertasError = false;
 function p2pCuentaActual(){return typeof UID==='string'?UID:'';}
 function p2pLimpiar(uid){
   p2pUid=uid;p2pGeneration++;p2pCache=null;p2pMine=null;p2pPublic=null;
   p2pMineError='';p2pPublicError='';p2pLoading=false;p2pFlight=null;
+  p2pOfertas=null;p2pOfertasError=false;
 }
 function p2pResumen(){
   const status=$('p2p-cobros'),link=$('p2p-ver-cobros'),update=$('p2p-actualizar');
@@ -8089,7 +8105,7 @@ function p2pResumen(){
   const neto=ventas.reduce((s,r)=>s+marketNet(r.price,marketFee(r)),0);
   if(status){
     status.textContent=p2pMineError?'No se pudieron consultar tus cobros. Pulsa Actualizar.':
-      p2pMine===null?'Consultando tus cobros…':n?n+' venta'+(n===1?'':'s')+' · '+fmt(neto)+' Plata por cobrar':'Sin ventas por cobrar';
+      p2pMine===null?'Consultando tus cobros…':n?n+' venta'+(n===1?'':'s')+' · '+fmt(neto)+' Plata por cobrar':'Sin cobros de anuncios de venta';
     status.classList.toggle('p2p-cobros-listos',p2pMine!==null&&!p2pMineError&&n>0);
   }
   if(link)link.hidden=p2pMine===null||!!p2pMineError||n===0;
@@ -8130,6 +8146,180 @@ function p2pFilaCompra(r, uid) {
     ' data-buy="' + escapeHtml(String(r.id)) + '">Comprar · ' + fmt(r.price) + '</button></div></div>';
 }
 
+const P2P_OFERTA_RECURSOS = { madera: "Madera", piedra: "Piedra" };
+const P2P_OFERTA_NOMBRES = {
+  oferta_crear: "Publicar oferta", oferta_vender: "Vender materiales",
+  oferta_cancelar: "Retirar oferta", oferta_recibir: "Recibir materiales", oferta_cobrar: "Cobrar venta",
+};
+function p2pOfertaObjeto(item) {
+  return Object.hasOwn(P2P_OFERTA_RECURSOS, item) ? P2P_OFERTA_RECURSOS[item] : null;
+}
+function p2pOfertaId(id) {
+  return typeof id === "string" && /^[1-9][0-9]{0,17}$/.test(id);
+}
+function p2pOfertaEntero(value, min, max = Number.MAX_SAFE_INTEGER) {
+  return Number.isSafeInteger(value) && value >= min && value <= max;
+}
+function p2pOfertasEstadoValido(d) {
+  return d?.ok === true && p2pOfertaEntero(d.limite, 1) && p2pOfertaEntero(d.creadasHoy, 0) &&
+    p2pOfertaEntero(d.maxCantidad, 1) && p2pOfertaEntero(d.maxPrecio, 1) &&
+    Number.isSafeInteger(d.maxCantidad * d.maxPrecio) &&
+    Array.isArray(d.mercado) && Array.isArray(d.propias) && Array.isArray(d.entregas) && Array.isArray(d.cobros);
+}
+function p2pOfertasHtml(d, uid) {
+  let h = "";
+  const pendientes = ofertaPendientes(uid), pendiente = pendientes.length > 0;
+  if (pendiente) {
+    h += '<div class="info" role="status">Hay una oferta por comprobar. Hasta entonces tu avance queda en este navegador.</div>';
+    for (const p of pendientes) {
+      h += '<div class="forge-row"><span>' + P2P_OFERTA_NOMBRES[p.p2pOferta.accion] + '</span>' +
+        '<button class="ghost sm" data-oferta-comprobar="' + escapeHtml(p.op) + '">Comprobar operación</button></div>';
+    }
+  }
+  if (!p2pOfertasEstadoValido(d)) {
+    return h + '<div class="fds">No se pudieron cargar las ofertas de compra. Pulsa Actualizar.</div>';
+  }
+  const limite = Math.max(0, d.limite - d.creadasHoy), sinCupo = limite === 0;
+  const avisoCupo = sinCupo ? "Ya usaste tu cupo de hoy (UTC)." : "Ofertas disponibles hoy (UTC) · " + limite + " de " + d.limite + ".";
+  const bloquear = pendiente ? ' disabled' : '';
+  h += '<div class="secc">Publicar oferta de compra</div><div class="fds">' + avisoCupo +
+    ' La Plata se reserva hasta comprar los materiales o retirar la oferta.</div>' +
+    '<form id="p2p-oferta-form" class="p2p-oferta-form" novalidate>' +
+    '<label>Material<select id="p2p-oferta-item">' + Object.entries(P2P_OFERTA_RECURSOS)
+      .map(([k, n]) => '<option value="' + k + '">' + n + '</option>').join("") + '</select></label>' +
+    '<label>Cantidad<input id="p2p-oferta-cantidad" type="number" min="1" max="' + d.maxCantidad + '" step="1" value="1" inputmode="numeric"></label>' +
+    '<label>Plata por unidad<input id="p2p-oferta-precio" type="number" min="1" max="' + d.maxPrecio + '" step="1" value="1" inputmode="numeric"></label>' +
+    '<button type="submit" class="green sm" id="p2p-oferta-crear"' + (sinCupo ? ' disabled' : bloquear) + '>Revisar oferta</button>' +
+    '<p class="fds" id="p2p-oferta-total" aria-live="polite">Se reservará 1 Plata</p></form>';
+
+  h += '<div class="secc">Vender a una oferta</div>';
+  const mercado = d.mercado.filter(o => p2pOfertaObjeto(o?.item) && p2pOfertaId(o.id) &&
+    p2pOfertaEntero(o.qtyOpen, 1, d.maxCantidad) && p2pOfertaEntero(o.unitPrice, 1, d.maxPrecio));
+  if (!mercado.length) h += '<div class="fds">No hay ofertas de otros jugadores.</div>';
+  for (const o of mercado) {
+    const nombre = p2pOfertaObjeto(o.item), tienes = mkTengo("res", o.item), max = Math.min(o.qtyOpen, tienes);
+    h += '<div class="forge-row" data-oferta-fila="' + o.id + '"><div class="finfo"><div class="fnm">' +
+      nombre + ' · ' + ofertaPlata(o.unitPrice) + ' Plata/u.</div><div class="fds">Piden ' + o.qtyOpen + ' · Tienes ' + fmt(tienes) +
+      '</div></div><div class="fbtns"><input type="number" min="1" max="' + max + '" step="1" value="' + (max > 0 ? 1 : 0) +
+      '" inputmode="numeric" aria-label="Cantidad de ' + nombre + ' para vender" data-oferta-cantidad' + (max < 1 ? ' disabled' : bloquear) +
+      '><button class="green sm" data-oferta-vender="' + o.id + '"' + (max < 1 ? ' disabled' : bloquear) + '>Cotizar venta</button></div></div>';
+  }
+  h += '<div class="secc">Mis ofertas de compra</div>';
+  const propias = d.propias.filter(o => p2pOfertaObjeto(o?.item) && p2pOfertaId(o.id) &&
+    p2pOfertaEntero(o.qtyOpen, 1, d.maxCantidad) && p2pOfertaEntero(o.unitPrice, 1, d.maxPrecio));
+  if (!propias.length) h += '<div class="fds">No tienes ofertas con Plata reservada.</div>';
+  for (const o of propias) {
+    const nombre = p2pOfertaObjeto(o.item), fecha = Date.parse(o.expiresAt),
+      vencida = o.status === "vencida" || (Number.isFinite(fecha) && fecha <= Date.now()),
+      textoFecha = vencida ? " · Vencida" : Number.isFinite(fecha) ? " · Vence " +
+        new Intl.DateTimeFormat("es-UY", { dateStyle: "short", timeStyle: "short" }).format(fecha) : "";
+    h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + nombre + ' ×' + o.qtyOpen +
+      ' pendientes</div><div class="fds">' + ofertaPlata(o.qtyOpen * o.unitPrice) + ' Plata reservada' + textoFecha +
+      '</div></div><div class="fbtns"><button class="ghost sm" data-oferta-cancelar="' + o.id + '"' + bloquear + '>' +
+      (vencida ? 'Recuperar reserva' : 'Retirar oferta') + '</button></div></div>';
+  }
+  const entregas = d.entregas.filter(o => p2pOfertaObjeto(o?.item) && p2pOfertaId(o.id) && p2pOfertaEntero(o.qty, 1));
+  const cobros = d.cobros.filter(o => p2pOfertaId(o?.id) && p2pOfertaEntero(o.net, 0));
+  if (entregas.length) h += '<div class="secc">Compras listas para recibir</div>';
+  for (const o of entregas) {
+    h += '<div class="forge-row eq"><div class="fnm">' + p2pOfertaObjeto(o.item) + ' ×' + o.qty +
+      '</div><div class="fbtns"><button class="green sm" data-oferta-recibir="' + o.id + '"' + bloquear + '>Recibir</button></div></div>';
+  }
+  if (cobros.length) h += '<div class="secc">Ventas a ofertas por cobrar</div>';
+  for (const o of cobros) {
+    h += '<div class="forge-row eq"><div class="fnm">' + ofertaPlata(o.net) +
+      ' Plata</div><div class="fbtns"><button class="green sm" data-oferta-cobrar="' + o.id + '"' + bloquear + '>Cobrar</button></div></div>';
+  }
+  return h;
+}
+function p2pOfertasEnlazar(box, d, uid, current) {
+  const vigente = () => current() && p2pTab === "ofertas" && isOpen("ov-p2p");
+  const confirmar = (texto, hacer, opciones) => {
+    if (!vigente() || isOpen("ov-confirm") || !$("ov-confirm") || !$("cf-yes") || !$("cf-no")) return;
+    askConfirm(texto, () => {
+      if (vigente()) return hacer();
+      toast("La vista cambió. Vuelve a revisar la operación.");
+    }, { no: "Cancelar", yesClass: "green sm", ...opciones });
+  };
+  const mutar = async (detalle) => {
+    try {
+      const respuesta = await ofertaOperar(detalle);
+      if (respuesta && detalle.accion === "oferta_recibir" && UID === uid && mkPendCount()) mkPendCobrar();
+    } finally {
+      if (UID === uid && isOpen("ov-p2p")) await refreshP2P(true);
+    }
+  };
+  for (const b of box.querySelectorAll("[data-oferta-comprobar]")) b.onclick = () => {
+    confirmar("Vamos a comprobar el recibo. Si cambió el guardado del servidor, se cargará su versión y tu avance local quedará en una copia de este navegador.", async () => {
+      try { await ofertaComprobar(b.dataset.ofertaComprobar); }
+      finally { if (UID === uid && isOpen("ov-p2p")) await refreshP2P(true); }
+    }, { title: "Comprobar oferta pendiente", yes: "Comprobar" });
+  };
+  if (!p2pOfertasEstadoValido(d)) return;
+  const form = $("p2p-oferta-form"), lectura = () => {
+    const item = $("p2p-oferta-item").value, qty = Number($("p2p-oferta-cantidad").value), unitPrice = Number($("p2p-oferta-precio").value);
+    if (!p2pOfertaObjeto(item) || !p2pOfertaEntero(qty, 1, d.maxCantidad) || !p2pOfertaEntero(unitPrice, 1, d.maxPrecio)) return null;
+    return { item, qty, unitPrice, total: qty * unitPrice };
+  };
+  if (form) {
+    form.oninput = () => {
+      const oferta = lectura(), texto = $("p2p-oferta-total");
+      texto.textContent = oferta ? "Reserva de " + ofertaPlata(oferta.total) + " Plata" : "Elige una cantidad y un precio enteros.";
+    };
+    form.onsubmit = (ev) => {
+      ev.preventDefault();
+      if (!vigente() || ofertaPendientes(uid).length || d.creadasHoy >= d.limite) return;
+      const oferta = lectura();
+      if (!oferta) { toast("Elige una cantidad y un precio válidos."); return; }
+      const { item, qty, unitPrice, total } = oferta;
+      if (G.plata < total) { toast("Te faltan " + ofertaPlata(total - G.plata) + " Plata disponibles."); return; }
+      confirmar("Se reservarán " + ofertaPlata(total) + " Plata para comprar " + qty + " × " +
+        p2pOfertaObjeto(item) + ". Al retirar la oferta recuperarás la Plata de las unidades pendientes.", () => {
+        if (G.plata < total) { toast("Cambió tu saldo de Plata. Vuelve a revisar la oferta."); return; }
+        return mutar({ accion: "oferta_crear", kind: "res", item, qty, unitPrice });
+      }, { title: "Publicar oferta de compra", yes: "Reservar " + ofertaPlata(total) + " Plata" });
+    };
+  }
+  for (const b of box.querySelectorAll("[data-oferta-vender]")) b.onclick = async () => {
+    if (!vigente() || ofertaPendientes(uid).length) return;
+    const o = d.mercado.find(r => r.id === b.dataset.ofertaVender);
+    const qty = Number(b.closest("[data-oferta-fila]")?.querySelector("[data-oferta-cantidad]")?.value);
+    if (!o || !p2pOfertaEntero(qty, 1, Math.min(o.qtyOpen, mkTengo("res", o.item)))) {
+      toast("Revisa cuántos materiales tienes y cuántos pide la oferta.");
+      return;
+    }
+    b.disabled = true;
+    try {
+      const c = await ofertaCotizar(o.item, qty);
+      if (!vigente()) return;
+      if (c.order !== o.id || c.item !== o.item || c.qty !== qty || c.unitPrice !== o.unitPrice ||
+          c.gross !== o.unitPrice * qty || !p2pOfertaEntero(c.fee, 0, c.gross) || c.net !== c.gross - c.fee ||
+          typeof c.quote !== "string" || !c.quote) throw Error("La oferta cambió. Revisa el libro actualizado.");
+      if (c.net === 0) { toast("La comisión dejaría un cobro de 0 Plata. Prueba con otra cantidad."); return; }
+      confirmar("Entregarás " + qty + " × " + p2pOfertaObjeto(o.item) + " por " +
+        ofertaPlata(c.gross) + " Plata. La comisión es de " + ofertaPlata(c.fee) + ". Podrás cobrar " + ofertaPlata(c.net) + " Plata.", () => {
+        if (mkTengo("res", o.item) < qty) { toast("Cambió lo que tienes en la bolsa."); return; }
+        return mutar({ accion: "oferta_vender", kind: "res", item: o.item, qty, unitPrice: c.unitPrice,
+          order: c.order, minNet: c.net, quote: c.quote });
+      }, { title: "Vender a una oferta de compra", yes: "Vender" });
+    } catch (error) {
+      if (vigente()) { toast(error.message || "No se pudo cotizar la venta."); await refreshP2P(true); }
+    } finally { if (vigente()) b.disabled = false; }
+  };
+  for (const b of box.querySelectorAll("[data-oferta-cancelar]")) b.onclick = () => {
+    const o = d.propias.find(r => r.id === b.dataset.ofertaCancelar);
+    if (!o) return;
+    confirmar("Recuperarás la reserva de las unidades que aún no se hayan comprado. Las compras ya efectuadas quedan en tus entregas.", () =>
+      mutar({ accion: "oferta_cancelar", order: o.id }), { title: "Retirar oferta de compra", yes: "Retirar oferta" });
+  };
+  for (const b of box.querySelectorAll("[data-oferta-recibir]")) b.onclick = () => {
+    if (vigente()) return mutar({ accion: "oferta_recibir", delivery: b.dataset.ofertaRecibir });
+  };
+  for (const b of box.querySelectorAll("[data-oferta-cobrar]")) b.onclick = () => {
+    if (vigente()) return mutar({ accion: "oferta_cobrar", receipt: b.dataset.ofertaCobrar });
+  };
+}
+
 async function refreshP2P(actualizar=false) {
   const box = $("p2p-list"); if (!box) return;
   const uid=p2pCuentaActual();
@@ -8145,6 +8335,7 @@ async function refreshP2P(actualizar=false) {
   const jobs=[];
   if(p2pMine===null&&!p2pMineError)jobs.push({key:'mine',read:()=>mkMine({estricto:true,pendientes:true})});
   if(p2pTab==='comprar'&&p2pPublic===null&&!p2pPublicError)jobs.push({key:'public',read:()=>mkList(null,{estricto:true})});
+  if(p2pTab==='ofertas'&&!p2pOfertas&&!p2pOfertasError)jobs.push({key:'ofertas',read:ofertaConsultar});
   if(jobs.length){
     const generation=p2pGeneration;
     p2pLoading=true;p2pResumen();box.setAttribute('aria-busy','true');box.innerHTML='<div class="fds">Cargando…</div>';
@@ -8156,6 +8347,11 @@ async function refreshP2P(actualizar=false) {
         box.setAttribute('aria-busy','false');box.innerHTML='<div class="fds">La cuenta ha cambiado. Pulsa Actualizar.</div>';return;
       }
       results.forEach((result,i)=>{
+        if(jobs[i].key==='ofertas'){
+          p2pOfertas=result.status==='fulfilled'&&p2pOfertasEstadoValido(result.value)?result.value:null;
+          p2pOfertasError=!p2pOfertas;
+          return;
+        }
         const ok=result.status==='fulfilled'&&Array.isArray(result.value);
         if(jobs[i].key==='mine'){p2pMine=ok?result.value:null;p2pMineError=ok?'':'lectura';}
         else{p2pPublic=ok?result.value:null;p2pPublicError=ok?'':'lectura';}
@@ -8179,7 +8375,9 @@ async function refreshP2P(actualizar=false) {
       (typeof mkPendDetalle === 'function' ? (G.mkPend || []).map(p => '<div class="fds">' + escapeHtml(mkPendDetalle(p)) + '</div>').join('') : '') + '</div>' +
       '<div class="fbtns"><button class="green sm" id="p2p-pend">Reclamar</button></div></div>';
   }
-  if (p2pTab === "vender") {
+  if (p2pTab === "ofertas") {
+    h += p2pOfertasHtml(p2pOfertas, uid);
+  } else if (p2pTab === "vender") {
     h += '<div class="info">Comisión para nuevos anuncios: '+marketFee()+'%. Tu límite: '+infraCupoP2P()+' anuncios al día (reinicio a las 00:00 UTC). La tiendita en Mercado → Mejoras añade un anuncio de venta diario de forma permanente.</div>';
     h += '<div class="fds">Elige qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
     const ops = [];
@@ -8232,6 +8430,7 @@ async function refreshP2P(actualizar=false) {
     }
   }
   box.innerHTML = h;
+  if (p2pTab === "ofertas") p2pOfertasEnlazar(box, p2pOfertas, uid, current);
   { const pb = $("p2p-pend"); if (pb) pb.onclick = () => { mkPendCobrar(); refreshP2P(); }; }
   box.querySelectorAll("[data-pub]").forEach(b => b.onclick = async () => {
     if(!current())return;
