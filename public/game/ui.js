@@ -4197,7 +4197,26 @@ function refreshForge() {
     '"></div><div class="finfo"><div class="fnm">' + peto.label + '</div><div class="fds">+' +
     pieza.def + " de defensa · " + estadoPeto + "</div>" + precioPeto + '</div><div class="fbtns">' +
     botonPeto + "</div></div>";
-  // picos APILABLES (31/7): cada uno es 1 uso; craftear suma al stock
+  const motivoLoteHerreria = {
+    vip: "Hasta 5 con VIP", cap: "Máximo 99 en la bolsa", space: "Falta espacio en la bolsa",
+    stock: "Faltan materiales", plata: "Falta Plata",
+  };
+  const botonesHerramienta = (kind, id, individual, lote) => {
+    const uno = forgeToolQuote(kind, id), vip = forgeToolQuote(kind, id, 5);
+    const region = "forge-lote-" + kind + "-" + id;
+    const coste = Object.entries(vip.cost).map(([k, n]) => k === "plata" ? fmtPlata(n) + " Plata"
+      : fmt(n) + " " + (RES_LABEL[k] || k).toLowerCase()).join(" · ");
+    const motivo = motivoLoteHerreria[vip.reason];
+    const detalle = '<div class="fds" id="' + region + '">' + (vip.count ? 'Coste del lote: <b>' + escapeHtml(coste) + '</b>' : '') +
+      (motivo ? (vip.count ? ' · ' : '') + motivo : '') + '</div>' +
+      (!uno.count && ["cap", "space"].includes(uno.reason) ? '<div class="falta-receta">' + motivoLoteHerreria[uno.reason] + '</div>' : '');
+    const btns = '<button class="green sm" ' + (uno.count ? '' : 'disabled ') + 'data-' + individual + '="' + id +
+      '" data-forge-count="' + uno.count + '">Fabricar</button>' +
+      '<button class="green sm" ' + (vip.count ? '' : 'disabled ') + 'data-' + lote + '="' + id + '" data-forge-count="' + vip.count +
+      '" aria-describedby="' + region + '">' + (vip.produced ? 'Fabricar ' + vip.produced : 'Lote') + ' · VIP</button>';
+    return { detalle, btns };
+  };
+  // Los picos se apilan y cada receta suma sus usos a la bolsa.
   PICK_ORDER.forEach(id => {
     const pd = PICK_DEF[id], n = pickCount(id), isEq = eq === id && n > 0;
     /* 18/8: dos puertas por mineral — el pico (lo que la herramienta aguanta) y Minería (lo que
@@ -4208,11 +4227,9 @@ function refreshForge() {
         : '<span style="opacity:.4" title="Minería nivel ' + oreNivelReq(o) + '">' + resIc(o) + '</span>').join("");
     const img = '<img src="' + GF.spr(pd.sprite) + '">';
     const costStr = Object.keys(pd.cost).map(k => resIc(k) + " " + pd.cost[k]).join(" · ") + (pd.plata ? (Object.keys(pd.cost).length ? " · " : "") + coinIc("plata") + " " + pd.plata : "");
-    const afford = canAfford(pd.cost) && (!pd.plata || G.plata >= pd.plata);
-    let btns = '<button class="green sm" ' + (afford ? "" : "disabled") + ' data-craft="' + id + '">Fabricar</button>'
-      + '<button class="green sm" ' + (afford && vipVigente() ? "" : "disabled") + ' data-craft5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button>';
-    if (n > 0 && !isEq) btns += '<button class="ghost sm" data-equip="' + id + '">Equipar</button>';
-    craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tienes ' + n + '</div><div class="fds">Coste por unidad: <b>' + costStr + '</b></div>'+faltaReceta(pd.cost,pd.plata)+'</div><div class="fbtns">' + btns + "</div></div>";
+    const { detalle, btns } = botonesHerramienta("pick", id, "craft", "craft5");
+    const equip = n > 0 && !isEq ? '<button class="ghost sm" data-equip="' + id + '">Equipar</button>' : '';
+    craft += '<div class="forge-row ' + (isEq ? "eq" : "") + '"><div class="fic">' + img + '</div><div class="finfo"><div class="fnm">' + pd.label + (isEq ? ' <span class="tag">equipado</span>' : "") + '</div><div class="fds">Mina: ' + mineEmo + ' · 1 uso c/u · tienes ' + n + '</div><div class="fds">Coste por unidad: <b>' + costStr + '</b></div>'+faltaReceta(pd.cost,pd.plata)+detalle+'</div><div class="fbtns">' + btns + equip + "</div></div>";
   });
   // herramientas consumibles (modelo SFL 31/7): el hacha se craftea barata y se rompe (sin reparación)
   // 8/9 (dirección): la caña salió de acá — era el fósil de la Pesca v2 y no la usaba nadie
@@ -4220,10 +4237,8 @@ function refreshForge() {
   ["axe"].forEach(id => {
     const td = TOOL_DEF[id], tc = TOOL_CRAFT[id], n = toolCount(id);
     const cs = Object.keys(tc.cost).map(k => resIc(k) + " " + tc.cost[k]).join(" · ") + (tc.plata ? (Object.keys(tc.cost).length ? " · " : "") + coinIc("plata") + " " + tc.plata : "");
-    const ok = canAfford(tc.cost) && G.plata >= tc.plata;
-    const btn = '<button class="green sm" ' + (ok ? "" : "disabled") + ' data-ctool="' + id + '">Fabricar</button>'
-      + '<button class="green sm" ' + (ok && vipVigente() ? "" : "disabled") + ' data-ctool5="' + id + '" title="Fabricar cinco requiere VIP">×5 · VIP</button>';
-    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tienes ' + n + '</div><div class="fds">Coste por unidad: <b>' + cs + '</b></div>'+faltaReceta(tc.cost,tc.plata)+'</div><div class="fbtns">' + btn + '</div></div>';
+    const { detalle, btns } = botonesHerramienta("tool", id, "ctool", "ctool5");
+    craft += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(td.sprite) + '"></div><div class="finfo"><div class="fnm">' + td.label + '</div><div class="fds">1 uso c/u · tienes ' + n + '</div><div class="fds">Coste por unidad: <b>' + cs + '</b></div>'+faltaReceta(tc.cost,tc.plata)+detalle+'</div><div class="fbtns">' + btns + '</div></div>';
   });
   /* LAS CAÑAS DE LA v4 SE ARMAN AQUÍ, y esto arregla el fallo más caro que encontré en toda la
      limpieza: la Herrería vendía las cañas de la v3, que escriben en el MISMO G.canas que las de
@@ -4369,10 +4384,14 @@ function refreshForge() {
   if (G.armasUnlocked) $("forge-armas").innerHTML = armas || '<div class="sub">Ya tienes todas las armas. Las flechas se siguen fabricando aquí.</div>';
   $("forge-repair").innerHTML = repair || '<div class="sub">Todavía no tienes armas para reparar.</div>';
   const card = $("ov-forge");
+  const cuentaHerreria = typeof UID === "undefined" ? null : UID;
+  const escenaHerreria = window.GF?.scene;
+  const ejecutarHerramienta = (b, fabricar, id, cantidad) => (typeof UID === "undefined" || UID === cuentaHerreria) &&
+    window.GF?.scene === escenaHerreria && fabricar(id, cantidad, Number(b.dataset.forgeCount));
   card.querySelectorAll("[data-craft]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
-    ["[data-craft='" + b.dataset.craft + "']"], () => craftPick(b.dataset.craft)));
+    ["[data-craft='" + b.dataset.craft + "']"], () => ejecutarHerramienta(b, craftPick, b.dataset.craft, 1)));
   card.querySelectorAll("[data-craft5]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
-    ["[data-craft5='" + b.dataset.craft5 + "']", "[data-craft='" + b.dataset.craft5 + "']"], () => craftLote(craftPick, b.dataset.craft5, 5)));
+    ["[data-craft5='" + b.dataset.craft5 + "']", "[data-craft='" + b.dataset.craft5 + "']"], () => ejecutarHerramienta(b, craftPick, b.dataset.craft5, 5)));
   card.querySelectorAll("[data-equip]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
     ["[data-equip='" + b.dataset.equip + "']", "[data-craft='" + b.dataset.equip + "']"], () => equipPick(b.dataset.equip)));
   card.querySelectorAll("[data-mat]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
@@ -4382,11 +4401,11 @@ function refreshForge() {
   card.querySelectorAll("[data-rtool]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
     ["[data-rtool='" + b.dataset.rtool + "']"], () => repairTool(b.dataset.rtool)));
   card.querySelectorAll("[data-ctool]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
-    ["[data-ctool='" + b.dataset.ctool + "']"], () => craftTool(b.dataset.ctool)));
+    ["[data-ctool='" + b.dataset.ctool + "']"], () => ejecutarHerramienta(b, craftTool, b.dataset.ctool, 1)));
   card.querySelectorAll("[data-ccana]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
     ["[data-ccana='" + b.dataset.ccana + "']"], () => { if (canaV4Comprar(b.dataset.ccana)) refreshForge(); }));
   card.querySelectorAll("[data-ctool5]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
-    ["[data-ctool5='" + b.dataset.ctool5 + "']", "[data-ctool='" + b.dataset.ctool5 + "']"], () => craftTool(b.dataset.ctool5, 5)));
+    ["[data-ctool5='" + b.dataset.ctool5 + "']", "[data-ctool='" + b.dataset.ctool5 + "']"], () => ejecutarHerramienta(b, craftTool, b.dataset.ctool5, 5)));
   card.querySelectorAll("[data-carm]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
     ["[data-eqarm='" + b.dataset.carm + "']", "[data-carm='" + b.dataset.carm + "']"], () => craftWeapon(b.dataset.carm)));
   card.querySelectorAll("[data-rarm]").forEach(b => {
@@ -4455,6 +4474,16 @@ function hornoAccionConFocoPc(ev, selectores, accion) {
   try { accion(); }
   finally { HORNO_FOCO_EN_ACCION = false; hornoReponerFocoPc($("horno-mats")); }
 }
+function hornoCotizarLote(id) {
+  const receta = Object.hasOwn(MAT_DEF, id) ? MAT_DEF[id] : null;
+  if (!receta) return null;
+  const libres = hornoLibres();
+  const insumos = Object.entries(receta.cost);
+  const cantidad = Math.max(0, Math.min(libres, ...insumos.map(([k, n]) => Math.floor((G.res[k] || 0) / n))));
+  const total = insumos.map(([k, n]) => fmtDec(cantidad * n) + " " + (RES_LABEL[k] || k).toLowerCase()).join(" · ");
+  return { cantidad, total, libres };
+}
+
 function refreshHorno() {
   const box = $("horno-mats"); if (!box) return;
   /* 24/8: el Horno pasó a ser una COLA (como las ollas). Primero lo que está al fuego con su
@@ -4530,36 +4559,50 @@ function refreshHorno() {
     ["[data-hn-cancelar='" + b.dataset.hnCancelar + "']"], () => { hornoCancelar(+b.dataset.hnCancelar); }));
   }
 
-  /* --- lo que se puede fundir. El botón del LOTE dice cuántos van a entrar de verdad --- */
-  /* 24/8 (diseñador: « dice craft 5 y craftea 3; o craftea de 5 en 5 o dice craftear 3 »).
-     Craftear de 5 en 5 querría un horno de 5 bocas, y las tres son a propósito. Así que manda
-     la boca: el botón cuenta los lugares libres y lo que alcanza con lo que tenés, y escribe
-     ESE número. Un botón que promete cinco y hace tres no es un bug de la cola: es un botón
-     que miente, y el jugador lo descubre después de apretarlo. */
   let lista = "";
+  const vip = vipVigente(), cuenta = typeof UID === "undefined" ? null : UID, partida = G;
   MAT_ORDER.forEach(id => {
-    const md = MAT_DEF[id], cs = Object.keys(md.cost).map(k => resIc(k) + " " + md.cost[k]).join(" · ");
-    const libres = (typeof hornoLibres === "function") ? hornoLibres() : 1;
-    const alcanza = Math.min.apply(null, Object.keys(md.cost).map(k => Math.floor((G.res[k] || 0) / md.cost[k])));
-    const lote = Math.max(0, Math.min(libres, alcanza));
-    const puede = lote >= 1;
-    let btn = '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-mat="' + id + '">Fundir</button>';
-    if (lote >= 2) btn += '<button class="green sm" '+(vipVigente()?'':'disabled')+' data-mat5="' + id + '" data-lote="' + lote +
-      '" title="Llenar el horno: ' + lote + ' al fuego de una; requiere VIP">×' + lote + ' · VIP</button>';
-    const porqueNo = libres <= 0 ? " · el horno está lleno" : (alcanza < 1 ? " · te faltan materiales" : "");
-    html = '<div class="forge-row"><div class="fic"><img src="' + GF.spr(md.sprite) + '"></div><div class="finfo"><div class="fnm">' + md.label + '</div>' +
-      '<div class="fds">Tienes ' + fmt(G.res[id] || 0) + ' · Coste: ' + cs + ' · tarda ' + Math.round(matCdMs(id) / 60000) + ' min' + porqueNo + '</div>' +
+    const md = MAT_DEF[id], cotizacion = hornoCotizarLote(id);
+    const unidad = Object.entries(md.cost).map(([k, n]) => fmtDec(n) + " " + (RES_LABEL[k] || k).toLowerCase()).join(" · ");
+    const { cantidad, total, libres } = cotizacion;
+    const bloqueo = libres <= 0 ? " · La cola está llena" : cantidad < 1 ? " · Faltan materiales" : "";
+    const precioLote = vip && cantidad >= 2 ? '<div class="fds" id="hn-lote-' + id + '">Total del lote <b>' + escapeHtml(total) + '</b></div>' : "";
+    let btn = '<button class="green sm" data-mat="' + id + '" aria-describedby="hn-unidad-' + id + '"' +
+      (cantidad > 0 ? "" : " disabled") + '>Fundir</button>';
+    if (cantidad >= 2) {
+      btn += '<button class="green sm" data-mat5="' + id + '" data-lote="' + cantidad + '"' +
+        (vip ? ' aria-describedby="hn-lote-' + id + '">Fundir ' + cantidad : ' disabled>Lote') + ' · VIP</button>';
+    }
+    lista += '<div class="forge-row"><div class="fic"><img alt="" src="' + GF.spr(md.sprite) +
+      '"></div><div class="finfo"><div class="fnm">' + md.label + '</div><div class="fds">Tienes ' + fmt(G.res[id] || 0) +
+      ' · ' + Math.round(matCdMs(id) / 60000) + ' min por pieza</div><div class="fds" id="hn-unidad-' + id +
+      '">Por pieza <b>' + escapeHtml(unidad) + '</b>' + bloqueo + '</div>' + precioLote +
       '</div><div class="fbtns">' + btn + '</div></div>';
-    lista += html;
   });
   if (cola.length && !window._hornoCdTick) { window._hornoCdTick = setTimeout(() => { window._hornoCdTick = null; if (isOpen("ov-horno")) refreshHorno(); }, 1000); }
-  if (elLista._firma !== lista) {   // solo se rehace si cambió: así ningún tick se come un clic
+  if (elLista._firma !== lista || elLista._partida !== partida || elLista._cuenta !== cuenta) {
     elLista._firma = lista;
+    elLista._partida = partida;
+    elLista._cuenta = cuenta;
     elLista.innerHTML = lista;
+    const vigente = boton => G === partida && boton.isConnected && isOpen("ov-horno") && !enZona() &&
+      (typeof UID === "undefined" ? null : UID) === cuenta;
     elLista.querySelectorAll("[data-mat]").forEach(b => b.onclick = (ev) => hornoAccionConFocoPc(ev,
-      ["[data-mat='" + b.dataset.mat + "']"], () => craftMat(b.dataset.mat)));
+      ["[data-mat='" + b.dataset.mat + "']"], () => {
+        if (vigente(b) && compraLocalPuedeGuardar(cuenta, "fundir")) craftMat(b.dataset.mat);
+      }));
     elLista.querySelectorAll("[data-mat5]").forEach(b => b.onclick = (ev) => hornoAccionConFocoPc(ev,
-      ["[data-mat5='" + b.dataset.mat5 + "']", "[data-mat='" + b.dataset.mat5 + "']"], () => craftLote(craftMat, b.dataset.mat5, +b.dataset.lote || 5)));
+      ["[data-mat5='" + b.dataset.mat5 + "']", "[data-mat='" + b.dataset.mat5 + "']"], () => {
+        if (!vigente(b) || !compraLocalPuedeGuardar(cuenta, "fundir")) return false;
+        const id = b.dataset.mat5, cantidad = Number(b.dataset.lote);
+        const actual = hornoCotizarLote(id);
+        if (!vipVigente() || actual?.cantidad !== cantidad) {
+          toast("Cambió la cantidad disponible. Revisa el lote y su coste.");
+          refreshHorno();
+          return false;
+        }
+        return craftLote(craftMat, id, cantidad);
+      }));
   }
   hornoReponerFocoPc(box);
 }
@@ -6716,14 +6759,18 @@ function refreshPacks(){
 }
 function refreshSeedShop() {
   const box = $("seed-shop"); if (!box) return;
+  const cuenta = typeof UID === "undefined" ? null : UID, partida = G;
   const futurosAbiertos=!!box.querySelector('#semillas-futuras')?.open;
   const sb = seedBuysToday();
   // 15/8 (dirección): el cupo de siempre manda también durante el tutorial (el kit cubre los insumos)
-  const cupoTxt = 'Cupo diario: ' + sb.count + '/' + seedDailyMax() + ' semillas (sube con el nivel de granja) · las semillas se abren con la habilidad de Cultivo';
+  const maximo = seedDailyMax(), disponibles = Math.max(0, maximo - sb.count);
+  const cupoTxt = 'Semillas disponibles hoy: ' + disponibles + ' de ' + maximo +
+    '. El cupo depende de tus parcelas y se renueva a las 00:00 UTC. Se desbloquean más semillas al subir Cultivo.';
   box.innerHTML = '<div id="packs-shop"></div><div class="shophead">' + cupoTxt + '</div>' + CROP_ORDER.map(k => {
     const cd = CROP_DEF[k], unlocked = cropUnlocked(k), aff = G.plata >= cd.seedCost;
+    const fiada = unlocked && semillaFiadaDisponible(k, sb);
     const controls = unlocked
-      ? `<input id="sq-${k}" aria-label="Cantidad de semillas de ${cd.label}" title="Cantidad a comprar" type="number" min="1" value="1"><button class="green sm" data-buy="${k}" ${aff ? "" : "disabled"}>Comprar · ${coinIc("plata")}${cd.seedCost} c/u</button>`
+      ? `<input id="sq-${k}" aria-label="Cantidad de semillas de ${cd.label}" title="Cantidad a comprar" type="number" min="1" value="1" ${fiada ? "disabled" : ""}><button class="green sm" data-buy="${k}" data-fiada="${fiada}" ${aff || fiada ? "" : "disabled"}>${fiada ? "Pedir 1 semilla fiada" : "Comprar · " + coinIc("plata") + cd.seedCost + " c/u"}</button>`
       : `<button class="ghost sm" disabled data-cultivo-bloqueado="${k}" title="Se abre con la habilidad de Cultivo">Cultivo nv ${cd.lvl}</button>`;
     return `<div class="mkt-row"><span class="mimg">${itemIcon({ sprite: "seed_" + k, emoji: cd.emoji })}</span><div class="minfo"><div class="mnm">${cd.label} <span class="seedlv">nv ${cd.lvl}</span></div><div class="mds">Semilla · crece en <span class="seed-grow-time">${fmtSecs(cd.grow)}</span> · tienes ${fmt(G.seeds[k] || 0)}</div><div class="mds compra-total" id="st-${k}" aria-live="polite">Total: ${cd.seedCost} Plata</div></div>${controls}</div>`;
   }).join("")
@@ -6746,7 +6793,7 @@ function refreshSeedShop() {
     return '<details class="ayuda-menu"><summary>🆘 Kit de emergencia · Golden</summary>'
       + fila("axe", "axe", "🪓", "Hacha", "1 uso · para cuando no te queda ni para talar")
       + fila("pick", "pick_stone", "⛏️", "Pico de Piedra", "1 picada · se suma a tu pila (como las hachas)")
-      + fila("seed", "seed_papa", "🥔", "Semilla de papa", "no gasta el cupo diario · para replantar de cero")+'</details>';
+      + fila("seed", "seed_papa", "🥔", "Semilla de papa", "cuenta para el cupo diario de semillas")+'</details>';
   })()
   /* 8/9 (tarde, dirección) — LOS CONTENEDORES DE CAZA. Se venden acá y no en la Herrería a
      propósito: son de reponer, no de fabricar, y quien acaba de perder la mochila tiene que poder
@@ -6768,11 +6815,23 @@ function refreshSeedShop() {
   refreshPacks();
   box.querySelectorAll('[id^="sq-"]').forEach(inp=>{
  const k=inp.id.slice(3),out=$('st-'+k);
- const previa=()=>{const left=Math.max(0,seedDailyMax()-seedBuysToday().count),n=Math.min(left,Math.max(1,Math.floor(+inp.value||1)));if(out)out.textContent=left?'Total: '+fmt(n*CROP_DEF[k].seedCost)+' Plata'+(n<+inp.value?' · cupo: '+n+' semillas':''):'Cupo diario agotado';};
+ const previa=()=>{
+   if(!out)return;
+   const registro=seedBuysToday(),left=Math.max(0,seedDailyMax()-registro.count);
+   const n=Math.min(left,Math.max(1,Math.floor(+inp.value||1)));
+   out.textContent=semillaFiadaDisponible(k,registro)?'1 semilla fiada · 0 Plata':
+     left?'Total: '+fmt(n*CROP_DEF[k].seedCost)+' Plata'+(n<+inp.value?' · cupo: '+n+' semillas':''):'Cupo diario agotado';
+ };
  inp.addEventListener('input',previa);previa();
  });
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = (ev) => {
+    if (G !== partida || !b.isConnected || (typeof UID === "undefined" ? null : UID) !== cuenta) return;
     seedShopGuardarFocoPc(ev, "buy", b.dataset.buy);
+    if ((b.dataset.fiada === "true") !== semillaFiadaDisponible(b.dataset.buy, seedBuysToday())) {
+      toast("Cambió la disponibilidad. Revisa la cantidad y el coste.");
+      refreshSeedShop();
+      return;
+    }
     const inp = $("sq-" + b.dataset.buy); buySeed(b.dataset.buy, inp ? +inp.value : 1);
     /* buySeed sólo repinta si la compra llegó a hacerse. Si la rechazó, no dejamos una intención
        vieja que pudiera reaparecer en el siguiente refresco ajeno. */

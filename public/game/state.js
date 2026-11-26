@@ -810,6 +810,15 @@ function seedBuysToday() {
   if (sb.date !== dayStamp(0)) { sb.date = dayStamp(0); sb.count = 0; sb.caridad = 0; }   // 15/8: también la semilla fiada del día
   return sb;
 }
+// El rescate de una papa diaria se ofrece sólo cuando no queda nada con lo que replantar.
+function semillaFiadaDisponible(k, sb) {
+  if (k !== "papa" || G.plata >= CROP_DEF.papa.seedCost || sb.caridad || sb.count >= seedDailyMax()) return false;
+  const tieneSem = Object.values(G.seeds || {}).some(n => n > 0);
+  const tieneCult = Object.keys(CROP_DEF).some(c => Math.floor(G.res[c] || 0) > 0);
+  const tienePlato = Object.values(G.dishes || {}).some(n => n > 0);
+  const tieneSembrado = (G.plots || []).some(p => p && (p.state === "growing" || p.state === "ready"));
+  return !tieneSem && !tieneCult && !tienePlato && !tieneSembrado;
+}
 function buySeed(k, qty) {
   const cd = CROP_DEF[k]; if (!cd) { console.warn("[buySeed] cultivo inexistente:", k); return; }
   if (!cropUnlocked(k)) { toast("Necesitas Cultivo nivel " + cd.lvl); return; }
@@ -828,17 +837,14 @@ function buySeed(k, qty) {
   // 15/8: RED ANTI-SOFTLOCK — jugador en cero absoluto (sin plata, semillas, cultivos,
   // platos ni nada creciendo): el Mercado le FÍA una semilla de papa por día. Sin esto,
   // como los materiales no se venden, el cero era un callejón sin salida matemático.
-  let fiada = false;
-  if (k === "papa" && G.plata < cd.seedCost && !sb.caridad) {
-    const tieneSem = Object.keys(G.seeds || {}).some(s => (G.seeds[s] || 0) > 0);
-    const tieneCult = Object.keys(CROP_DEF).some(c => Math.floor(G.res[c] || 0) > 0);
-    const tienePlato = Object.keys(G.dishes || {}).some(d => (G.dishes[d] || 0) > 0);
-    const tieneSembrado = (G.plots || []).some(p => p && (p.state === "growing" || p.state === "ready"));
-    if (!tieneSem && !tieneCult && !tienePlato && !tieneSembrado) { fiada = true; qty = 1; sb.caridad = 1; }
-  }
+  const fiada = semillaFiadaDisponible(k, sb);
+  if (fiada) qty = 1;
   const cost = fiada ? 0 : cd.seedCost * qty;
   if (G.plata < cost) { toast("Te falta plata"); return; }
-  if (fiada) toast("El Mercado te fía tu primera semilla del día 🌱");
+  if (fiada) {
+    sb.caridad = 1;
+    toast("El Mercado te fía tu primera semilla del día 🌱");
+  }
   G.plata -= cost; G.seeds[k] = (G.seeds[k] || 0) + qty;
   sb.count += qty;
   // 13/8: la semilla comprada vuelve a la barra rápida si no estaba (la agotada sale sola)
@@ -3464,24 +3470,86 @@ function payCost(c) { for (const k in c) { if (k === "plata") G.plata -= c[k]; e
 const FORGE_LIT_MS = 8000;
 function forgeWork() { G.forgeLitUntil = nowMs() + FORGE_LIT_MS; if (window.FARM && FARM.updateForge) FARM.updateForge(); if (window.sfx) sfx("mine"); }
 // picos APILABLES: G.picks.dur[id] es la CANTIDAD (1 uso cada uno); craftear suma al stock
-function pickCount(id) { return G.picks.owned[id] ? Math.max(0, Math.floor(G.picks.dur[id] || 0)) : 0; }
-function craftPick(id) {
-  picosUnificarEstado(G);if(id==='wood')id='stone';
-  const pd = PICK_DEF[id]; if (!pd) { console.warn("[craftPick] pico inexistente:", id); return; }
-  if (pickCount(id) >= 99) { toast("Máximo 99 " + pd.label); return; }
-  if (!canAfford(pd.cost)) { toast("Te faltan materiales"); return; }
-  if (pd.plata && G.plata < pd.plata) { toast("Te falta plata"); return; }
-  payCost(pd.cost); if (pd.plata) G.plata -= pd.plata;
-  const first = !G.picks.owned[id];
-  // 17/8: un crafteo rinde pd.dur PICADAS, no una. El campo `dur` existía en PICK_DEF desde
-  // siempre pero NADIE lo leía: acá se sumaba un 1 fijo. O sea que subir `dur` no hacía nada
-  // y el arreglo del ancla habría sido un no-op silencioso. Ahora la receta paga dur usos.
-  G.picks.owned[id] = true; G.picks.dur[id] = pickCount(id) + (pd.dur || 1);
-  if (first || !G.picks.eq) G.picks.eq = id;
-  addXp("crafting", 10 + pd.tier * 4);
-  if (typeof tutoEvent === "function") { tutoEvent("crafttool"); tutoEvent("craftpick"); }
-  log("Has fabricado " + pd.label + ((pd.dur || 1) > 1 ? " ×" + pd.dur : "") + " (tienes " + G.picks.dur[id] + ").", "gold"); toast("+" + (pd.dur || 1) + " " + pd.label, "success", "fabricar");
+function pickCount(id, picks = G.picks) { return picks.owned[id] ? Math.max(0, Math.floor(picks.dur[id] || 0)) : 0; }
+function forgeToolQuote(kind, id, requested = 1) {
+  const pick = kind === "pick";
+  if (pick && id === "wood") id = "stone";
+  const recipes = pick ? PICK_DEF : TOOL_CRAFT;
+  if (!Object.hasOwn(recipes, id)) return null;
+  const recipe = recipes[id], units = pick ? recipe.dur || 1 : 1;
+  const limit = Math.min(99, Math.max(1, Math.floor(requested || 1)));
+  const quote = { id, count: 0, produced: 0, cost: {}, reason: null };
+  if (limit > 1 && !vipVigente()) { quote.reason = "vip"; return quote; }
+  const pilas = amount => Math.ceil(Math.floor(amount) / 99);
+  // La cotización sólo proyecta la migración que la fabricación de picos aplica al confirmar.
+  const picks = pick ? { owned: { ...G.picks.owned }, dur: { ...G.picks.dur } } : G.picks;
+  if (pick) picosUnificarEstado({ picks });
+  const current = pick ? pickCount(id, picks) : toolCount(id);
+  const occupied = canonicalStacks().length, capacity = invSlots();
+  const normalized = occupied + (pick ? pilas(pickCount("stone", picks)) - pilas(pickCount("stone")) : 0);
+  const materials = Object.entries(recipe.cost);
+  for (let n = 1; n <= limit; n++) {
+    const produced = n * units, total = current + produced;
+    if (total > 99) { quote.reason = "cap"; break; }
+    const cost = Object.fromEntries(materials.map(([key, amount]) => [key, amount * n]));
+    if (!canAfford(cost)) { quote.reason = "stock"; break; }
+    if (recipe.plata) {
+      cost.plata = recipe.plata * n;
+      if (G.plata < cost.plata) { quote.reason = "plata"; break; }
+    }
+    let slots = normalized + pilas(total) - pilas(current);
+    for (const [key] of materials) {
+      const available = G.res[key] || 0;
+      slots += pilas(available - cost[key]) - pilas(available);
+    }
+    if (slots > capacity) {
+      // Una bolsa antigua con exceso puede usar un hueco liberado o una pila visible existente.
+      if (slots > occupied) { quote.reason = "space"; break; }
+      const resources = { ...G.res };
+      for (const [key] of materials) resources[key] -= cost[key];
+      const tools = pick ? G.tools : { ...G.tools, [id]: total };
+      const nextPicks = pick ? { owned: { ...picks.owned, [id]: true }, dur: { ...picks.dur, [id]: total } } : picks;
+      const visible = Array.isArray(G.slots) ? G.slots.slice() : [];
+      ubicarCasillasBolsa(visible, capacity, canonicalStacks(bolsaCuentas({ tools, picks: nextPicks, resources })));
+      if (!visible.some(cell => cell?.kind === kind && cell.key === id)) { quote.reason = "space"; break; }
+    }
+    Object.assign(quote, { count: n, produced, cost });
+  }
+  return quote;
+}
+function forgeToolConfirm(quote, expected, label) {
+  if (!quote) return false;
+  if (expected !== undefined && quote.count !== expected) {
+    toast("Cambió la cantidad disponible. Revisa cuánto puedes fabricar y su coste.");
+    refreshForge();
+    return false;
+  }
+  if (quote.count) return true;
+  if (quote.reason === "space") bagFull("fabricar " + label);
+  else if (quote.reason === "cap") toast("Máximo 99 " + label);
+  else if (quote.reason === "vip") toast("La fabricación en lotes requiere VIP");
+  else toast(quote.reason === "plata" ? "Te falta plata" : "Te faltan materiales");
+  return false;
+}
+function craftPick(id, requested = 1, expected) {
+  const quote = forgeToolQuote("pick", id, requested);
+  if (!quote || !forgeToolConfirm(quote, expected, PICK_DEF[quote.id].label)) return false;
+  id = quote.id;
+  const pd = PICK_DEF[id], uses = pd.dur || 1;
+  picosUnificarEstado(G);
+  payCost(quote.cost);
+  for (let n = 0; n < quote.count; n++) {
+    const first = !G.picks.owned[id];
+    G.picks.dur[id] = pickCount(id) + uses;
+    G.picks.owned[id] = true;
+    if (first || !G.picks.eq) G.picks.eq = id;
+    addXp("crafting", 10 + pd.tier * 4);
+    if (typeof tutoEvent === "function") { tutoEvent("crafttool"); tutoEvent("craftpick"); }
+  }
+  log("Has fabricado " + quote.produced + " × " + pd.label + " (tienes " + G.picks.dur[id] + ").", "gold");
+  toast("+" + quote.produced + " " + pd.label, "success", "fabricar");
   forgeWork(); refreshForge(); refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+  return true;
 }
 // modelo SFL (31/7): los picos NO se reparan — se rompen y se craftean de nuevo
 function destroyPick(id) {
@@ -8298,7 +8366,7 @@ function tutoPity(def, out) {
 }
 // modelo SFL APILABLE (31/7): G.tools[axe/rod] es la CANTIDAD de herramientas (1 uso cada una).
 // Craftear suma al stock; usar consume 1. La espada y el arco conservan durabilidad + reparación.
-function toolCount(id) { return Math.max(0, Math.floor((G.tools && G.tools[id]) || 0)); }
+function toolCount(id, tools = G.tools) { return Math.max(0, Math.floor((tools && tools[id]) || 0)); }
 function toolLost(id) { return toolCount(id) <= 0; }
 function toolDur(id) {
   if (id === "axe") return toolCount(id);   // apilable: el chequeo es tener stock
@@ -8326,26 +8394,17 @@ function useTool(id) {
    gastan. Se quedaba ocupando una línea de la Herrería, quince unidades del kit de bienvenida,
    una casilla de la barra rápida y un hueco de la bolsa, a cambio de nada. */
 const TOOL_CRAFT = { axe: { cost:{}, plata:2 } };   // 18/8: el hacha baja a 2 con el árbol de 30 min (sigue siendo el 17% de lo que saca)
-function craftTool(id, lote) {
-  lote = Math.max(1, lote || 1);
-  if(lote>1&&!vipVigente()){toast("La fabricación en lotes requiere VIP");return;}
-  const tc = TOOL_CRAFT[id], td = TOOL_DEF[id]; if (!tc || !td) { console.warn("[craftTool] herramienta inexistente:", id); return; }
-  if (lote > 1) {   // doc 2/8: crafteo en lote — la fricción es económica, no de clicks
-    let hechas = 0;
-    while (hechas < lote && toolCount(id) < 99 && canAfford(tc.cost) && G.plata >= tc.plata) { payCost(tc.cost); G.plata -= tc.plata; G.tools[id] = toolCount(id) + 1; hechas++; }
-    if (!hechas) { toast("Te faltan materiales o plata"); return; }
-    addXp("crafting", 5 * hechas); log("Has fabricado " + hechas + " × " + td.label + " (tienes " + G.tools[id] + ").", "good"); toast("+" + hechas + " " + td.label, "success", "fabricar");
-  if (typeof tutoEvent === "function") tutoEvent("crafttool");
-    forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
-    return;
-  }
-  if (toolCount(id) >= 99) { toast("Máximo 99 " + td.label); return; }
-  if (!canAfford(tc.cost)) { toast("Te faltan materiales"); return; }
-  if (G.plata < tc.plata) { toast("Te falta plata"); return; }
-  payCost(tc.cost); G.plata -= tc.plata;
-  G.tools[id] = toolCount(id) + 1;
-  addXp("crafting", 5); log("Has fabricado " + td.label + " (tienes " + G.tools[id] + ").", "good"); toast("+1 " + td.label, "success", "fabricar");
+function craftTool(id, lote = 1, expected) {
+  const quote = forgeToolQuote("tool", id, lote), td = TOOL_DEF[id];
+  if (!quote || !td || !forgeToolConfirm(quote, expected, td.label)) return false;
+  payCost(quote.cost);
+  G.tools[id] = toolCount(id) + quote.produced;
+  addXp("crafting", 5 * quote.count);
+  log("Has fabricado " + quote.produced + " × " + td.label + " (tienes " + G.tools[id] + ").", "good");
+  toast("+" + quote.produced + " " + td.label, "success", "fabricar");
+  if (lote > 1 && typeof tutoEvent === "function") tutoEvent("crafttool");
   forgeWork(); refreshForge(); if (isOpen("ov-inv")) refreshInv(); refreshHud(); syncSlots(); if (typeof refreshHotbar === "function") refreshHotbar();
+  return true;
 }
 function repairTool(id) { const td = TOOL_DEF[id]; if (!td) return; if (toolLost(id)) { toast("No tienes esa herramienta — la tiraste"); return; } if (toolDur(id) >= td.max) { toast("Ya está al 100%"); return; } if (!canAfford(td.repair)) { toast("Te faltan materiales para reparar"); return; } payCost(td.repair); G.tools[id] = td.max; log("Reparaste " + td.label + " (100%).", "good"); toast("Reparado"); forgeWork(); refreshForge(); if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv(); }
 
@@ -8669,13 +8728,13 @@ function mudanzaPescaV4() {
    Ahora hay una lista y dos vistas: canonicalStacks() la reparte en casillas para la rejilla,
    y bolsaFoto() la aplana en cantidades para el flujo. Si mañana entra un objeto nuevo, entra
    en las dos a la vez o en ninguna. */
-function bolsaCuentas() {
+function bolsaCuentas({ tools = G.tools, picks = G.picks, resources = G.res } = {}) {
   const out = [];
   const add = (kind, key, n) => { if (n > 0) out.push({ kind, key, n }); };
-  add("tool", "axe", toolCount("axe"));   // 8/9: la caña de la v2 se jubiló
+  add("tool", "axe", toolCount("axe", tools));   // 8/9: la caña de la v2 se jubiló
   for (const id of ARM_ORDER) if (G.weapons && G.weapons[id] && G.gear.arma !== id) add("arm", id, 1);
   for (const set of ARMOR_ORDER) for (const pieza of ARMOR_SLOTS) if (armorTiene(set, pieza) && !armorActiva(set, pieza)) add("armor", armorKey(set, pieza), 1);
-  PICK_ORDER.forEach(id => add("pick", id, pickCount(id)));
+  PICK_ORDER.forEach(id => add("pick", id, pickCount(id, picks)));
   for (const id of Object.keys(G.weaponSpares || {})) add("arm_spare",id,1);
   /* las cañas de la v4 no se gastan: se TIENEN. Por eso la cuenta es 1 y no « usos », y por eso
      la bolsa las muestra sin número — un contador que siempre dice 1 es ruido. */
@@ -8684,7 +8743,7 @@ function bolsaCuentas() {
   /* 8/9 (tarde): los contenedores son objetos, así que viven en la bolsa como cualquier otro.
      Solo los que NO llevás puestos: el que está de viaje no está en la granja. */
   if (typeof CONT_ORDER !== "undefined") CONT_ORDER.forEach(c => add("cont", c, contsTengo(c)));
-  ITEM_RES_ORDER.forEach(r => add("res", r, Math.floor(G.res[r] || 0)));
+  ITEM_RES_ORDER.forEach(r => add("res", r, Math.floor(resources[r] || 0)));
   CROP_ORDER.forEach(s => add("seed", s, Math.floor(G.seeds[s] || 0)));
   pecesDeLaBolsa().forEach(f => add("fish", f, Math.floor((G.fish && G.fish[f]) || 0)));
   RECIPE_ORDER.forEach(d => add("dish", d, Math.floor((G.dishes && G.dishes[d]) || 0)));
@@ -8803,9 +8862,9 @@ function recientesCant(kind, key) {
 /* UNA CASILLA POR CADA 99 — la vista que pinta la rejilla de la bolsa.
    Las armas y las cañas son la excepción: ocupan UNA casilla cada una aunque la caña tenga
    veinte usos dentro, porque lo que se guarda es el objeto, no sus usos. */
-function canonicalStacks() {
+function canonicalStacks(cuentas = bolsaCuentas()) {
   const list = [];
-  bolsaCuentas().forEach(x => {
+  cuentas.forEach(x => {
     if (x.kind === "arm" || x.kind === "arm_spare" || x.kind === "cana") { list.push({ kind: x.kind, key: x.key }); return; }
     let n = x.n; while (n > 0) { list.push({ kind: x.kind, key: x.key }); n -= 99; }
   });
@@ -8834,17 +8893,19 @@ function cobertizoCuenta() { return cobertizoItems().length; }
 
 // reconcilia G.slots con lo que hay realmente, preservando el orden que armó el jugador
 function syncSlots() {
-  const cap = invSlots();
   if (!Array.isArray(G.slots)) G.slots = [];
-  while (G.slots.length < cap) G.slots.push(null);
-  if (G.slots.length > cap) { const extra = G.slots.splice(cap); extra.filter(Boolean).forEach(d => { const i = G.slots.indexOf(null); if (i >= 0) G.slots[i] = d; }); }
-  const want = {}; canonicalStacks().forEach(d => { const k = descKey(d); want[k] = (want[k] || 0) + 1; });
-  const have = {}; G.slots.forEach(d => { if (d) { const k = descKey(d); have[k] = (have[k] || 0) + 1; } });
-  for (const k in have) { let surplus = have[k] - (want[k] || 0); for (let i = G.slots.length - 1; i >= 0 && surplus > 0; i--) { if (G.slots[i] && descKey(G.slots[i]) === k) { G.slots[i] = null; surplus--; } } }
+  ubicarCasillasBolsa(G.slots, invSlots(), canonicalStacks());
+}
+function ubicarCasillasBolsa(slots, cap, stacks) {
+  while (slots.length < cap) slots.push(null);
+  if (slots.length > cap) { const extra = slots.splice(cap); extra.filter(Boolean).forEach(d => { const i = slots.indexOf(null); if (i >= 0) slots[i] = d; }); }
+  const want = {}; stacks.forEach(d => { const k = descKey(d); want[k] = (want[k] || 0) + 1; });
+  const have = {}; slots.forEach(d => { if (d) { const k = descKey(d); have[k] = (have[k] || 0) + 1; } });
+  for (const k in have) { let surplus = have[k] - (want[k] || 0); for (let i = slots.length - 1; i >= 0 && surplus > 0; i--) { if (slots[i] && descKey(slots[i]) === k) { slots[i] = null; surplus--; } } }
   for (const k in want) {
-    let cur = 0; G.slots.forEach(d => { if (d && descKey(d) === k) cur++; });
+    let cur = 0; slots.forEach(d => { if (d && descKey(d) === k) cur++; });
     const ix = k.indexOf(":"), kind = k.slice(0, ix), key = k.slice(ix + 1);
-    for (let j = cur; j < want[k]; j++) { const i = G.slots.indexOf(null); if (i < 0) break; G.slots[i] = { kind, key }; }
+    for (let j = cur; j < want[k]; j++) { const i = slots.indexOf(null); if (i < 0) break; slots[i] = { kind, key }; }
   }
 }
 // herramienta "en mano" según el hueco seleccionado de la hotbar

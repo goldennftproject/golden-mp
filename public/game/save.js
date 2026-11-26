@@ -1236,7 +1236,10 @@ function hydrate(d) {
   if (typeof d.plotsCompradas === "number") G.plotsCompradas = Math.max(0, d.plotsCompradas);   // 20/8: el precio de tienda sube solo con éstas
   G.plotsFicha = Math.max(0, d.plotsFicha || 0);   // 20/8: las de Ficha de parcela (pase) — parte del libro mayor
   if (typeof d.expParcelasDadas === "number") G.expParcelasDadas = Math.max(0, Math.min(16, d.expParcelasDadas));   // 20/8: la FLAG de dirección — qué expansiones ya entregaron su parcela
-  if (d.seedBuys && typeof d.seedBuys === "object") G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
+  if (d.seedBuys && typeof d.seedBuys === "object") {
+    G.seedBuys = { date: d.seedBuys.date || "", count: d.seedBuys.count || 0 };
+    if (d.seedBuys.caridad === 1) G.seedBuys.caridad = 1;
+  }
   if (d.goblin && typeof d.goblin === "object") G.goblin = { date: d.goblin.date || "" };   // 22/8: Mercader Goblin
   if (d.logros && typeof d.logros === "object") G.logros = d.logros;   // 22/8: logros cobrados (🏆) — solo llaves true
   domaCargar(d);
