@@ -23,6 +23,12 @@ function fixture({vale=1,vip=0,level=9}={}){
 }
 function within(options,fn){const f=fixture(options);try{fn(f);}finally{f.close();}}
 function sorted(a){return [...a].sort();}
+function confirmar(f,boton){
+ const antes=JSON.stringify(f.c.G);boton.click();
+ assert.equal(JSON.stringify(f.c.G),antes,"abrir la confirmación no gasta");
+ assert(f.doc.getElementById("ov-confirm").classList.contains("show"));
+ f.doc.getElementById("cf-yes").click();
+}
 
 test('expansion voucher offers exactly three basic choices and advanced purchases are separate',()=>within({},f=>{
  f.render();assert.deepEqual(sorted(f.sectionKeys('prod-elegir')),sorted(BASIC));
@@ -44,14 +50,14 @@ test('each node type has one action with one matching explanation id',()=>within
 
 test('real paid-gold button spends Plata and retains the expansion voucher',()=>within({},f=>{
  f.render();const gold=f.doc.querySelector('#prod-comprar [data-prod-buy="oro"]');assert(gold&&!gold.disabled);
- const before=f.c.G.plata;gold.click();
+ const before=f.c.G.plata;confirmar(f,gold);
  assert.equal(f.c.G.plata,before-500);assert.equal(f.c.G.produccion.vale,1);
  assert(f.c.produccionItems().some(x=>x.type==='ore'&&f.c.GF.WORLD_OBJECTS[x.i].ore==='oro'));
 }));
 
 test('real free-basic button spends exactly one voucher without charging Plata',()=>within({},f=>{
  f.render();const before=f.c.G.plata,plots=f.c.G.plotsOwned;
- f.doc.querySelector('#prod-elegir [data-prod-buy="plot"]').click();
+ confirmar(f,f.doc.querySelector('#prod-elegir [data-prod-buy="plot"]'));
  assert.equal(f.c.G.produccion.vale,0);assert.equal(f.c.G.plata,before);assert.equal(f.c.G.plotsOwned,plots+1);
  assert(!f.c.brujula()?.txt.includes('vale'));
 }));
@@ -64,19 +70,19 @@ test('without a voucher or VIP reward all ordinary choices belong to the Plata c
 test('VIP-only gift choices are separated from Plata and consume one VIP reward',()=>within({vale:0,vip:2},f=>{
  f.render();assert.deepEqual(sorted(f.sectionKeys('prod-vip-elegir')),sorted([...BASIC,...ADVANCED]));
  assert.deepEqual(f.sectionKeys('prod-comprar'),[]);assert.deepEqual(f.sectionKeys('prod-elegir'),[]);
- const before=f.c.G.plata;f.doc.querySelector('#prod-vip-elegir [data-prod-buy="oro"]').click();
+ const before=f.c.G.plata;confirmar(f,f.doc.querySelector('#prod-vip-elegir [data-prod-buy="oro"]'));
  assert.equal(f.c.G.produccion.vipNodos,1);assert.equal(f.c.G.produccion.vale,0);assert.equal(f.c.G.plata,before);
 }));
 
 test('with both rewards basic choices spend vouchers before VIP rewards',()=>within({vale:2,vip:2},f=>{
  f.render();assert.deepEqual(sorted(f.sectionKeys('prod-elegir')),sorted(BASIC));
  assert.deepEqual(sorted(f.sectionKeys('prod-vip-elegir')),sorted(ADVANCED));assert.deepEqual(f.sectionKeys('prod-comprar'),[]);
- const before=f.c.G.plata;f.doc.querySelector('#prod-elegir [data-prod-buy="plot"]').click();
+ const before=f.c.G.plata;confirmar(f,f.doc.querySelector('#prod-elegir [data-prod-buy="plot"]'));
  assert.equal(f.c.G.produccion.vale,1);assert.equal(f.c.G.produccion.vipNodos,2);assert.equal(f.c.G.plata,before);
 }));
 
 test('with both rewards an advanced choice spends VIP reward and preserves the basic voucher',()=>within({vip:2},f=>{
- f.render();const before=f.c.G.plata;f.doc.querySelector('#prod-vip-elegir [data-prod-buy="oro"]').click();
+ f.render();const before=f.c.G.plata;confirmar(f,f.doc.querySelector('#prod-vip-elegir [data-prod-buy="oro"]'));
  assert.equal(f.c.G.produccion.vipNodos,1);assert.equal(f.c.G.produccion.vale,1);assert.equal(f.c.G.plata,before);
 }));
 
@@ -100,7 +106,7 @@ test('pausing an existing gold node lets the player redeem the basic voucher wit
  f.render();const before=f.c.G.plata;
  f.doc.querySelector('[data-prod-pause="n:'+gold.i+'"]').click();
  assert.equal(f.c.produccionPausada(gold),true);assert.equal(f.c.G.produccion.nodos[gold.i],true);assert.equal(f.c.produccionHayCupo(),true);
- assert.equal(f.c.brujula().ui,'#prod-elegir>summary');f.render();f.button('plot').click();
+ assert.equal(f.c.brujula().ui,'#prod-elegir>summary');f.render();confirmar(f,f.button('plot'));
  assert.equal(f.c.G.produccion.vale,0);assert.equal(f.c.G.plata,before);assert.equal(f.c.G.produccion.nodos[gold.i],true);
  assert.equal(f.c.produccionPausada(gold),true);
 }));
@@ -118,7 +124,7 @@ test('blocked tree and rock emplacements do not hide an available free plot',()=
  f.c.produccionEmplazamiento=()=>-1;f.render();
  assert.equal(f.button('tree').disabled,true);assert.equal(f.button('rock').disabled,true);assert.equal(f.button('plot').disabled,false);
  assert.equal(f.c.brujula().ui,'#prod-elegir>summary');
- const before=f.c.G.plata;f.button('plot').click();assert.equal(f.c.G.produccion.vale,0);assert.equal(f.c.G.plata,before);
+ const before=f.c.G.plata;confirmar(f,f.button('plot'));assert.equal(f.c.G.produccion.vale,0);assert.equal(f.c.G.plata,before);
 }));
 
 test('rendering and reading guidance do not mutate the canonical save or submit a save',()=>within({vip:2},f=>{
@@ -166,7 +172,7 @@ test('gold use requirements are visible while the existing purchase gate stays u
 test('redeeming the last voucher moves focus to a section summary rather than a newly paid choice',()=>within({},f=>{
  f.c.G.expansiones=2;f.render();
  const old=f.doc.querySelector('#prod-elegir [data-prod-buy="plot"]');assert(old&&!old.disabled);
- const before=f.c.G.plata,plots=f.c.G.plotsOwned,saves=f.effects.saves;old.focus();old.click();
+ const before=f.c.G.plata,plots=f.c.G.plotsOwned,saves=f.effects.saves;old.focus();confirmar(f,old);
  assert.equal(f.c.G.produccion.vale,0);assert.equal(f.c.G.plata,before);assert.equal(f.c.G.plotsOwned,plots+1);assert.equal(f.effects.saves,saves+1);
  const nextPaid=f.doc.querySelector('#prod-comprar [data-prod-buy="plot"]');assert(nextPaid&&!nextPaid.disabled,'a paid successor exists and remains usable, so focus handling is exercised');
  assert.notEqual(f.doc.activeElement,nextPaid);assert.equal(f.doc.activeElement.tagName,'SUMMARY');
@@ -177,7 +183,7 @@ test('redeeming the last voucher moves focus to a section summary rather than a 
 test('redeeming one of two vouchers retains focus on the same still-free choice after real rerender',()=>within({vale:2},f=>{
  f.c.G.expansiones=2;f.render();
  const old=f.doc.querySelector('#prod-elegir [data-prod-buy="plot"]');assert(old&&!old.disabled);
- const before=f.c.G.plata,plots=f.c.G.plotsOwned,saves=f.effects.saves;old.focus();old.click();
+ const before=f.c.G.plata,plots=f.c.G.plotsOwned,saves=f.effects.saves;old.focus();confirmar(f,old);
  assert.equal(f.c.G.produccion.vale,1);assert.equal(f.c.G.plata,before);assert.equal(f.c.G.plotsOwned,plots+1);assert.equal(f.effects.saves,saves+1);
  const remaining=f.doc.querySelector('#prod-elegir [data-prod-buy="plot"]');assert(remaining&&!remaining.disabled);
  assert.notEqual(remaining,old,'the renderer did rebuild the action');assert.equal(f.doc.activeElement,remaining);
@@ -186,7 +192,7 @@ test('redeeming one of two vouchers retains focus on the same still-free choice 
 
 test('spending the last VIP reward never focuses its new paid successor',()=>within({vale:0,vip:1},f=>{
  f.render();const old=f.doc.querySelector('#prod-vip-elegir [data-prod-buy="plot"]');assert(old&&!old.disabled);
- const before=f.c.G.plata,saves=f.effects.saves;old.focus();old.click();
+ const before=f.c.G.plata,saves=f.effects.saves;old.focus();confirmar(f,old);
  assert.equal(f.c.G.produccion.vipNodos,0);assert.equal(f.c.G.plata,before);assert.equal(f.effects.saves,saves+1);
  const paid=f.doc.querySelector('#prod-comprar [data-prod-buy="plot"]');assert(paid&&!paid.disabled);
  assert.notEqual(f.doc.activeElement,paid);assert.equal(f.doc.activeElement.tagName,'SUMMARY');

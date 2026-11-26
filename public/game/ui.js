@@ -736,15 +736,24 @@ function refreshViaje() {
   h += '<div class="vj-conts">';
   CONT_ORDER.forEach(c => {
     const d = CONT_DEF[c], tengo = contsTengo(c), puesto = raiz && raiz.c === c;
-    const hay = tengo > 0 || puesto;
-    h += '<div class="vj-cont' + (puesto ? " on" : "") + (hay ? "" : " no") + '"' + (hay ? viajeAccionAttr("vcont", c, "Elegir " + d.label) : "") + '>' +
-      '<span class="em">' + d.emoji + '</span><div><b>' + d.label + (puesto ? " · puesta" : "") + '</b>' +
-      '<span class="d">' + d.huecos + ' espacios · ' + (hay ? "tienes " + (tengo + (puesto ? 1 : 0)) : "no tienes — se compra en la Tienda") + '</span></div></div>';
+    const hay = tengo > 0 || puesto, saldo = G.plata || 0;
+    const eleccion = hay ? viajeAccionAttr("vcont", c, "Elegir " + d.label) + ' aria-pressed="' + !!puesto + '"' : "";
+    const compra = hay ? "" : '<button type="button" class="green sm vj-comprar" data-vcomprar="' + c +
+      '" aria-label="Comprar ' + d.label + ' por ' + fmtPlata(d.plata) + ' Plata"' +
+      (saldo < d.plata ? ' aria-describedby="vj-falta-' + c + '" disabled' : '') +
+      '>Comprar · ' + fmtPlata(d.plata) + ' Plata</button>' +
+      (saldo < d.plata ? '<span class="vj-falta" id="vj-falta-' + c + '">Te faltan ' +
+        fmtPlata(Math.ceil((d.plata - saldo) * 10 - 1e-6) / 10) + ' Plata</span>' : '');
+    h += '<div class="vj-cont' + (puesto ? " on" : "") + (hay ? "" : " vj-cont-compra") + '"' + eleccion + '>' +
+      '<span class="em" aria-hidden="true">' + d.emoji + '</span><div class="vj-cont-datos"><b>' +
+      d.label + (puesto ? " · puesta" : "") + '</b><span class="d">' + d.huecos +
+      ' espacios' + (hay ? ' · tienes ' + (tengo + (puesto ? 1 : 0)) : '') + '</span>' +
+      (hay && !puesto ? '<span class="vj-elegir">Elegir</span>' : '') + '</div>' + compra + '</div>';
   });
   h += '</div>';
 
   if (!raiz) {
-    h += '<div class="info">Elige con qué sales. Sin contenedor no se cruza el portal: allá adentro no vas a tener dónde meter el botín.</div>' +
+    h += '<div class="info">Elige una Bolsa o Mochila para llevar el botín. Si te falta, puedes comprarla aquí.</div>' +
       '<div class="vj-pie"><div class="vj-aviso"></div><button class="ghost sm" id="vj-cerrar">Volver</button></div>';
     caja.innerHTML = h;
     engancharViaje(caja);
@@ -938,6 +947,39 @@ function engancharViaje(caja) {
   caja.querySelectorAll("[data-vcont]").forEach(b => {
     const elegir = () => { const c = b.dataset.vcont; if (viajeElegir(c)) rep([["vcont", c]]); };
     b.onclick = elegir; activarAccionConTeclado(b, elegir);
+  });
+
+  caja.querySelectorAll("[data-vcomprar]").forEach(b => {
+    b.onclick = () => {
+      const c = b.dataset.vcomprar;
+      if (!CONT_ORDER.includes(c) || isOpen("ov-confirm") || !$("ov-confirm") || !$("cf-yes") || !$("cf-no")) return;
+      const d = CONT_DEF[c], precio = d.plata, cuenta = typeof UID === "undefined" ? null : UID;
+      const puertaVigente = () => window.GF && GF.scene === "farm" && isOpen("ov-viaje") &&
+        (typeof UID === "undefined" || UID === cuenta);
+      const guardadoDisponible = () => {
+        if ((typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) ||
+          (typeof SAVE_CONFLICTOS !== "undefined" && SAVE_CONFLICTOS.has(cuenta))) {
+          toast("Revisa el guardado antes de comprar.");
+          return false;
+        }
+        return true;
+      };
+      const disponible = () => !contsTengo(c) && contLlevado()?.c !== c && CONT_DEF[c]?.plata === precio;
+      const faltaPlata = () => (G.plata || 0) < precio;
+      if (!puertaVigente() || !guardadoDisponible()) return;
+      if (!disponible() || faltaPlata()) { rep([["vcont", c], ["vcomprar", c]]); return; }
+      askConfirm("Comprar " + d.label + " de " + d.huecos + " espacios por " + fmtPlata(precio) +
+        " Plata. Podrás elegirla aquí para el viaje.", () => {
+        if (!puertaVigente() || !guardadoDisponible()) return;
+        if (!disponible() || faltaPlata()) {
+          toast("Cambió tu inventario, el precio o tu saldo. Revisa la compra.");
+          rep([["vcont", c], ["vcomprar", c]]);
+          return;
+        }
+        if (comprarCont(c)) rep([["vcont", c]]);
+      }, { title: "Comprar " + d.label, yes: "Comprar", no: "Volver", yesClass: "green sm",
+        onClose: () => { if (puertaVigente()) enfocarAccionViaje(caja, [["vcomprar", c]]); } });
+    };
   });
 
   /* 8/9 (Suren) — SUBIR Y BAJAR SON LA MISMA OPERACIÓN con distinto sentido, así que una sola
@@ -2701,7 +2743,9 @@ function produccionPremiumHtml() {
   for (const tipo of Object.keys(PRODUCCION_PREMIUM_DEF)) {
     const c=produccionPremiumCotizacion(tipo),def=PRODUCCION_PREMIUM_DEF[tipo],motivo=!online?'Conecta y sincroniza el guardado':produccionPremiumMotivo(tipo);
     const texto=!c?def.label+' · No disponible':c.precio==null?def.label+' · Límite alcanzado':'Comprar '+def.label+' · '+fmtGolden(c.precio)+' Golden';
-    h+='<div class="eleccion-nodo"><button class="gold sm" data-prod-premium="'+tipo+'" aria-describedby="prod-premium-motivo-'+tipo+'" title="'+escapeHtml(motivo||'Comprar '+def.label+' y guardarlo en el Cobertizo')+'" '+(motivo?'disabled':'')+'>'+texto+'</button><small class="sub" id="prod-premium-motivo-'+tipo+'">'+escapeHtml(motivo||'Comprados '+c.usadas+'/'+c.maxTipo+' · incluye cupo propio')+'</small></div>';
+    const uso = 'prod-premium-uso-' + tipo;
+    const preparacion = "Para colocarlo, Granja nivel " + def.nivel + ". " + produccionPreparacionNodo(tipo).texto;
+    h+='<div class="eleccion-nodo"><button class="gold sm" data-prod-premium="'+tipo+'" aria-describedby="prod-premium-motivo-'+tipo+' '+uso+'" title="'+escapeHtml(motivo||'Comprar '+def.label+' y guardarlo en el Cobertizo')+'" '+(motivo?'disabled':'')+'>'+texto+'</button><small class="sub" id="prod-premium-motivo-'+tipo+'">'+escapeHtml(motivo||'Comprados '+c.usadas+'/'+c.maxTipo+' · incluye cupo propio')+'</small><small class="motivo-accion" id="'+uso+'">'+escapeHtml(preparacion)+'</small></div>';
   }
   h+='</div>';
   if(historial?.some(c=>c.nodo===null))h+='<div class="secc">Por colocar</div>';
@@ -2711,7 +2755,7 @@ function produccionPremiumHtml() {
 function confirmarCompraProduccionPremium(tipo) {
   const motivo=produccionPremiumMotivo(tipo),c=produccionPremiumCotizacion(tipo);
   if(motivo){toast(motivo);return false;}
-  askConfirm('¿Comprar '+c.label+' por '+fmtGolden(c.precio)+' Golden? Es tu compra '+(c.usadas+1)+' de '+c.maxTipo+' de este tipo con Golden. Se guardará en el Cobertizo para colocarlo en tu terreno.',()=>produccionPremiumComprar(tipo,c.precio),{title:'Comprar nodo con Golden',yes:'Comprar · '+fmtGolden(c.precio)+' Golden',yesClass:'gold',no:'Cancelar'});
+  askConfirm('¿Comprar '+c.label+' por '+fmtGolden(c.precio)+' Golden? Es tu compra '+(c.usadas+1)+' de '+c.maxTipo+' de este tipo con Golden. Se guardará en el Cobertizo. Para colocarlo, Granja nivel '+c.nivel+'. '+produccionPreparacionNodo(tipo).texto,()=>produccionPremiumComprar(tipo,c.precio),{title:'Comprar nodo con Golden',yes:'Comprar · '+fmtGolden(c.precio)+' Golden',yesClass:'gold',no:'Cancelar'});
 }
 function abrirProduccionPremium() {
   if(!PRODUCCION_PREMIUM_ACTIVA){toast('La compra de nodos con Golden no está disponible');return false;}
@@ -2905,6 +2949,89 @@ function produccionAyudaBronceHtml(items, libres) {
   }
   return h+'<p class="sub">Para picar: Minería nivel '+oreNivelReq('bronce')+' (tienes '+nivelOficio('mining')+') y '+escapeHtml(pd.label)+'. Fabrícalo en la Herrería con '+escapeHtml(receta)+'. No necesitas bronce para fabricar ese pico.</p></details>';
 }
+// Preparación para usar un nodo. La compra conserva sus requisitos propios.
+function produccionPreparacionNodo(tipo) {
+  if (tipo === "plot") {
+    const semilla = CROP_ORDER.find(k => G.seeds?.[k] > 0 && cropUnlocked(k));
+    return semilla ? {lista:true, texto:"Ya tienes semillas que puedes sembrar."}
+      : {lista:false, texto:"Antes de sembrar, consigue semillas de tu nivel de Cultivo en el Mercado."};
+  }
+  if (tipo === "tree") {
+    const hacha = toolCount("axe") > 0;
+    return hacha ? {lista:true, texto:"Ya tienes hacha para talarlo."}
+      : {lista:false, texto:"Antes de talarlo, consigue un hacha en la Herrería."};
+  }
+  const mineral = tipo === "rock" ? "piedra" : tipo;
+  const nivel = oreNivelReq(mineral), actual = nivelOficio("mining");
+  const id = picoQueHaceFalta(tipo === "rock" ? {type:"rock"} : {type:"ore",ore:mineral});
+  const pico = PICK_DEF[id];
+  const inventario = G.picks;
+  // Las partidas antiguas se unifican al minar. La vista no modifica su inventario.
+  const tienePico = !!(inventario?.owned && inventario.dur && (pickCount(id) > 0 ||
+    id === "stone" && Number(inventario.dur.wood) >= 1));
+  const requisitos = "Minería nivel " + nivel + " · " + pico.label + ".";
+  const faltas = [];
+  if (actual < nivel) faltas.push("subir Minería de " + actual + " a " + nivel);
+  if (!tienePico) faltas.push("fabricar el " + pico.label + " en la Herrería");
+  return {lista:!faltas.length, texto: requisitos + " " + (faltas.length
+    ? "Antes de picar, debes " + faltas.join(" y ") + "."
+    : "Ya tienes el pico y el nivel.")};
+}
+
+const PRODUCCION_NODOS_UI = {
+  plot:["Parcela",0,1], tree:["Árbol",30,1], rock:["Roca",30,1], bronce:["Veta de Bronce",180,3],
+  hierro:["Veta de Hierro",300,6], oro:["Veta de Oro",500,9], diamante:["Veta de Diamante",900,13],
+  netherita:["Veta de Netherita",1400,17]
+};
+function produccionOpcionNodo(tipo, libres = produccionHayCupo()) {
+  const [nombre, precio, nivel] = PRODUCCION_NODOS_UI[tipo];
+  const costo = tipo === "plot" ? plotUnlockCost() : precio;
+  const fuente = produccionFuenteNodo(tipo);
+  const motivo = G.level < nivel ? "Requiere granja nivel " + nivel
+    : !libres ? "Sin cupos: pausa un nodo o expande"
+    : fuente === "plata" && G.plata < costo ? "Faltan " + fmtPlata(costo - G.plata) + " Plata"
+    : tipo === "plot" && (G.plotsOwned || 3) >= PLOT_MAX ? "Máximo de parcelas alcanzado"
+    : tipo !== "plot" && produccionEmplazamiento(tipo) < 0 ? "Sin emplazamiento: libera terreno o expande" : "";
+  const importe = fuente === "vale" ? "1 vale de expansión" : fuente === "vip" ? "1 regalo VIP" : costo + " Plata";
+  return {tipo,nombre,nivel,costo,fuente,motivo,importe,preparacion:produccionPreparacionNodo(tipo)};
+}
+
+function confirmarProduccionNodo(boton) {
+  const tipo = boton.dataset.prodBuy, fuente = boton.dataset.prodSource;
+  if (!Object.prototype.hasOwnProperty.call(PRODUCCION_NODOS_UI,tipo)) return false;
+  const opcion = produccionOpcionNodo(tipo);
+  if (opcion.fuente !== fuente || opcion.motivo) {
+    toast(opcion.motivo || "La opción cambió. Revisa los vales, regalos y precios actuales.");
+    refreshProduccionGranja(); return false;
+  }
+  // askConfirm ejecuta el callback cuando falta el diálogo. Aquí nunca se gasta sin que se vea la pregunta.
+  const ov = $("ov-confirm");
+  if (!ov || !$("cf-title") || !$("cf-msg") || !$("cf-yes") || !$("cf-no") || ov.classList.contains("show")) return false;
+  const partida = G, libro = G.produccion, cuenta = typeof UID === "undefined" ? null : UID;
+  const teniaFoco = document.activeElement === boton;
+  const actualizarFoco = () => {
+    if (!teniaFoco) return;
+    const panel = $("prod-granja");
+    const destino = panel?.querySelector('[data-prod-buy="' + tipo + '"][data-prod-source="' + fuente + '"]:not(:disabled)');
+    const resumen = panel?.querySelector("#" + (fuente === "vale" ? "prod-elegir" : fuente === "vip" ? "prod-vip-elegir" : "prod-comprar") + ">summary");
+    (destino || resumen)?.focus({ preventScroll:true });
+  };
+  const costo = "Usarás " + opcion.importe + " y ocuparás 1 cupo.";
+  const tiempo = tipo === "plot" ? "" : " La primera carga empieza a recuperarse al activarlo.";
+  askConfirm(costo + " " + opcion.preparacion.texto + tiempo, () => {
+    if (G !== partida || G.produccion !== libro || (typeof UID === "undefined" ? null : UID) !== cuenta) return false;
+    const actual = produccionOpcionNodo(tipo);
+    if (actual.fuente !== opcion.fuente || actual.importe !== opcion.importe ||
+        actual.motivo || actual.preparacion.texto !== opcion.preparacion.texto) {
+      toast(actual.motivo || "Tu granja cambió. Revisa la opción actual antes de confirmar.");
+      refreshProduccionGranja(); return false;
+    }
+    return produccionComprar(tipo);
+  }, {title:opcion.fuente === "plata" ? "Comprar " + opcion.nombre : "Canjear por " + opcion.nombre,
+    yes:opcion.fuente === "plata" ? "Comprar" : "Canjear", yesClass:"green", no:"Cancelar", onClose:actualizarFoco});
+  return true;
+}
+
 function refreshProduccionGranja() {
   // Reliquias se gestiona en su propio panel, no en el Cobertizo.
   const cont = $("prod-granja"); if (!cont || !G.produccion) return;
@@ -2933,25 +3060,31 @@ function refreshProduccionGranja() {
     '<details class="ayuda-menu"><summary>Cómo funcionan los cupos y el VIP</summary><p class="sub">Cada parcela, árbol o veta activa ocupa un cupo. Cada expansión suma uno. Pausar libera el cupo y conserva cargas y cultivos; no genera producción durante la pausa. Los objetos quedan en su lugar.</p><p class="sub">Un solo VIP. ' + produccionVipPaseTexto() + ' Al vencer se pausan las últimas producciones activadas que excedan la capacidad Sin VIP, sin borrar nada. Sin cobro externo ni canje por USDT.</p></details>';
   if(G.produccion.vipNodos>0)h+='<p class="verde">VIP: '+G.produccion.vipNodos+' nodos incluidos a elegir. Una sola entrega; respeta nivel, terreno y cupos.</p>';
   if (G.produccion.vale) h += '<p class="verde">Tienes '+G.produccion.vale+' vale(s) de expansión: cada uno permite elegir gratis un árbol, una roca o una parcela. Elegir una opción consume un vale; las otras no se entregan automáticamente.</p>';
-  const tipos = { plot: ["Parcela", plotUnlockCost(), 1], tree: ["Árbol", 30, 1], rock: ["Roca", 30, 1], bronce: ["Bronce", 180, 3], hierro: ["Hierro", 300, 6], oro: ["Oro", 500, 9], diamante: ["Diamante", 900, 13], netherita: ["Netherita", 1400, 17] };
-  const filaNodo = k => {
-    const d = tipos[k], fuente = produccionFuenteNodo(k), gratis = fuente !== 'plata';
-    const motivo=G.level<d[2]?'Requiere granja nivel '+d[2]:!libres?'Sin cupos: pausa un nodo o expande':!gratis&&G.plata<d[1]?'Faltan '+fmtPlata(d[1]-G.plata)+' Plata':k==='plot'&&(G.plotsOwned||3)>=PLOT_MAX?'Máximo de parcelas alcanzado':k!=='plot'&&produccionEmplazamiento(k)<0?'Sin emplazamiento: libera terreno o expande':'';
-    const incluido = fuente === 'vale' ? 'incluido · 1 vale' : 'incluido · regalo VIP';
-    const pico = !['plot','tree','rock'].includes(k) && picoQueHaceFalta({type:'ore',ore:k});
-    const uso = pico ? '<small class="motivo-accion" id="prod-uso-'+k+'">Para minar: Minería nivel '+oreNivelReq(k)+' · '+escapeHtml(PICK_DEF[pico].label)+'</small>' : '';
-    return '<div class="eleccion-nodo"><button class="green sm" data-prod-buy="' + k + '" data-prod-source="'+fuente+'" aria-describedby="prod-motivo-'+k+(pico?' prod-uso-'+k:'')+'" title="'+escapeHtml(motivo||'Activar '+d[0]+' · ocupa 1 cupo')+'" ' + (motivo ? 'disabled' : '') + '>' + d[0] + ' · ' + (gratis ? incluido : d[1] + ' Plata') + ' · granja niv. ' + d[2] + '</button><small class="motivo-accion" id="prod-motivo-'+k+'">'+escapeHtml(motivo||'Ocupa 1 cupo')+'</small>'+uso+'</div>';
+  const opciones = Object.keys(PRODUCCION_NODOS_UI).map(k => produccionOpcionNodo(k,libres));
+  const filaNodo = o => {
+    const precio = o.fuente === "plata" ? o.importe : "incluido · " + o.importe;
+    return '<div class="eleccion-nodo"><button class="green sm" data-prod-buy="' + o.tipo + '" data-prod-source="' +
+      o.fuente+'" aria-describedby="prod-motivo-' + o.tipo + ' prod-uso-' + o.tipo + '" title="' +
+      escapeHtml(o.motivo || "Revisar " + o.nombre) + '"' + (o.motivo ? " disabled" : "") + ">" +
+      escapeHtml(o.nombre + " · " + precio + " · granja niv. " + o.nivel) + '</button>' +
+      '<small class="motivo-accion" id="prod-motivo-' + o.tipo + '">' + escapeHtml(o.motivo || "Ocupa 1 cupo") + '</small>' +
+      '<small class="motivo-accion" id="prod-uso-' + o.tipo + '">' + escapeHtml(o.preparacion.texto) + '</small></div>';
   };
   const grupos = [
-    ['vale','prod-elegir','Canjear vale · elige un nodo gratuito','Un vale = una parcela, un árbol o una roca.'],
-    ['vip','prod-vip-elegir','Elegir nodos incluidos del VIP','Cada elección consume un regalo VIP. Los vales de expansión se usan primero para los nodos básicos.'],
-    ['plata','prod-comprar','Comprar nodos con Plata','Estas compras usan Plata y no consumen vales de expansión.']
+    ["vale","prod-elegir","Canjear vale · elige un nodo gratuito","El vale cubre una parcela, un árbol o una roca."],
+    ["vip","prod-vip-elegir","Elegir nodos incluidos del VIP","Cada elección usa 1 regalo VIP. Las vetas están en este grupo cuando tienes regalos VIP."],
+    ["plata","prod-comprar","Comprar nodos con Plata","Estas compras mantienen tus vales de expansión."]
   ];
   h += produccionAyudaBronceHtml(items, libres);
   for (const [fuente,id,titulo,nota] of grupos) {
-    const claves = Object.keys(tipos).filter(k => produccionFuenteNodo(k) === fuente);
-    if (!claves.length) continue;
-    h += '<details id="'+id+'"><summary>'+titulo+'</summary><p class="sub">'+nota+'</p><div class="fbtns">'+claves.map(filaNodo).join('')+'</div></details>';
+    const delGrupo = opciones.filter(o => o.fuente === fuente);
+    if (!delGrupo.length) continue;
+    const recomendada = delGrupo.find(o => !o.motivo && o.preparacion.lista);
+    const consejo = fuente !== "plata" && recomendada
+      ? '<p class="sub verde" data-prod-recomendado="' + recomendada.tipo + '"><b>Opción recomendada:</b> ' +
+        escapeHtml(recomendada.nombre + ". " + recomendada.preparacion.texto) + '</p>' : "";
+    h += '<details id="' + id + '"><summary>' + titulo + '</summary><p class="sub">' + nota + '</p>' +
+      consejo + '<div class="fbtns">' + delGrupo.map(filaNodo).join("") + '</div></details>';
   }
   const practicaPausa = typeof tutoPracticaPausa === 'function' && tutoPracticaPausa();
   h += '<p class="sub">Cada nodo necesita un cupo y emplazamiento disponible dentro de tu terreno. Su primera carga empieza a recuperarse al activarlo.</p>'+produccionPremiumHtml()+'<details id="prod-gestion"><summary>Gestionar producción activa y pausada</summary>'+
@@ -2977,12 +3110,7 @@ function refreshProduccionGranja() {
   const liberarBronce = $('prod-bronce-liberar'); if (liberarBronce) liberarBronce.onclick = () => produccionVerGestion();
   const verVetaBronce = $('prod-bronce-ver-veta'); if (verVetaBronce) verVetaBronce.onclick = produccionVerBronce;
   const vetaPausada = $('prod-bronce-pausada'); if (vetaPausada) vetaPausada.onclick = () => produccionVerGestion(vetaPausada.dataset.bronceClave);
-  cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => {
-    if (produccionFuenteNodo(b.dataset.prodBuy) !== b.dataset.prodSource) {
-      toast('La opción cambió. Revisa los vales, regalos y precios actuales.');refreshProduccionGranja();return false;
-    }
-    return produccionComprar(b.dataset.prodBuy);
-  });
+  cont.querySelectorAll("[data-prod-buy]").forEach(b => b.onclick = () => confirmarProduccionNodo(b));
   cont.querySelectorAll("[data-prod-premium]").forEach(b => {
     const tipo=b.dataset.prodPremium,c=produccionPremiumCotizacion(tipo);
     b.onclick=()=>confirmarCompraProduccionPremium(tipo);
