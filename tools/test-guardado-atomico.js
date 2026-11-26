@@ -1,12 +1,8 @@
 "use strict";
 const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
-const {stripTypeScriptTypes}=require("node:module");
+const {compilarGuardar}=require(path.join(__dirname,"guardar-contexto.cjs"));
 const fuente=fs.readFileSync(path.resolve(__dirname,"../supabase/functions/guardar/index.ts"),"utf8");
-const importacionBellotas=/^import \{\s*([^}]+)\s*\} from ["']\.\/bellotas\.ts["'];\s*$/m;
-const bellotasImportadas=fuente.match(importacionBellotas);
-const js=stripTypeScriptTypes(fuente).replace(/^import .*createClient.*;\s*$/m,"").replace(importacionBellotas,"");
-const rutaBellotas=path.resolve(__dirname,"../supabase/functions/guardar/bellotas.ts");
-const moduloBellotas=bellotasImportadas && stripTypeScriptTypes(fs.readFileSync(rutaBellotas,"utf8")).replace(/^export (?=function )/gm,"");
+const cargarGuardar=compilarGuardar(fuente,path.resolve(__dirname,"../supabase/functions/guardar/bellotas.ts"));
 function servidor(inicial, opciones={}) {
   let fila=inicial && structuredClone(inicial), writes=0, handle;
   const admin={auth:{getUser:async()=>({data:{user:{id:"qa"}},error:null})},from:tabla=>{
@@ -23,12 +19,7 @@ function servidor(inicial, opciones={}) {
     }};return q;
   }};
   const ctx={Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>"unused"},serve:f=>{handle=f;}}};
-  vm.createContext(ctx);
-  if(bellotasImportadas){
-    const exportaciones=vm.runInContext(`(function(){\n${moduloBellotas}\nreturn {${bellotasImportadas[1]}};\n})()`,ctx,{filename:rutaBellotas});
-    Object.assign(ctx,exportaciones);
-  }
-  vm.runInContext(js,ctx);
+  cargarGuardar(ctx);
   return{call:(body,auth=true)=>handle(new Request("https://qa.invalid/guardar",{method:"POST",headers:auth?{Authorization:"Bearer qa"}:{},body:JSON.stringify({...body,...(body.artefacto && !body.cuenta ? {cuenta:'qa'}:{})})})),row:()=>fila,writes:()=>writes,ctx};
 }
 const base="2026-10-15T12:00:00.000Z";

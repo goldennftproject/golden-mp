@@ -1,10 +1,11 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),vm=require('vm');
-const root=path.resolve(__dirname,'..'),{stripTypeScriptTypes}=require('node:module');
-const js=stripTypeScriptTypes(fs.readFileSync(path.join(root,'supabase/functions/guardar/index.ts'),'utf8')).replace(/^import .*createClient.*;\s*$/m,'');
+const {compilarGuardar}=require('./guardar-contexto.cjs');
+const root=path.resolve(__dirname,'..'),guardar=path.join(root,'supabase/functions/guardar');
+const cargarGuardar=compilarGuardar(fs.readFileSync(path.join(guardar,'index.ts'),'utf8'),path.join(guardar,'bellotas.ts'));
 let handle,calls=[],fail=false;
 const admin={auth:{getUser:async()=>({data:{user:{id:'qa-verificado'}}})},rpc:async(name,args)=>{calls.push({name,args});return fail?{error:{message:'offline'}}:{data:{ok:true,phase:'alpha',vip_release_dias:30,compras:[],usdt:false}};}};
-vm.runInNewContext(js,{Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>''},serve:f=>handle=f}});
+cargarGuardar({Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>''},serve:f=>handle=f}});
 const call=(accion,auth=true)=>handle(new Request('https://qa.invalid/guardar',{method:'POST',headers:auth?{Authorization:'Bearer qa'}:{},body:JSON.stringify({alfa:{accion},cuenta:'otro',p_uid:'otro'})}));
 (async()=>{
  assert.equal((await call('estado',false)).status,401);assert.equal(calls.length,0);
