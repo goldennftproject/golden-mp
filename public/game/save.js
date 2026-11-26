@@ -2902,7 +2902,7 @@ async function mkList(filtro, opciones = {}) {
     const porPagina = 100;
     for (;;) {
       comprobar();
-      let q = cliente.from("market").select("*").is("sold_to", null).order("id", { ascending: true }).limit(porPagina);
+      let q = cliente.from("market_activo").select("*").is("sold_to", null).order("id", { ascending: true }).limit(porPagina);
       if (filtro?.kind) q = q.eq("kind", filtro.kind);
       if (ultimoId !== null) q = q.gt("id", ultimoId);
       if (signal) q = q.abortSignal(signal);

@@ -17,8 +17,8 @@ function harness(rows = [], overrides = {}) {
     setTimeout(fn, ms) { assert.equal(ms, 15000); timerStarts++; const id = ++timerId; timers.set(id, fn); return id; },
     clearTimeout(id) { timers.delete(id); },
   };
-  function query() {
-    const spec = { selected: null, eq: [], is: [], gt: [], order: [], limit: null, range: null, signal: null };
+  function query(table) {
+    const spec = { table, selected: null, eq: [], is: [], gt: [], order: [], limit: null, range: null, signal: null };
     const q = {
       select(columns) { spec.selected = columns; return q; },
       eq(column, value) { spec.eq.push([column, value]); return q; },
@@ -36,11 +36,18 @@ function harness(rows = [], overrides = {}) {
     for (const method of ['insert', 'update', 'upsert', 'delete', 'rpc']) q[method] = () => { writes++; throw Error('Unexpected write: ' + method); };
     return q;
   }
-  const client = { from(table) { assert.equal(table, 'market'); return query(); }, rpc() { writes++; throw Error('Unexpected RPC'); } };
+  const client = {
+    from(table) { assert.ok(['market', 'market_activo'].includes(table)); return query(table); },
+    rpc() { writes++; throw Error('Unexpected RPC'); },
+  };
   responder = async spec => {
     assert.equal(spec.selected, '*');
     let selected = rows.filter(row => spec.eq.every(([key, value]) => row[key] === value) &&
       spec.is.every(([key, value]) => row[key] === value) && spec.gt.every(([key, value]) => row[key] > value));
+    if (spec.table === 'market_activo') {
+      const relojServidor = Date.parse('2026-11-26T18:00:00Z');
+      selected = selected.filter(row => row.expires_at == null || Date.parse(row.expires_at) > relojServidor);
+    }
     selected.sort((a, b) => {
       for (const [key, options] of spec.order) {
         if (a[key] === b[key]) continue;
@@ -70,6 +77,16 @@ function row(id, extra = {}) { return { id, seller: 'player-a', created_at: '202
   let h = harness([row(1), row(2, { sold_to: 'buyer' }), row(3, { kind: 'seed' })]);
   assert.deepEqual(normalize(await h.context.mkList({ kind: 'res' }, { estricto: true })), [row(1)]);
   assert.equal(h.calls.length, 1); assert.equal(h.calls[0].limit, 100); assert(h.calls[0].signal instanceof AbortSignal);
+  assert.equal(h.calls[0].table, 'market_activo');
+  h.verify();
+
+  const vencida = row(1, { expires_at: '2026-11-26T18:00:00Z' });
+  const activa = row(2, { expires_at: '2026-11-26T18:00:01Z' });
+  const legado = row(3, { expires_at: null });
+  h = harness([vencida, activa, legado], { Date: { now() { throw Error('No uses el reloj local'); } } });
+  assert.deepEqual(normalize(await h.context.mkList(null, { estricto: true })), [activa, legado]);
+  assert.deepEqual(normalize(await h.context.mkMine({ estricto: true, pendientes: true })), [legado, activa, vencida]);
+  assert.deepEqual(h.calls.map(call => call.table), ['market_activo', 'market']);
   h.verify();
 
   // Public listings must retain all matching ads beyond the first page.

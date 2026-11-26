@@ -8292,18 +8292,36 @@ function p2pAgruparLotes(filas, uid) {
   return [...grupos.values()];
 }
 
+const P2P_FECHA_ANUNCIO = new Intl.DateTimeFormat("es-UY", { dateStyle: "short", timeStyle: "short" });
+const P2P_DIAS_PUBLICACION = 7;
+
+function p2pVencimientoEstimado() {
+  return P2P_FECHA_ANUNCIO.format(Date.now() + P2P_DIAS_PUBLICACION * 86400000);
+}
+
 function p2pFilaCompra(r, uid) {
   const mio = r.seller === uid;
   const equipo = r.kind === "arm" || r.kind === "armor";
   const durabilidad = equipo && Number.isFinite(r.payload?.dur) ? ' · Durabilidad: ' + r.payload.dur : '';
   const unidad = r.qty > 1 ? ' · ' + fmtDec(r.price / r.qty) + ' Plata/u.' : '';
+  const vence = Date.parse(r.expires_at);
+  const plazo = Number.isFinite(vence) ? ' · Vence ' + P2P_FECHA_ANUNCIO.format(vence) : '';
   return '<div class="forge-row"><div class="finfo"><div class="fnm">' +
     escapeHtml(r.name || r.item) + ' ×' + r.qty + ' <span class="tag">' + escapeHtml(MARKET_KINDS[r.kind] || r.kind) + '</span></div>' +
-    '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (tú)" : "") + unidad + durabilidad + '</div></div>' +
+    '<div class="fds">Vende: ' + escapeHtml(r.seller_name || "granjero") + (mio ? " (tú)" : "") + unidad + durabilidad + plazo + '</div></div>' +
     '<div class="fbtns"><button class="green sm" ' + (mio || G.plata < r.price ? "disabled" : "") +
     ' data-buy="' + escapeHtml(String(r.id)) + '">Comprar · ' + fmt(r.price) + '</button></div></div>';
 }
 
+function p2pFilaAnuncioPropio(r, vence, vencido) {
+  const plazo = Number.isFinite(vence)
+    ? (vencido ? 'Venció ' : 'Vence ') + P2P_FECHA_ANUNCIO.format(vence)
+    : 'Sin vencimiento';
+  return '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +
+    '<div class="fds">Precio: ' + fmt(r.price) + ' de plata · ' + plazo + '</div></div>' +
+    '<div class="fbtns"><button class="sm" data-cancel="' + escapeHtml(String(r.id)) + '">' +
+    (vencido ? 'Recuperar objetos' : 'Retirar') + '</button></div></div>';
+}
 const P2P_OFERTA_RECURSOS = { madera: "Madera", piedra: "Piedra" };
 const P2P_OFERTA_NOMBRES = {
   oferta_crear: "Publicar oferta", oferta_vender: "Vender materiales",
@@ -8341,7 +8359,8 @@ function p2pOfertasHtml(d, uid) {
   const avisoCupo = sinCupo ? "Ya usaste tu cupo de hoy (UTC)." : "Ofertas disponibles hoy (UTC) · " + limite + " de " + d.limite + ".";
   const bloquear = pendiente ? ' disabled' : '';
   h += '<div class="secc">Publicar oferta de compra</div><div class="fds">' + avisoCupo +
-    ' La Plata se reserva hasta comprar los materiales o retirar la oferta.</div>' +
+    ' La Plata de las unidades pendientes queda reservada. Cada oferta dura ' + P2P_DIAS_PUBLICACION +
+    ' días. Si vence, usa «Recuperar reserva» en Mis ofertas de compra.</div>' +
     '<form id="p2p-oferta-form" class="p2p-oferta-form" novalidate>' +
     '<label>Material<select id="p2p-oferta-item">' + Object.entries(P2P_OFERTA_RECURSOS)
       .map(([k, n]) => '<option value="' + k + '">' + n + '</option>').join("") + '</select></label>' +
@@ -8432,7 +8451,8 @@ function p2pOfertasEnlazar(box, d, uid, current) {
       const { item, qty, unitPrice, total } = oferta;
       if (G.plata < total) { toast("Te faltan " + ofertaPlata(total - G.plata) + " Plata disponibles."); return; }
       confirmar("Se reservarán " + ofertaPlata(total) + " Plata para comprar " + qty + " × " +
-        p2pOfertaObjeto(item) + ". Al retirar la oferta recuperarás la Plata de las unidades pendientes.", () => {
+        p2pOfertaObjeto(item) + ". Vencimiento estimado " + p2pVencimientoEstimado() +
+        ". Si vence, usa «Recuperar reserva» para recibir la Plata de las unidades pendientes.", () => {
         if (G.plata < total) { toast("Cambió tu saldo de Plata. Vuelve a revisar la oferta."); return; }
         return mutar({ accion: "oferta_crear", kind: "res", item, qty, unitPrice });
       }, { title: "Publicar oferta de compra", yes: "Reservar " + ofertaPlata(total) + " Plata" });
@@ -8537,7 +8557,8 @@ async function refreshP2P(actualizar=false) {
     h += p2pOfertasHtml(p2pOfertas, uid);
   } else if (p2pTab === "vender") {
     h += '<div class="info">Comisión para nuevos anuncios: '+marketFee()+'%. Tu límite: '+infraCupoP2P()+' anuncios al día (reinicio a las 00:00 UTC). La tiendita en Mercado → Mejoras añade un anuncio de venta diario de forma permanente.</div>';
-    h += '<div class="fds">Elige qué publicar. Se descuenta de tu bolsa hasta que se venda o lo retires.</div>';
+    h += '<div class="fds">Los anuncios duran ' + P2P_DIAS_PUBLICACION + ' días. Tus objetos quedan reservados hasta que se vendan o los retires. ' +
+      'Si el anuncio vence, recupéralos en Mis anuncios y cobros.</div>';
     const ops = [];
     CROP_ORDER.forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });
     ["madera","piedra","bronce","hierro","oro","diamante","netherita","fibra","pelaje","cuero","colmillo","esencia_runica"].forEach(k => { if ((G.res[k] || 0) > 0) ops.push(["res", k, G.res[k]]); });
@@ -8554,11 +8575,18 @@ async function refreshP2P(actualizar=false) {
         '<div class="fbtns">' +
           (kind === "arm" || kind === "armor" ? '' : '<input id="p2q-' + i + '" type="number" min="1" max="' + max + '" value="1" style="width:56px">') +
           '<input id="p2p-' + i + '" type="number" min="1" value="' + sug + '" style="width:70px" title="Precio en plata">' +
-          '<button class="green sm" data-pub="' + kind + ':' + key + ':' + i + '">Publicar</button>' +
+          '<button class="green sm" data-pub="' + kind + ':' + key + ':' + i + '">Revisar anuncio</button>' +
         '</div></div>';
     });
   } else if (p2pTab === "mias") {
-    const activas = filas.filter(r => !r.sold_to), vendidas = filas.filter(r => r.sold_to && !r.paid);
+    const vendidas = filas.filter(r => r.sold_to && !r.paid), activas = [], vencidas = [];
+    const ahora = Date.now();
+    for (const anuncio of filas) {
+      if (anuncio.sold_to) continue;
+      const vence = Date.parse(anuncio.expires_at);
+      const vencido = vence <= ahora;
+      (vencido ? vencidas : activas).push(p2pFilaAnuncioPropio(anuncio, vence, vencido));
+    }
     if (vendidas.length) h += '<div class="fnm">Ventas por cobrar</div>';
     vendidas.forEach(r => {
       const neto = marketNet(r.price, marketFee(r));
@@ -8567,12 +8595,12 @@ async function refreshP2P(actualizar=false) {
         '<div class="fbtns"><button class="green sm" data-cobrar="' + r.id + '">Cobrar</button></div></div>';
     });
     h += '<div class="secc">Anuncios activos: ' + activas.length + (' · '+(vipVigente()?'VIP':'Sin VIP')+': '+infraCupoP2P()+' anuncios por día UTC') + '</div>';
-    if (!activas.length) h += '<div class="fds">No tienes nada publicado.</div>';
-    activas.forEach(r => {
-      h += '<div class="forge-row"><div class="finfo"><div class="fnm">' + escapeHtml(r.name || r.item) + ' ×' + r.qty + '</div>' +
-        '<div class="fds">Precio: ' + fmt(r.price) + ' de plata</div></div>' +
-        '<div class="fbtns"><button class="sm" data-cancel="' + r.id + '">Retirar</button></div></div>';
-    });
+    h += activas.join("") || '<div class="fds">No tienes anuncios activos.</div>';
+    if (vencidas.length) {
+      h += '<div class="secc">Anuncios vencidos: ' + vencidas.length + '</div>' +
+        '<div class="fds">Recupera tus objetos. Si la bolsa está llena, quedarán en Entregas pendientes.</div>' +
+        vencidas.join("");
+    }
   } else {
     /* En escritorio, la regla compartida de .forge-list lleva este estado a la misma placa
        crema que una publicación real. Conservamos la clase base para no rediseñar móvil antes
@@ -8590,14 +8618,18 @@ async function refreshP2P(actualizar=false) {
   box.innerHTML = h;
   if (p2pTab === "ofertas") p2pOfertasEnlazar(box, p2pOfertas, uid, current);
   { const pb = $("p2p-pend"); if (pb) pb.onclick = () => { mkPendCobrar(); refreshP2P(); }; }
-  box.querySelectorAll("[data-pub]").forEach(b => b.onclick = async () => {
-    if(!current())return;
+  box.querySelectorAll("[data-pub]").forEach(b => b.onclick = () => {
+    if (!current() || p2pTab !== "vender" || isOpen("ov-confirm")) return;
     const [kind, key, i] = b.dataset.pub.split(":");
     const q = $("p2q-" + i), pr = $("p2p-" + i);
-    const cant = kind === "arm" || kind === "armor" ? 1 : Math.max(1, +(q && q.value) || 1);
-    // candado anti-exploit (12/8): el P2P tampoco deja sacar recursos que el objetivo activo pide
-    try{await marketPublicar(kind, key, cant, Math.max(1, +(pr && pr.value) || 1));}
-    finally{if(uid===p2pCuentaActual())await refreshP2P(true);}
+    const cant = kind === "arm" || kind === "armor" ? 1 : Math.max(1, Math.floor(Number(q?.value) || 1));
+    const precio = Math.max(1, Math.floor(Number(pr?.value) || 1));
+    askConfirm("Publicar " + fmt(cant) + " × " + mkNombre(kind, key) + " por " + fmt(precio) + " Plata. " +
+      "Vencimiento estimado " + p2pVencimientoEstimado() + ". Consulta el vencimiento exacto en Mis anuncios y cobros.", async () => {
+      if (!current() || p2pTab !== "vender") return;
+      try { await marketPublicar(kind, key, cant, precio); }
+      finally { if (uid === p2pCuentaActual()) await refreshP2P(true); }
+    }, { title: "Publicar anuncio de venta", yes: "Publicar", yesClass: "green sm", no: "Cancelar" });
   });
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = async () => {
     if(!current())return;

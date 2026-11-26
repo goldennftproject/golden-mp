@@ -62,7 +62,74 @@ function hasError(text){return /no (?:se )?(?:ha |han )?(?:podido|pudo|pudieron)
   assert.equal(f.calls.list.length,1,'no consulta anuncios públicos mientras está en Mis anuncios');assert.equal(f.get('p2p-ver-cobros').hidden,true);
   assert.equal(JSON.stringify(f.c.G),before,'el renderer no acredita Plata por su cuenta');assert.equal(f.calls.save,0);
  }
+ // Un vencimiento cambia la indicación y usa el mismo retiro, sólo al pulsar.
+ {
+  const f = await fixture(), list = f.get('p2p-list');
+  const activa = { ...offer('activa', 'qa-owner'), expires_at: '2099-01-01T20:00:00Z' };
+  const vencida = { ...offer('vencida', 'qa-owner'), expires_at: '2000-01-01T20:00:00Z' };
+  const legado = { ...offer('legado', 'qa-owner'), expires_at: null };
+  f.controls.own = [activa, vencida, legado, { ...sold(), expires_at: vencida.expires_at }];
+  f.controls.public = [{ ...activa, id: 'publica', seller: 'qa-other' }];
+  await f.c.refreshP2P(true);
+  assert.match(list.textContent, /Vence /);
+  assert.ok(list.querySelector('[data-buy="publica"]'));
+  assert.equal(list.querySelector('[data-buy="vencida"]'), null);
+  await f.tab('vender').onclick();
+  assert.match(list.textContent, /Los anuncios duran 7 días/);
+  await f.tab('mias').onclick();
+  assert.match(list.textContent, /Anuncios activos:\s*2/);
+  assert.match(list.textContent, /Anuncios vencidos:\s*1/);
+  assert.match(list.textContent, /Sin vencimiento/);
+  assert.match(list.textContent, /Entregas pendientes/);
+  assert.match(list.querySelector('[data-cancel="activa"]').textContent, /Retirar/);
+  const recuperar = list.querySelector('[data-cancel="vencida"]');
+  assert.match(recuperar.textContent, /Recuperar objetos/);
+  assert.ok(list.querySelector('[data-cobrar="sale-1"]'), 'una venta anterior al vencimiento conserva el cobro');
+  noAction(f, 'consultar anuncios vencidos');
+  f.controls.own = f.controls.own.filter(row => row !== vencida);
+  await recuperar.onclick();
+  assert.deepEqual(f.calls.cancel, [vencida]);
+  assert.equal(list.querySelector('[data-cancel="vencida"]'), null);
+ }
  // Cero confirmado es distinto de error; ninguna consulta fallida se presenta como lista vacía.
+ // El plazo estimado se ve en ambas confirmaciones antes de reservar objetos o Plata.
+ {
+  const f = await fixture(), list = f.get('p2p-list');
+  f.c.isOpen = id => id === 'ov-p2p' || !!f.get(id)?.classList.contains('show');
+  f.c.Date = class extends Date { static now() { return Date.parse('2026-11-26T19:00:00Z'); } };
+  const vence = f.c.p2pVencimientoEstimado();
+  let solicitudes = 0;
+  f.c.ofertaConsultar = async () => ({
+    ok: true, limite: 1, creadasHoy: 0, maxCantidad: 99, maxPrecio: 1000000,
+    mercado: [], propias: [], entregas: [], cobros: [],
+  });
+  f.c.ofertaOperar = async () => { solicitudes++; };
+  await f.c.refreshP2P(true);
+  await f.tab('vender').onclick();
+  const publicar = list.querySelector('[data-pub="res:madera:0"]') ||
+    list.querySelector('[data-pub^="res:madera:"]');
+  publicar.onclick();
+  assert.match(f.get('cf-msg').textContent, /Vencimiento estimado/);
+  assert.ok(f.get('cf-msg').textContent.includes(vence));
+  assert.equal(f.calls.publish.length, 0);
+  f.get('cf-no').onclick();
+  assert.equal(f.calls.publish.length, 0);
+  publicar.onclick();
+  f.get('cf-yes').onclick();
+  await tick();
+  assert.equal(f.calls.publish.length, 1);
+  assert.deepEqual(f.calls.publish[0].slice(0, 3), ['res', 'madera', 1]);
+
+  await f.tab('ofertas').onclick();
+  assert.match(list.textContent, /Cada oferta dura 7 días/);
+  assert.match(list.textContent, /Recuperar reserva/);
+  f.get('p2p-oferta-form').onsubmit({ preventDefault() {} });
+  assert.ok(f.get('cf-msg').textContent.includes(vence));
+  assert.match(f.get('cf-msg').textContent, /Recuperar reserva/);
+  assert.equal(solicitudes, 0);
+  f.get('cf-no').onclick();
+  assert.equal(solicitudes, 0);
+ }
  {
   const f=await fixture();f.controls.own=[];await f.c.refreshP2P(true);assert.equal(f.get('p2p-ver-cobros').hidden,true);
   assert(!hasError(f.get('p2p-cobros').textContent),'cero confirmado no es un error');
@@ -117,5 +184,5 @@ function hasError(text){return /no (?:se )?(?:ha |han )?(?:podido|pudo|pudieron)
   const old=f.c.refreshP2P(true);await tick();f.c.UID='qa-next';await f.c.refreshP2P(true);mine.resolve([sold('previous-session')]);list.resolve([offer('previous-public')]);await old;
   assert.equal(f.get('p2p-ver-cobros').hidden,true);assert(f.get('p2p-list').querySelector('[data-buy="next-public"]'));assert(!f.get('p2p-list').querySelector('[data-buy="previous-public"]'));
  }
- console.log('OK: apertura/Actualizar, netos y redondeo, navegación sin cobro, cobro manual, errores separados, caché sin sondeo, concurrencia, última pestaña, generación forzada y sesión/handlers anteriores descartados.');
+ console.log('OK: apertura/Actualizar, cobro manual, vencimientos y recuperación, errores separados, caché sin sondeo, concurrencia y aislamiento de sesión.');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{for(const f of fixtures)f.dom.window.close();});
