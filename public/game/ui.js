@@ -734,14 +734,14 @@ function refreshMorral() {
 function viajeAccionAttr(dato, valor, etiqueta) {
   return ' data-' + dato + '="' + escapeHtml(valor) + '" role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) + '"';
 }
-function compraLocalPuedeGuardar(cuenta) {
+function compraLocalPuedeGuardar(cuenta, accion = "comprar") {
   if (cuenta && typeof ofertaPendientes === "function" && ofertaPendientes(cuenta).length) {
     toast("Hay una oferta por comprobar. Revisa el recibo en Ofertas de compra.");
     return false;
   }
   if ((typeof MERCADO_EN_CURSO !== "undefined" && MERCADO_EN_CURSO) ||
       (typeof SAVE_CONFLICTOS !== "undefined" && SAVE_CONFLICTOS.has(cuenta))) {
-    toast("Revisa el guardado antes de comprar.");
+    toast("Revisa el guardado antes de " + accion + ".");
     return false;
   }
   return true;
@@ -2323,7 +2323,7 @@ function itemView(d) {
     if (!def) return { sprite: null, emoji: "⚔️", label: "Repuesto no disponible", dur: null };
     return { sprite: def.sprite || ARM_TIPO_DEF[def.tipo].sprite, emoji: "⚔️",
       glow: rep.w.dur <= 0 ? "rota" : undefined,
-      label: def.label + (rep.w.plus ? " +" + rep.w.plus : "") + " · repuesto · durabilidad " + rep.w.dur + "/" + def.dur + " · clic para usar; conserva el arma actual",
+      label: def.label + (rep.w.plus ? " +" + rep.w.plus : "") + " · repuesto · durabilidad " + rep.w.dur + "/" + def.dur + " · clic para usar y conservar el arma actual" + (rep.w.dur < def.dur ? " · después puedes repararla en Herrería → Reparar" : ""),
       dur: Math.max(0, Math.min(100, Math.round(rep.w.dur / def.dur * 100))) };
   }
   if (!d) return null;
@@ -4206,15 +4206,25 @@ function refreshForge() {
      Herrería: se calan desde el panel de la laguna, con la carnada a la vista, porque la
      decisión que ordenan —« ¿mis lombrices van a lances o a nasas? »— solo existe si las dos
      opciones se ven a la vez.) */
-  // solo las ARMAS se reparan → Reparar
-  ARM_ORDER.forEach(id => {   // doc 2/8: las armas nuevas se reparan acá
-    if (!G.weapons || !G.weapons[id]) return;
-    const w = ARM_DEF[id], dur = G.weapons[id].dur, pct = Math.round(dur / w.dur * 100);
-    const rstr = Object.keys(w.repair).map(k => resIc(k) + w.repair[k]).join(" ");
-    const btn = dur < w.dur
-      ? '<button class="gold sm" ' + (canAfford(w.repair) ? "" : "disabled") + ' data-rarm="' + id + '" title="Reparar: ' + rstr + '">Reparar</button>'
-      : '<button class="ghost sm" disabled>100%</button>';
-    repair += '<div class="forge-row"><div class="fic"><img src="' + GF.spr(w.sprite || ARM_TIPO_DEF[w.tipo].sprite) + '"></div><div class="finfo"><div class="fnm">' + w.label + '</div><div class="durbar"><i style="width:' + pct + '%"></i></div><div class="fds">' + dur + "/" + w.dur + " · reparar: " + rstr + '</div></div><div class="fbtns">' + btn + "</div></div>";
+  // La lista de armas indica el resultado y usa la misma cotización que la reparación.
+  ARM_ORDER.forEach(id => {
+    if (!G.weapons?.[id]) return;
+    const w = ARM_DEF[id], quote = weaponRepairQuote(id);
+    const pct = quote ? Math.round(quote.current / quote.max * 100) : 0;
+    const estado = quote ? "Durabilidad " + quote.current + "/" + quote.max : "Durabilidad no disponible";
+    let detalle = estado, boton = '<button class="ghost sm" disabled>' + (quote ? "100%" : "No disponible") + '</button>';
+    if (quote?.missing > 0) {
+      const { plata, ...materiales } = quote.cost;
+      const coste = Object.entries(quote.cost).map(([k, n]) => fmtDec(n) + " " + (k === "plata" ? "Plata" : RES_LABEL[k] || k)).join(" · ");
+      detalle += ' → ' + quote.max + '/' + quote.max + ' · <b>' + escapeHtml(coste) + '</b>';
+      boton = '<button class="gold sm"' + (canAfford(quote.cost) ? "" : " disabled") +
+        ' data-rarm="' + id + '" data-rarm-dur="' + quote.current + '" aria-label="Reparar ' + escapeHtml(w.label) +
+        '" aria-describedby="forge-repair-cost-' + id + '">Reparar</button>';
+      detalle = '<div class="fds" id="forge-repair-cost-' + id + '">' + detalle + '</div>' + faltaReceta(materiales, plata);
+    } else detalle = '<div class="fds">' + detalle + '</div>';
+    repair += '<div class="forge-row"><div class="fic"><img alt="" src="' + GF.spr(w.sprite || ARM_TIPO_DEF[w.tipo].sprite) +
+      '"></div><div class="finfo"><div class="fnm">' + w.label + '</div><div class="durbar"><i style="width:' + pct +
+      '%"></i></div>' + detalle + '</div><div class="fbtns">' + boton + '</div></div>';
   });
   // armas y flechas → pestaña ARMAS (detalles viernes: no se mezclan con las herramientas)
   let armas = "";
@@ -4280,7 +4290,7 @@ function refreshForge() {
 
   $("forge-craft").innerHTML = craft || '<div class="sub">Nada por fabricar — ya tienes todo. </div>';
   if (G.armasUnlocked) $("forge-armas").innerHTML = armas || '<div class="sub">Ya tienes todas las armas. Las flechas se siguen fabricando aquí.</div>';
-  $("forge-repair").innerHTML = repair;
+  $("forge-repair").innerHTML = repair || '<div class="sub">Todavía no tienes armas para reparar.</div>';
   const card = $("ov-forge");
   card.querySelectorAll("[data-craft]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
     ["[data-craft='" + b.dataset.craft + "']"], () => craftPick(b.dataset.craft)));
@@ -4302,8 +4312,17 @@ function refreshForge() {
     ["[data-ctool5='" + b.dataset.ctool5 + "']", "[data-ctool='" + b.dataset.ctool5 + "']"], () => craftTool(b.dataset.ctool5, 5)));
   card.querySelectorAll("[data-carm]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
     ["[data-eqarm='" + b.dataset.carm + "']", "[data-carm='" + b.dataset.carm + "']"], () => craftWeapon(b.dataset.carm)));
-  card.querySelectorAll("[data-rarm]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev,
-    ["[data-rarm='" + b.dataset.rarm + "']"], () => repairWeapon(b.dataset.rarm)));
+  card.querySelectorAll("[data-rarm]").forEach(b => {
+    const id = b.dataset.rarm, ficha = G.weapons[id];
+    b.onclick = (ev) => forgeAccionConFocoPc(ev, ["[data-rarm='" + id + "']"], () => {
+      if (G.weapons?.[id] !== ficha || weaponRepairQuote(id)?.current !== Number(b.dataset.rarmDur)) {
+        toast("El arma cambió. Revisa el coste de reparación.");
+        refreshForge();
+        return false;
+      }
+      return repairWeapon(id);
+    });
+  });
   card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev, [], () => {
     G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof tutoEvent === "function") tutoEvent("equiparm"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
   }));

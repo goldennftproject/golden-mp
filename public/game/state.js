@@ -7278,14 +7278,33 @@ function craftWeapon(id) {
   if (typeof tutoEvent === "function") tutoEvent("craftarm");
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv(); refreshHud();
 }
+function weaponRepairQuote(id) {
+  if (!Object.hasOwn(ARM_DEF, id)) return null;
+  const w = ARM_DEF[id], dur = G.weapons?.[id]?.dur;
+  if (!Number.isFinite(dur)) return null;
+  const current = Math.max(0, Math.min(w.dur, Math.floor(dur)));
+  const missing = w.dur - current;
+  // La bolsa usa unidades enteras. Redondear hacia arriba evita que fraccionar el desgaste abarate la reparación.
+  const cost = missing ? Object.fromEntries(Object.entries(w.repair).map(([material, fullCost]) =>
+    [material, Math.ceil(fullCost * missing / w.dur)])) : {};
+  return { current, max: w.dur, missing, cost };
+}
 function repairWeapon(id) {
-  const w = ARM_DEF[id]; if (!w || !G.weapons[id]) return;
-  if (G.weapons[id].dur >= w.dur) { toast("Ya está al 100%"); return; }
-  if (!canAfford(w.repair)) { toast("Te faltan materiales para reparar"); return; }
-  payCost(w.repair); G.weapons[id].dur = w.dur;
+  const quote = weaponRepairQuote(id);
+  if (!quote) return false;
+  if (!quote.missing) { toast("Ya está al 100%"); return false; }
+  if (enZona()) { toast("Vuelve a la granja para reparar el arma"); return false; }
+  const cuenta = typeof UID === "undefined" ? null : UID;
+  if (typeof compraLocalPuedeGuardar === "function" && !compraLocalPuedeGuardar(cuenta, "reparar")) return false;
+  if (!canAfford(quote.cost)) { toast("Te faltan materiales para reparar"); return false; }
+  payCost(quote.cost);
+  G.weapons[id].dur = quote.max;
+  if (typeof saveFarm === "function") saveFarm(true);
+  const w = ARM_DEF[id];
   log("Reparaste " + w.label + " (100%).", "good"); toast("Reparada"); forgeWork(); refreshForge();
   refreshHud(); if (typeof syncSlots === "function") syncSlots();
   if (isOpen("ov-equip")) refreshEquip(); if (isOpen("ov-inv")) refreshInv();
+  return true;
 }
 function useWeapon(id) { if (G.weapons[id] && G.weapons[id].dur > 0) G.weapons[id].dur--; return G.weapons[id] ? G.weapons[id].dur : 0; }
 /* ============ 11/9 — LA DEFENSA DE LOS MOBS Y EL DAÑO DEL JUGADOR, COMO TIBIA (TFS) ===========
