@@ -100,9 +100,9 @@ console.log("\nLA COLUMNA DE ZONA TAMBIÉN DEJA EL MENÚ LEGIBLE\n");
   ok("el sincronizado incluye recientes, Zona y carrete", /\["recientes", "morral", "combate", "pesca-mini"\]/.test(sync));
   ok("sólo corre el desplazamiento en escritorio con el menú abierto",
     /window\.innerWidth > 640/.test(sync) && /!menu\.classList\.contains\("collapsed"\)/.test(sync));
-  ok("morral, muelle y carrete dejan el mismo pasillo de 8 px que los recientes",
+  ok("los paneles de Zona usan el desplazamiento medido y los demás conservan su regla",
     /#recientes\.menu-abierto\{right:208px\}/.test(HTML) &&
-    /#morral\.menu-abierto,#combate\.menu-abierto\{right:208px\}/.test(HTML) &&
+    /#morral\.menu-abierto,#combate\.menu-abierto\s*\{\s*right:\s*var\(--zona-menu-offset/.test(HTML) &&
     /#pesca-mini\.menu-abierto\{right:208px\}/.test(HTML));
   ok("el aviso efímero se vuelve a medir cuando el muelle cambia de columna", /placeSaveIndPc\(\)/.test(sync));
 

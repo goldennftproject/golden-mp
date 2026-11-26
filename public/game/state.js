@@ -6036,16 +6036,16 @@ const ARMOR_SETS = {
   vegetal: { label:"Peto de fibra vegetal", mat:"papa", taller:"store",
     piezas:{ pecho:{mat:8,plata:20,def:1} } },
   fibra:    { label:"Armadura de Fibra",    animal:"alpaca", mat:"fibra",    tipo:"ligera",
-    bono:{ txt:"+15% vel. ataque + 12% evasión", atkSpd:15, evade:12 },
+    bono:{ txt:"Velocidad de ataque +15% · Evasión +12%", atkSpd:15, evade:12 },
     piezas:{ yelmo:{mat:2,plata:30,def:3}, pecho:{mat:4,plata:60,def:5}, pantalones:{mat:3,plata:45,def:4}, botas:{mat:2,plata:25,def:2}, guantes:{mat:1,plata:20,def:1} } },
   piel:     { label:"Armadura de Piel",     animal:"conejo", mat:"pelaje",   tipo:"vitalidad",
-    bono:{ txt:"+2 HP/s de regeneración + 12% vel. de recolección", regen:2, farm:12 },
+    bono:{ txt:"Regeneras 2 de vida por segundo · Siembra y cosecha −12% de duración cuando llevan tiempo. Hoy son instantáneas.", regen:2, farm:12 },
     piezas:{ yelmo:{mat:2,plata:35,def:3}, pecho:{mat:5,plata:70,def:6}, pantalones:{mat:4,plata:55,def:5}, botas:{mat:2,plata:30,def:2}, guantes:{mat:2,plata:25,def:2} } },
   cuero:    { label:"Armadura de Cuero",    animal:"toro",   mat:"cuero",    tipo:"equilibrada",
-    bono:{ txt:"+40 de vida máxima + 8% de defensa", hpmax:40, defPct:8 },
+    bono:{ txt:"Vida máxima +40 · Daño recibido −8%", hpmax:40, defPct:8 },
     piezas:{ yelmo:{mat:3,plata:55,def:5}, pecho:{mat:5,plata:100,def:8}, pantalones:{mat:4,plata:80,def:6}, botas:{mat:2,plata:40,def:3}, guantes:{mat:2,plata:35,def:3} } },
   colmillo: { label:"Armadura de Colmillo", animal:"jabali", mat:"colmillo", tipo:"pesada",
-    bono:{ txt:"+20% de defensa y +10% de daño (−5% de velocidad)", defPct:20, dmgPct:10, spd:-5 },
+    bono:{ txt:"Daño recibido −20% · Daño infligido +10% · Movimiento −5%", defPct:20, dmgPct:10, spd:-5 },
     piezas:{ yelmo:{mat:2,hierro:5,plata:120,def:8}, pecho:{mat:3,hierro:8,plata:200,def:12}, pantalones:{mat:2,hierro:6,plata:150,def:9}, botas:{mat:1,hierro:4,plata:80,def:5}, guantes:{mat:1,hierro:3,plata:70,def:4} } },
 };
 const ARMOR_ORDER = ["vegetal", "fibra", "piel", "cuero", "colmillo"];
@@ -7466,24 +7466,50 @@ function swordDmg() {   // legado: >0 si hay un arma CUERPO A CUERPO equipada y 
 const BOW_COST = { madera: 12, bronce: 2 };
 const ARROW_COST = { madera: 2, piedra: 1 };
 const ARROW_BATCH = 20;
-function craftArrows() {
-  if (!canAfford(ARROW_COST)) { toast("Te faltan materiales"); return; }
+const ARROW_VIP_BATCHES = 5;
+function arrowCraftQuote(requested = 1) {
+  const limit = requested === ARROW_VIP_BATCHES ? ARROW_VIP_BATCHES : 1;
+  if (limit > 1 && !vipVigente()) return { batches: 0, arrows: 0, cost: {}, reason: "vip" };
   const pilas = cantidad => Math.ceil(Math.floor(cantidad) / 99);
   const flechas = G.res.flecha || 0;
-  let cupos = canonicalStacks().length + pilas(flechas + ARROW_BATCH) - pilas(flechas);
-  // Consumir la última unidad de un material puede liberar la casilla que ocupará el lote.
-  for (const [material, cantidad] of Object.entries(ARROW_COST)) {
-    const disponible = G.res[material];
-    cupos += pilas(disponible - cantidad) - pilas(disponible);
+  const materiales = Object.entries(ARROW_COST);
+  const ocupadas = canonicalStacks().length, capacidad = invSlots();
+  let batches = 0, cost = {}, reason = null;
+  for (let n = 1; n <= limit; n++) {
+    const siguiente = Object.fromEntries(materiales.map(([material, cantidad]) => [material, cantidad * n]));
+    if (!canAfford(siguiente)) { reason = "stock"; break; }
+    let cupos = ocupadas + pilas(flechas + n * ARROW_BATCH) - pilas(flechas);
+    for (const [material, cantidad] of Object.entries(siguiente)) {
+      const disponible = G.res[material] || 0;
+      cupos += pilas(disponible - cantidad) - pilas(disponible);
+    }
+    // Al agotar una pila de materiales se libera espacio. Se verifica cada paso del lote.
+    if (cupos > capacidad) { reason = "space"; break; }
+    batches = n;
+    cost = siguiente;
   }
-  if (cupos > invSlots()) { bagFull("fabricar flechas"); return; }
-  payCost(ARROW_COST);
-  G.res.flecha = flechas + ARROW_BATCH;   // van a la bolsa, NO se autoequipan
-  addXp("crafting", 3);
-  log("Has fabricado " + ARROW_BATCH + " flechas — están en tu bolsa; equípalas en el panel de Equipo.", "good");
-  toast("+" + ARROW_BATCH + " flechas en la bolsa");
+  return { batches, arrows: batches * ARROW_BATCH, cost, reason };
+}
+function craftArrows(requested = 1, expectedBatches) {
+  const quote = arrowCraftQuote(requested);
+  if (expectedBatches !== undefined && expectedBatches !== quote.batches) {
+    toast("Cambió la cantidad disponible. Revisa cuántas flechas puedes fabricar y su coste.");
+    refreshForge();
+    return false;
+  }
+  if (!quote.batches) {
+    if (quote.reason === "space") bagFull("fabricar flechas");
+    else toast(quote.reason === "vip" ? "La fabricación en lotes requiere VIP" : "Te faltan materiales");
+    return false;
+  }
+  payCost(quote.cost);
+  G.res.flecha = (G.res.flecha || 0) + quote.arrows;
+  for (let n = 0; n < quote.batches; n++) addXp("crafting", 3);
+  log("Has fabricado " + quote.arrows + " flechas. Puedes equiparlas desde el panel de Equipo.", "good");
+  toast("+" + quote.arrows + " flechas en la bolsa");
   forgeWork();
   refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (isOpen("ov-inv")) refreshInv();
+  return true;
 }
 // viernes (2): la pestaña Armas de la Herrería se desbloquea pagando
 const ARMAS_UNLOCK_COST = { madera: 15, piedra: 10 }; var ARMAS_UNLOCK_PLATA = 300;   // 14/8 rebalance: era 20+20+1000 (~100 min de papa aún con 8 parcelas, medido)
@@ -7731,7 +7757,7 @@ function dishPrice(r) {      // precio base de venta (antes de la maestría)
 function dishBuffLabel(b, pot) {
   const v = Math.round((b.val || 0) * (pot || 1));
   switch (b.type) {
-    case "farm": return "+" + v + "% vel. de recolección";
+    case "farm": return "−" + v + "% de duración al sembrar y cosechar cuando llevan tiempo";
     case "regen": return "regenera +" + v + " HP/s";
     case "speed": return "+" + v + "% vel. de movimiento";
     case "def": return "+" + v + "% defensa";

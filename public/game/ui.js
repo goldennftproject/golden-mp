@@ -485,7 +485,7 @@ function durArmaHtml(id) {
   return '<div class="' + cls + '" title="' + tip + '">' +
     '<img class="cb-durIc" src="' + GF.spr(w.sprite || ARM_TIPO_DEF[w.tipo].sprite) + '" onerror="this.outerHTML=\'⚔️\'">' +
     '<span class="cb-durBar"><i style="width:' + (pct * 100).toFixed(0) + '%"></i></span>' +
-    '<b>' + dur + '</b></div>';
+    '<b>' + dur + '/' + max + '</b></div>';
 }
 /* El HUD se puede envolver en varias filas en un escritorio angosto. El morral no puede quedarse
    en su antiguo top fijo, porque terminaría debajo de moneda/vida; se ancla justo bajo la última
@@ -507,6 +507,35 @@ function ubicarMorralPc() {
    La posición se deriva de la caja ya renderizada: el contenido del contenedor puede crecer, pero
    nunca vuelve a esconderse detrás de un panel. Solo corre en escritorio; móvil conserva su
    disposición propia. */
+function zonaLateralCompacta() {
+  return window.innerWidth <= 640 ||
+    (window.innerWidth <= 1000 && window.innerHeight <= 540);
+}
+function ubicarZonaLateralCompacta(muelle, morral) {
+  const rect = id => {
+    const el = $(id);
+    const r = el && typeof el.getBoundingClientRect === "function" && el.getBoundingClientRect();
+    return r && r.width && r.height ? r : null;
+  };
+  const caja = rect("combate") || rect("morral");
+  if (!caja || !muelle.style?.setProperty || !morral.style?.setProperty) return;
+  let top = 8, reserva = 8;
+  for (const id of ["hudbar", "hud-flot", "zone-combat-guide-help"]) {
+    const r = rect(id);
+    if (r && r.right > caja.left && r.left < caja.right) top = Math.max(top, Math.ceil(r.bottom + 6));
+  }
+  for (const id of ["guardado-manual", "hotwrap", "editbar"]) {
+    const r = rect(id);
+    if (r && r.right > caja.left && r.left < caja.right && r.top > top) {
+      reserva = Math.max(reserva, Math.ceil(window.innerHeight - r.top + 6));
+    }
+  }
+  muelle.style.setProperty("--zona-equipo-arriba", top + "px");
+  muelle.style.setProperty("--zona-reserva-inferior", reserva + "px");
+  const equipo = rect("combate");
+  morral.style.setProperty("--zona-morral-arriba", (equipo ? Math.ceil(equipo.bottom + 5) : top) + "px");
+  morral.style.setProperty("--zona-reserva-inferior", reserva + "px");
+}
 function ubicarMuelleCombatePC() {
   const muelle = $("combate"), morral = $("morral");
   if (typeof ubicarMorralPc === "function") ubicarMorralPc();
@@ -515,7 +544,20 @@ function ubicarMuelleCombatePC() {
   /* 25/9: con la misma guarda que escribirCapaOv — el DOM de cartón de los tests no tiene
      removeProperty, y test-cuerpos / test-tumba-una-sola reventaban en refreshMorral. */
   const limpiar = () => { const st = muelle.style; if (!st) return; if (typeof st.removeProperty === "function") st.removeProperty("--muelle-zona-top"); else st["--muelle-zona-top"] = ""; if(typeof st.removeProperty==="function")st.removeProperty("--muelle-zona-reserva");else st["--muelle-zona-reserva"]=""; };   // 25/9: con guarda (DOM de cartón de los tests)
-  if (!morral || !window.GF || GF.scene !== "forest" || window.innerWidth <= 640) { limpiar(); reubicarAviso(); return; }
+  const enZona = !!(window.GF && GF.scene === "forest");
+  $("hudbar")?.classList?.toggle("zona-hud-compacta", enZona);
+  if (!morral || !enZona) { limpiar(); reubicarAviso(); return; }
+  const menu = $("gmenu");
+  const menuRect = window.innerWidth > 640 && menu && !menu.classList?.contains("collapsed") &&
+    typeof menu.getBoundingClientRect === "function" ? menu.getBoundingClientRect() : null;
+  for (const panel of [morral, muelle]) {
+    if (menuRect?.width && Number.isFinite(menuRect.left)) {
+      panel.style?.setProperty?.("--zona-menu-offset", Math.ceil(window.innerWidth - menuRect.left + 8) + "px");
+    } else {
+      panel.style?.removeProperty?.("--zona-menu-offset");
+    }
+  }
+  if (zonaLateralCompacta()) { limpiar(); ubicarZonaLateralCompacta(muelle, morral); reubicarAviso(); return; }
   const r = morral.getBoundingClientRect();
   if (!r.height) { limpiar(); reubicarAviso(); return; }
   { const st = muelle.style; if (st && typeof st.setProperty === "function") st.setProperty("--muelle-zona-top", Math.ceil(r.bottom + 8) + "px"); else if (st) st["--muelle-zona-top"] = Math.ceil(r.bottom + 8) + "px"; }
@@ -532,7 +574,7 @@ function ubicarMuelleCombatePC() {
    equivalente evita que Tab caiga al documento después de una decisión rápida en plena Zona.
    El botón Equipo es el respaldo si esa casilla ya no puede actuar. */
 function enfocarControlCombate(caja, selector) {
-  if (!caja || (typeof window !== "undefined" && window.innerWidth <= 640) || typeof caja.querySelector !== "function") return;
+  if (!caja || typeof caja.querySelector !== "function") return;
   const control = caja.querySelector(selector) || caja.querySelector("#cb-eq-open") || caja.querySelector("[data-modo]");
   if (!control || typeof control.focus !== "function") return;
   try { control.focus({ preventScroll: true }); } catch (e) { control.focus(); }
@@ -634,15 +676,12 @@ function refreshCombate() {
     durArmaHtml(gr.arma) +
     '<button class="cb-def cb-eq-open" id="cb-eq-open" title="Abrir el panel de Equipo">Equipo · Defensa ' + (typeof gearDefTotal === "function" ? gearDefTotal() : 0) + '</button>' +
     '<div class="cb-modos">' +
-      '<button class="cb-m' + (modo === "perseguir" ? " on" : "") + '" data-modo="perseguir" title="Vas hacia el objetivo hasta la distancia de tu arma">👣 Perseguir</button>' +
-      '<button class="cb-m' + (modo === "parado" ? " on" : "") + '" data-modo="parado" title="Atacas sin moverte — para pelear con arco">🛑 Parado</button>' +
+      '<button class="cb-m' + (modo === "perseguir" ? " on" : "") + '" data-modo="perseguir" aria-pressed="' + (modo === "perseguir") + '" title="Vas hacia el objetivo hasta la distancia de tu arma">👣 Perseguir</button>' +
+      '<button class="cb-m' + (modo === "parado" ? " on" : "") + '" data-modo="parado" aria-pressed="' + (modo === "parado") + '" title="Atacas sin moverte — para pelear con arco">🛑 Parado</button>' +
     '</div>';
   const abrirEquipo = () => { if (typeof openOv === "function") openOv("ov-equip"); };
-  const eq = $("cb-eq"), abrir = $("cb-eq-open");
+  const abrir = $("cb-eq-open");
   if (abrir) abrir.onclick = abrirEquipo;
-  /* Móvil conserva el toque sobre el muñeco entero; en PC el botón explícito evita anidar ese
-     acceso dentro de las casillas rápidas, que sí son acciones independientes. */
-  if (typeof window !== "undefined" && window.innerWidth <= 640 && eq) eq.onclick = abrirEquipo;
   caja.querySelectorAll("[data-gslot]").forEach(b => {
     const moverPieza = (e) => {
       if (e && typeof e.stopPropagation === "function") e.stopPropagation();
@@ -679,7 +718,10 @@ function refreshCombate() {
 function refreshMorral() {
   const caja = $("morral"); if (!caja) return;
   const enZona = !!(window.GF && GF.scene === "forest");
-  if (!enZona) { caja.style.display = "none"; caja._firma = ""; ubicarMuelleCombatePC(); return; }
+  if (!enZona) {
+    caja.style.display = "none"; caja._firma = ""; caja.classList?.remove("morral-expandido");
+    ubicarMuelleCombatePC(); return;
+  }
   /* 8/9 (tarde): el panel dejó de ser « el morral » y es EL CONTENEDOR que llevás puesto — el
      objeto de verdad, con su nombre y su cupo. Sigue siendo de solo lectura y sigue viviendo en
      el costado: es el recordatorio de cuánto te queda por llenar antes de tener que volver, que
@@ -697,9 +739,15 @@ function refreshMorral() {
   caja._firma = firma;
   caja.style.display = "";
   const lleno = raiz ? libres <= 0 : true;
-  let h = '<div class="mor-tit' + (lleno ? " lleno" : "") + '">' +
-    (raiz ? CONT_DEF[raiz.c].emoji + ' ' + CONT_DEF[raiz.c].label + ' ' + l.length + '/' + cupo + (lleno ? ' · LLENO' : '')
-          : '👝 Sin contenedor') + '</div><div class="mor-huecos">';
+  const rotulo = raiz ? CONT_DEF[raiz.c].emoji + " " + CONT_DEF[raiz.c].label + " " + l.length + "/" + cupo
+    : "👝 Sin contenedor";
+  const expandido = caja.classList?.contains("morral-expandido") || false;
+  const foco = typeof document !== "undefined" && document.activeElement?.id === "mor-abrir";
+  let h = '<div class="mor-tit' + (lleno ? ' lleno' : '') + '">' + rotulo +
+    (raiz && lleno ? ' · LLENO' : '') + '</div>' +
+    '<button class="mor-abrir' + (lleno ? ' lleno' : '') + '" id="mor-abrir" type="button" aria-controls="mor-detalle" aria-expanded="' +
+    expandido + '"><span>' + rotulo + '</span><span class="mor-indicador" aria-hidden="true">▾</span></button>' +
+    '<div id="mor-detalle"><div class="mor-huecos">';
   for (let i = 0; i < Math.max(cupo, 8); i++) {
     const e = l[i];
     if (!e) { h += '<div class="mor-h"></div>'; continue; }
@@ -711,8 +759,17 @@ function refreshMorral() {
       (spr ? '<img src="' + GF.spr(spr) + '" onerror="this.remove()">' : '<span class="em">📦</span>') +
       '<span class="mn">' + fmt(e.n) + '</span></div>';
   }
-  h += '</div><div class="mor-pie">' + (raiz ? 'Se vacía solo al volver — y se pierde entero si te matan' : 'Vuelve a la granja') + '</div>';
+  h += '</div><div class="mor-pie">' + (raiz ? 'Al volver se descarga el botín. Si te derrotan, queda en tu calavera.' : 'Vuelve a la granja') + '</div></div>';
   caja.innerHTML = h;
+  const control = typeof caja.querySelector === "function" ? caja.querySelector("#mor-abrir") : null;
+  if (control) {
+    control.onclick = () => {
+      const abierto = caja.classList.toggle("morral-expandido");
+      control.setAttribute("aria-expanded", String(abierto));
+      ubicarMuelleCombatePC();
+    };
+    if (foco) control.focus({ preventScroll: true });
+  }
   ubicarMuelleCombatePC();
 }
 /* ═══ LA PUERTA DE LA ZONA NEGRA ═══════════════════════════ (8/9, dirección: « esa bag es la
@@ -1101,7 +1158,8 @@ function syncRecientesMenuPc() {
   });
   // Si el aviso de guardado está vivo, el muelle acaba de cambiar de columna: se vuelve a medir
   // en el mismo gesto y nunca queda una fracción de segundo encima de sus controles.
-  if (typeof placeSaveIndPc === "function") placeSaveIndPc();
+  if (typeof ubicarMuelleCombatePC === "function") ubicarMuelleCombatePC();
+  else if (typeof placeSaveIndPc === "function") placeSaveIndPc();
 }
 /* El menú vive bajo el HUD. En un escritorio angosto la barra se puede envolver, y la repisa de
    estamina/buffs es absoluta: ninguna de las dos agranda el viejo top fijo de 52 px. Medimos
@@ -4279,8 +4337,27 @@ function refreshForge() {
       });
     });
   }
-  const astr = G.armasUnlocked ? Object.keys(ARROW_COST).map(k => resIc(k) + " " + ARROW_COST[k]).join(" · ") : "";
-  if (G.armasUnlocked) armas = '<div class="forge-row"><div class="fic"><img src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div><div class="finfo"><div class="fnm">Flechas ×' + ARROW_BATCH + '</div><div class="fds">Tienes ' + fmt(G.res.flecha || 0) + ' · Coste: ' + astr + '</div></div><div class="fbtns"><button class="green sm" ' + (canAfford(ARROW_COST) ? "" : "disabled") + ' id="forge-arrows">Fabricar</button><button class="green sm" ' + (canAfford(ARROW_COST) && vipVigente() ? "" : "disabled") + ' id="forge-arrows5" title="Fabricar ' + (ARROW_BATCH * 5) + ' flechas requiere VIP">×5 · VIP</button></div></div>' + armas;
+  let flechasUna, flechasVip;
+  if (G.armasUnlocked) {
+    flechasUna = arrowCraftQuote();
+    flechasVip = arrowCraftQuote(ARROW_VIP_BATCHES);
+    const coste = c => escapeHtml(Object.entries(c).map(([k, n]) => fmt(n) + " " + (RES_LABEL[k] || k).toLowerCase()).join(" · "));
+    const limite = q => q.reason === "space" ? "Falta espacio en la bolsa" : "Faltan materiales";
+    const uno = coste(ARROW_COST) + (flechasUna.batches ? "" : " · " + limite(flechasUna));
+    const hasta = ARROW_BATCH * ARROW_VIP_BATCHES;
+    const vip = flechasVip.reason === "vip" ? "Hasta " + hasta + " flechas con VIP"
+      : flechasVip.batches ? coste(flechasVip.cost) + (flechasVip.batches < ARROW_VIP_BATCHES ? " · " + limite(flechasVip) + " para más" : "")
+      : limite(flechasVip);
+    armas = '<div class="forge-row"><div class="fic"><img alt="" src="' + GF.spr("res_flecha") + '" onerror="this.outerHTML=\'➳\'"></div>' +
+      '<div class="finfo"><div class="fnm">Flechas</div><div class="fds">Tienes ' + fmt(G.res.flecha || 0) + '</div>' +
+      '<div class="fds" id="forge-arrows-cost">Coste por ' + ARROW_BATCH + ': ' + uno + '</div>' +
+      '<div class="fds" id="forge-arrows5-cost">' + (flechasVip.reason === "vip" ? vip : "VIP · " + vip) + '</div></div>' +
+      '<div class="fbtns"><button class="green sm" id="forge-arrows" aria-describedby="forge-arrows-cost"' +
+      (flechasUna.batches ? "" : " disabled") + '>Fabricar ' + ARROW_BATCH + '</button>' +
+      '<button class="green sm" id="forge-arrows5" aria-describedby="forge-arrows5-cost"' +
+      (flechasVip.batches ? "" : " disabled") + '>' +
+      (flechasVip.arrows ? "Fabricar " + flechasVip.arrows : "Lote") + ' · VIP</button></div></div>' + armas;
+  }
   // cofre depósito: 10 espacios + 1% de materiales por cofre
   G.chests = G.chests || [];
   const chn = G.chests.length, chFull = chn >= CHEST_MAX;
@@ -4326,8 +4403,13 @@ function refreshForge() {
   card.querySelectorAll("[data-eqarm]").forEach(b => b.onclick = (ev) => forgeAccionConFocoPc(ev, [], () => {
     G.gear.arma = b.dataset.eqarm; toast(ARM_DEF[b.dataset.eqarm].label + " equipada"); if (typeof tutoEvent === "function") tutoEvent("equiparm"); if (typeof applyCombatHp === "function") applyCombatHp(); refreshHud(); refreshForge(); if (typeof syncSlots === "function") syncSlots(); if (typeof saveFarm === "function") saveFarm();
   }));
-  const fa = $("forge-arrows"); if (fa) fa.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-arrows"], () => craftArrows());
-  const fa5 = $("forge-arrows5"); if (fa5) fa5.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-arrows5", "#forge-arrows"], () => craftLote(craftArrows, null, 5));
+  const fa = $("forge-arrows"), fa5 = $("forge-arrows5");
+  if (fa && fa5) {
+    const cuenta = typeof UID === "undefined" ? null : UID;
+    const conCuenta = (lotes, cantidad) => G.armasUnlocked && (typeof UID === "undefined" || UID === cuenta) && craftArrows(lotes, cantidad);
+    fa.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-arrows"], () => conCuenta(1, flechasUna.batches));
+    fa5.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-arrows5", "#forge-arrows"], () => conCuenta(ARROW_VIP_BATCHES, flechasVip.batches));
+  }
   const fp = $("forge-peto");
   if (fp) fp.onclick = (ev) => forgeAccionConFocoPc(ev, ["#forge-peto"], () => {
     if (tienePeto) repararArmor("vegetal", "pecho");

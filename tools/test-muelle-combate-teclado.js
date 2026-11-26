@@ -1,7 +1,7 @@
 /* MUELLE DE COMBATE: CONTROLES RÁPIDOS DE ESCRITORIO
    El muñeco de la Zona no detiene el juego: es un muelle persistente. Por eso su acceso a
    Equipo y las casillas que de verdad pueden mover una pieza tienen que funcionar por Tab,
-   Enter/Espacio y conservar el foco tras redibujarse. Móvil mantiene su toque compacto.
+   Enter/Espacio y conservar el foco tras redibujarse. El modo compacto conserva el botón Equipo.
      node tools/test-muelle-combate-teclado.js */
 const fs = require("fs"), vm = require("vm"), { JSDOM } = require("jsdom");
 const UI = fs.readFileSync("public/game/ui.js", "utf8");
@@ -21,12 +21,13 @@ console.log("\nEL MUELLE SEPARA EQUIPO DE LAS CASILLAS RÁPIDAS\n");
 {
   const fn = UI.slice(iniCombate, finCombate);
   ok("Equipo es un botón nativo explícito", /<button class="cb-def cb-eq-open" id="cb-eq-open"/.test(fn));
-  ok("el muñeco de escritorio no queda como un botón que contiene otros botones",
-    /window\.innerWidth <= 640 && eq\) eq\.onclick = abrirEquipo/.test(fn));
+  ok("las casillas rápidas y el botón Equipo tienen acciones separadas",
+    /abrir\.onclick = abrirEquipo/.test(fn) && !/eq\.onclick\s*=\s*abrirEquipo/.test(fn));
   ok("una casilla sólo entra en Tab si puede mover una pieza", /movible \? ' role="button" tabindex="0" aria-label="'/.test(fn));
-  ok("PC muestra el acceso separado y móvil conserva el muñeco compacto",
-    /@media\(min-width:641px\)\{\.cb-doll\{cursor:default\}\.cb-eq-open\{display:block\}\}/.test(HTML) &&
-    /@media\(max-width:640px\)\{\.cb-eq-open\{display:none\}\}/.test(HTML));
+  ok("la vista compacta muestra el botón Equipo aunque oculte las casillas",
+    /#combate \.cb-doll,#morral \.mor-tit\{display:none\}/.test(HTML) &&
+    /#combate \.cb-eq-open\{display:block\}/.test(HTML) &&
+    !/\.cb-eq-open\{display:none\}/.test(HTML));
 }
 
 console.log("\nTAB, ENTER Y ESPACIO MUEVEN UNA PIEZA SIN FILTRARSE AL MUNDO\n");

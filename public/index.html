@@ -180,7 +180,6 @@
     padding:3px 4px;line-height:1.2}
   .cb-eq-open:hover{border-color:#8a6f34;color:#f2ead5;background:rgba(201,162,39,.16)}
   @media(min-width:641px){.cb-doll{cursor:default}.cb-eq-open{display:block}}
-  @media(max-width:640px){.cb-eq-open{display:none}}
   /* 15/9: la durabilidad del arma, debajo del muñeco. El aviso es el MISMO cuarto que pone roja
      la vida y marca una pieza gastada — tres umbrales distintos para decir « ojo » enseñan a no
      mirar ninguno. */
@@ -207,7 +206,6 @@
   .cb-m{border:1px solid #4a3a1e;background:rgba(0,0,0,.35);color:#cbbf9f;border-radius:6px;
     font-size:10px;font-weight:700;padding:3px 4px;cursor:pointer;text-align:center}
   .cb-m.on{border-color:#9ede54;background:rgba(60,90,30,.6);color:#f2ead5}
-  @media(max-width:640px){ #combate{width:104px;top:206px} .cb-m{font-size:9px} }
 
   /* ═══ EL MORRAL DE CAZA (8/9) ═══ arriba a la derecha, debajo de la barra. Solo aparece
      dentro de la Zona Negra: en la granja se vacía solo y una mochila vacía sería ruido. */
@@ -225,6 +223,55 @@
   .mor-h .mn{position:absolute;right:-2px;bottom:-3px;font-size:9px;font-weight:800;color:#ffeaa7;
     background:rgba(36,21,5,.92);border-radius:5px;padding:0 3px;line-height:12px}
   .mor-pie{font-size:9px;color:#a3936f;text-align:center;margin-top:5px;line-height:1.25}
+
+  .mor-abrir{display:none}
+  #morral{display:flex;flex-direction:column;box-sizing:border-box;pointer-events:auto}
+  #mor-detalle{display:flex;flex-direction:column;min-height:0}
+  .mor-huecos{min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:0 3px 3px 0;scrollbar-width:thin}
+  .mor-pie{color:#e8d7af}
+  #combate{box-sizing:border-box}
+  .cb-dur b{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cb-m:focus-visible,.cb-eq-open:focus-visible,.mor-abrir:focus-visible{outline:2px solid #ffdc8c;outline-offset:2px}
+  @media(min-width:641px){
+    #morral,#combate{width:152px}
+    #morral{max-height:min(188px,max(50px,calc((100dvh - var(--morral-zona-top,96px)) * .31)))}
+    #combate .cb-m,#combate .cb-eq-open{min-height:27px;font-size:11px}
+  }
+  @media(max-width:640px), (min-width:641px) and (max-width:1000px) and (max-height:540px){
+    #combate,#morral{width:min(162px,calc(100vw - 16px));right:max(8px,env(safe-area-inset-right));transition:none}
+    body #combate{top:var(--zona-equipo-arriba,128px);max-height:max(36px,calc(100dvh - var(--zona-equipo-arriba,128px) - var(--zona-reserva-inferior,48px) - 55px));display:flex;flex-direction:column;gap:4px;padding:5px;overflow:auto}
+    #combate .cb-doll,#morral .mor-tit{display:none}
+    #combate .cb-dur,#combate .cb-modos,#combate .cb-eq-open{margin:0;flex-shrink:0}
+    #combate .cb-dur{min-height:24px;font-size:12px;padding:3px 5px}
+    #combate .cb-eq-open,#combate .cb-m,#morral .mor-abrir{min-height:40px;font-size:12px;line-height:1.15;color:#fff1ce}
+    #combate .cb-eq-open{display:block}
+    #combate .cb-modos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+    #combate .cb-m{padding-inline:2px}
+    #morral{top:var(--zona-morral-arriba,260px);padding:4px;max-height:max(50px,calc(100dvh - var(--zona-morral-arriba,260px) - var(--zona-reserva-inferior,48px)))}
+    #morral .mor-abrir{display:flex;align-items:center;justify-content:space-between;gap:3px;text-align:left;width:100%;flex-shrink:0;padding:3px 5px;background:#332419;border:1px solid #7b5a38;border-radius:5px;color:#fff1ce}
+    #morral .mor-abrir.lleno{color:#ffb4ab}
+    #morral .mor-abrir[aria-expanded="true"] .mor-indicador{transform:rotate(180deg)}
+    #morral .mor-abrir .mor-indicador{flex:none}
+    #morral:not(.morral-expandido) #mor-detalle{display:none}
+    #morral .mor-huecos{margin-top:5px}
+    #morral .mor-pie{font-size:11px}
+  }
+  @media(max-width:420px){
+    #hudbar.zona-hud-compacta .brand h1:has(.gf-logo){width:132px;height:35px}
+    #hudbar.zona-hud-compacta .brand .gf-logo{width:132px}
+    #hudbar.zona-hud-compacta .hud{gap:4px}
+    #hudbar.zona-hud-compacta .pill{font-size:11px;padding:1px 4px;gap:3px;border-width:5px}
+    #hudbar.zona-hud-compacta .cbarw,#hudbar.zona-hud-compacta .hpbarw,
+    #hudbar.zona-hud-compacta .hud-xp-label{display:none}
+  }
+  @media(max-width:360px){
+    #combate,#morral{width:calc(50vw - 18px)}
+    #combate .cb-m{font-size:11px}
+  }
+  @media(max-height:380px){
+    #combate .cb-eq-open,#combate .cb-m,#morral .mor-abrir{min-height:32px}
+  }
+
   /* ═══ LA PUERTA DE LA ZONA (8/9) ═══ dos columnas: la granja y lo que te llevás. La flecha del
      medio se lee sola y no hace falta explicar el gesto: clic en algo de la izquierda, se pasa. */
   .vj-conts{display:flex;gap:8px;margin:8px 0 4px}
@@ -275,9 +322,8 @@
      la columna de decisiones. En móvil sigue exactamente en su posición compacta. */
   @media(min-width:641px){
     #recientes.menu-abierto{right:208px}
-    /* El menú ocupa 190 px desde el borde derecho de 10 px. Morral y combate tienen la misma
-       columna: a 208 px queda el hueco visual de 8 px y no pierden clics detrás del menú. */
-    #morral.menu-abierto,#combate.menu-abierto{right:208px}
+    /* El menú puede cambiar de ancho con el tema. El muelle usa su borde real. */
+    #morral.menu-abierto,#combate.menu-abierto{right:var(--zona-menu-offset,208px)}
     /* El carrete ocupa esta misma columna derecha. Los recientes son un recordatorio pasivo:
        mientras se pesca ceden el sitio completo al minijuego y vuelven al terminar. */
     #recientes.pesca-activa{display:none !important}

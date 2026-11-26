@@ -59,7 +59,7 @@ console.log("\nEN ESCRITORIO, EL MUELLE NACE DEBAJO DEL MORRAL REAL\n");
   ok("existe el posicionador de escritorio", !!fn);
   ok("mide el borde inferior ya renderizado del morral", /morral\.getBoundingClientRect\(\)/.test(fn) && /r\.bottom \+ 8/.test(fn));
   ok("escribe la altura en la variable que usa el CSS", /setProperty\("--muelle-zona-top"/.test(fn));
-  ok("móvil queda fuera de esta regla", /window\.innerWidth <= 640/.test(fn));
+  ok("la vista compacta tiene su propio cálculo", /zonaLateralCompacta\(\)/.test(fn));
   ok("en una ventana baja el muelle se puede desplazar por dentro", /max-height:calc\(100vh - var\(--muelle-zona-top/.test(HTML) && /overflow-y:auto/.test(HTML));
 }
 
@@ -93,6 +93,35 @@ console.log("\nEL CÁLCULO MIDE LA CAJA REAL, NO UNA ALTURA INVENTADA\n");
   ctx.GF.scene='forest';ctx.innerWidth=1280;ctx.innerHeight=720;
   try{vm.runInContext('ubicarMuelleCombatePC()',ctx);ok('el muelle termina ocho píxeles antes del disquete',values['--muelle-zona-reserva']==='78px',values['--muelle-zona-reserva']);}
   finally{ctx.document.getElementById=antes;ctx.innerWidth=ancho;ctx.innerHeight=alto;ctx.GF.scene=scene;}
+}
+
+console.log("\nEL MENÚ ANCHO DEJA LIBRES MORRAL Y EQUIPO\n");
+{
+  const anterior = ctx.document.getElementById;
+  const ancho = ctx.innerWidth, alto = ctx.innerHeight, escena = ctx.GF.scene;
+  const estilo = () => ({ setProperty(k, v) { this[k] = v; }, removeProperty(k) { delete this[k]; } });
+  const morral = { style: estilo(), getBoundingClientRect: () => ({ height: 140, bottom: 240 }) };
+  const combate = { style: estilo() };
+  let plegado = false, borde = 626;
+  const menu = {
+    classList: { contains: nombre => plegado && nombre === "collapsed" },
+    getBoundingClientRect: () => ({ left: borde, right: 890, width: 890 - borde, height: 325 }),
+  };
+  ctx.document.getElementById = id => ({ morral, combate, gmenu: menu })[id] || anterior(id);
+  ctx.innerWidth = 900; ctx.innerHeight = 600; ctx.GF.scene = "forest";
+  const ambos = value => [morral, combate].every(panel => panel.style["--zona-menu-offset"] === value);
+  try {
+    vm.runInContext("ubicarMuelleCombatePC()", ctx);
+    ok("una lista que empieza en 626 deja los paneles a 282 px del borde", ambos("282px"));
+    borde = 682;
+    vm.runInContext("ubicarMuelleCombatePC()", ctx);
+    ok("si cambia el ancho del menú se recalcula el pasillo", ambos("226px"));
+    plegado = true;
+    vm.runInContext("ubicarMuelleCombatePC()", ctx);
+    ok("al plegarlo se elimina el desplazamiento de ambos paneles", ambos(undefined));
+  } finally {
+    ctx.document.getElementById = anterior; ctx.innerWidth = ancho; ctx.innerHeight = alto; ctx.GF.scene = escena;
+  }
 }
 
 console.log("\nEL ENCABEZADO CUENTA LOS HUECOS QUE REALMENTE QUEDAN\n");
@@ -130,7 +159,7 @@ console.log("\nEL REACOMODO NO DEPENDE DE QUE CAMBIE EL CONTENIDO\n");
   const morral = (UI.match(/function refreshMorral\(\)[\s\S]*?\n\}/) || [""])[0];
   const combate = (UI.match(/function refreshCombate\(\)[\s\S]*?\n\}/) || [""])[0];
   ok("el morral recoloca incluso con la misma firma", /if \(caja\._firma === firma\) \{ ubicarMuelleCombatePC\(\); return; \}/.test(morral));
-  ok("y lo hace después de dibujar sus filas", /caja\.innerHTML = h;\s*ubicarMuelleCombatePC\(\);/.test(morral));
+  ok("y lo hace después de dibujar sus filas", /caja\.innerHTML = h;[\s\S]*ubicarMuelleCombatePC\(\);/.test(morral));
   ok("el muelle también se corrige cuando se redibuja solo", /ubicarMuelleCombatePC\(\);/.test(combate));
   ok("el muelle recalcula antes el morral", /function ubicarMuelleCombatePC\(\)[\s\S]{0,260}ubicarMorralPc\(\)/.test(UI));
 }
