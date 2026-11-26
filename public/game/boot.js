@@ -156,7 +156,11 @@ class BootScene extends Phaser.Scene {
   preload() {
     // ATLAS: todos los sprites del mundo en 2 archivos (mucho más liviano para el server free).
     // Si el atlas no llega, ensureAll() baja los archivos sueltos como respaldo.
+    // Con la carga de imagen del navegador, el atlas comparte la precarga del HTML y el formato aceptado.
+    const tipoImagen = this.load.imageLoadType;
+    this.load.imageLoadType = "HTMLImageElement";
     this.load.image("__atlas", "assets/atlas.png?v=57");
+    this.load.imageLoadType = tipoImagen;
     this.load.json("__atlasmap", "assets/atlas.json?v=57");
     // 2/9: la isla viaja en la PRIMERA pasada (es la única imagen que no cabe en el atlas:
     // 1190x854). Antes quedaba para los reintentos y era ella sola la que disparaba una
@@ -164,7 +168,9 @@ class BootScene extends Phaser.Scene {
     this.load.image("isla", "assets/farm/isla.png?v=1");
     // Variante opcional separada: el atlas clásico y sus originales permanecen intactos.
     if (typeof window !== "undefined" && window.GoldenVisual && GoldenVisual.pc()) {
+      this.load.imageLoadType = "HTMLImageElement";
       this.load.image("__visualv2", "assets/visual-v2/atlas.png?v=5");
+      this.load.imageLoadType = tipoImagen;
       this.load.json("__visualv2map", "assets/visual-v2/atlas.json?v=5");
     }
 

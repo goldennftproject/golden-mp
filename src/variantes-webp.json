@@ -1,0 +1,87 @@
+{
+  "base": "615a859",
+  "reproducir": "python generar-webp.py",
+  "pillow": "12.3.0",
+  "libwebp": "1.6.0",
+  "opciones_webp": {
+    "lossless": true,
+    "method": 6,
+    "exact": true
+  },
+  "archivos": [
+    {
+      "png": {
+        "ruta": "assets/atlas.png",
+        "bytes": 2286896,
+        "sha256": "3bbb8bf481a01644b46c775fd0cd3f4a32896f3894de0d1b2dd8a4f6e90fa7d7"
+      },
+      "webp": {
+        "ruta": "assets/atlas.webp",
+        "bytes": 692306,
+        "sha256": "27af01bf33b80e10ced84876e0270cd6654575b7d5ee0c72e946374e51768bf1"
+      },
+      "dimensiones": [
+        4096,
+        1319
+      ],
+      "pixeles_rgba_identicos": true
+    },
+    {
+      "png": {
+        "ruta": "assets/visual-v2/atlas.png",
+        "bytes": 1288430,
+        "sha256": "ab1742dbe7e247d75465895397b973b6f8353d0e60fd73d2de8c1528611f6509"
+      },
+      "webp": {
+        "ruta": "assets/visual-v2/atlas.webp",
+        "bytes": 1009550,
+        "sha256": "5789c744c1e73e52638896f8d3eb5730e1341cc8f6e3dc078adcd5b1c28c1f40"
+      },
+      "dimensiones": [
+        1994,
+        608
+      ],
+      "pixeles_rgba_identicos": true
+    },
+    {
+      "png": {
+        "ruta": "assets/golden-farm-alpha-v1.png",
+        "bytes": 747566,
+        "sha256": "798a4c0bbcf42b2b66af12998e9d69ff863714440499b7d4ad1e9854e2aecd36"
+      },
+      "webp": {
+        "ruta": "assets/golden-farm-alpha-v1.webp",
+        "bytes": 478448,
+        "sha256": "baf0ac4075568730ed1680fedeac062ab859afea071ca4146a813da322c309e1"
+      },
+      "dimensiones": [
+        1974,
+        797
+      ],
+      "pixeles_rgba_identicos": true
+    },
+    {
+      "png": {
+        "ruta": "assets/visual-v2/skin/ui-concept-reference.png",
+        "bytes": 3104223,
+        "sha256": "742fdeefe60b742fab466ed12ece3e59ed932892e551de6a12686bd89da81dda"
+      },
+      "webp": {
+        "ruta": "assets/visual-v2/skin/ui-concept-reference.webp",
+        "bytes": 2389914,
+        "sha256": "203daee2b1cf43f6b7cf75aecc3313e3dac71fe185524dfe6613585dc9d0eec6"
+      },
+      "dimensiones": [
+        1672,
+        941
+      ],
+      "pixeles_rgba_identicos": true
+    }
+  ],
+  "totales": {
+    "png_bytes": 7427115,
+    "webp_bytes": 4570218,
+    "ahorro_bytes": 2856897,
+    "ahorro_porcentaje": 38.47
+  }
+}
