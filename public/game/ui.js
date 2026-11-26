@@ -6358,6 +6358,7 @@ function refreshPaquete() {
    rincón (pocas palabras, toque directo, temblor antes de entregar) y DELEGACIÓN de
    clics con data-attrs — la lección aprendida con el buzón. ---- */
 var _pdVista = "pedidos";   // pedidos | canje
+const _pdDescartes = new WeakMap();
 function enfocarPedidoTablon(nota) {
   if (window.innerWidth <= 640 || !isOpen("ov-pedidos")) return;
   const destino = nota.isConnected ? nota
@@ -6421,6 +6422,36 @@ function solicitarEntregaTablon(nota, teclado = false) {
   }, { title: "Entregar pedido", yes: "Entregar", no: "Cancelar", yesClass: "green sm",
     onClose: teclado ? () => enfocarPedidoTablon(nota) : undefined });
 }
+function solicitarDescarteTablon(control) {
+  const seleccion = _pdDescartes.get(control);
+  const nota = control.closest(".pd-nota");
+  const devolverFoco = nota && document.activeElement === nota ? () => enfocarPedidoTablon(nota) : undefined;
+  const visible = () => isOpen("ov-pedidos") && _pdVista === "pedidos";
+  const vigente = () => {
+    if (!seleccion?.pedido || !visible() || !tablonAbierto() ||
+        seleccion.cuenta !== (typeof UID === "undefined" ? null : UID) ||
+        seleccion.escena !== window.GF?.scene) return false;
+    const estado = pedidosEstado();
+    return estado.dia === seleccion.dia && estado.lista[seleccion.i] === seleccion.pedido &&
+      !seleccion.pedido.hecho;
+  };
+  const avisoCambio = () => {
+    toast("El pedido cambió. Revisa el tablón antes de descartarlo.");
+    if (visible()) refreshPedidos();
+    devolverFoco?.();
+  };
+  if (!control.isConnected || !vigente()) { avisoCambio(); return; }
+  if (!$("ov-confirm") || !$("cf-yes") || !$("cf-no")) {
+    toast("No se pudo abrir la confirmación del descarte.");
+    return;
+  }
+  const { i, pedido } = seleccion;
+  askConfirm("¿Descartar el pedido de " + pedido.n + " × " + pedidoLabel(pedido) + "? Otro vecino colgará el suyo.", () => {
+    if (!vigente()) { avisoCambio(); return; }
+    pedidoDescartar(i);
+    devolverFoco?.();
+  }, { title: "Descartar pedido", yes: "Descartar", no: "Cancelar", onClose: devolverFoco });
+}
 document.addEventListener("pointerdown", (e) => {
   const cont = document.getElementById("ov-pedidos");
   if (!cont || !cont.classList.contains("show") || !e.target?.closest || !cont.contains(e.target) ||
@@ -6431,7 +6462,7 @@ document.addEventListener("pointerdown", (e) => {
   const vis = e.target.closest("[data-pd-vista]");
   if (!ent && !des && !can && !vis) return;
   e.preventDefault(); e.stopPropagation();
-  if (des) { const i = +des.getAttribute("data-pd-desc"); askConfirm("¿Descartar este pedido? Otro vecino colgará el suyo.", () => pedidoDescartar(i)); return; }
+  if (des) { solicitarDescarteTablon(des); return; }
   if (vis) { _pdVista = vis.getAttribute("data-pd-vista"); refreshPedidos(); return; }
   if (ent) { solicitarEntregaTablon(ent); return; }
   if (can) valesCanjear(can.getAttribute("data-pd-canje"));
@@ -6517,6 +6548,12 @@ function refreshPedidos() {
   cont.querySelectorAll("[data-pd-entregar]").forEach(nota => {
     activarAccionConTeclado(nota, () => solicitarEntregaTablon(nota, true));
     nota.addEventListener("click", ev => { if (!ev.detail) solicitarEntregaTablon(nota, true); });
+  });
+  const cuenta = typeof UID === "undefined" ? null : UID;
+  const escena = window.GF?.scene;
+  cont.querySelectorAll("[data-pd-desc]").forEach(control => {
+    const i = Number(control.dataset.pdDesc);
+    _pdDescartes.set(control, { i, pedido: e.lista[i], dia: e.dia, cuenta, escena });
   });
 }
 /* (pdSeccionPesca vivió acá unas horas del 31/8: los pedidos de pesca colgados de este tablón.

@@ -13,22 +13,22 @@
        la cobra al volver);
      · con la bolsa llena la pieza NO se pierde: se queda al fuego esperando lugar.
      node tools/test-horno-cola.js                                                             */
-const fs = require("fs"), vm = require("vm");
+const vm = require("node:vm"), path = require("node:path");
+const { arrancar } = require("./arrancar-el-juego.contexto.js");
+const { ctx, problemas } = arrancar(path.resolve(__dirname,".."), {"game/main.js":""});
+if (problemas.some(p => p.grave && /game\/(config|state|save)\.js/.test(p.quien))) throw Error(JSON.stringify(problemas));
 
+(async () => {
+await ctx.SAVE_READY;
 const T0 = 1755730800000; let desfase = 0;
 class FakeDate extends Date { constructor(...a) { a.length ? super(...a) : super(T0 + desfase); } static now() { return T0 + desfase; } }
-
-const ctx = { console: { log() {}, warn() {}, error() {}, info() {} }, Math, Date: FakeDate, JSON, Object, Array,
-  Number, String, Boolean, Set, Map, isNaN, isFinite, parseInt, parseFloat,
-  performance: { now: () => 0 }, setTimeout: () => 0, setInterval: () => 0, clearInterval() {} };
-ctx.window = ctx; ctx.globalThis = ctx;
-ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
-ctx.document = { getElementById: () => null, addEventListener() {}, querySelectorAll: () => [], querySelector: () => null, createElement: () => ({}) };
-vm.createContext(ctx);
-["config", "nav", "state", "save"].forEach(f => vm.runInContext(fs.readFileSync("public/game/" + f + ".js", "utf8"), ctx));
+ctx.Date = FakeDate;
+ctx.nowMs = () => T0 + desfase;
+ctx.estadoDeCero();
 const avisos = [];
 ctx.toast = t => avisos.push(String(t)); ctx.log = () => {};
-["isOpen", "refreshInv", "refreshHud", "saveFarm", "refreshHorno", "bagFull", "recalcFarmLevel", "tutoEvent"].forEach(f => { if (!ctx[f]) ctx[f] = () => {}; });
+ctx.isOpen = () => false;
+for (const f of ["refreshInv", "refreshHud", "saveFarm", "refreshHorno", "bagFull", "recalcFarmLevel", "tutoEvent"]) ctx[f] = () => {};
 const G = ctx.G;
 const MAT_CD_S = vm.runInContext("MAT_CD_S", ctx), HORNO_SLOTS = vm.runInContext("HORNO_SLOTS", ctx);
 
@@ -110,7 +110,7 @@ console.log("\nEL ×5 ENCOLA DE VERDAD (el bug del botón que no hacía nada)");
   ok("puso " + HORNO_SLOTS + " al fuego (los lugares del horno)", ctx.hornoList().length === HORNO_SLOTS,
     ctx.hornoList().length + " piezas");
   ok("y cobró solo lo que encoló", G.res.madera === 99 - 3 * HORNO_SLOTS, "madera " + G.res.madera);
-  ok("el horno lleno avisa", avisos.some(a => /lleno/i.test(a)), avisos.join(" · "));
+  ok("el horno lleno avisa", avisos.some(a => /cola del horno llena/i.test(a)), avisos.join(" · "));
   const mad = G.res.madera;
   ctx.craftMat("tablon");
   ok("y con el horno lleno NO cobra", G.res.madera === mad);
@@ -180,4 +180,5 @@ console.log("\nLO QUE ESPERA SU TURNO SE PUEDE CANCELAR (23/9, diseñador)");
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n" : "\nTodo en orden: el horno cocina, no castiga.\n");
-process.exit(fallos ? 1 : 0);
+process.exitCode = fallos ? 1 : 0;
+})().catch(error => {console.error(error);process.exitCode = 1;});

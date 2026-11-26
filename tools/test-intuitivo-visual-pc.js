@@ -9,13 +9,22 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.
  c.refreshFarmBar();assert.equal(doc.getElementById('lvl-tipo').textContent,'XP');assert.equal(doc.getElementById('lvlpill').dataset.progreso,'xp');
  c.G.level=25;c.refreshFarmBar();assert.equal(doc.getElementById('lvl-tipo').textContent,'');assert.equal(doc.getElementById('lvl-txt').textContent,'MAX');
  c.G.level=1;
- // Banco: visual y lector de pantalla reciben la misma cotización, sin activar un canje.
+ // Banco: el canje interno permanece cerrado según las condiciones de la alfa.
  vm.runInContext("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;BANCO_COTIZACION={uid:'qa',tasa:10000,recibido:Date.now(),revision:'qa'};",c);
- c.G.plata=25000;const input=doc.getElementById('banco-cantidad'),visual=doc.getElementById('banco-visual');input.value=2;c.bancoActualizarPrevia();
- assert.deepEqual([...visual.querySelectorAll('strong')].map(e=>e.textContent),['20.000','2']);assert.match(doc.getElementById('banco-previa').textContent,/20.000 Plata.*2 Golden/);assert.equal(visual.dataset.insuficiente,'false');
- input.value=3;c.bancoActualizarPrevia();assert.equal(visual.dataset.insuficiente,'true');assert.equal(doc.getElementById('banco-canjear').disabled,true);
- input.value='1.5';c.bancoActualizarPrevia();assert.equal(visual.children.length,0,'no dibuja importes inválidos');
- vm.runInContext('BANCO_COTIZACION.recibido=Date.now()-61000',c);input.value=2;c.bancoActualizarPrevia();assert.equal(visual.children.length,0,'no conserva una tasa caducada');
+ c.G.plata=25000;
+ const bancoInicial=JSON.stringify(c.G), input=doc.getElementById('banco-cantidad'), visual=doc.getElementById('banco-visual');
+ const canjear=doc.getElementById('banco-canjear');
+ assert.equal(doc.getElementById('banco-interno').hidden,true);
+ assert.equal(canjear.closest('.banco-acciones').hidden,true);
+ for (const cantidad of [2,3,'1.5']) {
+   input.value=cantidad;
+   c.bancoActualizarPrevia();
+   assert.equal(visual.children.length,0);
+   assert.equal(canjear.disabled,true);
+ }
+ c.bancoSolicitar(2,'qa');
+ assert.equal(JSON.stringify(c.G),bancoInicial);
+ assert.match(doc.getElementById('toast').textContent,/desactivado durante la alfa/);
  // Compras: imágenes y ventajas, propiedad real; visitar el catálogo no ejecuta compras.
  const snapshot=JSON.stringify(c.G);c.refreshTienda();assert.equal(JSON.stringify(c.G),snapshot);
  assert.equal(doc.querySelectorAll('.tienda-producto .tienda-chips').length,4);assert.equal(doc.querySelectorAll('.tienda-producto .compra-estado').length,0);
@@ -23,7 +32,7 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.
  c.G.produccion.vipHasta=0;c.refreshTienda();assert.equal(doc.querySelector('.tienda-destacado .compra-estado'),null,'no muestra VIP activo después de vencer');
  // Menús: la información secundaria es desplegable, sin esconder acciones de uso frecuente.
  assert.ok(doc.querySelector('#ov-barn details.ayuda-menu'));assert.ok(doc.querySelector('#forge-pane-repair details.ayuda-menu'));
- for(const id of ['ov-cobertizo','ov-equip','ov-objetivos','ov-p2p'])assert.ok(doc.querySelector('.gmi[data-panel="'+id+'"] small'));
+ for(const id of ['ov-cobertizo','ov-equip','ov-objetivos','ov-p2p']){const boton=doc.querySelector('.gmi[data-panel="'+id+'"]');assert.ok(boton?.querySelector('.menu-label')?.textContent.trim(),id);assert.ok(boton?.title.trim(),id+' tiene ayuda');};
  assert.equal(doc.getElementById('banco-canjear').closest('details'),null);
  // Feedback: tipo, icono de acción y texto sin interpretar HTML; un bloqueo borra el éxito anterior.
  c.toast('Hacha lista','success','fabricar');const toast=doc.getElementById('toast');assert.equal(toast.dataset.resultado,'success');assert.equal(toast.dataset.accion,'fabricar');
@@ -41,6 +50,6 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(root,{'game/main.
  c.GF.uiOpen=true;c.guiaDestinoActual=()=>({id:'plant',target:'plot',guiaPlot:'dry'});
  p.tickDestinoGuia.call({_guiaHasta:Date.now()+8000,_guiaPaso:c.guiaDestinoActual(),limpiarDestinoGuia(){cleaned++}});assert.equal(cleaned,2,'ninguna marca activa detrás de un menú');
  c.GF.uiOpen=false;const plot={cx:10,by:20,state:'dry'},effects=[];const fx=()=>({setStrokeStyle(){return this},setDepth(){return this},setOrigin(){return this},destroy(){}});const scene={_guiaHasta:Date.now()+8000,_guiaPaso:c.guiaDestinoActual(),plots:[plot],objetivosDestinoGuia:p.objetivosDestinoGuia,add:{rectangle(){return fx()},text(x,y,t){effects.push(t);return fx()}}};p.tickDestinoGuia.call(scene);assert.equal(effects[0],'↓');assert.equal(scene._guiaMarcas[0].fx.length,2,'contorno y flecha sobre la misma parcela');
- console.log('OK: siete mejoras de PC, propiedad y expiración, cotización y bloqueos, estados derivados y limpieza de guía; sin compras ni cambios de economía.');
+ console.log('OK: siete mejoras de PC, propiedad y expiración, Banco cerrado, estados derivados y limpieza de guía; sin compras ni cambios de economía.');
 })().catch(e=>{console.error(e);process.exitCode=1});
 

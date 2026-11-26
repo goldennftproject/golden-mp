@@ -57,8 +57,13 @@ console.log("\nEL CARTEL DICE LA VERDAD EN LOS DOS CASOS");
 
 console.log("\nY EL PROGRESO SE GUARDA ANTES DE RECARGAR (lo de siempre)");
 {
-  ok("doReload guarda primero", /doReload\(\) \{\s*try \{ if \(typeof saveFarm === "function"\) saveFarm\(\); \}/.test(UPD));
-  ok("y espera a que el guardado salga", /setTimeout\(\(\) => location\.reload\(\), 400\)/.test(UPD));
+  const bloque = UPD.slice(UPD.indexOf("async function doReload()"),UPD.indexOf("// al volver a la pestaña"));
+  ok("la recarga manual espera un guardado confirmado", /await prepararRecargaSegura\(\)/.test(bloque));
+  ok("comprueba de nuevo el guardado justo antes de recargar",
+    /recargaSigueConfirmada\(ticket\)/.test(bloque) &&
+    bloque.indexOf("recargaSigueConfirmada(ticket)") < bloque.indexOf("location.reload()"));
+  ok("la cuenta atrás comprueba si el jugador entró después del anuncio",
+    /if \(juegoEnCurso\(\)\) \{ esperarJugador\(\); return; \}/.test(UPD));
 }
 
 console.log(fallos ? "\n" + fallos + " fallo(s)\n"

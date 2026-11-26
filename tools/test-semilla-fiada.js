@@ -63,6 +63,24 @@ test("la granja en cero pide una semilla fiada por el botón y conserva el uso t
   assert.equal(game.seedBuysToday().count,1);
 });
 
+test("las semillas del premio diario que aún no puedes sembrar permiten pedir la papa fiada",t=>{
+  const {game,shop,potato} = granja(t);
+  game.G.seeds.zanahoria=5;
+  assert.equal(game.cropUnlocked("zanahoria"),false);
+  shop();
+  assert.ok(!potato().disabled);
+  assert.match(potato().textContent,/1 semilla fiada/);
+  potato().click();
+  assert.equal(game.G.seeds.zanahoria,5);
+  assert.equal(game.G.seeds.papa,1);
+  assert.equal(game.G.plata,0);
+  assert.equal(game.seedBuysToday().count,1);
+  assert.equal(game.seedBuysToday().caridad,1);
+  game.G.seeds.papa=0;
+  shop();
+  assert.ok(potato().disabled);
+});
+
 test("las condiciones existentes y el coste de una compra normal se respetan",t=>{
   const {game,shop,potato,messages} = granja(t);
   const ledger = game.seedBuysToday();

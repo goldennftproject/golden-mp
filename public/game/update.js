@@ -102,18 +102,22 @@
     if (!el) { if (!juegoEnCurso()) doReload(); return; }
     el.style.display = "flex";
     const c = el.querySelector(".updc");
-    if (!juegoEnCurso()) {   // nadie está jugando: recarga sola, con su cuenta atrás de siempre
-      let n = 5;
-      const tick = () => { if (c) c.textContent = n; if (n <= 0) { doReload(); return; } n--; setTimeout(tick, 1000); };
-      tick();
-    } else if (c) {
-      /* con la partida en curso el cartel se queda quieto hasta que el jugador quiera. Su
-         progreso está guardado igual (el autosave corre), pero recargarle el juego en medio de
-         una siembra es decidir por él algo que no es nuestro. */
-      c.textContent = "";
+    const esperarJugador = () => {
+      if (c) c.textContent = "";
       const t = el.querySelector(".updt");
       if (t) t.textContent = "Hay una versión nueva del juego.";
-    }
+    };
+    if (!juegoEnCurso()) {   // nadie está jugando: recarga sola, con su cuenta atrás de siempre
+      let n = 5;
+      const tick = () => {
+        if (juegoEnCurso()) { esperarJugador(); return; }
+        if (c) c.textContent = n;
+        if (n <= 0) { doReload(); return; }
+        n--;
+        setTimeout(tick, 1000);
+      };
+      tick();
+    } else esperarJugador();
     const btn = document.getElementById("updnow");
     if (btn) btn.onclick = doReload;
   }

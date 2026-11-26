@@ -14,9 +14,14 @@ const {ctx:c}=require('./arrancar-el-juego.contexto').arrancar(path.resolve(__di
  assert.equal(c.tutoActivo().id,'harvest');assert.equal(c.G.seeds.papa,0);
  clock=Math.max(...plots.map(p=>p.readyAt))+1;
  for(const o of plots){o.state='ready';sc.action={kind:'harvest',o};finish.call(sc);}
+ const practica=c.tutoActivo();assert.equal(practica.id,'produccion_pausar');
+ assert.ok(c.produccionAlternar(practica.clave));assert.equal(c.tutoActivo().id,'produccion_reactivar');
+ c.hydrate(JSON.parse(JSON.stringify(c.snapshot())));
+ assert.equal(c.tutoActivo().clave,practica.clave,'la pausa y el objetivo sobreviven la recarga');
+ assert.ok(c.produccionAlternar(practica.clave));
  assert.equal(c.tutoActivo().id,'sell');assert.equal(c.G.res.papa,3);
  vm.runInContext("marketCur='plata';MERCADO_GLOBAL=false",c);c.mercadoGlobalActivo=()=>false;c.$('mq-papa').value=3;c.sellItem('papa');
  assert.equal(c.G.res.papa,0);assert.ok(c.G.plata>3,'el ciclo permite volver a sembrar');assert.equal(c.tutoActivo().id,'place_store');assert.ok(c.G.planos.store);
  const snap=JSON.parse(JSON.stringify(c.snapshot())),step=c.G.tuto.step;c.hydrate(snap);assert.equal(c.G.tuto.step,step,'recargar conserva el siguiente paso');
- console.log('OK: kit → compra → tres siembras → reloj → tres cosechas → venta → plano de Herrería; reglas reales locales y continuidad al hidratar. Sin servidor ni cuentas reales.');
+ console.log('OK: kit → compra → tres siembras → reloj → tres cosechas → pausa y reactivación → venta → plano de Herrería. Pruebas locales con recarga.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

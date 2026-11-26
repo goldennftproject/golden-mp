@@ -813,7 +813,7 @@ function seedBuysToday() {
 // El rescate de una papa diaria se ofrece sólo cuando no queda nada con lo que replantar.
 function semillaFiadaDisponible(k, sb) {
   if (k !== "papa" || G.plata >= CROP_DEF.papa.seedCost || sb.caridad || sb.count >= seedDailyMax()) return false;
-  const tieneSem = Object.values(G.seeds || {}).some(n => n > 0);
+  const tieneSem = Object.keys(CROP_DEF).some(c => G.seeds?.[c] > 0 && cropUnlocked(c));
   const tieneCult = Object.keys(CROP_DEF).some(c => Math.floor(G.res[c] || 0) > 0);
   const tienePlato = Object.values(G.dishes || {}).some(n => n > 0);
   const tieneSembrado = (G.plots || []).some(p => p && (p.state === "growing" || p.state === "ready"));

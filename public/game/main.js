@@ -666,19 +666,30 @@ function correoPlausible(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String
 async function mandarElEnlace() {
   const mail = document.getElementById("gmail");
   const btn = document.getElementById("enter");
+  const nick = document.getElementById("nick");
+  const alternar = document.getElementById("gate-ya");
+  if (btn && btn.disabled) return;
   const v = mail ? String(mail.value || "").trim() : "";
   if (!correoPlausible(v)) { gateMsg("Ese correo no parece completo. Revisalo y prueba de nuevo.", "mal"); return; }
+  const volver = MODO_PUERTA === "volver";
+  const apodo = nick?.value;
   if (btn) { btn.disabled = true; btn.textContent = "Mandando…"; }
+  if (alternar) alternar.disabled = true;
+  if (mail) mail.readOnly = true;
+  if (nick) nick.readOnly = true;
   gateMsg("Mandando el enlace…");
-  try { await window.SAVE_READY; } catch (e) {}
   let r;
-  if (MODO_PUERTA === "volver") {
-    r = (typeof entrarConEmail === "function") ? await entrarConEmail(v) : { error: "no disponible" };
-  } else {
-    const n = (document.getElementById("nick") || {}).value;
-    r = (typeof crearCuentaConEmail === "function") ? await crearCuentaConEmail(v, n) : { error: "no disponible" };
+  try {
+    await conTope(window.SAVE_READY, 10000, "preparar el acceso");
+    r = volver ? await entrarConEmail(v) : await crearCuentaConEmail(v, apodo);
+  } catch {
+    r = { error: "sin conexión con la nube" };
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = volver ? "Enviar enlace" : "Entrar"; }
+    if (alternar) alternar.disabled = false;
+    if (mail) mail.readOnly = false;
+    if (nick) nick.readOnly = false;
   }
-  if (btn) { btn.disabled = false; btn.textContent = MODO_PUERTA === "volver" ? "Enviar enlace" : "Entrar"; }
   if (r && r.ok) {
     gateMsg("Listo: te mandamos un enlace a <b>" + v.replace(/[<>&]/g, "") + "</b>.<br>" +
       "Abrilo y vuelves directo a tu granja. Si no aparece en un minuto, mira el correo no deseado.", "ok");
@@ -688,12 +699,14 @@ async function mandarElEnlace() {
      Supabase lo dice en inglés y en jerga. Se traduce, porque es EL caso en que el jugador
      necesita entender qué hacer: crear una granja nueva en vez de seguir intentando entrar. */
   const e = String((r && r.error) || "no se pudo");
-  if (MODO_PUERTA === "volver" && /not found|no user|signups? not allowed|invalid/i.test(e)) {
-    gateMsg("No hay ninguna granja vinculada a ese correo. Si es tu primera vez, selecciona «Crear cuenta».", "mal");
-  } else if (/rate|limit|too many|seconds/i.test(e)) {
+  if (/rate|limit|too many|seconds/i.test(e)) {
     gateMsg("Se mandaron muchos correos seguidos. Espera un minuto y prueba otra vez.", "mal");
+  } else if (volver && /user not found|no user|signups? not allowed/i.test(e)) {
+    gateMsg("No hay ninguna granja vinculada a ese correo. Si es tu primera vez, selecciona «Crear cuenta».", "mal");
+  } else if (/invalid.*e-?mail|e-?mail.*invalid/i.test(e)) {
+    gateMsg("Revisa la dirección de correo e inténtalo de nuevo.", "mal");
   } else {
-    gateMsg("No se pudo mandar el enlace: " + e.replace(/[<>]/g, ""), "mal");
+    gateMsg("No pudimos confirmar el envío. Revisa tu bandeja y el correo no deseado. Si no llega, vuelve a intentarlo.", "mal");
   }
 }
 
