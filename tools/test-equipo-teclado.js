@@ -7,7 +7,7 @@ const UI = fs.readFileSync("public/game/ui.js", "utf8");
 const HTML = fs.readFileSync("public/index.html", "utf8");
 const iniAccion = UI.indexOf("function activarAccionConTeclado");
 const finAccion = UI.indexOf("function enfocarAccionViaje", iniAccion);
-const iniEquipo = UI.indexOf("function refreshEquip()");
+const iniEquipo = UI.indexOf("function piezasArmaduraEnUso(");
 const finEquipo = UI.indexOf("function refreshDaily", iniEquipo);
 if (iniAccion < 0 || finAccion < 0 || iniEquipo < 0 || finEquipo < 0) throw new Error("No encontré Equipo o la puerta de teclado");
 
@@ -38,6 +38,7 @@ console.log("\nENTER Y ESPACIO CONSERVAN LA ACCIÓN Y EL FOCO\n");
     $: id => dom.window.document.getElementById(id), GF: { spr: s => "/sprites/" + s + ".png" },
     GEAR_DEF: {}, ARM_DEF: { sword: { label: "Espada", sprite: "sword", tipo: "espada" } }, ARM_TIPO_DEF: {},
     ARMOR_SETS: {}, ARMOR_ORDER: [], ARMOR_SLOTS: [], ARMOR_SLOT_LABEL: { guantes: "Guantes", pantalones: "Pantalones" },
+    armorFamiliaEnRanura: () => null, gearEnRanura: slot => G.gear[slot],
     armorTiene: () => false, armorPuestas: () => 0, armorEquipado: () => false, armorSetCompleto: () => false,
     gearDefTotal: () => 0, fmt: n => String(n), llevoTengo: () => 3, armasAMano: () => ["sword"], enZona: () => false,
     toast: texto => avisos.push(texto), tutoEvent: paso => tutorial.push(paso), syncSlots() {}, saveFarm() {}, refreshHud() {},

@@ -6,6 +6,7 @@ type Dependencies = {
   planDeath?(data: any): {dropSlots: string[]; breakSlots?: string[]};
 };
 const origin = "https://goldenfarm.onrender.com";
+const deathDropSlots = new Set(["casco", "armadura", "botas", "escudo", "arma", "set", "set:vegetal", "set:fibra", "set:piel", "set:cuero", "set:colmillo"]);
 const cors = {"Access-Control-Allow-Origin": origin, "Access-Control-Allow-Headers": "authorization,x-client-info,apikey,content-type", "Access-Control-Allow-Methods": "POST,OPTIONS", "Vary": "Origin"};
 const uuid = (v: unknown) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), {status, headers: {...cors, "Content-Type": "application/json", "Cache-Control": "no-store"}});
@@ -57,7 +58,7 @@ export function createHandler(deps: Dependencies) {
         if (pre.error) return failed(pre.error);
         if (!pre.data?.ok || !pre.data.actor?.data || Date.parse(pre.data.actor.updated_at) !== Date.parse(body.base)) return json({ok: false, error: "No se pudo preparar la derrota; comprobá el mismo recibo"}, 503);
         const plan = deps.planDeath(pre.data.actor.data);
-        if (!Array.isArray(plan?.dropSlots) || plan.dropSlots.length > 6 || new Set(plan.dropSlots).size !== plan.dropSlots.length || plan.dropSlots.some(s => !["casco", "armadura", "botas", "escudo", "arma", "set"].includes(s))) throw Error("Plan de derrota inválido");
+        if (!Array.isArray(plan?.dropSlots) || plan.dropSlots.length > 7 || new Set(plan.dropSlots).size !== plan.dropSlots.length || plan.dropSlots.some(s => !deathDropSlots.has(s))) throw Error("Plan de derrota inválido");
         const breakSlots = plan.breakSlots || [];
         if (!Array.isArray(breakSlots) || breakSlots.length > 5 || new Set(breakSlots).size !== breakSlots.length || breakSlots.some(s => !["yelmo", "pecho", "pantalones", "botas", "guantes"].includes(s))) throw Error("Rotura de derrota inválida");
         // El sorteo y la fuente son del servidor. El cuerpo del navegador no aporta premios.

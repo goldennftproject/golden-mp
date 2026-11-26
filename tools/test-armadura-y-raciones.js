@@ -163,8 +163,9 @@ console.log("\n4 · LOS PANELES NO MIENTEN (bugs encontrados abriendo el juego)\
   ok("y cuántas le faltan cuando no alcanza", /te faltan <b>' \+ faltan/.test(UI));
   /* el panel decía « ACTIVO » del bono con una pieza en cero, mientras armorBono() devolvía null */
   ok("el cartel del bono pregunta por el set SANO, no por tener las cinco piezas",
-    /armorSetSano\(set\) : completo/.test(UI) && /sano \? ' — ACTIVO'/.test(UI));
-  ok("y cuando está apagado lo dice en vez de callarse", /apagado: repara las piezas gastadas/.test(UI));
+    /const sano = armorSetSano\(set\)/.test(UI) && /sano \? ' — ACTIVO'/.test(UI));
+  ok("y cuando está apagado indica que hay que equipar las cinco piezas en buen estado",
+    /sano \? ' — ACTIVO' : ' · Equipa las cinco piezas en buen estado'/.test(UI));
 
   /* 15/9 (dirección: « esta esencia golden hay que quitarla ») — el tooltip de la moneda del HUD
      decía « Esencia $Golden — se usa para pescar »: la llamaba Esencia, que no se llama así en

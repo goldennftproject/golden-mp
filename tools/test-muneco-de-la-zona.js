@@ -42,7 +42,7 @@ console.log("\n2 · ESTÁN LOS DIEZ HUECOS, NO SEIS\n");
     /SLOTS\.map\(piezaSet\)/.test(fn) && /ARMOR_SLOTS/.test(fn), SLOTS.join(", "));
   for (const s of ["casco", "armadura", "botas", "escudo"]) ok("sigue el hueco de loot: " + s, new RegExp('pieza\\("' + s + '"').test(fn));
   ok("y siguen el arma y la munición", /armaHtml/.test(fn) && /munHtml/.test(fn));
-  ok("las piezas del set salen con su sprite de verdad (armor_<set>_<pieza>)", /armor_" \+ setEq \+ "_" \+ pz/.test(fn));
+  ok("las piezas salen con el sprite de su familia y ranura", /GF\.spr\(armorSprite\(set, pz\)\)/.test(fn));
   ok("y un hueco vacío enseña su silueta, no un cuadro mudo", /SIL_SET\[pz\]/.test(fn));
   /* las cinco siluetas tienen que ser de las que EXISTEN: una inventada deja el hueco en blanco */
   const sil = (fn.match(/const SIL_SET = \{[\s\S]*?\};/) || [""])[0];
@@ -55,8 +55,8 @@ console.log("\n2 · ESTÁN LOS DIEZ HUECOS, NO SEIS\n");
 console.log("\n3 · Y NO PUEDE MENTIR MIENTRAS SE JUEGA\n");
 {
   const fn = (UI.match(/function refreshCombate\(\)[\s\S]*?\n\}/) || [""])[0];
-  ok("la firma que decide si hay que redibujar incluye el set y su durabilidad",
-    /setFirma/.test(fn) && /armorDur\(G\.armorEq, pz\)/.test(fn));
+  ok("la firma que decide si hay que redibujar incluye la familia y durabilidad de cada ranura",
+    /const setFirma = SLOTS\.map\(pz => \{\s*const set = familia\(pz\);\s*return set \? set \+ ":" \+ armorDur\(set, pz\)/.test(fn));
   ok("una pieza GASTADA se marca aparte (sigue puesta, pero no defiende)", /" seca"/.test(fn));
   ok("y el CSS la muestra distinta de una que falta", /\.cbq\.seca\{/.test(HTML) && /\.cbq\.vacio\{/.test(HTML));
   ok("el rótulo de la gastada dice qué hacer", /GASTADA: no defiende hasta que la repares/.test(fn));

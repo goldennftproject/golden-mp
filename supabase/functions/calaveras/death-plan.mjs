@@ -6,9 +6,17 @@ const own=(v,k)=>Object.prototype.hasOwnProperty.call(v||{},k);
 const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const capacities=Object.freeze(Object.assign(Object.create(null),{bag:8,backpack:20}));
 const kinds=new Set(['res','seed','fish','dish','arm','armor','armorset','gear','cont','pick','tool','cana']);
-const gearKeys=new Set(['botas_cuero','casco_cuero','pechera_cuero','escudo_madera','casco_hierro','escudo_hierro','pechera_hierro']);
+const gearKeys={
+ casco:['casco_cuero','casco_hierro'],
+ armadura:['pechera_cuero','pechera_hierro'],
+ botas:['botas_cuero'],
+ escudo:['escudo_madera','escudo_hierro']
+};
 const armorPieces=['yelmo','pecho','pantalones','botas','guantes'];
-const armorSets=new Set(['vegetal','fibra','piel','cuero','colmillo']);
+const armorSets=['vegetal','fibra','piel','cuero','colmillo'];
+const lootSlotForPiece={yelmo:'casco',pecho:'armadura',botas:'botas'};
+const armorKey=(set,piece)=>'arm_'+set+'_'+piece;
+const armorDurability=(dur,key)=>Number.isFinite(dur[key])?Math.max(0,Math.min(100,dur[key])):100;
 function randomInt100(){
  const crypto=globalThis.crypto;if(!crypto?.getRandomValues)throw Error('Secure random source unavailable');
  const a=new Uint32Array(1);do{crypto.getRandomValues(a);}while(a[0]>=4294967200);return a[0]%100;
@@ -35,29 +43,64 @@ export function planSharedGraveDeath(canonicalData,roll100=randomInt100){
  }
  const gear=clone(object(d.gear)?d.gear:{}),weapons=clone(object(d.weapons)?d.weapons:{});
  const armor=clone(object(d.armor)?d.armor:{}),armorDur=clone(object(d.armorDur)?d.armorDur:{}),armorOff=clone(object(d.armorOff)?d.armorOff:{});
- let armorEq=d.armorEq??null;
+ const legacySet=typeof d.armorEq==='string';
+ let armorEq=object(d.armorEq)?clone(d.armorEq):d.armorEq??null;
+ const active={},shadowed={};
+ for(const piece of armorPieces){
+  const set=legacySet?armorEq:armorEq?.[piece];
+  if(!armorSets.includes(set)||(set==='vegetal'&&piece!=='pecho'))continue;
+  const k=armorKey(set,piece);if(!armor[k]||armorOff[k])continue;
+  const slot=lootSlotForPiece[piece];
+  if(legacySet&&slot&&gearKeys[slot].includes(gear[slot]))shadowed[slot]=piece;
+  else active[piece]=set;
+ }
+ const coveredByCraft={...active};
  const breakSlots=[],gastadas=[];
- if(armorSets.has(armorEq))for(const piece of (armorEq === "vegetal" ? ["pecho"] : armorPieces)){
-  const k='arm_'+armorEq+'_'+piece;if(!armor[k]||armorOff[k])continue;
-  const before=Number.isFinite(armorDur[k])?Math.max(0,Math.min(100,armorDur[k])):100;
+ for(const piece of armorPieces){
+  const set=active[piece];if(!set)continue;
+  const k=armorKey(set,piece),before=armorDurability(armorDur,k);
   if(before>0){armorDur[k]=Math.max(0,before-5);gastadas.push(piece);}
-  else{const roll=roll100();if(!Number.isSafeInteger(roll)||roll<0||roll>=100)throw Error('Invalid secure armour roll');if(roll<10){delete armor[k];delete armorDur[k];breakSlots.push(piece);}}
+  else{
+   const roll=roll100();if(!Number.isSafeInteger(roll)||roll<0||roll>=100)throw Error('Invalid secure armour roll');
+   if(roll<10){
+    delete armor[k];delete armorDur[k];delete armorOff[k];delete active[piece];
+    if(object(armorEq))delete armorEq[piece];
+    breakSlots.push(piece);
+   }
+  }
  }
  const candidates=[];
- for(const slot of ['casco','armadura','botas','escudo'])if(gearKeys.has(gear[slot]))candidates.push({slot,kind:'gear',k:gear[slot]});
+ const pieceForLootSlot={casco:'yelmo',armadura:'pecho',botas:'botas'};
+ for(const [slot,keys] of Object.entries(gearKeys)){
+  if(keys.includes(gear[slot])&&!coveredByCraft[pieceForLootSlot[slot]]){
+   candidates.push({slot,kind:'gear',k:gear[slot]});
+  }
+ }
  if(typeof gear.arma==='string'&&own(weapons,gear.arma)&&object(weapons[gear.arma]))candidates.push({slot:'arma',kind:'arm',k:gear.arma});
- const pieces=armorSets.has(armorEq)?(armorEq === "vegetal" ? ["pecho"] : armorPieces).filter(p=>armor['arm_'+armorEq+'_'+p]&&!armorOff['arm_'+armorEq+'_'+p]):[];
- if(pieces.length)candidates.push({slot:'set',kind:'armorset',k:armorEq});
+ for(const set of armorSets){
+  const pieces=armorPieces.filter(piece=>active[piece]===set);
+  if(pieces.length)candidates.push({slot:legacySet?'set':'set:'+set,kind:'armorset',k:set,pieces});
+ }
  const dropSlots=[],labels=[];
  for(const p of candidates){
   const roll=roll100();if(!Number.isSafeInteger(roll)||roll<0||roll>=100)throw Error('Invalid secure equipment roll');
   if(roll>=5)continue;
   dropSlots.push(p.slot);labels.push(p.k);
-  if(p.kind==='gear'){gear[p.slot]=null;items.push({kind:'gear',k:p.k,n:1});}
+  if(p.kind==='gear'){
+   gear[p.slot]=null;items.push({kind:'gear',k:p.k,n:1});
+   // Keep previously shadowed armour in the bag when its legacy occupant falls.
+   if(shadowed[p.slot]&&!object(armorEq))armorEq={...active};
+  }
   else if(p.kind==='arm'){const w=weapons[p.k];gear.arma=null;delete weapons[p.k];items.push({kind:'arm',k:p.k,n:1,w});}
   else{
-   const dur={};for(const piece of pieces){const k='arm_'+p.k+'_'+piece;dur[piece]=Number.isFinite(armorDur[k])?Math.max(0,Math.min(100,armorDur[k])):100;delete armor[k];delete armorDur[k];}
-   armorEq=null;items.push({kind:'armorset',k:p.k,n:1,piezas:pieces.slice(),dur});
+   const dur={};
+   for(const piece of p.pieces){
+    const k=armorKey(p.k,piece);dur[piece]=armorDurability(armorDur,k);
+    delete armor[k];delete armorDur[k];delete armorOff[k];
+    if(object(armorEq))delete armorEq[piece];
+   }
+   if(legacySet)armorEq=null;
+   items.push({kind:'armorset',k:p.k,n:1,piezas:p.pieces,dur});
   }
  }
  if(items.length>256)throw Error('Canonical death inventory exceeds supported bound');

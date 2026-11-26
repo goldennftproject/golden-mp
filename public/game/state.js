@@ -19,7 +19,7 @@ const G = {
   stats: {}, statsBase: {}, actividadGranja: null, actividadAcciones: {}, logrosV2:null, logrosAcciones:{}, infraestructura:null, farmXpEdificios:0, chestCap: 0, edif2: {}, cosmeticos: [],
   animals: {},                   // Establo: animal → { desde, feliz, comidoAt, prodAt }
   domas: {}, doma: null, domaActivaKey: null, domaActivaDesde: 0,
-  armor: {}, armorDur: {}, armorEq: null,   // Curtiduría: piezas crafteadas, su durabilidad y el set equipado
+  armor: {}, armorDur: {}, armorEq: null,   // piezas, durabilidad y familia equipada por ranura
   ofrendaPts: 0, ofrendaLog: 0,  // Altar de Ofrendas: puntos acumulados y recursos quemados
   nodoUsos: {},                  // cuántas veces se recogió de cada nodo (para el arranque rápido)
   cosEq: null,                   // cosmético lucido: título, color de nombre, marco y aura
@@ -4624,7 +4624,7 @@ function mkSacar(kind, key, n) {
   else if (kind === "dish") G.dishes[key] -= n;
   else if (kind === "fish") G.fish[key] -= n;
   else if (kind === "arm") { if (G.gear.arma === key) G.gear.arma = null; delete G.weapons[key]; }
-  else if (kind === "armor") { delete G.armor[key]; if (G.armorDur) delete G.armorDur[key]; if (G.armorOff) delete G.armorOff[key]; applyCombatHp(); }
+  else if (kind === "armor") { armorRetirarPieza(armorPieza(key)); applyCombatHp(); }
   return true;
 }
 // Individual spare instances retain their full metadata. Only confirmed pending
@@ -5617,19 +5617,27 @@ function contDescargar(nodo, silencio) {
       G.weapons = G.weapons || {};
       if (!G.weapons[e.k]) { G.weapons[e.k] = e.w || { dur: (typeof ARM_DEF !== "undefined" && ARM_DEF[e.k] ? ARM_DEF[e.k].dur : 40) }; ok = true; }
     }
-    /* 8/9 — RECUPERAR EL SET DEVUELVE LAS PIEZAS. Acá se hacía `if (!G.armorEq) G.armorEq = e.k`
-       y nada más: como equipoCaido tampoco las quitaba, la línea « funcionaba » sin hacer nada y
-       con otro set puesto devolvía ok = true sin devolver el set. Ahora que la caída se lleva las
-       piezas de verdad, esta es la puerta por la que vuelven. Equiparlo o no lo decide el jugador
-       —pisarle el set que lleve puesto sería decidir por él—, pero el objeto vuelve siempre. */
+    /* Las piezas recuperadas pueden ocupar ranuras libres. Las demás vuelven a la bolsa. */
     else if (e.kind === "armorset") {
-      const piezas = (Array.isArray(e.piezas) ? e.piezas : ARMOR_SLOTS).filter(pz => ARMOR_SLOTS.includes(pz));
-      if (ARMOR_SETS[e.k] && !piezas.some(pz => armorTiene(e.k, pz))) {
-        const oldArmor = G.armor, oldDur = G.armorDur, oldEq = G.armorEq;
-        G.armor = { ...(G.armor || {}) }; G.armorDur = { ...(G.armorDur || {}) };
-        piezas.forEach(pz => { const key = armorKey(e.k, pz); G.armor[key] = true; G.armorDur[key] = e.dur && Number.isFinite(e.dur[pz]) ? Math.max(0, Math.min(ARMOR_DUR_MAX, e.dur[pz])) : ARMOR_DUR_MAX; });
-        if (!G.armorEq) G.armorEq = e.k;
-        if (canonicalStacks().length > invSlots()) { G.armor = oldArmor; G.armorDur = oldDur; G.armorEq = oldEq; }
+      const piezas = ARMOR_SLOTS.filter(pz => ARMOR_SETS[e.k]?.piezas?.[pz] &&
+        (!Array.isArray(e.piezas) || e.piezas.includes(pz)));
+      if (piezas.length && !piezas.some(pz => armorTiene(e.k, pz))) {
+        const oldArmor = G.armor, oldDur = G.armorDur, oldEq = G.armorEq, oldOff = G.armorOff;
+        const equipadas = armorMapaEquipado();
+        G.armor = { ...oldArmor };
+        G.armorDur = { ...oldDur };
+        G.armorOff = { ...oldOff };
+        for (const pz of piezas) {
+          const key = armorKey(e.k, pz);
+          G.armor[key] = true;
+          G.armorDur[key] = Number.isFinite(e.dur?.[pz]) ? Math.max(0, Math.min(ARMOR_DUR_MAX, e.dur[pz])) : ARMOR_DUR_MAX;
+          delete G.armorOff[key];
+          if (!equipadas[pz] && !gearEnRanura(ARMOR_GEAR_SLOT[pz])) equipadas[pz] = e.k;
+        }
+        G.armorEq = equipadas;
+        if (canonicalStacks().length > invSlots()) {
+          G.armor = oldArmor; G.armorDur = oldDur; G.armorEq = oldEq; G.armorOff = oldOff;
+        }
         else ok = true;
       }
     }
@@ -5900,26 +5908,32 @@ function tumbaLimpiar() { G.tumba = null; }
    Un 5% global sería una moneda al aire que se lleva el equipo entero, y eso no es un castigo:
    es una lotería, y las loterías no enseñan a jugar mejor. */
 var EQUIPO_CAE_PCT = 5;
-/* qué piezas están puestas, en el orden en que se leen en el muelle. El set de la Curtiduría
-   cuenta como UNA pieza: se equipa entero, así que partirlo al caer inventaría un estado que el
-   resto del juego no sabe representar. */
+/* Cada familia de armadura mantiene su tirada de caída y conserva sus piezas activas juntas. */
 function equipoPuesto() {
   const out = [];
   for (const slot of ["casco", "armadura", "botas", "escudo"]) {
-    const k = G.gear && G.gear[slot];
-    if (k && typeof GEAR_DEF !== "undefined" && GEAR_DEF[k]) out.push({ slot: slot, kind: "gear", k: k });
+    const k = gearEnRanura(slot);
+    if (k) out.push({ slot: slot, kind: "gear", k: k });
   }
   if (G.gear && G.gear.arma && G.weapons && G.weapons[G.gear.arma]) out.push({ slot: "arma", kind: "arm", k: G.gear.arma });
-  if (G.armorEq && typeof ARMOR_SETS !== "undefined" && ARMOR_SETS[G.armorEq] && armorEquipado(G.armorEq)) out.push({ slot: "set", kind: "armorset", k: G.armorEq });
+  for (const set of ARMOR_ORDER) {
+    if (armorEquipado(set)) out.push({ slot: typeof G.armorEq === "string" ? "set" : "set:" + set, kind: "armorset", k: set });
+  }
   return out;
 }
 /* tira el 5% de cada pieza y devuelve las que se cayeron, ya desequipadas */
-function equipoCaido(azar) {
+function equipoCaido(azar, equipoAlMorir) {
   const rnd = azar || Math.random;
   const caen = [];
+  const eraFamilia = typeof G.armorEq === "string";
   for (const p of equipoPuesto()) {
+    if (equipoAlMorir && !equipoAlMorir.some(anterior => anterior.kind === p.kind && anterior.k === p.k)) continue;
     if (rnd() * 100 >= EQUIPO_CAE_PCT) continue;
-    if (p.kind === "gear") { G.gear[p.slot] = null; caen.push({ kind: "gear", k: p.k, n: 1 }); }
+    if (p.kind === "gear") {
+      armorFijarRanuraDeBotin(p.slot);
+      G.gear[p.slot] = null;
+      caen.push({ kind: "gear", k: p.k, n: 1 });
+    }
     else if (p.kind === "arm") {
       /* el arma viaja con su durabilidad, su +N y sus runas: perder el objeto es una cosa y
          perder las mejoras que le metiste otra muy distinta. */
@@ -5927,15 +5941,12 @@ function equipoCaido(azar) {
       G.gear.arma = null; delete G.weapons[p.k];
       caen.push({ kind: "arm", k: p.k, n: 1, w: w });
     } else {
-      /* 8/9 — EL SET CAÍA DE MENTIRA. Acá solo se hacía `G.armorEq = null`, y G.armor —donde
-         viven las piezas— no se tocaba: tras la caída, y aunque el cuerpo se deshiciera, bastaba
-         pulsar « Equipar » en el panel para recuperar los 15 de defensa gratis. Mientras tanto el
-         aviso de la muerte te lo contaba como perdido y ocupaba un hueco del cuerpo.
-         O caía de verdad o no caía; lo que no puede es caer en el log y no en el estado. Se
-         llevan las PIEZAS, que son el objeto; el set vuelve entero al recuperar el cuerpo. */
       const piezas = ARMOR_SLOTS.filter(pz => armorActiva(p.k, pz)), dur = {};
-      piezas.forEach(pz => { dur[pz] = armorDur(p.k, pz); if (G.armor) delete G.armor[armorKey(p.k, pz)]; if (G.armorDur) delete G.armorDur[armorKey(p.k, pz)]; });
-      G.armorEq = null;
+      for (const pieza of piezas) {
+        dur[pieza] = armorDur(p.k, pieza);
+        armorRetirarPieza({ set: p.k, pieza });
+      }
+      if (eraFamilia) G.armorEq = null;
       caen.push({ kind: "armorset", k: p.k, n: 1, piezas, dur });
     }
   }
@@ -5943,7 +5954,7 @@ function equipoCaido(azar) {
 }
 /* la caída completa. Devuelve el desglose que el aviso de la muerte necesita para no ser
    genérico: un « perdiste cosas » no le enseña nada a nadie. */
-function tumbaCaer(zona, x, y, azar) {
+function tumbaCaer(zona, x, y, azar, equipoAlMorir) {
   const raiz = contLlevado();
   /* 8/9 — el `w` VIAJA. Este map lo tiraba, así que lo que llevabas PUESTO conservaba su
      durabilidad, su +N y sus runas (equipoCaido sí lo lleva) y lo que llevabas GUARDADO volvía
@@ -5957,7 +5968,7 @@ function tumbaCaer(zona, x, y, azar) {
     return p;
   }) : [];
   const bolsas = raiz ? raiz.items.filter(esCont).map(b => ({ kind: "cont", k: b.c, n: 1 })) : [];
-  const piezas = equipoCaido(azar);
+  const piezas = equipoCaido(azar, equipoAlMorir);
   const items = dentro.concat(bolsas);
   /* el contenedor raíz también cae: es un objeto, y era tuyo */
   if (raiz) items.push({ kind: "cont", k: raiz.c, n: 1 });
@@ -6132,17 +6143,71 @@ function armorPieza(key) {
   }
   return null;
 }
-function armorActiva(set, pieza) { return G.armorEq === set && armorTiene(set, pieza) && !(G.armorOff || {})[armorKey(set, pieza)]; }
+const ARMOR_GEAR_SLOT = { yelmo: "casco", pecho: "armadura", botas: "botas" };
+const GEAR_ARMOR_SLOT = { casco: "yelmo", armadura: "pecho", botas: "botas" };
+function armorFamiliaEnRanura(pieza) {
+  const equipo = G.armorEq;
+  const anterior = typeof equipo === "string";
+  const set = anterior ? equipo : equipo?.[pieza];
+  if (!armorTiene(set, pieza) || G.armorOff?.[armorKey(set, pieza)]) return null;
+  const slot = ARMOR_GEAR_SLOT[pieza], botin = G.gear?.[slot];
+  if (anterior && botin && GEAR_DEF[botin]?.slot === slot) return null;
+  return set;
+}
+function armorActiva(set, pieza) { return !!set && armorFamiliaEnRanura(pieza) === set; }
+function armorMapaEquipado() {
+  const equipo = {};
+  for (const pieza of ARMOR_SLOTS) {
+    const set = armorFamiliaEnRanura(pieza);
+    if (set) equipo[pieza] = set;
+  }
+  return equipo;
+}
+function armorFijarRanuraDeBotin(slot) {
+  const pieza = GEAR_ARMOR_SLOT[slot];
+  const set = G.armorEq;
+  if (pieza && typeof set === "string" && armorTiene(set, pieza) && !G.armorOff?.[armorKey(set, pieza)]) {
+    G.armorEq = armorMapaEquipado();
+  }
+}
+function armorRetirarPieza(p) {
+  if (!p) return;
+  const key = armorKey(p.set, p.pieza);
+  if (G.armorEq?.[p.pieza] === p.set) {
+    const equipo = armorMapaEquipado();
+    delete equipo[p.pieza];
+    G.armorEq = equipo;
+  }
+  delete G.armor[key];
+  if (G.armorDur) delete G.armorDur[key];
+  if (G.armorOff) delete G.armorOff[key];
+}
+function armorCambiarRanuras(equipo, piezas) {
+  const cupo = Math.max(invSlots(), canonicalStacks().length);
+  const anterior = G.armorEq, off = G.armorOff;
+  G.armorEq = equipo;
+  G.armorOff = { ...off };
+  for (const key of piezas) delete G.armorOff[key];
+  if (canonicalStacks().length <= cupo) return true;
+  G.armorEq = anterior;
+  G.armorOff = off;
+  toast("Haz lugar en la bolsa para guardar la armadura que te quitas");
+  return false;
+}
+function armorActualizarEquipo() {
+  applyCombatHp(); syncSlots(); refreshHud();
+  if (isOpen("ov-inv")) refreshInv();
+  if (isOpen("ov-equip")) refreshEquip();
+  if (typeof refreshCurtiduria === "function" && isOpen("ov-curtiduria")) refreshCurtiduria();
+  if (typeof saveFarm === "function") saveFarm(true);
+}
 function armorAlternarPieza(key) {
   const p = armorPieza(key); if (!p || !armorTiene(p.set, p.pieza)) return false;
-  const anteriorSet = G.armorEq, anteriorOff = { ...(G.armorOff || {}) };
-  G.armorOff = G.armorOff || {};
-  if (G.armorEq !== p.set) { G.armorEq = p.set; for (const pieza of ARMOR_SLOTS) G.armorOff[armorKey(p.set, pieza)] = true; }
-  if (armorActiva(p.set, p.pieza) && canonicalStacks().length >= invSlots()) { toast("Haz lugar en la bolsa para desequipar"); return false; }
-  G.armorOff[key] = !G.armorOff[key];
-  if (canonicalStacks().length > invSlots()) { G.armorEq = anteriorSet; G.armorOff = anteriorOff; toast("No hay lugar para guardar las piezas que te quitas"); return false; }
-  applyCombatHp(); syncSlots(); refreshHud(); if (isOpen("ov-inv")) refreshInv(); if (isOpen("ov-equip")) refreshEquip();
-  if (typeof saveFarm === "function") saveFarm(true);
+  const equipo = armorMapaEquipado();
+  if (equipo[p.pieza] === p.set) delete equipo[p.pieza];
+  else equipo[p.pieza] = p.set;
+  if (!armorCambiarRanuras(equipo, [key])) return false;
+  armorActualizarEquipo();
   return true;
 }
 /* la durabilidad vive aparte de G.armor para que los guardados viejos sigan valiendo: una pieza
@@ -6200,11 +6265,11 @@ function repararArmor(set, pieza) {
    500, que es lo que la mecánica quería decir desde el principio.
    Devuelve la lista de piezas que acaban de quedar inertes, para que la escena lo avise. */
 function armorGastar(n) {
-  const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return [];
   G.armorDur = G.armorDur || {};
   const secas = [];
   ARMOR_SLOTS.forEach(pz => {
-    if (!armorActiva(set, pz) || armorDur(set, pz) <= 0) return;
+    const set = armorFamiliaEnRanura(pz);
+    if (!set || armorDur(set, pz) <= 0) return;
     G.armorDur[armorKey(set, pz)] = Math.max(0, armorDur(set, pz) - (n || 1));
     if (G.armorDur[armorKey(set, pz)] <= 0) secas.push(pz);
   });
@@ -6221,26 +6286,25 @@ function armorGastar(n) {
 var ARMOR_MUERTE_PCT = 0.05;   // lo que se lleva cada muerte, sobre la durabilidad TOTAL
 var ARMOR_ROTURA_PCT = 10;     // % de que una pieza YA gastada se rompa y desaparezca al morir
 function armorAlMorir() {
-  const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return { gastadas: [], rotas: [] };
   G.armorDur = G.armorDur || {};
   const gastadas = [], rotas = [];
   ARMOR_SLOTS.forEach(pz => {
-    if (!armorActiva(set, pz)) return;
+    const set = armorFamiliaEnRanura(pz);
+    if (!set) return;
     const antes = armorDur(set, pz);
     if (antes > 0) {
       G.armorDur[armorKey(set, pz)] = Math.max(0, antes - Math.round(ARMOR_DUR_MAX * ARMOR_MUERTE_PCT));
       gastadas.push(pz);
     } else if (Math.random() * 100 < ARMOR_ROTURA_PCT) {
       /* estaba en cero y la suerte no acompañó: se rompe y se va */
-      delete G.armor[armorKey(set, pz)];
-      delete G.armorDur[armorKey(set, pz)];
+      armorRetirarPieza({ set, pieza: pz });
       rotas.push(pz);
     }
   });
   return { gastadas: gastadas, rotas: rotas };
 }
 function armorTiene(set, pieza) {
-  return !!(ARMOR_SETS[set]?.piezas[pieza] && G.armor?.[armorKey(set, pieza)]);
+  return !!(ARMOR_SETS[set]?.piezas?.[pieza] && G.armor?.[armorKey(set, pieza)]);
 }
 function armorPuestas(set) { return ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).length; }
 function armorSetCompleto(set) { return armorPuestas(set) === ARMOR_SLOTS.length; }
@@ -6249,17 +6313,22 @@ function armorSetCompleto(set) { return armorPuestas(set) === ARMOR_SLOTS.length
    funcionen » dejaron de ser lo mismo, y confundirlas haría que el bono siguiera activo con la
    armadura deshecha. */
 function armorSetSano(set) { return ARMOR_SLOTS.every(pz => armorActiva(set, pz) && armorDur(set, pz) > 0); }
-function armorEquipado(set) { return G.armorEq === set && ARMOR_SLOTS.some(pieza => armorActiva(set, pieza)); }
-// defensa: suma de las piezas del set EQUIPADO (más las piezas viejas de loot, que siguen valiendo)
+function armorEquipado(set) { return ARMOR_SLOTS.some(pieza => armorActiva(set, pieza)); }
+// Defensa de cada pieza equipada con durabilidad, sea cual sea su familia.
 function armorDefensa() {
-  const set = G.armorEq; if (!set || !ARMOR_SETS[set]) return 0;
   let d = 0;
   /* 14/9 — una pieza a cero de durabilidad no suma defensa. No está rota ni perdida: está
      gastada, y vuelve entera en cuanto la reparás. */
-  ARMOR_SLOTS.forEach(pz => { if (armorActiva(set, pz) && armorDur(set, pz) > 0) d += ARMOR_SETS[set].piezas[pz].def; });
+  for (const pz of ARMOR_SLOTS) {
+    const set = armorFamiliaEnRanura(pz);
+    if (set && armorDur(set, pz) > 0) d += ARMOR_SETS[set].piezas[pz].def;
+  }
   return d;
 }
-function armorBono() { const set = G.armorEq; return (set && armorSetSano(set)) ? ARMOR_SETS[set].bono : null; }
+function armorBono() {
+  const set = armorFamiliaEnRanura("pecho");
+  return set && armorSetSano(set) ? ARMOR_SETS[set].bono : null;
+}
 function armorBonoVal(campo) { const b = armorBono(); return (b && b[campo]) || 0; }
 // set de Fibra completo: velocidad de ataque y evasión (antes el set entero no hacía nada)
 function atkSpdMult() { return 1 + ((typeof eqRunaVal === "function" ? eqRunaVal("veloz") : 0) + armorBonoVal("atkSpd")) / 100; }
@@ -6297,18 +6366,16 @@ function craftArmor(set, pieza) {
   if (typeof saveFarm === "function") saveFarm(true);
 }
 function equiparSet(set) {
-  if (!ARMOR_SETS[set] || !armorPuestas(set)) { toast("Todavía no tienes piezas de ese set"); return; }
-  const antesSet = G.armorEq, antesOff = { ...(G.armorOff || {}) };
-  G.armorEq = set;
-  G.armorOff = G.armorOff || {}; for (const pieza of ARMOR_SLOTS) delete G.armorOff[armorKey(set, pieza)];
-  if (canonicalStacks().length > invSlots()) { G.armorEq = antesSet; G.armorOff = antesOff; toast("Haz lugar para guardar la armadura anterior"); return false; }
-  syncSlots();
-  applyCombatHp(); refreshHud();
-  log("Te pusiste la " + ARMOR_SETS[set].label + " (" + armorDefensa() + " de defensa" + (armorSetCompleto(set) ? " · " + ARMOR_SETS[set].bono.txt : "") + ").", "good");
+  const piezas = ARMOR_SLOTS.filter(pz => armorTiene(set, pz));
+  if (!piezas.length) { toast("Todavía no tienes piezas de ese set"); return false; }
+  const equipo = armorMapaEquipado();
+  for (const pieza of piezas) equipo[pieza] = set;
+  if (!armorCambiarRanuras(equipo, piezas.map(pz => armorKey(set, pz)))) return false;
+  const bono = armorSetSano(set) ? ARMOR_SETS[set].bono : null;
+  log("Equipaste " + ARMOR_SETS[set].label + " (" + armorDefensa() + " de defensa" + (bono ? " · " + bono.txt : "") + ").", "good");
   toast(ARMOR_SETS[set].label);
-  if (typeof refreshCurtiduria === "function" && isOpen("ov-curtiduria")) refreshCurtiduria();
-  if (isOpen("ov-equip")) refreshEquip();
-  if (typeof saveFarm === "function") saveFarm();
+  armorActualizarEquipo();
+  return true;
 }
 
 // ================= EL ESTABLO: ANIMALES Y MATERIALES ("2das mejoras", 4/8) =================
@@ -7158,8 +7225,9 @@ function armaCambiarLlevada(key) {
 function gearGuardar(slot) {
   if (!enZona()) return false;
   const raiz = contLlevado(); if (!raiz) return false;
-  const k = G.gear && G.gear[slot]; if (!k || !GEAR_DEF[k]) return false;
+  const k = gearEnRanura(slot); if (!k) return false;
   if (!contMeter(raiz, "gear", k, 1)) return false;      // lleno: no se toca nada
+  armorFijarRanuraDeBotin(slot);
   G.gear[slot] = null;
   return true;
 }
@@ -7170,10 +7238,24 @@ function gearPonerse(key) {
   const pila = contAplanar(raiz).find(e => e.kind === "gear" && e.k === key);
   if (!pila) return false;
   const previa = G.gear[gd.slot];
+  const anterior = G.armorEq, off = G.armorOff;
+  const pieza = GEAR_ARMOR_SLOT[gd.slot];
+  if (pieza && armorFamiliaEnRanura(pieza)) {
+    const equipo = armorMapaEquipado();
+    delete equipo[pieza];
+    if (!armorCambiarRanuras(equipo, [])) return false;
+  }
   /* la que llevabas baja ANTES de sacar la nueva: si no entra, se cancela entero */
-  if (previa && previa !== key && !contMeter(raiz, "gear", previa, 1)) return false;
-  contGastar(raiz, "gear", key, 1);
-  G.gear[gd.slot] = key;
+  if (previa !== key) {
+    if (previa && !contMeter(raiz, "gear", previa, 1)) {
+      G.armorEq = anterior; G.armorOff = off;
+      return false;
+    }
+    contGastar(raiz, "gear", key, 1);
+    armorFijarRanuraDeBotin(gd.slot);
+    G.gear[gd.slot] = key;
+  }
+  if (G.armorEq !== anterior) { applyCombatHp(); syncSlots(); }
   return true;
 }
 /* las piezas de ese hueco que llevás en el contenedor — lo que se puede poner sin volver */
@@ -7518,14 +7600,31 @@ const GEAR_DEF = {
   escudo_hierro:  { slot:"escudo",   label:"Escudo de Hierro",  emoji:"🛡️", def:2, sprite:"gear_escudo_hierro" },
   pechera_hierro: { slot:"armadura", label:"Pechera de Hierro", emoji:"🛡️", def:3, sprite:"gear_pechera_hierro" },
 };
-function gearDefTotal() { let d = 0; for (const s in G.gear) { const g = G.gear[s]; if (g && GEAR_DEF[g]) d += GEAR_DEF[g].def; } return d + (typeof armorDefensa === "function" ? armorDefensa() : 0); }
+function gearEnRanura(slot) {
+  const k = G.gear?.[slot], pieza = GEAR_ARMOR_SLOT[slot];
+  if (!k || GEAR_DEF[k]?.slot !== slot) return null;
+  return pieza && armorFamiliaEnRanura(pieza) ? null : k;
+}
+function gearDefTotal() {
+  let d = armorDefensa();
+  for (const slot of ["casco", "armadura", "botas", "escudo"]) {
+    const k = gearEnRanura(slot);
+    if (k) d += GEAR_DEF[k].def;
+  }
+  return d;
+}
 // al lootear una pieza: se equipa si mejora el slot; si no, se vende sola
 function gainGear(key) {
   const gd = GEAR_DEF[key]; if (!gd) return;
   const cur = G.gear[gd.slot];
-  if (!cur || GEAR_DEF[cur].def < gd.def) {
+  if (!GEAR_DEF[cur] || GEAR_DEF[cur].def < gd.def) {
+    armorFijarRanuraDeBotin(gd.slot);
     G.gear[gd.slot] = key;
-    log("Equipaste " + gd.label + " (defensa +" + gd.def + ").", "gold"); toast("" + gd.label + " equipado");
+    if (gearEnRanura(gd.slot)) {
+      log("Equipaste " + gd.label + " (defensa +" + gd.def + ").", "gold"); toast(gd.label + " equipado");
+    } else {
+      log("Guardaste " + gd.label + " en reserva.", "gold"); toast(gd.label + " en reserva");
+    }
   } else {
     const v = 5 + gd.def * 5; G.plata += v;
     log(gd.label + " repetido — vendido por " + v + " plata.", "good"); toast("+" + v + " (" + gd.label + ")");

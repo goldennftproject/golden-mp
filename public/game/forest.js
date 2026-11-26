@@ -1604,6 +1604,7 @@ class ForestScene extends Phaser.Scene {
       /* 15/9 (dirección) — MORIR CASTIGA LA ARMADURA. « si muere reduce un 5 % de su durabilidad
          total con riesgo a romperse y desaparecer ». Va ANTES de la tumba: lo que se rompe ya no
          existe, así que no puede caer al suelo ni recuperarse. */
+      const equipoAlMorir = typeof equipoPuesto === "function" ? equipoPuesto() : undefined;
       if (typeof armorAlMorir === "function") {
         const arm = armorAlMorir();
         if (arm.rotas.length) {
@@ -1616,7 +1617,7 @@ class ForestScene extends Phaser.Scene {
       }
       const teniaTumba = (typeof tumbaViva === "function") && !!tumbaViva();
       const c = (typeof tumbaCaer === "function")
-        ? tumbaCaer(this.zonaKey, this.hero ? this.hero.x : 0, this.hero ? this.hero.y : 0)
+        ? tumbaCaer(this.zonaKey, this.hero ? this.hero.x : 0, this.hero ? this.hero.y : 0, undefined, equipoAlMorir)
         : { pilas: 0, piezas: 0, cont: null };
       /* 8/9 (tanda 4) — EL AVISO DICE EXACTAMENTE QUÉ SE PERDIÓ, y en dos frases separadas,
          porque son dos castigos distintos: el contenedor cae SIEMPRE (fue tu decisión al

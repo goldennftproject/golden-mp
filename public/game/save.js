@@ -1158,8 +1158,9 @@ function hydrate(d) {
      armorDur() lee « sin entrada = entera », así que el que ya tenía su set no se lo encuentra
      gastado al entrar. Ley 1: nadie pierde nada por una mecánica nueva. */
   G.armorDur = (d.armorDur && typeof d.armorDur === "object") ? d.armorDur : {};
-  G.armorEq = d.armorEq || null;
   G.armorOff = d.armorOff && typeof d.armorOff === "object" ? d.armorOff : {};
+  G.armorEq = d.armorEq || null;
+  if (typeof G.armorEq !== "string" && G.armorEq !== null) G.armorEq = armorMapaEquipado();
   G.canaElegida = typeof d.canaElegida === "string" ? d.canaElegida : "";
   G.incResumen = d.incResumen && typeof d.incResumen === "object" ? d.incResumen : null;
   G.ofrendaPts = Number(d.ofrendaPts) || 0;

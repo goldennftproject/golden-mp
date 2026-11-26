@@ -541,17 +541,20 @@ function refreshCombate() {
   const caja = $("combate"); if (!caja) return;
   if (!(window.GF && GF.scene === "forest")) { caja.style.display = "none"; caja._firma = ""; ubicarMuelleCombatePC(); return; }
   const gr = G.gear || {};
+  const puesto = slot => typeof gearEnRanura === "function" ? gearEnRanura(slot) : gr[slot];
+  const familia = pieza => typeof armorFamiliaEnRanura === "function" ? armorFamiliaEnRanura(pieza) : null;
+  const SLOTS = typeof ARMOR_SLOTS === "undefined" ? [] : ARMOR_SLOTS;
   const modo = (typeof modoPelea === "function") ? modoPelea() : "perseguir";
   /* 8/9 (Suren) — este muelle solo se ve DENTRO de la Zona, así que las flechas que cuenta tienen
      que ser las que llevás en el contenedor. Leyendo G.res.flecha mostraba las sesenta que
      dejaste en la granja mientras el arco no podía disparar ni una: el peor cartel posible,
      porque no solo no ayuda, convence al jugador de que el problema está en otro lado. */
   const fl = (typeof llevoTengo === "function") ? llevoTengo("res", "flecha") : ((G.res && G.res.flecha) || 0);
-  /* 15/9: la firma también lleva el set y la durabilidad de cada pieza — si no, el muñeco nuevo
-     se dibujaría una vez y se quedaría mintiendo mientras la armadura se gasta a golpes. */
-  const setFirma = (typeof G.armorEq === "string" && typeof ARMOR_SLOTS !== "undefined")
-    ? G.armorEq + ":" + ARMOR_SLOTS.map(pz => (typeof armorDur === "function" ? armorDur(G.armorEq, pz) : 0) + ':' + armorActiva(G.armorEq, pz)).join(",")
-    : "-";
+  // El muelle se repinta al cambiar cualquier pieza equipada o su durabilidad.
+  const setFirma = SLOTS.map(pz => {
+    const set = familia(pz);
+    return set ? set + ":" + armorDur(set, pz) : "-";
+  }).join(",");
   /* …y lo que llevás PARA cada hueco: si no, al lootear un casco el hueco vacío seguiría
      diciendo « no llevás nada » hasta que cambiara otra cosa */
   const aManoFirma = (typeof gearAMano === "function")
@@ -559,7 +562,8 @@ function refreshCombate() {
   /* …y la durabilidad del arma: es lo que más cambia mientras peleás y, si no entra en la firma,
      el muelle enseñaría el número del momento en que entraste a la Zona */
   const durArma = (gr.arma && G.weapons && G.weapons[gr.arma]) ? G.weapons[gr.arma].dur : "-";
-  const firma = [gr.casco, gr.armadura, gr.botas, gr.escudo, gr.arma, gr.municion ? fl : 0, modo, setFirma, aManoFirma, durArma].join("|");
+  const firma = [puesto("casco"), puesto("armadura"), puesto("botas"), puesto("escudo"), gr.arma, gr.municion ? fl : 0,
+    modo, setFirma, aManoFirma, durArma].join("|");
   if (caja._firma === firma) { ubicarMuelleCombatePC(); return; }
   caja._firma = firma;
   caja.style.display = "";
@@ -569,13 +573,17 @@ function refreshCombate() {
      vacío se pone la que lleves. El rótulo lo dice, porque un clic que mueve cosas sin avisar es
      la clase de gesto que el jugador descubre cuando ya pasó. */
   const pieza = (slot, sil) => {
-    const g = gr[slot], gd = g && typeof GEAR_DEF !== "undefined" && GEAR_DEF[g];
+    const g = puesto(slot), gd = g && typeof GEAR_DEF !== "undefined" && GEAR_DEF[g];
     const aMano = (typeof gearAMano === "function") ? gearAMano(slot) : [];
-    const movible = !!(gd || aMano.length);
-    const tip = gd ? gd.label + " · defensa +" + gd.def + " · clic para guardarla en el contenedor"
-                   : (aMano.length ? "Vacío · clic para ponerte " + GEAR_DEF[aMano[0]].label : slot);
+    const candidato = aMano.length ? GEAR_DEF[aMano[0]] : null;
+    const equivalente = {casco:"yelmo", armadura:"pecho", botas:"botas"}[slot];
+    const taller = !gd && equivalente && familia(equivalente);
+    const reemplazo = taller ? " · se guardará " + nombrePiezaEnUso(taller, equivalente) : "";
+    const movible = !!(gd || candidato);
     const etiqueta = gd ? "Guardar " + gd.label + " en el contenedor"
-      : (aMano.length ? "Equipar " + GEAR_DEF[aMano[0]].label : "");
+      : candidato ? "Equipar " + candidato.label + reemplazo : "";
+    const tip = gd ? gd.label + " · defensa +" + gd.def + " · clic para guardarla en el contenedor"
+      : etiqueta || slot;
     return '<div class="cbq' + (gd ? "" : " vacio") + (movible ? " cbq-mov" : "") +
       '" data-gslot="' + slot + '"' + (movible ? ' role="button" tabindex="0" aria-label="' + escapeHtml(etiqueta) + '"' : "") +
       ' title="' + escapeHtml(tip) + '">' +
@@ -599,11 +607,11 @@ function refreshCombate() {
      (lo que se craftea), la de la izquierda lo que cae de los bichos y la derecha con qué peleás.
      El hueco de una pieza GASTADA se marca: sigue puesta pero no defiende, y eso, en la Zona y
      sin poder repararla, es exactamente lo que hay que ver antes de seguir metiéndose. */
-  const setEq = (typeof G.armorEq === "string") ? G.armorEq : null;
-  const setDef = setEq && typeof ARMOR_SETS !== "undefined" ? ARMOR_SETS[setEq] : null;
   const piezaSet = (pz) => {
-    const tiene = setDef && typeof armorTiene === "function" && armorActiva(setEq, pz);
-    const dur = tiene && typeof armorDur === "function" ? armorDur(setEq, pz) : 0;
+    const set = familia(pz);
+    const setDef = set && ARMOR_SETS[set];
+    const tiene = setDef?.piezas[pz];
+    const dur = tiene ? armorDur(set, pz) : 0;
     const max = (typeof ARMOR_DUR_MAX === "number") ? ARMOR_DUR_MAX : 100;
     const lbl = (typeof ARMOR_SLOT_LABEL !== "undefined" && ARMOR_SLOT_LABEL[pz]) || pz;
     /* las siluetas que EXISTEN son las del panel de Equipo: cada pieza del set toma la suya */
@@ -611,13 +619,12 @@ function refreshCombate() {
       botas: "sil_botas", guantes: "sil_guantes" };
     if (!tiene) return '<div class="cbq vacio" title="' + lbl + ' — sin pieza"><img class="sil" src="' +
       GF.spr(SIL_SET[pz] || "sil_armadura") + '" onerror="this.remove()"></div>';
-    return '<div class="cbq' + (dur > 0 ? "" : " seca") + '" title="' + lbl + " de " + setDef.label +
-      (dur > 0 ? " · defensa +" + setDef.piezas[pz].def + " · durabilidad " + dur + "/" + max
-               : " · GASTADA: no defiende hasta que la repares") + '">' +
-      '<img src="' + GF.spr(armorSprite(setEq, pz)) + '" onerror="this.outerHTML=\'🛡️\'">' +
+    return '<div class="cbq' + (dur > 0 ? "" : " seca") + '" title="' + escapeHtml(nombrePiezaEnUso(set, pz) +
+      (dur > 0 ? " · defensa +" + tiene.def + " · durabilidad " + dur + "/" + max
+               : " · GASTADA: no defiende hasta que la repares")) + '">' +
+      '<img src="' + GF.spr(armorSprite(set, pz)) + '" onerror="this.outerHTML=\'🛡️\'">' +
       (dur > 0 && dur <= max / 4 ? '<span class="cbn">' + dur + '</span>' : '') + '</div>';
   };
-  const SLOTS = (typeof ARMOR_SLOTS !== "undefined") ? ARMOR_SLOTS : [];
   caja.innerHTML =
     '<div class="cb-doll" id="cb-eq">' +
       '<div class="cb-col">' + pieza("casco", "sil_casco") + pieza("armadura", "sil_armadura") + pieza("botas", "sil_botas") + '</div>' +
@@ -639,7 +646,7 @@ function refreshCombate() {
   caja.querySelectorAll("[data-gslot]").forEach(b => {
     const moverPieza = (e) => {
       if (e && typeof e.stopPropagation === "function") e.stopPropagation();
-      const slot = b.dataset.gslot, puesta = (G.gear || {})[slot];
+      const slot = b.dataset.gslot, puesta = puesto(slot);
       if (puesta) {
         if (typeof gearGuardar !== "function" || !gearGuardar(slot)) { toast("El contenedor está lleno — no hay dónde guardarla"); return; }
         toast(GEAR_DEF[puesta].label + " al contenedor");
@@ -2355,7 +2362,12 @@ function itemView(d) {
   if (!d) return null;
   if (d.kind === "armor") {
     const p = armorPieza(d.key); if (!p || !armorTiene(p.set, p.pieza)) return null;
-    return { sprite: armorSprite(p.set, p.pieza), emoji: '🛡️', label: mkNombre('armor', d.key) + ' · durabilidad ' + armorDur(p.set, p.pieza) + '/' + ARMOR_DUR_MAX + ' · clic para equipar', dur: armorDur(p.set, p.pieza) / ARMOR_DUR_MAX * 100 };
+    const dur = armorDur(p.set, p.pieza);
+    const cambios = cambiosArmadura(p.set, [p.pieza]);
+    const accion = armorActiva(p.set, p.pieza) ? "clic para guardar"
+      : cambios.guardadas.length || cambios.reserva.length ? "clic para cambiar la pieza de esa ranura" : "clic para equipar";
+    return { sprite: armorSprite(p.set, p.pieza), emoji: '🛡️', label: nombrePiezaEnUso(p.set, p.pieza) +
+      ' · durabilidad ' + dur + '/' + ARMOR_DUR_MAX + ' · ' + accion, dur: dur / ARMOR_DUR_MAX * 100 };
   }
   if (d.kind === "tool") {
     if (d.key === "axe") return { sprite: "axe", emoji: "🔧", label: "Hacha · 1 uso cada una · tienes " + toolCount("axe"), dur: null };
@@ -3388,7 +3400,11 @@ function invCellClick(i) {
   if (modoPapeleraInventario) { preguntarPapelera(i); return; }
   const d = G.slots[i]; if (!d) return;
   if (d.kind === "arm_spare") { usarArmaRepuesto(d.key); return; }
-  if (d.kind === "armor") { armorAlternarPieza(d.key); return; }
+  if (d.kind === "armor") {
+    const p = armorPieza(d.key);
+    if (p && armorTiene(p.set,p.pieza)) confirmarCambioArmadura(p.set, () => armorAlternarPieza(d.key), "ov-inv", p.pieza);
+    return;
+  }
   if (d.kind === "seed") { if (!cropUnlocked(d.key)) { toast("Necesitas Cultivo nivel " + CROP_DEF[d.key].lvl); return; } selectSeed(d.key); toast("Plantando: " + CROP_DEF[d.key].label); }
   else if (d.kind === "arm") {   // clic = EQUIPAR (para tirarla, la papelera). Antes se borraba de una: bug reportado
     if (!(G.weapons && G.weapons[d.key])) return;
@@ -3825,6 +3841,56 @@ function refreshSkills() {
 }
 
 /* ---- equipo (slots estilo RPG; armadura/armas llegan con el combate) ---- */
+function piezasArmaduraEnUso(set) {
+  return ARMOR_SLOTS.filter(pieza => armorActiva(set, pieza));
+}
+
+function nombrePiezaEnUso(set, pieza) {
+  const def = ARMOR_SETS[set];
+  return def.taller ? def.label : ARMOR_SLOT_LABEL[pieza] + " (" + def.label + ")";
+}
+
+function cambiosArmadura(set, piezas) {
+  const guardadas = [], reserva = [];
+  const ranurasBotin = { yelmo:"casco", pecho:"armadura", botas:"botas" };
+  for (const pieza of piezas) {
+    const anterior = armorFamiliaEnRanura(pieza);
+    if (anterior && anterior !== set) guardadas.push(nombrePiezaEnUso(anterior, pieza));
+    const ranura = ranurasBotin[pieza], botin = ranura && gearEnRanura(ranura);
+    if (botin && GEAR_DEF[botin]) reserva.push(GEAR_DEF[botin].label);
+  }
+  return { guardadas, reserva };
+}
+
+function confirmarCambioArmadura(set, aplicar, panel, pieza = null) {
+  const def = ARMOR_SETS[set];
+  if (!def || !isOpen(panel) || isOpen("ov-confirm")) return false;
+  const disponibles = () => ARMOR_SLOTS.filter(p => armorTiene(set, p) && (!pieza || p === pieza));
+  const porPoner = disponibles();
+  if (!porPoner.length) return false;
+  if (pieza && armorActiva(set, pieza)) return aplicar();
+  const cambios = cambiosArmadura(set, porPoner);
+  if (!cambios.guardadas.length && !cambios.reserva.length) return aplicar();
+  if (!$("ov-confirm") || !$("cf-title") || !$("cf-msg") || !$("cf-yes") || !$("cf-no")) return false;
+  const cuenta = typeof UID === "undefined" ? null : UID;
+  const escena = window.GF?.scene, partida = G;
+  const antes = JSON.stringify([porPoner, cambios]);
+  const destino = pieza ? nombrePiezaEnUso(set, pieza) : def.label;
+  const avisoBolsa = cambios.guardadas.length ? " Volverá al inventario lo que llevas en esas ranuras (" + cambios.guardadas.join(", ") + ")." : "";
+  const avisoReserva = cambios.reserva.length ? " El botín de esas ranuras quedará en reserva (" + cambios.reserva.join(", ") + ")." : "";
+  askConfirm("¿Quieres equipar " + destino + "?" + avisoBolsa + avisoReserva, () => {
+    const disponiblesAhora = disponibles();
+    if (G !== partida || (typeof UID === "undefined" ? null : UID) !== cuenta ||
+        window.GF?.scene !== escena || !isOpen(panel) ||
+        JSON.stringify([disponiblesAhora, cambiosArmadura(set, disponiblesAhora)]) !== antes) {
+      toast("El equipo cambió. Vuelve a elegir qué quieres equipar.");
+      return false;
+    }
+    return aplicar();
+  }, {title:pieza ? "Cambiar pieza" : "Equipar conjunto", yes:"Equipar", yesClass:"green", no:"Cancelar"});
+  return true;
+}
+
 function refreshEquip() {
   const box = $("eq-grid");
   if (box) box.innerHTML = "";   // viernes (2): fuera el cinturón de herramientas del panel de Equipo
@@ -3832,7 +3898,7 @@ function refreshEquip() {
   const SIL = { "eq-casco": "sil_casco", "eq-armadura": "sil_armadura", "eq-botas": "sil_botas", "eq-escudo": "sil_escudo", "eq-arma": "sil_arma", "eq-municion": "sil_municion" };
   const fill = (id, on, html, tip) => { const el = $(id); if (!el) return; el.classList.toggle("ghost", !on); el.title = tip || ""; el.innerHTML = on ? html : `<img class="eqsil" src="${GF.spr(SIL[id])}" onerror="this.remove()">`; };
   const spIc = (sprite, em) => `<img class="eqimg" src="${GF.spr(sprite)}" onerror="this.outerHTML='${em}'">`;
-  const gearSlot = (id, slot, nm) => { const g = G.gear && G.gear[slot]; const gd = g && GEAR_DEF[g]; fill(id, !!gd, gd ? spIc(gd.sprite, gd.emoji) : "", gd ? gd.label + " · defensa +" + gd.def : nm); };
+  const gearSlot = (id, slot, nm) => { const g = gearEnRanura(slot); const gd = g && GEAR_DEF[g]; fill(id, !!gd, gd ? spIc(gd.sprite, gd.emoji) : "", gd ? gd.label + " · defensa +" + gd.def : nm); };
   gearSlot("eq-casco", "casco", "Casco");
   gearSlot("eq-armadura", "armadura", "Armadura");
   gearSlot("eq-botas", "botas", "Botas");
@@ -3903,18 +3969,30 @@ function refreshEquip() {
   // del área de equipo — antes solo salían en la lista de abajo y los casilleros quedaban vacíos.
   // Guantes y Pantalones dejaron de ser "próximamente". El gear viejo de loot conserva su lugar.
   {
-    const setEq = (G.armorEq && ARMOR_SETS[G.armorEq]) ? G.armorEq : null;
     const MAPA = { "eq-casco": ["yelmo", "casco"], "eq-armadura": ["pecho", "armadura"], "eq-pantalones": ["pantalones", null], "eq-botas": ["botas", "botas"], "eq-guantes": ["guantes", null] };
     for (const id in MAPA) {
       const [pz, slotViejo] = MAPA[id], el = $(id); if (!el) continue;
-      const viejo = slotViejo && G.gear && G.gear[slotViejo] && GEAR_DEF[G.gear[slotViejo]];
-      if (viejo) continue;   // ese casillero ya lo dibujó gearSlot con el gear de loot
-      if (setEq && armorActiva(setEq, pz)) {
+      el.onclick = null;
+      desactivarAccionConTeclado(el);
+      for (const atributo of ["role","tabindex","aria-label"]) el.removeAttribute?.(atributo);
+      const viejo = slotViejo && gearEnRanura(slotViejo);
+      if (viejo) continue;   // Las partidas anteriores conservan su prioridad visual de botín.
+      const setEq = armorFamiliaEnRanura(pz);
+      if (setEq) {
         const sd = ARMOR_SETS[setEq];
         el.classList.remove("ghost");
-        el.title = ARMOR_SLOT_LABEL[pz] + " · " + sd.label + " · defensa +" + sd.piezas[pz].def;
+        const dur = armorDur(setEq, pz);
+        el.title = nombrePiezaEnUso(setEq, pz) + (dur > 0
+          ? " · defensa +" + sd.piezas[pz].def + " · durabilidad " + dur + "/" + ARMOR_DUR_MAX
+          : " · gastada, hay que repararla");
         el.innerHTML = spIc(armorSprite(setEq, pz), "🛡️");
-        el.onclick = () => armorAlternarPieza(armorKey(setEq, pz));
+        el.setAttribute("role","button");
+        el.setAttribute("tabindex","0");
+        el.setAttribute("aria-label","Guardar " + nombrePiezaEnUso(setEq,pz));
+        el.onclick = () => {
+          if (!isOpen("ov-confirm") && armorActiva(setEq,pz)) armorAlternarPieza(armorKey(setEq,pz));
+        };
+        activarAccionConTeclado(el, el.onclick);
         activarAccionConTeclado(el, el.onclick);
       } else if (!slotViejo) {
         /* 31/8 — guantes/pantalones vacíos: SU silueta, no un span vacío. El span venía de
@@ -3930,19 +4008,31 @@ function refreshEquip() {
   // lado" fuera de esa ventana. Ahora el panel de Equipo lista tus sets, piezas y bonos.
   if (box) {
     let h = '<div class="secc">Armaduras</div>';
+    h += '<div class="info">Puedes combinar piezas de distintos conjuntos. Equipar una pieza sólo cambia su ranura. Para activar un bono, equipa las cinco piezas de ese conjunto en buen estado.</div>';
     const tengoAlguna = ARMOR_ORDER.some(s => armorPuestas(s) > 0);
     if (!tengoAlguna) h += '<div class="info">Todavía no has fabricado ninguna pieza — se hacen en la Curtiduría con los materiales de tus animales.</div>';
     else ARMOR_ORDER.forEach(set => {
       const n = armorPuestas(set); if (!n) return;
-      const sd = ARMOR_SETS[set], eq = armorEquipado(set);
-      h += '<div class="forge-row' + (eq ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + sd.label + (eq ? ' <span class="tag">equipada</span>' : '') + ' <span class="tag">' + n + '/5</span></div>' +
+      const sd = ARMOR_SETS[set], puestas = piezasArmaduraEnUso(set).length;
+      const piezaUnica = Object.keys(sd.piezas).length === 1;
+      const detalle = piezaUnica ? 'Pieza única' : n + '/' + Object.keys(sd.piezas).length + ' piezas';
+      const marca = puestas ? ' <span class="tag">' + (piezaUnica ? 'Equipada' : puestas + ' equipadas') + '</span>' : '';
+      h += '<div class="forge-row' + (puestas ? ' eq' : '') + '"><div class="finfo"><div class="fnm">' + sd.label + marca + ' <span class="tag">' + detalle + '</span></div>' +
         '<div class="fds">' + ARMOR_SLOTS.filter(pz => armorTiene(set, pz)).map(pz =>
-          '<img src="' + GF.spr(armorSprite(set, pz)) + '" title="' + ARMOR_SLOT_LABEL[pz] + '" style="width:26px;height:26px;image-rendering:pixelated;vertical-align:middle" onerror="this.remove()">').join(" ") + '</div>' +
-        (armorSetCompleto(set) ? '<div class="fds">Set completo: ' + sd.bono.txt + '</div>' : '<div class="fds">Defensa de las piezas: +' + ARMOR_SLOTS.reduce((a, pz) => a + (armorTiene(set, pz) ? sd.piezas[pz].def : 0), 0) + '</div>') + '</div>' +
-        '<div class="fbtns">' + (eq ? '' : '<button class="green sm" data-armeq="' + set + '">Equipar</button>') + '</div></div>';
+          '<img src="' + GF.spr(armorSprite(set, pz)) + '" title="' + escapeHtml(nombrePiezaEnUso(set,pz) +
+            (armorActiva(set,pz) ? " · equipada" : " · en inventario")) +
+            '" style="width:26px;height:26px;image-rendering:pixelated;vertical-align:middle" onerror="this.remove()">').join(" ") + '</div>' +
+        (sd.bono ? '<div class="fds">Bono del conjunto · ' + sd.bono.txt +
+          (armorSetSano(set) ? ' · Activo' : ' · Equipa las cinco piezas en buen estado') + '</div>'
+          : '<div class="fds">Defensa +' + sd.piezas.pecho.def + '</div>') + '</div>' +
+        '<div class="fbtns">' + (puestas === n ? '' : '<button class="green sm" data-armeq="' + set + '">' +
+          (piezaUnica ? 'Equipar' : 'Equipar piezas') + '</button>') + '</div></div>';
     });
     box.innerHTML = h;
-    box.querySelectorAll("[data-armeq]").forEach(b => b.onclick = () => { equiparSet(b.dataset.armeq); refreshEquip(); });
+    box.querySelectorAll("[data-armeq]").forEach(b => b.onclick = () => {
+      const set = b.dataset.armeq;
+      return confirmarCambioArmadura(set, () => equiparSet(set), "ov-equip");
+    });
   }
 }
 
@@ -5356,19 +5446,20 @@ function refreshGodHand() {
 /* ---- Curtiduría: las 20 piezas de armadura ("2das mejoras") ---- */
 function refreshCurtiduria() {
   const box = $("curti-list"); if (!box) return;
-  let h = '<div class="info">Equipada: <b>' + (G.armorEq && ARMOR_SETS[G.armorEq] ? ARMOR_SETS[G.armorEq].label + " · " + armorDefensa() + " de defensa" : "ninguna") + '</b></div>';
+  let h = '<div class="info">Defensa de las piezas fabricadas · <b>' + armorDefensa() +
+    '</b>. Puedes combinar conjuntos y elegir qué pieza usar en cada ranura.</div>';
   ARMOR_ORDER.filter(set => !ARMOR_SETS[set].taller).forEach(set => {
-    const sd = ARMOR_SETS[set], eq = armorEquipado(set), n = armorPuestas(set), completo = armorSetCompleto(set);
+    const sd = ARMOR_SETS[set], n = armorPuestas(set), puestas = piezasArmaduraEnUso(set).length;
     /* 14/9 — TENER LAS CINCO Y QUE FUNCIONEN DEJARON DE SER LO MISMO. Con la durabilidad, el
        panel decía « ACTIVO » del bono mientras una pieza estaba en cero y armorBono() devolvía
        null: el jugador leía que tenía el bono y no lo tenía. El cartel pasa a preguntar por el
        set SANO, que es lo que de verdad enciende el bono. */
-    const sano = (typeof armorSetSano === "function") ? armorSetSano(set) : completo;
+    const sano = armorSetSano(set);
     const defTotal = ARMOR_SLOTS.reduce((a, pz) => a + sd.piezas[pz].def, 0);
     h += '<div class="secc">' + sd.label + ' <span class="fds">(' + sd.tipo + ' · ' + n + '/5 piezas · ' + defTotal + ' de defensa el set)</span></div>';
     h += '<div class="info"><div>Material: <b>' + RES_LABEL[sd.mat] + '</b> (tienes ' + (G.res[sd.mat] || 0) + ') · del ' + ANIMAL_DEF[sd.animal].label + '</div>' +
       '<div class="oro">Bono del set completo: ' + sd.bono.txt +
-        (sano ? ' — ACTIVO' : (completo ? ' — <b>apagado: repara las piezas gastadas</b>' : '')) + '</div></div>';
+        (sano ? ' — ACTIVO' : ' · Equipa las cinco piezas en buen estado') + '</div></div>';
     ARMOR_SLOTS.forEach(pz => {
       const p = sd.piezas[pz], tiene = armorTiene(set, pz);
       const costo = p.mat + " " + RES_LABEL[sd.mat] + (p.hierro ? " · " + p.hierro + " Hierro" : "") + " · " + p.plata + " plata";
@@ -5383,7 +5474,8 @@ function refreshCurtiduria() {
         '<div class="fic"><img src="' + GF.spr("armor_" + set + "_" + pz) + '" onerror="this.remove()"></div>' +
         '<div class="finfo">' +
         '<div class="fnm">' + ARMOR_SLOT_LABEL[pz] + ' <span class="tag">+' + p.def + ' def</span>' +
-          (tiene ? (dur > 0 ? ' ✓' : ' <span class="tag" style="background:#8a3c3c">gastada</span>') : '') + '</div>' +
+          (tiene ? (dur > 0 ? ' ✓' : ' <span class="tag" style="background:#8a3c3c">gastada</span>') : '') +
+          (armorActiva(set,pz) ? ' <span class="tag">Equipada</span>' : '') + '</div>' +
         '<div class="fds">' + (tiene
           ? ("Estado: " + dur + "/" + ARMOR_DUR_MAX + (dur <= 0 ? " — no da defensa hasta repararla" : "") +
              (rep ? " · reparar: " + rep.mat + " " + RES_LABEL[sd.mat] + (rep.hierro ? " · " + rep.hierro + " Hierro" : "") + " · " + rep.plata + " plata" : ""))
@@ -5393,13 +5485,17 @@ function refreshCurtiduria() {
                  : '<button class="ghost sm" disabled>Entera</button>')
           : '<button class="green sm" ' + (puede ? "" : "disabled") + ' data-carmor="' + set + ':' + pz + '">Fabricar</button>') + '</div></div>';
     });
-    if (n) h += '<div class="fbtns" style="margin-top:4px">' + (eq ? '<button class="ghost sm" disabled>Puesta</button>'
-      : '<button class="green sm" data-eqset="' + set + '">Ponerse esta armadura</button>') + '</div>';
+    if (n) h += '<div class="fbtns" style="margin-top:4px">' + (puestas === n
+      ? '<button class="ghost sm" disabled>Todas las disponibles equipadas</button>'
+      : '<button class="green sm" data-eqset="' + set + '">Equipar piezas</button>') + '</div>';
   });
   box.innerHTML = h;
   box.querySelectorAll("[data-carmor]").forEach(b => b.onclick = () => { const [s2, p2] = b.dataset.carmor.split(":"); craftArmor(s2, p2); });
   box.querySelectorAll("[data-rarmor]").forEach(b => b.onclick = () => { const [s2, p2] = b.dataset.rarmor.split(":"); repararArmor(s2, p2); refreshCurtiduria(); });
-  box.querySelectorAll("[data-eqset]").forEach(b => b.onclick = () => equiparSet(b.dataset.eqset));
+  box.querySelectorAll("[data-eqset]").forEach(b => b.onclick = () => {
+    const set = b.dataset.eqset;
+    return confirmarCambioArmadura(set, () => equiparSet(set), "ov-curtiduria");
+  });
 }
 
 function refreshDoma() {
