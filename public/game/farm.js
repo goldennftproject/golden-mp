@@ -2370,10 +2370,6 @@ class FarmScene extends Phaser.Scene {
     if (["chop", "mine", "plant", "harvest"].includes(a.kind) && produccionPausada(o)) { this.action = null; return; }
     if (window.sfx) sfx({ chop: "chop", mine: "mine", plant: "plant", harvest: "harvest", fish: "splash", water: "splash" }[a.kind] || "click");
     // (la sacudida y las astillas ya salieron en el momento del impacto, no acá al final)
-    if (['plant', 'harvest', 'chop', 'mine'].includes(a.kind) &&
-        !produccionManualSinEnergia(a.kind, true, nowMs()) && !energiaGranjaPuede(a.kind)) {
-      energiaGranjaPagar(a.kind); this.action=null; return;
-    }
     if (a.kind === "chop") {
       /* 22/8 (cargas, ritmo FINAL de dirección, dictado clic a clic): los CORTES SUAVES pagan una
          carga cada uno (+1 madera, −1 hacha); el CORTE PROFUNDO no da ni consume nada; el TOCÓN
@@ -2527,7 +2523,7 @@ class FarmScene extends Phaser.Scene {
     } else if (a.kind === "plant") {
       const ck = a.seed || G.selSeed, cd = CROP_DEF[ck];   // la semilla que se validó al hacer clic (cambiarla a mitad de la animación no la cuela)
       if (cd && (G.seeds[ck] || 0) > 0) {
-        if (!energiaGranjaPagar('plant', 1, false, nowMs(), true)) { this.action=null; return; }
+        actividadRegistrarAccion('plant', true);
         G.seeds[ck]--; o.cropKey = ck; o.state = "growing"; o.witherAt = 0;
         o.abonadaDoma = false;
         // acelerador del tutorial (12/8): la papa crece rápido SOLO mientras el objetivo activo la pide

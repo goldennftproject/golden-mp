@@ -28,7 +28,7 @@ const MARGEN = 3;          // multiplicador de gracia sobre el máximo físico
 
 const num = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
 const ARTEFACTOS_PRECIOS = {cobre:10,plata:25,jade:50,oro:100,granero:150,rubi:250,corona:500};
-const ARTEFACTOS_DIAS = 180, ARTEFACTOS_PLATA_POR_GOLDEN_DIA = 87, ENERGIA_GRANJA_MS = 14400000;
+const ARTEFACTOS_DIAS = 180, ARTEFACTOS_PLATA_POR_GOLDEN_DIA = 87;
 const OBJETOS_PLATA_DESDE = 1792193400000;
 // 0,87 % diario sobre 10.000 Plata/Golden, independiente de la tasa vigente del Banco.
 function objetoModelo(id){return String(id).split(':')[0];}
@@ -46,32 +46,6 @@ const ENERGIA_EVENTO_FIN = Date.parse("2026-11-19T03:00:00Z");
 function energiaEventoActivo(t) {
   return t >= ENERGIA_EVENTO_INICIO && t < ENERGIA_EVENTO_FIN;
 }
-function energiaCapacidad(t, finVip) {
-  return finVip > t || energiaEventoActivo(t) ? 100 : 50;
-}
-function energiaRegeneracion(desde, hasta, finVip) {
-  const vip = Math.max(0, Math.min(hasta, finVip) - desde);
-  const eventoSinVip = Math.max(0, Math.min(hasta, ENERGIA_EVENTO_FIN) - Math.max(desde, finVip, ENERGIA_EVENTO_INICIO));
-  return (Math.max(0, hasta - desde) + vip + eventoSinVip) * 50 / ENERGIA_GRANJA_MS;
-}
-// Aplicar el tope de cada tramo conserva la carga al subir y limita el saldo al bajar.
-function energiaPorTramos(actual, at, hasta, finVip) {
-  at = Math.min(at, hasta);
-  const limites = [finVip, ENERGIA_EVENTO_INICIO, ENERGIA_EVENTO_FIN]
-    .filter(limite => limite > at && limite < hasta).sort((a, b) => a - b);
-  let valor = Math.max(0, actual);
-  for (const fin of [...limites, hasta]) {
-    const cap = energiaCapacidad(at, finVip);
-    valor = Math.min(cap, valor + Math.max(0, fin - at) * cap / ENERGIA_GRANJA_MS);
-    at = fin;
-  }
-  return Math.min(energiaCapacidad(hasta, finVip), valor);
-}
-function energiaServidor(d, ahora) {
-  const e = d?.energiaGranja, finVip = num(d?.produccion?.vipHasta);
-  if (!e || !Number.isFinite(e.actual) || !Number.isFinite(e.at)) return finVip > ahora ? 100 : 50;
-  return energiaPorTramos(e.actual, e.at || ahora, ahora, finVip);
-}
 const ACTIVIDAD_OBJETIVO=2000;
 function picosUnificarEstado(d){
   if(!d||typeof d!=='object')return;
@@ -87,14 +61,10 @@ function picosUnificarEstado(d){
   };
   for(const k of ['cont','tumba','hotbar'])visitar(d[k],0);
 }
-const ACTIVIDAD_COSTOS={plant:1,harvest:1,chop:1,mine:1,animal:2,cook:1,auto:2};
+const ACTIVIDAD_TIPOS=['plant','harvest','chop','mine','animal','cook','auto'];
 function actividadLibro(d){
   const a=d?.actividadGranja;
   return {v:1,energia:Math.min(ACTIVIDAD_OBJETIVO,Math.max(0,Math.floor(num(a?.energia)))),registro:{...(a?.registro||{})},desde:num(a?.desde),cumplidaAt:num(a?.cumplidaAt),jornada:a?.jornada?JSON.parse(JSON.stringify(a.jornada)):null,bonoTotal:Math.max(0,num(a?.bonoTotal))};
-}
-function actividadAcreditar(data,cantidad,ahora){
-  const a=actividadLibro(data);a.desde=a.desde||ahora;a.energia=Math.min(ACTIVIDAD_OBJETIVO,a.energia+Math.max(0,Math.floor(cantidad)));
-  if(a.energia>=ACTIVIDAD_OBJETIVO&&!a.cumplidaAt)a.cumplidaAt=ahora;data.actividadGranja=a;return a;
 }
 function actividadEstado(d,ahora){const a=actividadLibro(d);return {energia:a.energia,objetivo:ACTIVIDAD_OBJETIVO,cumplida:a.energia>=ACTIVIDAD_OBJETIVO,vip:num(d?.produccion?.vipHasta)>ahora,usdt:false};}
 // No depende de cuánto material queda en la bolsa. null conserva el testigo neto
@@ -207,7 +177,7 @@ function usosNodosConCargas(a,b,ahora,desdeServidor,tipo){
 function piedraEvidenciaNodos(a,b,ahora,desdeServidor){
   return usosNodosConCargas(a,b,ahora,desdeServidor,'rock')??0;
 }
-function talaEvidenciaNodos(a,b,ahora,desdeServidor=0,sinEnergia=false){
+function talaEvidenciaNodos(a,b,ahora,desdeServidor=0){
   const probadas=usosNodosConCargas(a,b,ahora,desdeServidor,'tree');
   if(probadas===null)return null;
   if(!probadas)return 0;
@@ -224,17 +194,7 @@ function talaEvidenciaNodos(a,b,ahora,desdeServidor=0,sinEnergia=false){
   }
   const fabricadas=Math.min(Math.floor(Math.max(0,num(b.skills?.crafting)-num(a.skills?.crafting))/5),Math.floor(Math.max(0,num(a.plata)+ingresosPedidos-num(b.plata))/2));
   const hachas=Math.max(0,num(a.tools?.axe)+fabricadas-num(b.tools?.axe));
-  if (sinEnergia) return Math.min(probadas, stat, xp, Math.floor(hachas));
-  const e=a.energiaGranja,finVip=num(a.produccion?.vipHasta);
-  if(!e||!Number.isFinite(e.actual)||!Number.isFinite(b.energiaGranja?.actual)||b.energiaGranja.actual<0)return 0;
-  // La regeneración anterior al último guardado sólo puede llenar el depósito.
-  // El intervalo posterior usa updated_at del servidor, nunca visto/at del cliente nuevo.
-  const recibido=desdeServidor>0&&desdeServidor<=ahora?desdeServidor:ahora,anclaEnergia=num(a.energiaGranja?.at);
-  const inicio=anclaEnergia>0&&anclaEnergia<=recibido?anclaEnergia:recibido;
-  const energiaInicio=energiaServidor(a,inicio);
-  const finEnergia=Number.isFinite(b.energiaGranja?.at)?Math.min(ahora,Math.max(inicio,b.energiaGranja.at)):ahora;
-  const energia=Math.floor(Math.max(0,energiaInicio+energiaRegeneracion(inicio,finEnergia,finVip)-b.energiaGranja.actual)+1e-6);
-  return Math.min(probadas,stat,xp,Math.floor(hachas),energia);
+  return Math.min(probadas, stat, xp, Math.floor(hachas));
 }
 function actividadEvidencias(a,b,ahora,desdeServidor=0,evento=false,manualEnviado=false){
   const suma=o=>Object.values(o||{}).reduce((s,v)=>s+Math.max(0,num(v)),0);
@@ -266,7 +226,7 @@ function actividadEvidencias(a,b,ahora,desdeServidor=0,evento=false,manualEnviad
   const manual = manualEnviado ? produccionCultivosEvidencia(a,b,ahora,desdeServidor || ahora) : {};
   if (manualEnviado) {
     manual.plant = Math.min(manual.plant, baja(a.seeds,b.seeds) + Math.floor(Math.max(0,num(a.plata)-num(b.plata))));
-    manual.chop = talaEvidenciaNodos(a,b,ahora,desdeServidor,true) || 0;
+    manual.chop = tala || 0;
     manual.mine = mineralesEvidencia(a,b,ahora,desdeServidor);
   }
   const papas=evento?Math.min(cosechasPapa,Math.max(0,num(b.stats?.cosechar?.papa)-num(a.stats?.cosechar?.papa))):0;
@@ -327,7 +287,6 @@ function jornadaAcreditar(prev,next,acciones,ahora){
  for(const k of ['plant','harvest','chop','mine','animal']){
   const n=Math.max(0,Math.floor(num(acciones[k])));
   j.progreso[k]=Math.min(200,Math.max(0,num(j.progreso[k]))+n);
-  j.energia=Math.min(200,num(j.energia)+Math.max(0,n-num(acciones.manual?.[k]))*ACTIVIDAD_COSTOS[k]);
  }
  j.progreso.platos=Math.min(30,Math.max(0,num(j.progreso.platos))+Math.max(0,num(acciones.platos)));
  next.actividadGranja.jornada=j;
@@ -384,12 +343,8 @@ function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0
   const manualEnviado = ahora >= Date.parse(JORNADA_CAMBIO + 'T00:00:00Z') && ['plant', 'harvest', 'chop', 'mine']
     .some(tipo => Number.isSafeInteger(pedidos['manual_'+tipo]) && pedidos['manual_'+tipo] <= 1e9 && pedidos['manual_'+tipo] > num(a.registro['manual_'+tipo]));
   const pruebas = prev ? actividadEvidencias(prev,next,ahora,desdeServidor,evento,manualEnviado) : {};
-  const e=prev?.energiaGranja,at=Math.min(ahora,num(e?.at)||ahora),fin=num(prev?.produccion?.vipHasta);
-  // Sólo el intervalo representado por la muestra, sin reutilizar regeneración posterior.
-  const finEnergia=Number.isFinite(next.energiaGranja?.at)?Math.min(ahora,Math.max(at,next.energiaGranja.at)):ahora;
-  const regen=energiaRegeneracion(at,finEnergia,fin);
-  let presupuesto=e&&Number.isFinite(e.actual)?Math.max(0,e.actual+regen-num(next.energiaGranja?.actual)):0,credito=0;const acciones={manual:{}};
-  for(const k of Object.keys(ACTIVIDAD_COSTOS)){
+  const acciones={};
+  for(const k of ACTIVIDAD_TIPOS){
     const anterior=Math.max(0,num(a.registro[k])),pedido=Number.isSafeInteger(pedidos[k])&&pedidos[k]>=0&&pedidos[k]<=1e9?Math.max(anterior,pedidos[k]):anterior;
     const key = 'manual_' + k;
     const manualAnterior = Math.max(0, num(a.registro[key]));
@@ -398,14 +353,10 @@ function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0
     const diferencia = pedido-anterior;
     const manuales = Math.min(diferencia, manualPedido-manualAnterior);
     const sinGasto = Math.min(manuales, Math.max(0, Math.floor(num(pruebas.manual?.[k]))));
-    const pagadas = Math.min(diferencia-manuales, Math.max(0,Math.floor(num(pruebas[k]))-sinGasto),
-      Math.floor((presupuesto+1e-6)/ACTIVIDAD_COSTOS[k]));
-    credito += pagadas*ACTIVIDAD_COSTOS[k];
-    presupuesto -= pagadas*ACTIVIDAD_COSTOS[k];
+    const otras = Math.min(diferencia-manuales, Math.max(0, Math.floor(num(pruebas[k]))-sinGasto));
     a.registro[k]=pedido;
     if (manualPedido) a.registro[key]=manualPedido;
-    acciones[k]=pagadas+sinGasto;
-    if (sinGasto) acciones.manual[k]=sinGasto;
+    acciones[k]=otras+sinGasto;
   }
   const recetas=evento?{}:undefined;
   acciones.platos=platosTerminados(prev,next,ahora,recetas);
@@ -413,10 +364,10 @@ function actividadActualizar(prev,next,ahora,recibo,premiar=true,desdeServidor=0
     acciones.recetas=recetas;
     acciones.papas=Math.min(acciones.harvest,Math.floor(num(pruebas.papas)));
     acciones.piedra=Math.min(acciones.mine,Math.floor(num(pruebas.piedra)));
-    acciones.energiaGranja=['plant', 'harvest', 'chop', 'mine'].reduce((total, k) => total + acciones[k] - num(acciones.manual[k]), 2*acciones.animal);
+    acciones.energiaGranja=0;
   }
   if(recibo)Object.assign(recibo,acciones);
-  next.actividadGranja=a;next.actividadAcciones={...a.registro};logrosActualizar(prev,next,acciones);actividadAcreditar(next,credito,ahora);if(premiar)jornadaAcreditar(prev,next,acciones,ahora);return next.actividadGranja;
+  next.actividadGranja=a;next.actividadAcciones={...a.registro};logrosActualizar(prev,next,acciones);if(premiar)jornadaAcreditar(prev,next,acciones,ahora);return next.actividadGranja;
 }
 // Documento logros.docx aprobado el 21/10. Metas acumulativas, premios únicos.
 const LOGROS_TABLA={papa:[[100,100],[300,400],[1000,2000]],ciruela:[[100,110],[250,330],[1200,2200]],zanahoria:[[100,100],[250,300],[1200,2200]],cebolla:[[100,150],[250,300],[1200,2400]],calabacin:[[100,200],[250,350],[1300,2600]],madera:[[100,100],[200,200],[500,500]],piedra:[[100,100],[250,250],[1000,800]],visitas:[[10,10],[50,50],[100,150],[500,500]]};
@@ -565,10 +516,6 @@ function artefactoOperacion(prev,accion,id,ahora,op) {
     data.golden=Math.round((data.golden-ARTEFACTOS_PRECIOS[id])*1e6)/1e6;libro.items[destino]={desde:ahora,cobrado:ahora,resto:0,moneda:'plata-v2'};
   }else{
     if(!a || t.cobro<=0 || !objetoCobroListo(a,ahora))return {error:'La Plata se reclama cada 24 horas'};
-    const energia=energiaServidor(data,ahora);
-    if(energia<1)return {error:'Necesitás 1 punto de energía de granja para cobrar'};
-    data.energiaGranja={v:1,actual:energia-1,at:ahora};
-    actividadAcreditar(data,1,ahora); // Cobro de objeto validado íntegramente en servidor.
     cobro=t.cobro;data.plata=Math.round((num(data.plata)+cobro)*10)/10;
     libro.items[id]={...a,cobrado:t.fin,resto:t.resto,moneda:'plata-v2'};
   }
@@ -867,7 +814,7 @@ function forjaOperacion(prev,p,ahora,op){
   // Fabricar cuesta cero energía en el catálogo actual; se conserva el mismo tick.
   const data=JSON.parse(JSON.stringify(prev));
   for(const [k,q] of Object.entries(w.cost))data.res[k]-=q;
-  data.plata-=w.plata;data.energiaGranja={v:1,actual:energiaServidor(prev,ahora),at:ahora};
+  data.plata-=w.plata;
   data.skills={...(repuestoMapa(data.skills)?data.skills:{})};data.skills.crafting=num(data.skills.crafting)+w.xp;
   data.armCd={...(repuestoMapa(data.armCd)?data.armCd:{}),[p.id]:ahora+w.cd*1000};
   data.mkPend=[...(Array.isArray(data.mkPend)?data.mkPend:[]),{kind:'arm',item:p.id,qty:1,payload:{dur:w.dur}}];
@@ -1198,14 +1145,14 @@ function protegerEconomia(prev, next, ahora, desdeServidor=0) {
   if(!mismoJSON(antes.banco||null,next.banco||null))errores.push('El Banco sólo se modifica en el servidor');
   if(!mismoJSON(antes.daily||{day:0,last:''},next.daily||{day:0,last:''}) || num(antes.buffCultivoHasta)!==num(next.buffCultivoHasta))errores.push('Las recompensas diarias sólo se reclaman en el servidor');
   if(!mismoJSON(antes.visitas||{},next.visitas||{}))errores.push('Las semillas de visitas sólo se reclaman en el servidor');
-  const energia=next.energiaGranja;
-  if(energia && (!Number.isFinite(energia.actual)||energia.actual<0||energia.actual>100||!Number.isFinite(energia.at)))errores.push('Energía de granja inválida');
-  // Transportar valor e instante juntos; las fechas del cliente no amplían el saldo permitido.
-  const energiaAt=energia ? Math.min(ahora,Math.max(0,num(antes.energiaGranja?.at),desdeServidor,num(energia.at))) : ahora;
-  const energiaHasta=energia ? Math.max(energiaAt,num(energia.at)) : energiaAt,energiaFinVip=num(antes.produccion?.vipHasta);
-  const energiaAdelantada=energiaRegeneracion(energiaAt,energiaHasta,energiaFinVip);
-  const energiaActual=energia ? num(energia.at)<energiaAt ? energiaServidor({energiaGranja:energia,produccion:antes.produccion},energiaAt) : Math.max(0,num(energia.actual)-energiaAdelantada) : energiaServidor(antes,energiaAt);
-  next.energiaGranja={v:1,actual:Math.min(energiaActual,energiaServidor(antes,energiaAt)),at:energiaAt};
+  // Conserva el valor histórico y el ancla temporal que también usa la validación de nodos.
+  const anteriorEnergia=antes.energiaGranja;
+  if (anteriorEnergia && Number.isFinite(anteriorEnergia.actual) && anteriorEnergia.actual>=0 && anteriorEnergia.actual<=100) {
+    const at=Math.min(ahora,Math.max(0,num(anteriorEnergia.at),desdeServidor));
+    next.energiaGranja={v:1,actual:anteriorEnergia.actual,at};
+  } else {
+    delete next.energiaGranja;
+  }
   let gastoVip = 0, reembolso = 0;
   if (!Number.isFinite(goldenCustodia(next))) errores.push("Golden inválido en saldo o contenedor");
   if (!prev && goldenCustodia(next) > 0) errores.push("Golden inicial no autorizado");

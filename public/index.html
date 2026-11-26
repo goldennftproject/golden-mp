@@ -82,7 +82,6 @@
   .pill .k{color:#a9bd94;font-weight:600;font-size:12px}
   /* barra de Combate global (doc maestro 2/8): insignia + relleno dorado + XP */
   .cpill{gap:6px}
-  #energia-granja-eta{font-size:10px;color:#ffe4a6;font-variant-numeric:tabular-nums}
   .hud-xp-numeros{display:inline-flex;align-items:center}
   .hud-xp-numeros small{display:none} /* La XP restante se consulta en el tooltip, sin elevar el HUD. */
   .cpill #c-lvl{min-width:14px;text-align:center}
@@ -1595,7 +1594,7 @@
 
 /* Lectura visual de PC: experiencia, divisas y resultado de acciones. */
 @media(min-width:641px){
- #lvl-fill{background:linear-gradient(#80c9f0,#3586c3)}#energia-granja-fill{background:linear-gradient(#ffe68a,#df9f24)}
+ #lvl-fill{background:linear-gradient(#80c9f0,#3586c3)}
  #lvl-tipo{font-size:10px;opacity:.9}#lvlpill[data-progreso="tareas"] #lvl-tipo{color:#ffe38b}
  .divisa-hud:has(#s-plata){box-shadow:inset 0 -3px #b7cbd2}.divisa-hud:has(#s-golden){box-shadow:inset 0 -3px #eac45e}
  .menu-opcion{display:block;flex:1;min-width:0}.menu-opcion small{display:block;font-size:10px;opacity:.85;line-height:1.3;font-weight:400;margin-top:2px}
@@ -1630,7 +1629,7 @@
   #hudbar .cbarw,#hudbar .hpbarw{width:42px;flex:0 1 42px;min-width:22px}
   #hudbar #lvlpill .cbarw,#hudbar #cbar .cbarw{display:none}
   #hudbar .hud-xp-label,#hudbar .hpeta{display:none}
-  #hudbar #lvlpill{order:1;margin-left:auto}#hudbar #energia-granja-pill{order:2}
+  #hudbar #lvlpill{order:1;margin-left:auto}
   #hudbar .divisa-hud{order:3}#hudbar #hppill{order:4}#hudbar #cbar{order:5}
   /* Márgenes iguales a ambos lados del grupo de datos; música y menú quedan a la derecha. */
   #hudbar #stampill{order:6}#hudbar #hud-sound{order:7;margin-left:auto;flex-shrink:0}#hudbar #menu-btn{order:8;margin-left:0;flex-shrink:0}
@@ -1713,7 +1712,6 @@
          los menúes. Estas dos píldoras viven ahora en una REPISA flotante pegada bajo la barra,
          fuera de su flujo — vengan o se vayan, la barra no se entera. -->
     <div id="hud-flot">
-      <button class="pill cpill" id="energia-granja-pill" onclick="openOv('ov-cobertizo')" title="Energía de granja: 50 sin VIP / 100 VIP; recuperación continua, 4 horas de vacía a llena. Clic para ver costes y capacidad."><span class="k">⚡ Energía</span><span class="cbarw"><span class="cfill lvlf" id="energia-granja-fill"></span></span><span class="k" id="s-energia-granja">50/50</span><span id="energia-granja-eta" hidden></span></button>
       <div class="pill cpill" id="stampill" role="button" tabindex="0" aria-label="Recargar estamina" aria-haspopup="dialog" aria-controls="ov-confirm" style="display:none" title="Estamina de combate — solo se gasta en la Zona Negra. Se recupera sola, comiendo guisos o con una recarga."><span class="k">⚔ Estamina</span><span class="cbarw"><span class="cfill stamf" id="stam-fill"></span></span><span class="k" id="s-stam">100/100</span></div>
       <!-- 31/8 (de los vídeos de referencia: « Food 00:00 » — la comida es un RELOJ). Los platos
            llevaban buffs con vencimiento desde el doc maestro del 2/8 y no se enseñaban en ningún
@@ -1744,7 +1742,7 @@
   <nav id="compras-accesos" aria-label="Tienda y compras de la granja">
     <button class="tienda-abrir" data-tienda="inicio" title="Ver la tienda y para qué sirve cada compra">Tienda</button>
     <div class="compras-iconos">
-      <button data-tienda="vip" title="VIP: más energía y capacidad"><img src="assets/ui/shop-vip-v1.webp" alt="" width="48" height="48"><span id="tienda-vip-estado">VIP</span></button>
+      <button data-tienda="vip" title="VIP: más capacidad y fabricación en lotes"><img src="assets/ui/shop-vip-v1.webp" alt="" width="48" height="48"><span id="tienda-vip-estado">VIP</span></button>
       <button data-tienda="objetos" title="Objetos de Granja: producen Plata cada 24 horas"><img src="assets/ui/shop-objetos-v1.webp" alt="" width="48" height="48"><span>Objetos</span></button>
       <button data-tienda="mejoras" title="Mejoras: edificios, God Hand y pasivas de recolección"><img src="assets/ui/shop-mejoras-v1.webp" alt="" width="48" height="48"><span>Mejoras</span></button>
       <button data-tienda="suministros" title="Packs: materiales para construir y fabricar"><img src="assets/ui/shop-suministros-v1.webp" alt="" width="48" height="48"><span>Packs</span></button>
@@ -1806,7 +1804,6 @@
       <button class="shoptab" data-shop="sell">Vender</button>
     </div>
     <div class="shoppane" id="shop-buy">
-      <div class="info">Comprar y fabricar no consumen energía de granja, tampoco en lotes de cinco.</div>
       <div class="mkt-list" id="seed-shop"></div>
     </div>
     <div class="shoppane" id="shop-deco" style="display:none">
@@ -1880,7 +1877,7 @@
       <button class="shoptab forgetab" data-forge="repair">Reparar</button>
     </div>
     <div id="forge-pane-craft">
-      <div class="sub">Elige qué fabricar · costes por unidad · ×5 requiere VIP. Sin gasto de energía.</div>
+      <div class="sub">Elige qué fabricar · costes por unidad · ×5 requiere VIP.</div>
       <div class="forge-list" id="forge-craft"></div>
     </div>
     <div id="forge-pane-armas" style="display:none">
@@ -1922,7 +1919,7 @@
     <div class="sub" id="cob-pie"></div>
     </section><section class="cob-gestion">
     <div id="prod-granja"></div>
-    <details class="ayuda-menu"><summary>⚡ Costes de energía</summary><p class="sub">50 sin VIP / 100 VIP · recarga completa en 4 h.</p><p class="sub">La siembra, cosecha, tala y minería manuales respetan el tiempo de cada recurso y no gastan energía.<br>1 ⚡: cocinar y compostar.<br>2 ⚡: recoger productos animales.<br>Sin energía: comprar, fabricar, vender, ordenar y construir.</p></details>
+    <p class="sub">Las tareas de la granja no gastan energía. Se mantienen los tiempos de crecimiento y recuperación.</p>
     </section></div>
   </div></div>
 

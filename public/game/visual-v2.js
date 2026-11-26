@@ -135,7 +135,6 @@
   const short=(node,label)=>{if(!node)return;if(!oldLabels.has(node))oldLabels.set(node,node.textContent);const value=isEnabled()?label:oldLabels.get(node);if(node.textContent!==value)node.textContent=value;node.title=oldLabels.get(node);};
   const quota=doc.querySelector('#seed-shop>.shophead');
   if(quota){const full=oldLabels.get(quota)||quota.textContent;short(quota,'Semillas · Cupo '+(full.match(/\d+\/\d+/)?.[0]||''));}
-  short(doc.querySelector('#shop-buy>.info'),'Semillas con Plata · Sin coste de energía');
   short(doc.querySelector('#ov-market [data-shop="buy"]'),'Semillas');
   for(const img of doc.querySelectorAll('#compras-accesos [data-tienda] img,#ov-tienda .tienda-arte img,#ov-vip .vip-ilustracion img')){
    const original=oldImages.get(img)||img.getAttribute('src')||'';

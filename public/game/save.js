@@ -4,7 +4,7 @@
  const PROJECT='ulspkdaljeuleqqdokfk',UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,HASH=/^[0-9a-f]{64}$/;
  const LIMITS=Object.freeze({keys:4096,wrappers:40,rawBytes:4194304,wrapperBytes:700000,depth:12,nodes:8192,objectKeys:256,arrayLength:512,snapshotBytes:131072,batchBytes:262144,items:3,timeout:3000,backoff:60000,ackEntries:64,ackAge:604800000});
  const SECRETS=new Set(['authorization','cookie','cookies','headers','password','passwd','accesstoken','refreshtoken','idtoken','jwt','apikey','servicerolekey','sbkey','email','correo','token','secret','clientsecret','privatekey','mnemonic','seedphrase','session','cookiestore','auth']);
- const COMPARISON_FIELDS=Object.freeze(["_economiaControl","_graveProtocol","_saveOp","actividadAcciones","actividadGranja","amarres","animals","armCd","armasUnlocked","armor","armorDur","armorEq","armorOff","artefactos","banco","bowOwned","buffCultivoHasta","buffs","built","buzonArchivo","buzonLeidas","canaElegida","canas","canasDur","canasDurV","chestCap","chests","cobertizo","combatXp","cont","conts","cooking","cosEq","cosmeticos","daily","decoBolsa","decos","dishes","doma","domaColeccion","dummyTrain","dummyUsedAt","edif2","editVisto","emergBuys","energiaGranja","escamas","escamasLonja","espacioV","establoV","estrellaMax","excav","expObra","expParcelasDadas","expansiones","farmXpBase","farmXpEdificios","farmXpRitmo","firstCropDone","firstSeeds","fish","forjaOps","gear","ghInv","goblin","godHand","golden","hbInit","horno","hotSel","hotbar","hp","hpMax","incDia","incResumen","incursion","incursionTutorialUsada","infraestructura","iniciado","invRows","kitReclamado","layout","layoutPlots","layoutPond","level","logros","logrosAcciones","logrosV2","lombDia","lombricario","lonja","lonjaCap","lonjaEntregados","lonjaMes","marea","mejorasPasivas","mercadoVentas","mkPend","modoPelea","nasaPlanos","nasas","nfts","nodoUsos","nodos","obraDep","obras","ofrendaLog","ofrendaPts","packs","pass","pedidos","pescaDesde","pescaDia","pescaHasta","pescaStats","pescaTiene","pescaV4","picks","planos","plata","plots","plotsCompradas","plotsFicha","plotsOwned","presion","prestige","produccion","recientes","regalos","reinicio","res","rocksOpen","runaOro","seedBuys","seeds","selSeed","senales","sflStock","skills","slots","stam","stamAcc","stamFullAt","stamLastAt","stamRec","stats","statsBase","swordOwned","swordWoodOwned","tituloPesca","tools","torneo","torneoCobrado","torneoPodioCobrado","trampas","treesOpen","triesV","tumba","tuto","vales","visitas","visto","vistos","weaponSpares","weaponSparesOps","weapons","zonaCdHasta","zonaViaje","zonasVistas"]);
+ const COMPARISON_FIELDS=Object.freeze(["_economiaControl","_graveProtocol","_saveOp","actividadAcciones","actividadGranja","amarres","animals","armCd","armasUnlocked","armor","armorDur","armorEq","armorOff","artefactos","banco","bowOwned","buffCultivoHasta","buffs","built","buzonArchivo","buzonLeidas","canaElegida","canas","canasDur","canasDurV","chestCap","chests","cobertizo","combatXp","cont","conts","cooking","cosEq","cosmeticos","daily","decoBolsa","decos","dishes","doma","domaColeccion","dummyTrain","dummyUsedAt","edif2","editVisto","emergBuys","escamas","escamasLonja","espacioV","establoV","estrellaMax","excav","expObra","expParcelasDadas","expansiones","farmXpBase","farmXpEdificios","farmXpRitmo","firstCropDone","firstSeeds","fish","forjaOps","gear","ghInv","goblin","godHand","golden","hbInit","horno","hotSel","hotbar","hp","hpMax","incDia","incResumen","incursion","incursionTutorialUsada","infraestructura","iniciado","invRows","kitReclamado","layout","layoutPlots","layoutPond","level","logros","logrosAcciones","logrosV2","lombDia","lombricario","lonja","lonjaCap","lonjaEntregados","lonjaMes","marea","mejorasPasivas","mercadoVentas","mkPend","modoPelea","nasaPlanos","nasas","nfts","nodoUsos","nodos","obraDep","obras","ofrendaLog","ofrendaPts","packs","pass","pedidos","pescaDesde","pescaDia","pescaHasta","pescaStats","pescaTiene","pescaV4","picks","planos","plata","plots","plotsCompradas","plotsFicha","plotsOwned","presion","prestige","produccion","recientes","regalos","reinicio","res","rocksOpen","runaOro","seedBuys","seeds","selSeed","senales","sflStock","skills","slots","stam","stamAcc","stamFullAt","stamLastAt","stamRec","stats","statsBase","swordOwned","swordWoodOwned","tituloPesca","tools","torneo","torneoCobrado","torneoPodioCobrado","trampas","treesOpen","triesV","tumba","tuto","vales","visitas","visto","vistos","weaponSpares","weaponSparesOps","weapons","zonaCdHasta","zonaViaje","zonasVistas"]);
  const forbidden=k=>SECRETS.has(k.toLowerCase().replace(/[^a-z0-9]/g,''))||['__proto__','prototype','constructor'].includes(k);
  const uid=v=>typeof v==='string'&&UUID.test(v)?v.toLowerCase():null,plain=v=>!!v&&Object.prototype.toString.call(v)==='[object Object]'&&(Object.getPrototypeOf(v)===null||Object.getPrototypeOf(Object.getPrototypeOf(v))===null),number=v=>typeof v==='number'&&Number.isFinite(v);
  const bytes=v=>new TextEncoder().encode(v).byteLength;
@@ -33,15 +33,9 @@
  }
  function increment(o,key,n=1){o[key]=(o[key]||0)+n;}
  // This projection is only a duplicate filter. Uploaded data/hash remain the original validated snapshot.
- function semanticallyEqual(a,b,now){
+ function semanticallyEqual(a,b){
   const project=data=>{const out=Object.create(null);for(const k of COMPARISON_FIELDS)if(!['visto','_saveOp','_economiaControl'].includes(k)&&Object.prototype.hasOwnProperty.call(data,k))out[k]=data[k];return out;};
-  const left=project(a),right=project(b),avip=number(a.produccion?.vipHasta)?a.produccion.vipHasta:0,bvip=number(b.produccion?.vipHasta)?b.produccion.vipHasta:0;
-  // A full, equal confirmed energy balance cannot regenerate further. Otherwise value and date stay inseparable.
-  const cap=typeof energiaCapacidad==="function"?energiaCapacidad(now,avip):avip>now?100:50;
-  if(avip===bvip&&plain(left.energiaGranja)&&plain(right.energiaGranja)&&left.energiaGranja.actual===cap&&right.energiaGranja.actual===cap&&number(left.energiaGranja.at)&&number(right.energiaGranja.at)){
-   left.energiaGranja={...left.energiaGranja};right.energiaGranja={...right.energiaGranja};delete left.energiaGranja.at;delete right.energiaGranja.at;
-  }
-  return canonicalJSON(left)===canonicalJSON(right);
+  return canonicalJSON(project(a))===canonicalJSON(project(b));
  }
  function capture(storage,owner,now=Date.now()){
   owner=uid(owner);const omissions={},records=[];let recognized=0,read=0,total=0;
@@ -103,7 +97,7 @@
      if(!current(token)||controller.signal.aborted)return report('cancelled');
      if(r.reset!==(number(canonical.reinicio)?canonical.reinicio:0)){increment(omissions,'resetStage');continue;}
      if((number(canonical.iniciado)?canonical.iniciado:0)!==r.started){increment(omissions,'startStage');continue;}
-     if(semanticallyEqual(JSON.parse(r.text),canonical,now())){increment(omissions,'canonicalEquivalent');continue;}
+     if(semanticallyEqual(JSON.parse(r.text),canonical)){increment(omissions,'canonicalEquivalent');continue;}
      const hash=await digest(r.text);if(!current(token)||controller.signal.aborted)return report('cancelled');if(!HASH.test(hash))throw Error('hash');
      if(seen.has(hash)){increment(omissions,'duplicate');continue;}seen.add(hash);if(acknowledged.has(hash)){increment(omissions,'acknowledged');continue;}distinct.push({...r,hash});
     }
@@ -1051,7 +1045,7 @@ function snapshot() {
      vistos y estrellaMax (el álbum con estrellas) y pescaTiene (el señuelo, que no se gasta).
      OJO con los comentarios AL FINAL de una línea de este objeto: se comen lo que sigue. */
   return { plata: G.plata, golden: G.golden, level: G.level, prestige: G.prestige, iniciado: G.iniciado, reinicio: G.reinicio,   /* 24/9: cuándo se reinició la cuenta (el portero lo lee) */
-    energiaGranja: G.energiaGranja, artefactos: G.artefactos, banco: G.banco, packs:G.packs, logrosV2:G.logrosV2, logrosAcciones:G.logrosAcciones,
+    artefactos: G.artefactos, banco: G.banco, packs:G.packs, logrosV2:G.logrosV2, logrosAcciones:G.logrosAcciones,
     espacioV: G.espacioV, mercadoVentas: G.mercadoVentas, farmXpBase: G.farmXpBase || 0, farmXpRitmo:G.farmXpRitmo, infraestructura:G.infraestructura||null, farmXpEdificios:G.farmXpEdificios||0,
     produccion: G.produccion,
     res: G.res, picks: G.picks, skills: G.skills, triesV: G.triesV, establoV: G.establoV, fish: G.fish, plots: G.plots, nodos: G.nodos, expansiones: G.expansiones, pescaHasta: G.pescaHasta, pescaDesde: G.pescaDesde, senales: G.senales, escamas: G.escamas, vistos: G.vistos, estrellaMax: G.estrellaMax, pescaTiene: G.pescaTiene, canas: G.canas, presion: G.presion, amarres: G.amarres, trampas: G.trampas, marea: G.marea, runaOro: G.runaOro, buffs: G.buffs, seeds: G.seeds, selSeed: G.selSeed,
@@ -1084,7 +1078,7 @@ function snapshot() {
     torneoPodioCobrado: G.torneoPodioCobrado, tituloPesca: G.tituloPesca, lombricario: G.lombricario };
 }
 // "huella" del estado guardable (incluye el apodo); si no cambia, no hay nada que guardar
-function snapKey(data=snapshot()) { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: {...data,visto:0,energiaGranja:{...data.energiaGranja,at:0}} }); }
+function snapKey(data=snapshot()) { return JSON.stringify({ n: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), d: {...data,visto:0} }); }
 
 /* ============ CARGAR UNA PARTIDA, EN TRES FASES (20/8) ==============================
    Dirección: "cada cosa que tocamos rompe otras".
@@ -1149,8 +1143,6 @@ function hydrate(d) {
     }
   }
   /* ---- FASE 1 · APLICAR ---- */
-  G.energiaGranja = d.energiaGranja && Number.isFinite(d.energiaGranja.actual) && Number.isFinite(d.energiaGranja.at)
-    ? {v:1,actual:Math.max(0,Math.min(100,d.energiaGranja.actual)),at:d.energiaGranja.at} : {v:1,actual:d.produccion?.vipHasta>nowMs()?100:50,at:nowMs()};
   G.artefactos = d.artefactos ? JSON.parse(JSON.stringify(d.artefactos)) : null;
   G.packs=d.packs?JSON.parse(JSON.stringify(d.packs)):null;
   G.banco = d.banco ? JSON.parse(JSON.stringify(d.banco)) : null;
@@ -1956,7 +1948,7 @@ function copiaHuellaDiagnostico(data, ruta='') {
   if(!data||typeof data!=='object')return data;
   const limpio={};
   for(const clave of Object.keys(data).sort()){
-    if((ruta===''&&(clave==='visto'||clave==='_saveOp'))||(ruta==='energiaGranja'&&clave==='at'))continue;
+    if(ruta===''&&(clave==='visto'||clave==='_saveOp'||clave==='energiaGranja'))continue;
     limpio[clave]=copiaHuellaDiagnostico(data[clave],ruta?ruta+'.'+clave:clave);
   }
   return limpio;
@@ -2200,8 +2192,9 @@ function guardadoHuellaPeticion(data, raiz=true) {
   if(!data||typeof data!=='object')return data;
   const result=Object.create(null);
   // Sólo libros que el guardado normal recalcula o proyecta desde el servidor.
-  // Saldos, recursos, entregas, recibos, energía, nodos y reinicio se comparan completos.
-  const derivados=new Set(['_saveOp','_economiaControl','actividadGranja','actividadAcciones','logrosV2','logrosAcciones','logros','incursionTutorialUsada','bellotasEvento']);
+  // La energía retirada puede seguir archivada en filas antiguas del servidor.
+  // Saldos, recursos, entregas, recibos, nodos y reinicio se comparan completos.
+  const derivados=new Set(['_saveOp','_economiaControl','actividadGranja','actividadAcciones','logrosV2','logrosAcciones','logros','incursionTutorialUsada','bellotasEvento','energiaGranja']);
   for(const k of Object.keys(data).sort())if(!raiz||!derivados.has(k))result[k]=guardadoHuellaPeticion(data[k],false);
   return result;
 }
@@ -2213,23 +2206,6 @@ function guardadoMismoContenido(peticion,fila) {
   if(esperada.weaponSpares===undefined&&remota.weaponSpares&&typeof remota.weaponSpares==='object'&&!Array.isArray(remota.weaponSpares)&&Object.keys(remota.weaponSpares).length===0)esperada.weaponSpares={};
   if(esperada.weaponSparesOps===undefined&&Array.isArray(remota.weaponSparesOps)&&remota.weaponSparesOps.length===0)esperada.weaponSparesOps=[];
   if(esperada.forjaOps===undefined&&Array.isArray(remota.forjaOps)&&remota.forjaOps.length===0)esperada.forjaOps=[];
-  const energia=esperada.energiaGranja,aceptada=remota.energiaGranja;
-  const base=Date.parse(peticion.body.base),commit=Date.parse(fila.updated_at);
-  if(energia&&aceptada&&Number.isFinite(energia.at)&&Number.isFinite(energia.actual)&&Number.isFinite(commit)){
-    // En una fila válida energia.at <= updated_at. Reproducir el transporte exacto
-    // del handler, usando el modelo compartido del cliente cuando la muestra avanza.
-    // El mínimo adicional contra el saldo previo del servidor NO se adivina: si recorta
-    // más que este cálculo, el resultado no coincide y se mantiene el bloqueo.
-    const at=Math.min(commit,Math.max(0,Number.isFinite(base)?base:0,energia.at));
-    let actual;
-    if(energia.at<at)actual=energiaModelo(esperada,at);
-    else {
-      const hasta=Math.max(at,energia.at),fin=Number(esperada.produccion?.vipHasta)||0;
-      const adelantada=energiaRegeneracion(at,hasta,fin);
-      actual=Math.max(0,energia.actual-adelantada);
-    }
-    if(aceptada.actual===actual&&aceptada.at===at){energia.actual=actual;energia.at=at;}
-  }
   return JSON.stringify(guardadoHuellaPeticion(remota))===JSON.stringify(guardadoHuellaPeticion(esperada));
 }
 
