@@ -4868,7 +4868,7 @@ function guiaEtiquetaMostrar(destino){
   if(destino&&GF.scene&&GF.scene!=='farm')return 'Ver mapa';
   if(destino?.panel==='ov-cobertizo'&&destino.ui==='#prod-elegir>summary')return 'Elegir nodo';
   if(destino?.panel==='ov-cobertizo'&&destino.ui?.replace(/\s/g,'')==='#prod-gestion>summary')return 'Ver producción';
-  if(destino?.practicaPausa)return 'Ver parcela';
+  if(destino?.practicaPausa||destino?.guiaReactivarParcela)return 'Ver parcela';
   if(destino?.panel==='ov-cocina'){
     if(destino.ui==='#ck-recoger')return 'Ver plato listo';
     if(destino.ui==='#ck-cola')return 'Ver olla';
@@ -4919,7 +4919,7 @@ function tutoRefresh() {
   const need = st.brujula ? 0 : tutoNeed(st);
   /* El desvío por nodos agotados no reemplaza el objetivo: conserva el contador para que se vea
      cuánto falta mientras la guía señala una tarea útil y vuelve sola al recurso al regenerarse. */
-  const conservaConteo = !!(sub && sub.esperaNodo && st.res);
+  const conservaConteo = !!(sub && ((sub.esperaNodo && st.res) || sub.guiaReactivarParcela));
   document.getElementById("tuto-n").textContent = (sub && !conservaConteo || st.brujula) ? "" : (st.res ? " " + Math.min(tutoTiene(st), need) + "/" + need
     : (st.n > 1 ? " " + Math.min(G.tuto.n || 0, st.n) + "/" + st.n : ""));
   /* 19/8 (dirección) — ACÁ HUBO DOS INTENTOS Y LOS DOS SE FUERON, que conviene dejar escrito:

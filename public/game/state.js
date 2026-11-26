@@ -1162,6 +1162,7 @@ function tutoSubNodoEnEspera(st) {
 }
 function tutoSub() {
   const st = tutoActivo(); if (!st) return null;
+  if (st.id === "harvest") return tutoCosechaEstado(st).reactivar || null;
   /* Cocinar tiene dos gestos distintos: poner el plato al fuego y, cuando termina, retirarlo.
      El paso está cumplido recién al recogerlo (ahí entra a la bolsa y dispara `tutoEvent`), así
      que seguir señalando « Cocinar » durante toda la olla era una orden vieja apuntando a un
@@ -3761,15 +3762,24 @@ function tutoTiene(st) {
   if (st.dep && G.built && G.built[st.dep]) n = Math.max(n, tutoNeed(st));   // construido = todo depositado
   return n;
 }
-/* El paso de cosecha llega apenas se planta la última papa. Antes decía "Cosechá" durante
-   todo el crecimiento, como si el siguiente gesto ya fuera posible. La parcela ya muestra su
-   reloj en el mundo; acá solo cambiamos la meta entre "están creciendo" y "cosechá". */
+function parcelaGuiaActiva(p, i = p?.i) {
+  return !!p && !p.locked && !p.oculto && p.state !== "locked" &&
+    !produccionPausada({ type: "plot", i });
+}
+/* El cartel, la cámara y las marcas de la primera cosecha deben señalar cultivos utilizables. */
 function tutoCosechaEstado(st) {
   const need = Math.max(1, tutoNeed(st));
   const ahora = nowMs();
-  let sembradas = 0, listas = 0, soloPapas = true;
-  (Array.isArray(G.plots) ? G.plots : []).forEach(p => {
+  let sembradas = 0, listas = 0, soloPapas = true, pausada = null;
+  (Array.isArray(G.plots) ? G.plots : []).forEach((p, i) => {
     if (!p || (p.state !== "growing" && p.state !== "ready")) return;
+    if (!parcelaGuiaActiva(p, i)) {
+      const guardada = G.produccion?.pausas?.["p:" + i]?.estado;
+      if (guardada && (!pausada || pausada.estado !== "ready" && guardada.state === "ready")) {
+        pausada = { i, estado: guardada.state };
+      }
+      return;
+    }
     sembradas++;
     if (p.cropKey !== "papa") soloPapas = false;
     if (p.state === "ready" || (p.state === "growing" && p.readyAt > 0 && p.readyAt <= ahora)) listas++;
@@ -3782,12 +3792,22 @@ function tutoCosechaEstado(st) {
   if (yaCosechadas >= need) return { sig, txt: "Cosecha tus " + need + " " + etiqueta(need) };
   if (listas > 0) {
     const n = Math.min(listas, faltan);
-    return { sig, txt: "Cosecha " + n + " " + etiqueta(n) + (listas < faltan ? " — los demás siguen creciendo" : "") };
+    const esperando = listas < faltan && (sembradas > listas || !pausada);
+    return { sig: sig + ":" + esperando, txt: "Cosecha " + n + " " + etiqueta(n) + (esperando ? " — los demás siguen creciendo" : "") };
   }
   if (sembradas > 0) {
     const plural = sembradas !== 1;
     return { sig, txt: (plural ? "Tus " : "Tu ") + sembradas + " " + etiqueta(sembradas) +
       (plural ? " están creciendo — espera a que estén listas para cosechar" : " está creciendo — espera a que esté lista para cosechar") };
+  }
+  if (pausada) {
+    const libre = produccionHayCupo();
+    const parcela = "Parcela " + (pausada.i + 1);
+    const txt = libre ? "Reactiva la " + parcela + " en el Cobertizo para seguir con la cosecha"
+      : "Pausa otra producción en el Cobertizo para reactivar la " + parcela;
+    const ui = libre ? '[data-prod-pause="p:' + pausada.i + '"]' : "#prod-gestion > summary";
+    return { sig: sig + ":" + pausada.i + ":" + libre, txt,
+      reactivar: { txt, panel: "ov-cobertizo", ui, guiaReactivarParcela: true } };
   }
   return { sig, txt: "Espera a que haya " + etiqueta(1) + " lista para cosechar" };
 }

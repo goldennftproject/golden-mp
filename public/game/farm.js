@@ -2673,8 +2673,11 @@ class FarmScene extends Phaser.Scene {
       /* La parcela que señala tiene que ser la que sirve para ESTE gesto. Mandar a la primera
          tierra desbloqueada era suficiente para plantar, pero durante la cosecha podía caer en
          una parcela seca mientras la papa lista estaba al lado. */
-      const plots = (this.plots || []).filter(o => o.state !== "locked");
-      const pl = st.guiaPlot === "ready" || st.id === "harvest"
+      const primeraCosecha = st.id === "harvest";
+      const plots = (this.plots || []).filter(primeraCosecha ? o => parcelaGuiaActiva(o) : o => o.state !== "locked");
+      const pl = primeraCosecha
+        ? (plots.find(o => o.state === "ready") || plots.find(o => o.state === "growing"))
+        : st.guiaPlot === "ready"
         ? (plots.find(o => o.state === "ready") || plots.find(o => o.state === "growing") || plots[0])
         : st.guiaPlot === "dry" || st.id === "plant"
           ? (plots.find(o => o.state === "dry") || plots[0])
@@ -2963,7 +2966,7 @@ class FarmScene extends Phaser.Scene {
     const activa=o=>!o.locked&&!o.oculto&&!(typeof produccionPausada==='function'&&produccionPausada(o));
     if(st.target==='plot'){
       const estado=st.guiaPlot==='ready'||st.id==='harvest'?'ready':st.guiaPlot==='growing'?'growing':'dry';
-      return (this.plots||[]).filter(o=>activa(o)&&o.state===estado);
+      return (this.plots||[]).filter(o=>parcelaGuiaActiva(o)&&o.state===estado);
     }
     if(st.target==='portal')return this.portal?[this.portal]:[];
     return (this.objs||[]).filter(o=>{
