@@ -1,10 +1,20 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),vm=require('vm'),{stripTypeScriptTypes}=require('node:module');
-const root=path.resolve(__dirname,'..'),source=fs.readFileSync(root+'/public/game/save.js','utf8'),edge=stripTypeScriptTypes(fs.readFileSync(root+'/supabase/functions/guardar/index.ts','utf8')).replace(/^import .*createClient.*;\s*$/m,'');
+const root=path.resolve(__dirname,'..'),source=fs.readFileSync(root+'/public/game/save.js','utf8');
+const edgeDir=path.join(root,'supabase/functions/guardar');
+const readEdge=file=>stripTypeScriptTypes(fs.readFileSync(path.join(edgeDir,file),'utf8'),{mode:'strip'});
+// Load the real local event helper. Only the remote Supabase client is stubbed.
+const bellotas=readEdge('bellotas.ts').replace(/^export (?=function )/gm,'');
+const edge=readEdge('index.ts')
+  .replace(/^import \{ createClient \} from "[^"]+";\r?$/m,'')
+  .replace(/^import \{ [^\r\n]+ \} from "\.\/bellotas\.ts";\r?$/m,'');
 const clone=x=>JSON.parse(JSON.stringify(x));
 (async()=>{
  let handle,rpcCalls=0,mode='ok';const admin={auth:{getUser:async()=>({data:{user:{id:'qa'}}})},rpc:async(name,p)=>{rpcCalls++;assert.equal(name,'p2p_operar');assert.equal(p.p_uid,'qa');return mode==='ok'?{data:{ok:true,data:{plata:3},updated_at:'v2'}}:{error:{code:'P0001',message:'conflicto: otra sesión'}};}};
- const sc={Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>''},serve:f=>handle=f}};vm.createContext(sc);vm.runInContext(edge,sc);
+ const sc={Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>''},serve:f=>handle=f}};
+ vm.createContext(sc);
+ vm.runInContext(bellotas,sc,{filename:'guardar/bellotas.ts'});
+ vm.runInContext(edge,sc,{filename:'guardar/index.ts'});
  const body={cuenta:'qa',base:'v1',op:'a7270001-0000-4000-8000-000000000001',p2p:{accion:'comprar',id:1,price:5}};
  const call=b=>handle(new Request('https://qa.invalid/guardar',{method:'POST',headers:{Authorization:'Bearer qa'},body:JSON.stringify(b)}));
  assert.equal((await call(body)).status,200);assert.equal((await call({...body,cuenta:'otra'})).status,409);assert.equal((await call({...body,op:'inválido'})).status,400);assert.equal(rpcCalls,1);mode='conflict';assert.equal((await call(body)).status,409);

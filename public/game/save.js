@@ -1348,6 +1348,7 @@ function hydrate(d) {
   G.ofrendaLog = Number(d.ofrendaLog) || 0;
   G.nodoUsos = (d.nodoUsos && typeof d.nodoUsos === "object") ? d.nodoUsos : {};
   G.cosEq = (d.cosEq && typeof d.cosEq === "object") ? d.cosEq : null;
+  cosElegido();
   G.incursion = (d.incursion && d.incursion.endAt) ? d.incursion : null;
   G.incursionTutorialUsada = d.incursionTutorialUsada === true;
   G.incDia = (d.incDia && typeof d.incDia === "object") ? d.incDia : null;
@@ -2830,17 +2831,30 @@ function sendChat(text) {
   chatChannel.send({ type: "broadcast", event: "msg", payload: { name: (typeof nombreLucido === "function" ? nombreLucido() : (window.NICK || "Granjero")), color: (typeof colorNombre === "function" ? colorNombre() : null), text: String(text).slice(0, 140), t: Date.now() } });
 }
 
+function autoguardadoTieneCambios() {
+  if (guardadoTienePendiente() || !lastSavedKey) return true;
+  if (G.stam === stamMax() && G.stamFullAt === 0) {
+    const anterior = JSON.parse(lastSavedKey).d;
+    if ((anterior.stam === G.stam || anterior.stam === null) && anterior.stamFullAt === 0) {
+      // Al estar llena, la marca de tiempo cambia aunque no se haya gastado estamina.
+      return snapKey({ ...snapshot(), stam: anterior.stam, stamLastAt: anterior.stamLastAt }) !== lastSavedKey;
+    }
+  }
+  return snapKey() !== lastSavedKey;
+}
+
 function startAutosave() {
   if (saveTimer) return;
   let actividad=Date.now(),guardado=false,intento=0,ciclo=0;
   for(const tipo of ['pointerdown','pointermove','keydown','input','wheel'])document.addEventListener(tipo,()=>{actividad=Date.now();guardado=false;ciclo++;},{passive:true});
   saveTimer = setInterval(async () => {
-    if(guardado||Date.now()-actividad<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||ofertaPendientes(UID).length||SAVE_EN_CURSO||MERCADO_EN_CURSO||(!guardadoTienePendiente(UID)&&snapKey()===lastSavedKey))return;
+    if(guardado||Date.now()-actividad<5000||Date.now()-intento<5000||!UID||!CARGA_OK||SOLO_LOCAL||SAVE_CONFLICTOS.has(UID)||ofertaPendientes(UID).length||SAVE_EN_CURSO||MERCADO_EN_CURSO||!autoguardadoTieneCambios())return;
     intento=Date.now();const uid=UID,vuelta=ciclo,antes=SAVE_CONFIRMACIONES.get(uid)||0;
     try{await saveFarm();if(UID===uid&&ciclo===vuelta&&(SAVE_CONFIRMACIONES.get(uid)||0)>antes&&!guardadoTienePendiente(uid))guardado=true;}catch{}
   },1000);
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && !guardado) saveFarm(); });
-  window.addEventListener("beforeunload", () => { if (!guardado) saveFarm(); });
+  const guardarAlSalir = () => { if (!guardado && autoguardadoTieneCambios()) saveFarm(); };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") guardarAlSalir(); });
+  window.addEventListener("beforeunload", guardarAlSalir);
 }
 
 // arranca la sesión en segundo plano; main.js espera esta promesa

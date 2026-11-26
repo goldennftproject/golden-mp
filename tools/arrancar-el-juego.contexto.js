@@ -55,8 +55,17 @@ function construir(problemas, elementos) {
      panel pintó, y eso solo funciona si el mapa de elementos es el mismo de los dos lados. */
   function elemento(id) {
     if (elementos[id]) return elementos[id];
+    const style = new Proxy({
+      getPropertyValue(name) { return this[name]; },
+      setProperty(name, value) { this[name] = String(value); },
+      removeProperty(name) {
+        const previous = this[name];
+        delete this[name];
+        return previous;
+      },
+    }, { get: (target, key) => target[key] ?? "" });
     const el = {
-      id, _html: "", tagName: "DIV", nodeName: "DIV", style: new Proxy({}, { get: () => "", set: () => true }),
+      id, _html: "", tagName: "DIV", nodeName: "DIV", style,
       classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
       dataset: {}, children: [], value: "", textContent: "", checked: false, disabled: false,
       get innerHTML() { return this._html; }, set innerHTML(v) { this._html = String(v); },

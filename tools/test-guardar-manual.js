@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const root=process.env.GF_TEST_ROOT||path.resolve(__dirname,'..'),{JSDOM}=require(path.join(root,'node_modules/jsdom')),save=fs.readFileSync(path.join(root,'public/game/save.js'),'utf8'),{ctx:c}=require(path.join(root,'tools/arrancar-el-juego.contexto')).arrancar(root,{'game/main.js':'','game/save.js':save.replace('window.SAVE_READY = initSave();','window.SAVE_READY = Promise.resolve();')});
+const root=process.env.GF_TEST_ROOT||path.resolve(__dirname,'..'),{JSDOM}=require('jsdom'),save=fs.readFileSync(path.join(root,'public/game/save.js'),'utf8'),{ctx:c}=require(path.join(root,'tools/arrancar-el-juego.contexto')).arrancar(root,{'game/main.js':'','game/save.js':save.replace('window.SAVE_READY = initSave();','window.SAVE_READY = Promise.resolve();')});
 c.document=new JSDOM(fs.readFileSync(path.join(root,'public/index.html'),'utf8')).window.document;const run=s=>vm.runInContext(s,c),b=()=>c.document.getElementById('gm-guardar'),txt=()=>c.document.getElementById('gm-guardado').textContent;
 function setup(){run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;MERCADO_EN_CURSO=null;SAVE_EN_CURSO=null;SAVE_CONFLICTOS.clear();SAVE_CONFIRMACIONES.clear();SAVE_BASES.set('qa','2026-10-24T12:00:00.000Z');");}
 (async()=>{
@@ -17,9 +17,10 @@ function setup(){run("UID='qa';CARGA_OK=true;SOLO_LOCAL=false;MERCADO_EN_CURSO=n
  setup();run('SOLO_LOCAL=true');calls=0;await c.guardarAhora();assert.equal(calls,0);assert.equal(b().dataset.estado,'error');
  assert.ok(save.includes('guardado||Date.now()-actividad<5000'));// Ejecutar los handlers reales: antes de confirmar se guarda al salir; tras el ACK
  // del mismo periodo inactivo no se duplica. Otra interacción habilita la salida otra vez.
- const handlers={},autoStart=save.indexOf('function startAutosave() {'),autoEnd=save.indexOf('// arranca la sesión',autoStart);
+ const handlers={},autoStart=save.indexOf('function autoguardadoTieneCambios() {'),autoEnd=save.indexOf('// arranca la sesión',autoStart);
  assert.ok(autoStart>=0&&autoEnd>autoStart);let autoAt=1800000000000,autoCalls=0,autoTick,key=1;
  const auto={Date:{now:()=>autoAt},UID:'qa',CARGA_OK:true,SOLO_LOCAL:false,saveTimer:null,SAVE_CONFLICTOS:new Set(),SAVE_EN_CURSO:null,MERCADO_EN_CURSO:null,SAVE_CONFIRMACIONES:new Map(),lastSavedKey:null,
+  G:{stam:null},stamMax:()=>100,ofertaPendientes:()=>[],
   document:{visibilityState:'visible',addEventListener:(name,fn)=>{handlers[name]=fn;}},window:{addEventListener:(name,fn)=>{handlers[name]=fn;}},setInterval:fn=>{autoTick=fn;return 1;},guardadoTienePendiente:()=>false,snapKey:()=>String(key),
   saveFarm:async()=>{autoCalls++;auto.SAVE_CONFIRMACIONES.set('qa',(auto.SAVE_CONFIRMACIONES.get('qa')||0)+1);auto.lastSavedKey=String(key);}};
  vm.runInNewContext(save.slice(autoStart,autoEnd)+'\nstartAutosave();',auto);

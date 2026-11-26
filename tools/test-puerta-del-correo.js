@@ -93,7 +93,7 @@ console.log("\n5 · LOS DOS GESTOS SON DOS FUNCIONES, Y NO SE CONFUNDEN\n");
   ok("y NO crea (shouldCreateUser: false): un correo desconocido tiene que fallar, no fabricar una granja vacía",
     /entrarConEmail[\s\S]{0,600}?shouldCreateUser: false/.test(SAVE));
   ok("el apodo viaja DENTRO del enlace, para no pedirlo dos veces",
-    /data: \{ nick: n \}/.test(SAVE) && /function apodoElegido/.test(SAVE));
+    /data: \{ nick: n\b/.test(SAVE) && /function apodoElegido/.test(SAVE));
   ok("y se lee de la cuenta, no solo del navegador (el correo se abre donde el jugador quiera)",
     /user_metadata && u\.user_metadata\.nick/.test(SAVE));
 }
@@ -144,7 +144,8 @@ console.log("\n7b · POR QUÉ BORRAR EL ALMACENAMIENTO Y RECARGAR NO LIMPIA NADA
      probar de verdad es una ventana de incógnito. */
   const SAVE2 = fs.readFileSync(path.join(RAIZ, "public/game/save.js"), "utf8");
   ok("beforeunload conserva cambios pendientes sin repetir el ciclo confirmado",
-    /beforeunload", \(\) => \{ if \(!guardado\) saveFarm\(\); \}/.test(SAVE2));
+    SAVE2.includes('window.addEventListener("beforeunload", guardarAlSalir)') &&
+    SAVE2.includes("if (!guardado && autoguardadoTieneCambios()) saveFarm()"));
   ok("(hecho) y la copia local vive en localStorage, que es lo que se reescribe",
     /localStorage\.setItem\(GF_COPIA_KEY/.test(SAVE2));
   ok("(hecho) el camino de « partida local sin cuenta » sigue existiendo…",

@@ -18,11 +18,12 @@ function harness(rows = [], overrides = {}) {
     clearTimeout(id) { timers.delete(id); },
   };
   function query() {
-    const spec = { selected: null, eq: [], is: [], order: [], limit: null, range: null, signal: null };
+    const spec = { selected: null, eq: [], is: [], gt: [], order: [], limit: null, range: null, signal: null };
     const q = {
       select(columns) { spec.selected = columns; return q; },
       eq(column, value) { spec.eq.push([column, value]); return q; },
       is(column, value) { spec.is.push([column, value]); return q; },
+      gt(column, value) { spec.gt.push([column, value]); return q; },
       order(column, options) { spec.order.push([column, options]); return q; },
       limit(n) { spec.limit = n; return q; },
       range(from, to) { spec.range = [from, to]; return q; },
@@ -38,7 +39,8 @@ function harness(rows = [], overrides = {}) {
   const client = { from(table) { assert.equal(table, 'market'); return query(); }, rpc() { writes++; throw Error('Unexpected RPC'); } };
   responder = async spec => {
     assert.equal(spec.selected, '*');
-    let selected = rows.filter(row => spec.eq.every(([key, value]) => row[key] === value) && spec.is.every(([key, value]) => row[key] === value));
+    let selected = rows.filter(row => spec.eq.every(([key, value]) => row[key] === value) &&
+      spec.is.every(([key, value]) => row[key] === value) && spec.gt.every(([key, value]) => row[key] > value));
     selected.sort((a, b) => {
       for (const [key, options] of spec.order) {
         if (a[key] === b[key]) continue;
@@ -67,7 +69,28 @@ function row(id, extra = {}) { return { id, seller: 'player-a', created_at: '202
 (async () => {
   let h = harness([row(1), row(2, { sold_to: 'buyer' }), row(3, { kind: 'seed' })]);
   assert.deepEqual(normalize(await h.context.mkList({ kind: 'res' }, { estricto: true })), [row(1)]);
-  assert.equal(h.calls.length, 1); assert.equal(h.calls[0].limit, 60); assert(h.calls[0].signal instanceof AbortSignal);
+  assert.equal(h.calls.length, 1); assert.equal(h.calls[0].limit, 100); assert(h.calls[0].signal instanceof AbortSignal);
+  h.verify();
+
+  // Public listings must retain all matching ads beyond the first page.
+  const expected = Array.from({ length: 210 }, (_, i) => i + 1).filter(id => id % 43 !== 0 && id !== 175);
+  const active = Array.from({ length: 210 }, (_, i) => row(210 - i, {
+    kind: (210 - i) % 43 === 0 ? 'seed' : 'res',
+    sold_to: (210 - i) === 175 ? 'buyer' : null,
+  }));
+  h = harness(active);
+  const all = await h.context.mkList({ kind: 'res' }, { estricto: true });
+  assert.deepEqual(normalize(all.map(ad => ad.id)), expected);
+  assert.deepEqual(h.calls.map(call => call.gt), [[], [['id', expected[99]]], [['id', expected[199]]]]);
+  for (const call of h.calls) {
+    assert.equal(call.limit, 100);
+    assert.equal(call.range, null);
+    assert.deepEqual(normalize(call.eq), [['kind', 'res']]);
+    assert.deepEqual(normalize(call.is), [['sold_to', null]]);
+    assert.deepEqual(normalize(call.order), [['id', { ascending: true }]]);
+    assert.equal(call.signal, h.calls[0].signal);
+  }
+  assert.equal(h.timerStarts, 1);
   h.verify();
 
   // An empty result is a confirmed empty array, not a query failure.
@@ -141,5 +164,5 @@ function row(id, extra = {}) { return { id, seller: 'player-a', created_at: '202
     finish({ data: Array.from({ length: 100 }, (_, i) => row(i)), error: null }); await pause();
     assert.equal(h.calls.length, 1, 'a late result cannot start more pages after the timeout');
   }
-  console.log('OK P2P reads: strict failures versus empty lists, legacy compatibility, paginated unpaid records, deterministic order, account isolation, bounded deadline, no retries or writes.');
+  console.log('OK P2P reads: complete public listings, strict failures versus empty lists, legacy compatibility, paginated unpaid records, deterministic order, account isolation, bounded deadline, no retries or writes.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
