@@ -2,7 +2,11 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const {stripTypeScriptTypes}=require("node:module");
 const fuente=fs.readFileSync(path.resolve(__dirname,"../supabase/functions/guardar/index.ts"),"utf8");
-const js=stripTypeScriptTypes(fuente).replace(/^import .*createClient.*;\s*$/m,"");
+const importacionBellotas=/^import \{\s*([^}]+)\s*\} from ["']\.\/bellotas\.ts["'];\s*$/m;
+const bellotasImportadas=fuente.match(importacionBellotas);
+const js=stripTypeScriptTypes(fuente).replace(/^import .*createClient.*;\s*$/m,"").replace(importacionBellotas,"");
+const rutaBellotas=path.resolve(__dirname,"../supabase/functions/guardar/bellotas.ts");
+const moduloBellotas=bellotasImportadas && stripTypeScriptTypes(fs.readFileSync(rutaBellotas,"utf8")).replace(/^export (?=function )/gm,"");
 function servidor(inicial, opciones={}) {
   let fila=inicial && structuredClone(inicial), writes=0, handle;
   const admin={auth:{getUser:async()=>({data:{user:{id:"qa"}},error:null})},from:tabla=>{
@@ -19,7 +23,12 @@ function servidor(inicial, opciones={}) {
     }};return q;
   }};
   const ctx={Response,Request,Date,Math,JSON,Number,Object,Array,Set,String,isFinite,createClient:()=>admin,Deno:{env:{get:()=>"unused"},serve:f=>{handle=f;}}};
-  vm.createContext(ctx);vm.runInContext(js,ctx);
+  vm.createContext(ctx);
+  if(bellotasImportadas){
+    const exportaciones=vm.runInContext(`(function(){\n${moduloBellotas}\nreturn {${bellotasImportadas[1]}};\n})()`,ctx,{filename:rutaBellotas});
+    Object.assign(ctx,exportaciones);
+  }
+  vm.runInContext(js,ctx);
   return{call:(body,auth=true)=>handle(new Request("https://qa.invalid/guardar",{method:"POST",headers:auth?{Authorization:"Bearer qa"}:{},body:JSON.stringify({...body,...(body.artefacto && !body.cuenta ? {cuenta:'qa'}:{})})})),row:()=>fila,writes:()=>writes,ctx};
 }
 const base="2026-10-15T12:00:00.000Z";
@@ -36,9 +45,11 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   let carrera=servidor({...inicial,data:{...inicial.data,golden:100}});
   const concurrentes=await Promise.all([carrera.call({base,op,artefacto:{accion:'comprar',id:'cobre'}}),carrera.call({base,op:'22222222-2222-4222-8222-222222222222',artefacto:{accion:'comprar',id:'plata'}})]);
   assert.deepEqual(concurrentes.map(r=>r.status).sort(),[200,409]);assert.equal(carrera.writes(),1,'CAS evita compras simultáneas sobre un mismo saldo');
-  objetos=servidor({...inicial,data:{...inicial.data,artefactos:{v:1,items:{cobre:{desde:Date.now()-86400000,cobrado:Date.now()-86400000,resto:0,moneda:'plata-v2'}},ops:[]},energiaGranja:{v:1,actual:100,at:Date.now()}}});
+  const energiaHistorica={v:1,actual:100,at:Date.now()};
+  objetos=servidor({...inicial,data:{...inicial.data,artefactos:{v:1,items:{cobre:{desde:Date.now()-86400000,cobrado:Date.now()-86400000,resto:0,moneda:'plata-v2'}},ops:[]},energiaGranja:energiaHistorica}});
   const cobro=await objetos.call({base,op,artefacto:{accion:'cobrar',id:'cobre'}});
-  assert.equal(cobro.status,200);assert.equal(objetos.row().data.golden,20);assert.equal(objetos.row().data.plata,880);assert.ok(objetos.row().data.energiaGranja.actual<=99);
+  assert.equal(cobro.status,200);assert.equal(objetos.row().data.golden,20);assert.equal(objetos.row().data.plata,880);
+  assert.deepEqual(objetos.row().data.energiaGranja,energiaHistorica,'cobrar no consume la energía histórica');
   assert.equal((await objetos.call({base,op,artefacto:{accion:'cobrar',id:'cobre'}})).status,200);assert.equal(objetos.writes(),1,'recibo impide cobro doble');
   let r=await s.call({base,data:{plata:12010,golden:20,level:1,res:{maiz:0}}});
   assert.equal(r.status,200,"venta grande de stock aceptado no se rechaza");
@@ -114,11 +125,25 @@ const inicial={user_id:"qa",name:"QA",updated_at:base,data:{plata:10,golden:20,l
   await bonusFlight;
   assert.equal(ctx.G.plata,58,'ACK suma premio sin borrar gasto en vuelo');
   assert.equal(run('lastSavedKey===snapKey()'),false,'gasto en vuelo sigue pendiente');
-  let llamadas=0,upserts=0;
-  ctx.qaSb={functions:{invoke:async()=>{llamadas++;return{data:null,error:{context:{status:409}}};}},from:()=>{upserts++;throw Error("No debe intentar una puerta alternativa");}};
+  let llamadas=0,lecturas=0,upserts=0;
+  ctx.qaSb={functions:{invoke:async()=>{llamadas++;return{data:null,error:{context:{status:409}}};}},from:tabla=>{
+    assert.equal(tabla,'farms');
+    return {
+      select:()=>({eq:()=>({maybeSingle:async()=>{lecturas++;return {data:{...inicial,updated_at:'otra-sesion'}};}})}),
+      upsert:()=>{upserts++;throw Error('No debe intentar una escritura alternativa');},
+    };
+  }};
   run("sb=qaSb;lastSavedKey=null;log=()=>{};toast=()=>{};showSaveError=()=>{};G.plata=99;");
   await ctx.saveFarm(true);await ctx.saveFarm(true);
-  assert.equal(llamadas,1);assert.equal(upserts,0);assert.equal(ctx.G.plata,99,"un conflicto no hidrata ni borra el progreso actual");
+  assert.equal(llamadas,1);assert.equal(lecturas,1);assert.equal(upserts,0);assert.equal(ctx.G.plata,99,"un conflicto no hidrata ni borra el progreso actual");
   assert.equal(run("SAVE_CONFLICTOS.has('qa')"),true);
   console.log("OK: stock vendido, catálogo, CAS de sesiones, inserción concurrente, errores de lectura, fallback de columna, auth, cola de guardado y 409 sin perder progreso.");
-})().catch(e=>{console.error(e);process.exitCode=1;});
+})().then(()=>{terminada=true;},e=>{console.error(e);process.exitCode=1;});
+
+let terminada=false;
+process.once('beforeExit',()=>{
+  if(!terminada&&!process.exitCode){
+    console.error('La prueba de guardado terminó con una operación sin resolver.');
+    process.exitCode=1;
+  }
+});
